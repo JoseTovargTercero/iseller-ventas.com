@@ -287,7 +287,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                             <div class='clearfix'></div>
                             <div class='row   fadeInUp animated'>
-                                <form name="formulario" action='' method='post' style="width: 100%;">
+                                <form name="formulario" action='' id="formulario" method='post' style="width: 100%;">
                                     <div class='col-lg-12'>
                                         <div class='x_panel'>
                                             <div class='x_title'>
@@ -298,14 +298,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                                             <div class='form-group  '>
-
                                                 <div style="display: none;" class="form-group col-lg-12">
                                                     <label for="fechaVenta" class="control-label">Fecha de venta</label>
                                                     <input type="date" required class="form-control" value="<?php echo date('Y-m-d') ?>" name="fechaVenta" id="fechaVenta">
                                                 </div>
+                                            </div>
 
-                                                <div class="form-group row" style="display: none">
-                                                    <label class="control-label col-md-3 col-sm-3 ">Metodo</label>
+
+                                            <div class="row">
+                                                <div class="form-group col-lg-6">
+                                                    <label class="control-label col-md-3 col-sm-3 ">Método de venta</label>
                                                     <select class="form-control" name="tipoDespacho" id="tipoDespacho" style="color: #1ABB9C" required>
                                                         <option value="1">Venta</option>
                                                         <option value="3">Venta fraccionada (Metodos de pago)</option>
@@ -313,30 +315,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                     </select>
                                                 </div>
-                                            </div>
-                                            <div class="col-lg-5" style="display: none;">
-                                                <h5>Negocio del cliente <span style="font-size: 10px;"> Opcional</span></h5>
-                                                <br>
-                                                <section id="datosNegocio">
-                                                    <div class='form-group  col-lg-12'>
+
+
+
+                                                <section id="datosNegocio" class="col-lg-6">
+                                                    <div class='form-group '>
+                                                        <label class="control-label col-md-3 col-sm-3 ">Cliente</label>
                                                         <input class='form-control  col-lg-12' type='text' name='nombreNegocio' placeholder='Nombre del Negocio'>
                                                     </div>
-                                                    <div class='form-group  col-lg-12'>
+                                                    <div style="display: none !important;">
                                                         <input class='form-control  col-lg-12' type='text' name='direccionNegocio' placeholder='Direccion'>
                                                     </div>
                                                 </section>
                                             </div>
-
-
-
-
-
-
-
-
                                             <div class="row">
-
-
                                                 <div class="col-lg-4" class="form-group">
                                                     <label class="control-label">Tipo de venta</label>
                                                     <select style="margin-top:10px" class="form-control" name="compraTipo" id="compraTipo">
@@ -344,22 +336,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <option value="4">Al mayor</option>
                                                     </select>
                                                 </div>
-
-
                                                 <section class="col-lg-8 row" id='tabla_resultado_alMayor' style="margin-top: 15px">
-
-
-
                                                 </section>
-
-
-
                                             </div>
-
-
-
-
-
                                             <div class="row">
 
 
@@ -946,15 +925,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 metodos: metodos
                             },
                         })
-
                         .done(function(resultado4) {
                             $("#datosMetodosPago").html(resultado4);
                         })
                 }
-
                 $(document).on('change', '#tipoDespacho', function() {
                     var valorBusqueda4 = $(this).val();
                     if (valorBusqueda4 != "") {
+                        console.log(valorBusqueda4)
                         obtener_registros4(valorBusqueda4);
                     } else {
                         obtener_registros4();
@@ -1046,6 +1024,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     $('#tabla_resultado_resumen').html('')
 
                     verificarContenido();
+                });
+
+
+
+
+
+                $(document).ready(function() {
+                    document.getElementById('formulario').addEventListener('submit', function(event) {
+                        const tipoDespacho = document.getElementById('tipoDespacho').value;
+                        const nombreNegocio = document.getElementById('nombreNegocio').value;
+
+                        // Verificar condiciones
+                        if (tipoDespacho === '2' && nombreNegocio.trim() === '') {
+                            event.preventDefault(); // Detener el envío del formulario
+                            alert('Por favor, complete el campo con el nombre del cliente.');
+                        }
+                    });
+
+
                 });
             </script>
 

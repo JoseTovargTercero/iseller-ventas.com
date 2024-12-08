@@ -258,10 +258,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <thead>
                               <tr class="headings">
                                 <th class="column-title">#</th>
+                                <th class="column-title">Telefono</th>
                                 <th class="column-title">Cliente</th>
-                                <th class="column-title">Cedula</th>
-                                <th class="column-title">Telfono</th>
-                                <th class="column-title">Comercio</th>
                                 <th class="column-title">Direccion</th>
                                 <th class="column-title">Valor ($)</th>
                                 <th class="column-title">Valor (COP)</th>
@@ -277,7 +275,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <tbody>
                               <?php
 
-                              $query6 = $conexion->query("SELECT * FROM creditos WHERE estado= 0 AND distribuidor!='si' ORDER BY cliente ASC");
+                              function redondearACentenaProxima($numero)
+                              {
+                                return ceil($numero / 100) * 100;
+                              }
+
+
+
+                              $queryFecha = "SELECT * FROM cambio WHERE id='1'";
+                              $buscarFecha = $conexion->query($queryFecha);
+                              if ($buscarFecha->num_rows > 0) {
+                                while ($filaFecha = $buscarFecha->fetch_assoc()) {
+                                  $tasaDolarValor = $filaFecha['bcv'];
+                                  $tasaPesoValor = $filaFecha['pesoDolar'];
+                                }
+                              }
+
+
+
+
+
+                              $query6 = $conexion->query("SELECT * FROM creditos WHERE estado='2' ORDER BY cliente ASC");
                               if ($query6->num_rows > 0) {
                                 while ($row6 = $query6->fetch_assoc()) {
 
@@ -303,27 +321,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         while ($row666 = $query666->fetch_assoc()) {
                                           $precioUnitarioUSD = $row666["precio_compra"] / $row666["cantidad_unidades"];
                                           $precioUnitarioUSD = $precioUnitarioUSD + ($row666["porcentaje"] * $precioUnitarioUSD / 100);
-                                          $tasaDolar = $row666['tasaDolar'];
-                                          $tasaPeso = $row666['TasaPeso'];
-
-
-
-
-                                          $query6666 = $conexion->query("SELECT * FROM tasas_dolar WHERE id='$tasaDolar'");
-                                          if ($query6666->num_rows > 0) {
-                                            while ($row6666 = $query6666->fetch_assoc()) {
-                                              $tasaDolarValor = $row6666['recepcion'];
-                                            }
-                                          }
-                                          $query66666 = $conexion->query("SELECT * FROM tasas_pesos WHERE id_peso='$tasaPeso'");
-                                          if ($query66666->num_rows > 0) {
-                                            while ($row66666 = $query66666->fetch_assoc()) {
-                                              $tasaPesoValor = $row66666['publicacion_peso'];
-                                            }
-                                          }
 
                                           $PrecioUnitarioBs += ($precioUnitarioUSD * $tasaDolarValor) * $quantity;
-                                          $PrecioUnitarioPeso += ($PrecioUnitarioBs * $tasaPesoValor) * $quantity;
+                                          $PrecioUnitarioPeso += ($precioUnitarioUSD * $tasaPesoValor) * $quantity;
                                         }
                                       }
                                     }
@@ -335,7 +335,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                   $precioPesoVenta = $PrecioUnitarioPeso;
 
 
-                                  $precioPesoVenta = round($precioPesoVenta, 2, PHP_ROUND_HALF_DOWN);
+                                  $precioPesoVenta = redondearACentenaProxima($precioPesoVenta);
                                   $precioPesoVenta =   number_format($precioPesoVenta, '0', ',', '.');
 
                                   $precioBsVenta = round($precioBsVenta, 2, PHP_ROUND_HALF_DOWN);
@@ -388,8 +388,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           <tr class="even pointer">
           <td class=" "><a data-toggle="tooltip" data-placement="top" title="' . $var1 . '"><i style="font-size: 18px;" class="icono2 fa fa-calendar"></i></a> </td>
                    
-                            <td class=" "><a href="?cedulaDeudor=' . $row6["cedula"] . '">' . $row6["cliente"] . '</a></td>
-                              <td class=" ">' . $row6["cedula"] . '</td>
                                <td class=" ">' . $row6["telefono"] . '</td>
                                 <td class=" ">' . $row6["negocio"] . '</td>
                                 <td class=" ">' . $row6["direccion"] . '</td>
@@ -400,7 +398,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                
                                <td class=" "><input type="text" name="tipo" hidden value="' . $row6["tipoCompra"] . '">
                                
-                               <input type="text" name="precioPesoVenta" hidden value="' . $PrecioUnitarioPeso . '">
+                               <input type="text" name="precioPesoVenta" hidden value="' . redondearACentenaProxima($PrecioUnitarioPeso) . '">
                                <input type="text" name="precioBsVenta" hidden value="' . $PrecioUnitarioBs . '">
                                                              <div class="col-lg-12 ">
                                                                  <select class="form-control" name="pagoTipo" required>

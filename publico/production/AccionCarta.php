@@ -301,7 +301,8 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
                 telefono, 
                 negocio, 
                 direccion,
-                tipoCompra) VALUES (
+                tipoCompra,
+                estado) VALUES (
                     '$orderID', 
                     '" . $valorFinalVenta . "', 
                     '$nombreC', 
@@ -309,7 +310,8 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
                     '$telefono', 
                     '$nombreNego', 
                     '$direccion', 
-                    '$compraTipo')";
+                    '$compraTipo',
+                    '2')";
 
 
             $resultado2 = mysqli_query($conexion, $insertCliente);

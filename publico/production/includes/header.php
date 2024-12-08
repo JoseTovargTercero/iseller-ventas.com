@@ -182,7 +182,7 @@ function topnav()
             $time2 = time();
 
 
-            if ($time2 - $time1 > 3) {
+            if ($time2 - $time1 > 21600) {
                 // Función para verificar conexión a Internet
                 function checkConnection($url)
                 {
@@ -193,6 +193,7 @@ function topnav()
                     }
                     return false;
                 }
+
 
                 $apiUrl = "https://api.exchangedyn.com/";
 
@@ -231,7 +232,7 @@ function topnav()
                         }
                     }
 
-                    $update = "UPDATE cambio SET DolarBolivar='$bolivar', bcv='$bcv', last_u_bcv='$time1' WHERE id='1'";
+                    $update = "UPDATE cambio SET DolarBolivar='$bolivar', bcv='$bcv', last_u_bcv='$time2' WHERE id='1'";
                     $result = mysqli_query($conexion, $update);
                 } else {
                     $internetError = true;

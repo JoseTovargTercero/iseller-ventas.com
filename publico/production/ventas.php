@@ -810,9 +810,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             Swal.fire({
                                 title: 'Vuelto calculado',
                                 html: `
-                    <p><strong>Vuelto en Pesos:</strong> ${vueltoPesos.toFixed(2)}</p>
-                    <p><strong>Vuelto en Dólares:</strong> ${vueltoDolares.toFixed(2)}</p>
-                    <p><strong>Vuelto en Bolívares:</strong> ${vueltoBolivares.toFixed(2)}</p>
+                    <p><strong class="text-total text-info">Pesos:</strong> <span style="font-size: 18px">${formatNumber(vueltoPesos.toFixed(2))}</span></p>
+                    <p><strong class="text-total text-danger">Dólares:</strong> <span style="font-size: 18px">${formatNumber(vueltoDolares.toFixed(2))}</span></p>
+                    <p><strong class="text-total text-success">Bolívares:</strong> <span style="font-size: 18px">${formatNumber(vueltoBolivares.toFixed(2))}</span></p>
                 `,
                                 confirmButtonText: 'Aceptar',
                                 confirmButtonColor: '#32d7c0',
