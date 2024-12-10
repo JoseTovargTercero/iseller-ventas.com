@@ -177,12 +177,23 @@ function topnav()
         }
 
 
+
+        $currentHour = date('H');
+        $currentMinute = date('i');
+
+        // Verificar si la tasa ya fue actualizada hoy después de las 4 pm
+        $lastUpdateDay = date('Y-m-d', $last_u_bcv);
+        $currentDay = date('Y-m-d');
+        $hasUpdatedToday = ($lastUpdateDay === $currentDay && $last_u_bcv >= strtotime("$currentDay 16:00"));
+
+
+
         if ($tipo_tasa_bs == 2 || $tipo_tasa_bs == 3) {
             $time1 = $last_u_bcv;
             $time2 = time();
 
-
-            if ($time2 - $time1 > 21600) {
+            if (!$hasUpdatedToday && $currentHour >= 16) {
+                //if ($time2 - $time1 > 21600) {
                 // Función para verificar conexión a Internet
                 function checkConnection($url)
                 {
@@ -194,6 +205,8 @@ function topnav()
                     return false;
                 }
 
+                $timestamp = strtotime("10/12/2024 13:00");
+                echo $timestamp;
 
                 $apiUrl = "https://api.exchangedyn.com/";
 
