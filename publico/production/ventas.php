@@ -436,7 +436,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         <div class="footer d-flex justify-content-between hide" id="botones_acciones">
                                             <a onclick="confirmarDescuento()" class="btn btn-danger " style="color:white; cursor: pointer">Descontar</a>
-                                            <button class="btn btn-light" id="calcularVuelto">Calcular vuelto</button>
+                                            <button class="btn btn-light" id="calcularVuelto">Vuelto</button>
+                                            <button class="btn btn-warning text-dark" id="calcularDiferencia">Diferencia</button>
+
                                             <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">Vender</button>
                                         </div>
                                     </div>
@@ -899,7 +901,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 // Cargar lista de productos
                 function buscarProducto(producto, modo) {
                     $.ajax({
-                            url: ' .php',
+                            url: 'consulta_producto.php',
                             type: 'POST',
                             dataType: 'html',
                             data: {
