@@ -5,6 +5,7 @@ require_once('includes/menu.php');
 require_once('includes/darkModeAct.php');
 
 
+
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($_SESSION['nivel'] == '1') {
         $menu = MenuAdministrador();
@@ -42,6 +43,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($buscarAlumnos225->num_rows > 0) {
         while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
             $pesoDolar = $filaAlumnos225['pesoDolar'];
+            $bolivarPesoTrans = $filaAlumnos225['bolivarPesoTrans'];
             $bsDolar = $filaAlumnos225['DolarBolivar'];
         }
     }
@@ -178,17 +180,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         }
 
                                         if ($redondeo == 0) {
-                                            $options_2 ='
+                                            $options_2 = '
                                             <option value="0">Ninguno</option>
                                             <option value="1">Entero mas cercano (+ .5)</option>
                                             <option value="2">Entero mas cercano (- .5)</option>';
-                                        }elseif($redondeo == 1) {
-                                            $options_2 ='
+                                        } elseif ($redondeo == 1) {
+                                            $options_2 = '
                                             <option value="1">Entero mas cercano (+ .5)</option>
                                             <option value="2">Entero mas cercano (- .5)</option>
                                             <option value="0">Ninguno</option>';
-                                        }else {
-                                            $options_2 ='
+                                        } else {
+                                            $options_2 = '
                                             <option value="2">Entero mas cercano (- .5)</option>
                                             <option value="1">Entero mas cercano (+ .5)</option>
                                             <option value="0">Ninguno</option>';
@@ -253,9 +255,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </div>
                                             <hr class="mt-3 mb-3">
                                             <div class="mb-3">
-                                                <label class="form-label">Pesos</label>
+                                                <label class="form-label">Pesos/Dolar</label>
                                                 <input value="<?php echo $pesoDolar ?>" name="peso" class="form-control">
                                             </div>
+                                            <hr class="mt-3 mb-3">
+                                            <div class="mb-3">
+                                                <label class="form-label">Pesos/Bolívar</label>
+                                                <input value="<?php echo $bolivarPesoTrans ?>" name="bolivarPesoTrans" class="form-control">
+                                            </div>
+
+
                                             <div class="pt-3 d-flex justify-content-between">
                                                 <button class="btn btn-success">Actualizar</button>
                                             </div>
@@ -271,21 +280,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                                    if(value == 2){
+                                    if (value == 2) {
                                         $('#section_redondeo').hide(300)
                                         $('#section_tasa_bs').hide()
                                         $('#section_margen').hide(300)
-                                        
-                                    }else if(value == 3){
+
+                                    } else if (value == 3) {
                                         $('#section_redondeo').show(300)
                                         $('#section_tasa_bs').hide()
                                         $('#section_margen').show(300)
-                                        
-                                    }else{
+
+                                    } else {
                                         $('#section_tasa_bs').show(300)
                                         $('#section_margen').hide()
                                         $('#section_redondeo').hide()
-                                    } 
+                                    }
                                 }
                             </script>
 

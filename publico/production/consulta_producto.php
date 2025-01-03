@@ -17,6 +17,7 @@
     while ($row7 = $query7->fetch_assoc()) {
       $pesoDolar = $row7['pesoDolar'];
       $DolarBolivar = $row7['DolarBolivar'];
+      $bolivarPesoTrans = $row7['bolivarPesoTrans'];
     }
   }
   function removeNonNumeric($string)
@@ -52,6 +53,8 @@
       while ($row = $query->fetch_assoc()) {
 
         $cantidadUnidad = $row["cantidad_unidades"];
+        $origen = $row["origen"];
+
         $precioDolarCompra = $row["precio_compra"] / $cantidadUnidad;
         $porcentaje = $row["porcentaje"];
         $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
@@ -59,7 +62,11 @@
         $precioDolarVenta = number_format($precioDolarVenta, '2', '.', ',');
 
         $precioPesoVenta = $precioDolarVenta * $pesoDolar;
-        $precioBsVenta = $precioDolarVenta * $DolarBolivar;
+        if ($origen == 'c') {
+          $precioBsVenta = ($precioPesoVenta / $bolivarPesoTrans) / 1000;
+        } else {
+          $precioBsVenta = $precioDolarVenta * $DolarBolivar;
+        }
 
 
         //        $precioPesoVenta  = number_format(, '0', ',', '.');

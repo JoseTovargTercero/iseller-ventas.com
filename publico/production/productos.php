@@ -49,6 +49,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
             $pesoDolar = $filaAlumnos225['pesoDolar'];
             $bsDolar = $filaAlumnos225['DolarBolivar'];
+            $bolivarPesoTrans = $filaAlumnos225['bolivarPesoTrans'];
         }
     }
 
@@ -262,6 +263,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     $PrecioPro = $row7E["precio_compra"];
                                     $CantidadPro = $row7E["cantidad_unidades"];
                                     $porcentajePro = $row7E["porcentaje"];
+                                    $origen = $row7E["origen"];
                                 }
                             }
                             $visible = "";
@@ -274,7 +276,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             setInterval(function() {
                                 capturar1()
                                 capturar()
-                            }, 100);
+                            }, 1000);
 
 
                             function capturar1() {
@@ -353,46 +355,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     //////////////////////
                                     //////////////////////
                                     //////////////////////
-                                    //////////////////////
-                                    //////////////////////
-
-                                    var bolivarSalida = preciodolarVenta * cambioDolar;
-
-                                    var numb2 = bolivarSalida.round(2); // 1.78
-                                    let inputNum = numb2
-
-                                    inputNum = inputNum.toString()
-                                    inputNum = inputNum.split('.')
-
-                                    if (!inputNum[1]) {
-                                        inputNum[1] = '00'
-                                    }
-
-                                    let separados
-
-                                    if (inputNum[0].length > cif) {
-                                        let uno = inputNum[0].length % cif
-                                        if (uno === 0) {
-                                            separados = []
-                                        } else {
-                                            separados = [inputNum[0].substring(0, uno)]
-                                        }
-                                        let posiciones = parseInt(inputNum[0].length / cif)
-                                        for (let i = 0; i < posiciones; i++) {
-                                            let pos = ((i * cif) + uno)
-                                            console.log(uno, pos)
-                                            separados.push(inputNum[0].substring(pos, (pos + 3)))
-                                        }
-                                    } else {
-                                        separados = [inputNum[0]]
-                                    }
 
 
-
-                                    if (separados != "NaN") {
-                                        document.getElementById('resultado4').value = separados.join(',') + '.' + inputNum[1] + ' BS'
-
-                                    }
 
 
                                     ///////
@@ -426,7 +390,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         let possPicionessP = parseInt(inputNumbP[0].length / cif)
                                         for (let i = 0; i < possPicionessP; i++) {
                                             let possP = ((i * cif) + unosP)
-                                            console.log(unosP, possP)
                                             separadoP.push(inputNumbP[0].substring(possP, (possP + 3)))
                                         }
                                     } else {
@@ -436,6 +399,58 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         document.getElementById('resultado3').value = separadoP.join(',') + '.' + inputNumbP[1] + ' COP'
                                     }
                                     ///////////////////
+
+
+                                    //////////////////////
+                                    //////////////////////
+
+                                    var bolivarSalida = preciodolarVenta * cambioDolar;
+                                    let tipoConversion = document.getElementById('origenProducto').value
+                                    var tipoCambio_pesosBs = parseFloat(<?php echo $bolivarPesoTrans ?>);
+
+
+                                    if (tipoConversion == 'c') {
+                                        bolivarSalida = (preciopesoVento / tipoCambio_pesosBs) / 1000;
+                                    } else {
+                                        bolivarSalida = preciodolarVenta * cambioDolar;
+                                    }
+
+                                    var numb2 = bolivarSalida.round(2); // 1.78
+                                    let inputNum = numb2
+
+                                    inputNum = inputNum.toString()
+                                    inputNum = inputNum.split('.')
+
+                                    if (!inputNum[1]) {
+                                        inputNum[1] = '00'
+                                    }
+
+                                    let separados
+
+                                    if (inputNum[0].length > cif) {
+                                        let uno = inputNum[0].length % cif
+                                        if (uno === 0) {
+                                            separados = []
+                                        } else {
+                                            separados = [inputNum[0].substring(0, uno)]
+                                        }
+                                        let posiciones = parseInt(inputNum[0].length / cif)
+                                        for (let i = 0; i < posiciones; i++) {
+                                            let pos = ((i * cif) + uno)
+                                            separados.push(inputNum[0].substring(pos, (pos + 3)))
+                                        }
+                                    } else {
+                                        separados = [inputNum[0]]
+                                    }
+
+
+
+                                    if (separados != "NaN") {
+                                        document.getElementById('resultado4').value = separados.join(',') + '.' + inputNum[1] + ' BS'
+                                    }
+
+
+
                                 } catch (e) {}
                             }
                         </script>
@@ -504,8 +519,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <div class='col-md-9 col-sm-9 '>
 
                                                             <input type='text' id='porcentaje' name='porcentaje' value="<?php echo $porcentajePro; ?>" required='required' class='form-control ' placeholder='XXX' onKeyUp='division()'>
-
-
                                                             <?php
 
                                                             if ($origen == "nuevo") {
@@ -514,11 +527,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                             }
 
                                                             ?>
-
-
-
-
                                                         </div>
+                                                    </div>
+
+                                                    <div class='item form-group'>
+                                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Origen <span class='required'>*</span>
+                                                        </label>
+                                                        <div class='col-md-9 col-sm-9 '>
+                                                            <select class="form-control" required='required' name="origenProducto" id="origenProducto" onchange="capturar()" division()>
+                                                                <option value="">Seleccione</option>
+                                                                <option <?php echo ($origen == 'v' ? 'selected' : '') ?> value="v">Venezolano</option>
+                                                                <option <?php echo ($origen == 'c' ? 'selected' : '') ?> value="c">Colombiano</option>
+                                                            </select>
+                                                        </div>
+
                                                     </div>
 
 
@@ -527,13 +549,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <div class='ln_solid'></div>
                                                     <div class='item form-group'>
                                                         <div class='col-md-12 col-sm-12 '>
-
-
                                                             <button type='submit' class="btn btn-success actualizar">Actualizar</button>
-
                                                         </div>
                                                     </div>
-
                                                 </div>
                                             </div>
                                         </div>
@@ -556,7 +574,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <form class='form-label-left input_mask'>
 
                                                         <div class='form-group row'>
-                                                            <label class='col-form-label col-md-3 col-sm-3 '>Precio ( Unidad )</label>
+                                                            <label class='col-form-label col-md-3 col-sm-3 '>Precio (Unidad)</label>
                                                             <div class='col-md-9 col-sm-9 '>
                                                                 <input type='text' class='form-control' disabled='disabled' name='resultado' id='resultado'>
                                                                 <span class='form-control-feedback right2' aria-hidden='true'><i class='fa fa-dollar'></i></span>
@@ -564,7 +582,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         </div>
 
                                                         <div class='form-group row'>
-                                                            <label class='col-form-label col-md-3 col-sm-3 '>Precio de Venta </label>
+                                                            <label class='col-form-label col-md-3 col-sm-3 '>Venta</label>
                                                             <div class='col-md-9 col-sm-9 '>
                                                                 <input type='text' class='form-control' disabled='disabled' name='resultado2' id='resultado2'>
                                                                 <span class='form-control-feedback right2' aria-hidden='true'><i class='fa fa-dollar'></i></span>
@@ -572,7 +590,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         </div>
 
                                                         <div class='form-group row'>
-                                                            <label class='col-form-label col-md-3 col-sm-3 '>Precio de Venta</label>
+                                                            <label class='col-form-label col-md-3 col-sm-3 '>Venta</label>
                                                             <div class='col-md-9 col-sm-9 '>
                                                                 <input type='text' class='form-control' readonly='readonly' name='resultado3' id='resultado3'>
                                                                 <span class='form-control-feedback right2' aria-hidden='true'><strong>COP</strong></span>
@@ -580,30 +598,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         </div>
 
                                                         <div class='form-group row'>
-                                                            <label class='col-form-label col-md-3 col-sm-3 '>Precio de Venta
+                                                            <label class='col-form-label col-md-3 col-sm-3 '>Venta
                                                             </label>
                                                             <div class='col-md-9 col-sm-9 '>
                                                                 <input class='date-picker form-control' type='text' readonly='readonly' name='resultado4' id='resultado4'>
                                                                 <span class='form-control-feedback right2' aria-hidden='true'><strong>BS</strong></span>
                                                             </div>
                                                         </div>
-                                                        <br>
-                                                        <br>
-                                                        <div class='form-group row'>
-                                                            <label class='col-form-label col-md-3 col-sm-3 '>Tasas de cambio
-                                                            </label>
-                                                            <div class='col-md-9 col-sm-9 '>
-                                                                <div class="code">
 
-                                                                    <section id="resultadoPesos">
-                                                                    </section>
-                                                                    <section id="resultadoDolares">
-                                                                    </section>
-
-                                                                </div>
-
-                                                            </div>
-                                                        </div>
 
                                                     </form>
 

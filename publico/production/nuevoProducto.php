@@ -42,6 +42,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($buscarAlumnos225->num_rows > 0) {
         while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
             $pesoDolar = $filaAlumnos225['pesoDolar'];
+            $bolivarPesoTrans = $filaAlumnos225['bolivarPesoTrans'];
             $bsDolar = $filaAlumnos225['DolarBolivar'];
         }
     }
@@ -215,17 +216,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     // Calcula el precio en dólares (compra y venta)
                                     const precioDolarCompra = parseFloat(precioUnitario);
                                     const precioDolarVenta = ((precioDolarCompra * porcentaje / 100) + precioDolarCompra).toFixed(2);
+                                    const pesoSalida = Math.round(precioDolarVenta * parseFloat(<?php echo $pesoDolar ?>));
+                                    const tipoCambio_pesosBs = parseFloat(<?php echo $bolivarPesoTrans ?>);
 
                                     // Actualiza resultados en dólares
                                     document.calculadora.resultado.value = `$ ${precioDolarCompra}`;
                                     document.calculadora.resultado2.value = `$ ${precioDolarVenta}`;
 
                                     // Conversión a bolívares
-                                    const bolivarSalida = (precioDolarVenta * cambioDolar).toFixed(2);
-                                    document.getElementById('resultado4').value = `${formatNumber(bolivarSalida)} BS`;
+                                    let bolivarSalida;
+                                    const tipoConversion = document.getElementById('origenProducto').value
 
-                                    // Conversión a pesos
-                                    const pesoSalida = Math.round(precioDolarVenta * parseFloat(<?php echo $pesoDolar ?>));
+
+                                    if (tipoConversion == 'c') {
+                                        bolivarSalida = ((pesoSalida / tipoCambio_pesosBs) / 1000).toFixed(2);
+                                    } else {
+                                        bolivarSalida = (precioDolarVenta * cambioDolar).toFixed(2);
+                                    }
+
+                                    document.getElementById('resultado4').value = `${bolivarSalida} BS`;
                                     document.getElementById('resultado3').value = `${formatNumber(pesoSalida)} COP`;
 
                                 } catch (error) {
@@ -306,6 +315,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     </select>
                                                 </div>
                                             </div>
+
+                                            <div class='item form-group'>
+                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Origen <span class='required'>*</span>
+                                                </label>
+                                                <div class='col-md-9 col-sm-9 '>
+                                                    <select class="form-control" required='required' name="origenProducto" id="origenProducto">
+                                                        <option value="">Seleccione</option>
+                                                        <option value="v">Venezolano</option>
+                                                        <option value="c">Colombiano</option>
+                                                    </select>
+                                                </div>
+
+                                            </div>
+
+
+
                                             <div class='item form-group'>
                                                 <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Código de barras <span class='required'>*</span>
                                                 </label>
@@ -313,6 +338,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <input type='text' id='c_barras' name='c_barras' required='required' class='form-control '>
                                                 </div>
                                             </div>
+
+
                                             <div class='ln_solid'></div>
                                             <div class='item form-group'>
                                                 <div class='col-md-12 col-sm-12 '>

@@ -165,7 +165,8 @@ function topnav()
 
         $query = "SELECT * FROM cambio WHERE id='1'";
         $buscarAlumnos = $conexion->query($query);
-        if ($buscarAlumnos->num_rows > 0) {
+
+        if ($buscarAlumnos && $buscarAlumnos->num_rows > 0) {
             while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
                 $bcv = $filaAlumnos['bcv'];
                 $last_u_bcv = $filaAlumnos['last_u_bcv'];
@@ -176,122 +177,77 @@ function topnav()
             }
         }
 
+        $hora_actual = new DateTime();
+        $hora_limite = new DateTime('16:00');
+        $ultima_actualizacion = (new DateTime())->setTimestamp($last_u_bcv);
+        $intervalo = $ultima_actualizacion->diff($hora_actual);
 
+        function obtenerTasaDeApi(&$internetError)
+        {
+            $api_key = "afa5859e067e3a9f96886ebc";
+            $url = "https://v6.exchangerate-api.com/v6/$api_key/pair/USD/VES";
 
-        $currentHour = date('H');
-        $currentMinute = date('i');
-
-        // Verificar si la tasa ya fue actualizada hoy después de las 4 pm
-        $lastUpdateDay = date('Y-m-d', $last_u_bcv);
-        $currentDay = date('Y-m-d');
-        $hasUpdatedToday = ($lastUpdateDay === $currentDay && $last_u_bcv >= strtotime("$currentDay 16:00"));
-
-
-
-        if ($tipo_tasa_bs == 2 || $tipo_tasa_bs == 3) {
-            $time1 = $last_u_bcv;
-            $time2 = time();
-
-            if (!$hasUpdatedToday && $currentHour >= 16) {
-                //if ($time2 - $time1 > 21600) {
-                // Función para verificar conexión a Internet
-                function checkConnection($url)
-                {
-                    $connected = @fsockopen(parse_url($url, PHP_URL_HOST), 80); // Probar conexión en el puerto 80
-                    if ($connected) {
-                        fclose($connected);
-                        return true;
-                    }
-                    return false;
-                }
-
-                $timestamp = strtotime("10/12/2024 13:00");
-                echo $timestamp;
-
-                $apiUrl = "https://api.exchangedyn.com/";
-
-                // Verificar si hay conexión antes de abrir la URL
-                if (checkConnection($apiUrl)) {
-                    $ar = fopen($apiUrl, "r");
-                    $linea = '';
-                    while (!feof($ar)) {
-                        $linea .= fgets($ar);
-                    }
-                    fclose($ar);
-
-                    $linea = substr($linea, 0, -2);
-                    $linea = substr($linea, 2, strlen($linea));
-                    $linea = str_replace('"API endpoints and data structure subject to changes at anytime. ALL INFORMATION IS PROVIDED \"', '', $linea);
-                    $linea = str_replace('"warning": AS IS', '', $linea);
-                    $linea = str_replace('". EACH PARTY MAKES NO WARRANTIES, EXPRESS, IMPLIED OR OTHERWISE, REGARDING ITS ACCURACY, COMPLETENESS OR PERFORMANCE."', '', $linea);
-                    $linea = str_replace('\\', '', $linea);
-                    $linea = str_replace('},', '}', $linea);
-                    $iter = explode(',', $linea);
-
-                    $last_u_bcv = substr($iter[2], 54, -1);
-                    $last_u_bcv = date('d-m-Y H:i a', strtotime($last_u_bcv));
-                    $bcv = number_format(substr($iter[4], 17, -15), 2, '.', '');
-
-                    $bolivar = $bcv;
-
-                    if ($tipo_tasa_bs == 3) {
-                        if ($margen_neto != 0 && $margen_neto != '') {
-                            $bolivar += $margen_neto;
-                        }
-                        if ($redondeo == 1) {
-                            $bolivar = round($bolivar, 0, PHP_ROUND_HALF_UP);
-                        } elseif ($redondeo == 2) {
-                            $bolivar = round($bolivar, 0, PHP_ROUND_HALF_DOWN);
-                        }
-                    }
-
-                    $update = "UPDATE cambio SET DolarBolivar='$bolivar', bcv='$bcv', last_u_bcv='$time2' WHERE id='1'";
-                    $result = mysqli_query($conexion, $update);
-                } else {
+            try {
+                $response = @file_get_contents($url);
+                if ($response === false) {
                     $internetError = true;
-                    $last_u_bcv = date('d-m-Y H:i a', $last_u_bcv);
+                    return 0;
                 }
-            } else {
-                $last_u_bcv = date('d-m-Y H:i a', $last_u_bcv);
+                $data = json_decode($response, true);
+                return $data['conversion_rate'];
+            } catch (Exception $e) {
+                $internetError = true;
             }
-
-
-            $menu .= "<span class='bot' >
-        " . ($internetError ? '<span class="text-danger">Sin conexion, la tasa no fue comprobada.</span>' : '') . "
-                                <span class='text-success'>" . $bcv . " Bs</span> - <span class='text-muted'>UA: <span class='text-info'>" . $last_u_bcv . "</span></span>
-                            </span>";
         }
 
+        if ($hora_actual > $hora_limite && $intervalo->h + ($intervalo->days * 24) >= 12) {
+            $tasa_banco = obtenerTasaDeApi($internetError);
+            $bcvNeto = $tasa_banco;
+            if (!$internetError) {
+                if ($tipo_tasa_bs == 3) {
+                    if ($margen_neto != 0 && $margen_neto != '') {
+                        $tasa_banco += $margen_neto;
+                    }
+                    if ($redondeo == 1) {
+                        $tasa_banco = round($tasa_banco, 0, PHP_ROUND_HALF_UP);
+                    } elseif ($redondeo == 2) {
+                        $tasa_banco = round($tasa_banco, 0, PHP_ROUND_HALF_DOWN);
+                    }
+                }
+
+                $time = time();
+
+                $update = "UPDATE cambio SET DolarBolivar='$tasa_banco', bcv='$bcvNeto', last_u_bcv='$time' WHERE id='1'";
+                $result = mysqli_query($conexion, $update);
+            }
+        }
+
+        $menu .= "<span class='bot'>" . ($internetError ? '<span class="text-danger">Sin conexión, la tasa no fue comprobada.</span>' : '') . "
+            <span class='text-success'>" . ($bcvNeto ?? $bcv) . " Bs</span> - <span class='text-muted'>UA: <span class='text-info'>" . date('d/m/Y h:i a', $last_u_bcv) . "</span></span>
+        </span>";
 
 
 
 
 
-
-
-
-        $menu .= "
-                                    <a type='button' id='tasas' href='cambiar_tasas.php'  class='bot' style='color: #909090 !important'>
-                                        <i class='line icon-anchor'></i>
-                                    </a>";
-        $menu .= "<a type='button' href='../../configurar/darkMode.php' class='bot' style='color: #909090 !important'>  
-                                                            <i class='line icon-sun'></i>
-                                                        </a>
-                                                        <a type='button'  " . $solo . "><i style='color: #979897;' class='" . $ico . " '></i></a>
-                                                        <ul class='dropdown-menu list-unstyled msg_list' role='menu' aria-labelledby='navbarDropdown1'>
-                                                        " . $tabla66 . " 
-                                                        </ul>
-                                                    </li>
-                                                </ul>
-                                            </nav>
-                                        </div>
-                                    </div>";
+        $menu .= "<a type='button' id='tasas' href='cambiar_tasas.php'  class='bot' style='color: #909090 !important'>
+                    <i class='line icon-anchor'></i>
+                  </a>
+                  <a type='button' href='../../configurar/darkMode.php' class='bot' style='color: #909090 !important'>  
+                    <i class='line icon-sun'></i>
+                                </a>
+                                <a type='button'  " . $solo . "><i style='color: #979897;' class='" . $ico . " '></i></a>
+                                <ul class='dropdown-menu list-unstyled msg_list' role='menu' aria-labelledby='navbarDropdown1'>
+                                " . $tabla66 . " 
+                                </ul>
+                            </li>
+                        </ul>
+                        </nav>
+                      </div>
+                  </div>";
     }
 
     return $menu;
 }
-function obt_bcv($var)
-{
-    # code...
-}
+
 ?>

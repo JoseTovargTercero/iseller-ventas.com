@@ -899,7 +899,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 // Cargar lista de productos
                 function buscarProducto(producto, modo) {
                     $.ajax({
-                            url: 'consulta_producto.php',
+                            url: ' .php',
                             type: 'POST',
                             dataType: 'html',
                             data: {
