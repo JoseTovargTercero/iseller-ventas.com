@@ -258,9 +258,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <thead>
                               <tr class="headings">
                                 <th class="column-title">#</th>
-                                <th class="column-title">Telefono</th>
+                                <th class="column-title">Teléfono</th>
                                 <th class="column-title">Cliente</th>
-                                <th class="column-title">Direccion</th>
+                                <th class="column-title">Productos</th>
                                 <th class="column-title">Valor ($)</th>
                                 <th class="column-title">Valor (COP)</th>
                                 <th class="column-title">Valor (BS)</th>
@@ -286,8 +286,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                               $buscarFecha = $conexion->query($queryFecha);
                               if ($buscarFecha->num_rows > 0) {
                                 while ($filaFecha = $buscarFecha->fetch_assoc()) {
-                                  $tasaDolarValor = $filaFecha['bcv'];
+                                  $tasaDolarValor = $filaFecha['DolarBolivar'];
                                   $tasaPesoValor = $filaFecha['pesoDolar'];
+                                  $bolivarPesoTrans = $filaFecha['bolivarPesoTrans'];
                                 }
                               }
 
@@ -295,35 +296,44 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                              $query6 = $conexion->query("SELECT * FROM creditos WHERE estado='2' ORDER BY cliente ASC");
+                              $query6 = $conexion->query("SELECT * FROM creditos WHERE estado='2' ORDER BY negocio DESC ");
                               if ($query6->num_rows > 0) {
                                 while ($row6 = $query6->fetch_assoc()) {
 
                                   $valor = $row6["total_price"];
                                   $id = $row6["order_id"];
 
-
-                                  $queryFecha = "SELECT * FROM orden WHERE id='$id'";
+                                  $queryFecha = "SELECT * FROM orden WHERE id='$id' ";
                                   $buscarFecha = $conexion->query($queryFecha);
                                   if ($buscarFecha->num_rows > 0) {
                                     while ($filaFecha = $buscarFecha->fetch_assoc()) {
                                       $desde = $filaFecha['created'];
                                     }
                                   }
+                                  $productos = '';
+                                  $PrecioUnitarioPeso = 0;
+                                  $PrecioUnitarioBs = 0;
+
                                   $query66 = $conexion->query("SELECT * FROM orden_articulos WHERE order_id='$id'");
                                   if ($query66->num_rows > 0) {
                                     while ($row66 = $query66->fetch_assoc()) {
                                       $product_id = $row66["product_id"];
                                       $quantity = $row66["quantity"];
-
                                       $query666 = $conexion->query("SELECT * FROM productos WHERE id='$product_id'");
                                       if ($query666->num_rows > 0) {
                                         while ($row666 = $query666->fetch_assoc()) {
+                                          $productos .= $row666["nombre"] . '  (' . $quantity . '). ';
+
                                           $precioUnitarioUSD = $row666["precio_compra"] / $row666["cantidad_unidades"];
                                           $precioUnitarioUSD = $precioUnitarioUSD + ($row666["porcentaje"] * $precioUnitarioUSD / 100);
-
-                                          $PrecioUnitarioBs += ($precioUnitarioUSD * $tasaDolarValor) * $quantity;
+                                          $origen = $row666['origen'];
                                           $PrecioUnitarioPeso += ($precioUnitarioUSD * $tasaPesoValor) * $quantity;
+
+                                          if ($origen == 'c') {
+                                            $PrecioUnitarioBs = (($PrecioUnitarioPeso / $bolivarPesoTrans) / 1000)  * $quantity;
+                                          } else {
+                                            $PrecioUnitarioBs += ($precioUnitarioUSD * $tasaDolarValor) * $quantity;
+                                          }
                                         }
                                       }
                                     }
@@ -390,7 +400,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                    
                                <td class=" ">' . $row6["telefono"] . '</td>
                                 <td class=" ">' . $row6["negocio"] . '</td>
-                                <td class=" ">' . $row6["direccion"] . '</td>
+                                <td class=" ">' . $productos . '</td>
                                 <td class=" ">' . round($valor, 2, PHP_ROUND_HALF_DOWN) . ' <small>$</small></td>
                                 <td class=" ">' . $precioPesoVenta . ' <small>COP</small></td>
                                 <td class="a-right a-right ">' . $precioBsVenta . ' <small>BS</small></td>

@@ -177,9 +177,12 @@ function topnav()
             }
         }
 
+
         $hora_actual = new DateTime();
         $hora_limite = new DateTime('16:00');
         $ultima_actualizacion = (new DateTime())->setTimestamp($last_u_bcv);
+        $diaActualizacion = date('d');
+        $tofday = date('d');
         $intervalo = $ultima_actualizacion->diff($hora_actual);
 
         function obtenerTasaDeApi(&$internetError)
@@ -194,13 +197,14 @@ function topnav()
                     return 0;
                 }
                 $data = json_decode($response, true);
+                echo $data['conversion_rate'];
                 return $data['conversion_rate'];
             } catch (Exception $e) {
                 $internetError = true;
             }
         }
 
-        if ($hora_actual > $hora_limite && $intervalo->h + ($intervalo->days * 24) >= 12) {
+        if ($hora_actual > $hora_limite && $diaActualizacion != $tofday) {
             $tasa_banco = obtenerTasaDeApi($internetError);
             $bcvNeto = $tasa_banco;
             if (!$internetError) {
