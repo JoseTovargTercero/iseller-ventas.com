@@ -1,7 +1,8 @@
 <?php
-//require_once('lib/pdf/mpdf.php');
-require_once('../../../configurar/configuracion.php');
+require_once('../../../configurar/configuracion.php'); // Tu configuración de BD
+require_once('TCPDF-main/tcpdf.php'); // Asegúrate de que la ruta de TCPDF sea correcta
 
+// Obtener datos de la empresa
 $query2 = "SELECT * FROM empresa WHERE id=1";
 $buscarAlumnos2 = $conexion->query($query2);
 if ($buscarAlumnos2->num_rows > 0) {
@@ -11,58 +12,68 @@ if ($buscarAlumnos2->num_rows > 0) {
     }
 }
 
+// Crear objeto TCPDF
+$pdf = new TCPDF();
+$pdf->SetCreator(PDF_CREATOR);
+$pdf->SetAuthor('Mi Tienda');
+$pdf->SetTitle('Lista de Compras');
+$pdf->SetMargins(10, 10, 10);
+$pdf->SetAutoPageBreak(TRUE, 10);
+$pdf->AddPage();
 
+// Estilo CSS para el PDF
+$css = '
+<style>
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    h1 { text-align: center; }
+    h5 { text-align: center; }
+</style>';
 
+// Construcción del HTML
+$html = $css . '
+<h1><img src="../../production/images/logo1-inv-compact.png" height="20px"> iSeller</h1>
+<h5> LISTA DE COMPRAS</h5>
 
-$html = '   <head>
-    <meta charset="utf-8">
-    <link rel="stylesheet" href="style.css" media="all" />
-  </head>
-
-</h1><img src="../../production/images/logo1-inv-compact.png" height="14px" width="14px" alt=""> MI TIENDA<h1>
-</h5>' . $nameempresa . ' - LISTA DE COMPRAS<h5>
 <table>
-    
- <thead>
+<thead>
 <tr>
 <th>Producto</th>
 <th>Stock</th>
 <th>Valor de Compra</th>
 <th>Unidades</th>
+<th>Proveedor</th>
 </tr>
 </thead>
- ';
-$query22 = "SELECT * FROM productos WHERE stock<='$stockCritico' AND activo='0' ORDER BY nombre ASC";
+<tbody>';
+
+// Obtener productos con stock crítico
+$query22 = "SELECT * FROM productos WHERE activo='0' ORDER BY proveedor ASC";
 $buscarAlumnos22 = $conexion->query($query22);
 if ($buscarAlumnos22->num_rows > 0) {
     while ($filaAlumnos22 = $buscarAlumnos22->fetch_assoc()) {
+        $stock = $filaAlumnos22['stock'];
+        // convierte $stock a float
+        $stock = (float)$stock;
 
-        $var1 = $filaAlumnos22["precio_compra"];
-        $var2 = $filaAlumnos22["cantidad_unidades"];
-
-        $nameProducto = $filaAlumnos22["nombre"];
-        $nameProducto = strtoupper($nameProducto);
-        $html .= '
-        <tbody>
-<tr>
-<td>' . $nameProducto . '</td>
-<td>' . $filaAlumnos22["stock"] . '</td>
-<td>$ ' . $var1 . '</td>
-<td>' . $var2 . '</td>
-</tr>
-</tbody>
-    
-';
+        if ($stock <= $stockCritico) {
+            $nameProducto = strtoupper($filaAlumnos22["nombre"]);
+            $html .= '<tr>
+        <td>' . $nameProducto . '</td>
+        <td>' . $filaAlumnos22["stock"] . '</td>
+        <td>$ ' . number_format($filaAlumnos22["precio_compra"], 2) . '</td>
+        <td>' . $filaAlumnos22["cantidad_unidades"] . '</td>
+        <td>' . $filaAlumnos22["proveedor"] . '</td>
+        </tr>';
+        }
     }
-    $html .= '  
-           </table>     ';
 }
 
-echo $html;
-/*
-$mpdf = new mPDF( 'c', 'A4' );
-$css = file( 'style.css' );
-$mpdf->writeHTML( $css, 1 );
-$mpdf->writeHTML( $html );
-$mpdf->Output( 'Etiquetas.pdf', 'I' )
-*/
+$html .= '</tbody></table>';
+
+// Agregar HTML al PDF
+$pdf->writeHTML($html, true, false, true, false, '');
+
+// Descargar el PDF
+$pdf->Output('lista_compras.pdf', 'D'); // 'D' para descargar, 'I' para mostrar en el navegador

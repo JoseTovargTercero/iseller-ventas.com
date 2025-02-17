@@ -264,6 +264,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     $CantidadPro = $row7E["cantidad_unidades"];
                                     $porcentajePro = $row7E["porcentaje"];
                                     $origen = $row7E["origen"];
+                                    $codigo_barras = $row7E["codigo_barras"];
                                 }
                             }
                             $visible = "";
@@ -543,7 +544,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                     </div>
 
-
+                                                    <div class='item form-group'>
+                                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Código de barras <span class='required'>*</span>
+                                                        </label>
+                                                        <div class='col-md-9 col-sm-9 '>
+                                                            <input type='text' id='codigo_barra' name='codigo_barra' value="<?php echo $codigo_barras; ?>" required='required' class='form-control ' placeholder='Unidades' disabled>
+                                                        </div>
+                                                    </div>
 
 
                                                     <div class='ln_solid'></div>
@@ -558,6 +565,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         <body onload='capturar()'>
                                         </body>
+
 
 
 
@@ -605,43 +613,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                 <span class='form-control-feedback right2' aria-hidden='true'><strong>BS</strong></span>
                                                             </div>
                                                         </div>
-
-
                                                     </form>
-
                                                 </div>
-
                                             </div>
-
-
                                         </div>
-
                                     </div>
-
-
                             </div>
 
                             </form>
 
-
-
-
-
-
                         </div>
                     </div>
-
-
-
-
-
-
-
-
-
-
-
-
 
                     <div class="col-lg-12">
                         <div class="x_panel   fadeInUp animated">
@@ -652,11 +634,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                             <div class="x_content">
                                 <div class="row">
-
-
-
-
-
 
                                     <div class="col-lg-12">
                                         <div class="card-box table-responsive">
@@ -678,9 +655,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <th></th>
                                                     </tr>
                                                 </thead>
-
-
-
 
                                                 <tbody>
                                                     <?php
@@ -958,6 +932,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <!-- Custom Theme Scripts -->
         <script src="../build/js/custom.min.js"></script>
+        <script>
+            document.getElementById('codigo_barra').addEventListener('click', function() {
+
+            })
+        </script>
     </body>
 
     </html>
