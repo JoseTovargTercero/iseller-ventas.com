@@ -13,13 +13,14 @@ $moneda = strip_tags(addslashes($_POST['moneda']));
 $precioMonedaOrigen = strip_tags(addslashes($_POST['precioMonedaOrigen']));
 $c_barras = strip_tags(addslashes($_POST['c_barras']));
 $origenProducto = strip_tags(addslashes($_POST['origenProducto']));
+$proveedor = strip_tags(addslashes($_POST['proveedor']));
 
 
 $stock = strip_tags(addslashes($_POST['stock']));
 $foto = "NO";
 
-$insertar = "INSERT INTO productos (nombre, precio_compra, cantidad_unidades, porcentaje, codigo, stock, codigo_barras, origen) VALUES 
-        ('$nombre','$precio','$cantidad','$porcentaje','$codigo','$stock', '$c_barras', '$origenProducto')";
+$insertar = "INSERT INTO productos (nombre, precio_compra, cantidad_unidades, porcentaje, codigo, stock, codigo_barras, origen, proveedor) VALUES 
+        ('$nombre','$precio','$cantidad','$porcentaje','$codigo','$stock', '$c_barras', '$origenProducto', '$proveedor')";
 
 
 

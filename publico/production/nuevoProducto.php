@@ -328,6 +328,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
 
                                             </div>
+                                            <div class='item form-group'>
+                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Proveedor <span class='required'>*</span>
+                                                </label>
+                                                <div class='col-md-9 col-sm-9 '>
+                                                    <input type='text' id='proveedor' name='proveedor' required='required' class='form-control '>
+                                                </div>
+                                            </div>
 
 
 
