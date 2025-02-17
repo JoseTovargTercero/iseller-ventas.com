@@ -1067,6 +1067,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const cant = inputCantidad ? inputCantidad.value : 1;
 
 
+                    const peso = formatPeso(pesoventa_p)
 
                     $.ajax({
                             url: 'AccionCarta.php',
@@ -1077,7 +1078,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 id: id,
                                 codigo: codigo,
                                 dolarventa: dolarventa_p,
-                                pesoventa: pesoventa_p,
+                                pesoventa: peso,
                                 bolivarventa: bolivarventa_p,
                                 cant: cant
                             },
