@@ -136,7 +136,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <?php
 
-    switch ($_GET['accion']) {
+    switch (@$_GET['accion']) {
       case ('pagado'):
         echo '<script>
           function mensajeVenta(){	
@@ -258,189 +258,34 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <thead>
                               <tr class="headings">
                                 <th class="column-title">#</th>
-                                <th class="column-title">Teléfono</th>
                                 <th class="column-title">Cliente</th>
-                                <th class="column-title">Productos</th>
-                                <th class="column-title">Valor ($)</th>
-                                <th class="column-title">Valor (COP)</th>
-                                <th class="column-title">Valor (BS)</th>
-                                <th class="column-title">PAGO POR</th>
-                                <th class="column-title right">Pagar</th>
+                                <th class="column-title text-center">Créditos</th>
+                                <th class="column-title"></th>
                               </tr>
                             </thead>
-
-
-
-
                             <tbody>
                               <?php
 
-                              function redondearACentenaProxima($numero)
-                              {
-                                return ceil($numero / 100) * 100;
-                              }
+                              $count = 1;
 
-
-
-                              $queryFecha = "SELECT * FROM cambio WHERE id='1'";
-                              $buscarFecha = $conexion->query($queryFecha);
-                              if ($buscarFecha->num_rows > 0) {
-                                while ($filaFecha = $buscarFecha->fetch_assoc()) {
-                                  $tasaDolarValor = $filaFecha['DolarBolivar'];
-                                  $tasaPesoValor = $filaFecha['pesoDolar'];
-                                  $bolivarPesoTrans = $filaFecha['bolivarPesoTrans'];
-                                }
-                              }
-
-
-
-
-
-                              $query6 = $conexion->query("SELECT * FROM creditos WHERE estado='2' ORDER BY negocio DESC ");
+                              $query6 = $conexion->query("SELECT DISTINCT(negocio), COUNT(*) AS total FROM `creditos` WHERE estado = 2 GROUP BY negocio");
                               if ($query6->num_rows > 0) {
                                 while ($row6 = $query6->fetch_assoc()) {
 
-                                  $valor = $row6["total_price"];
-                                  $id = $row6["order_id"];
-
-                                  $queryFecha = "SELECT * FROM orden WHERE id='$id' ";
-                                  $buscarFecha = $conexion->query($queryFecha);
-                                  if ($buscarFecha->num_rows > 0) {
-                                    while ($filaFecha = $buscarFecha->fetch_assoc()) {
-                                      $desde = $filaFecha['created'];
-                                    }
-                                  }
-                                  $productos = '';
-                                  $PrecioUnitarioPeso = 0;
-                                  $PrecioUnitarioBs = 0;
-
-                                  $query66 = $conexion->query("SELECT * FROM orden_articulos WHERE order_id='$id'");
-                                  if ($query66->num_rows > 0) {
-                                    while ($row66 = $query66->fetch_assoc()) {
-                                      $product_id = $row66["product_id"];
-                                      $quantity = $row66["quantity"];
-                                      $query666 = $conexion->query("SELECT * FROM productos WHERE id='$product_id'");
-                                      if ($query666->num_rows > 0) {
-                                        while ($row666 = $query666->fetch_assoc()) {
-                                          $productos .= $row666["nombre"] . '  (' . $quantity . '). ';
-
-                                          $precioUnitarioUSD = $row666["precio_compra"] / $row666["cantidad_unidades"];
-                                          $precioUnitarioUSD = $precioUnitarioUSD + ($row666["porcentaje"] * $precioUnitarioUSD / 100);
-                                          $origen = $row666['origen'];
-                                          $PrecioUnitarioPeso += ($precioUnitarioUSD * $tasaPesoValor) * $quantity;
-
-                                          if ($origen == 'c') {
-                                            $PrecioUnitarioBs = (($PrecioUnitarioPeso / $bolivarPesoTrans) / 1000)  * $quantity;
-                                          } else {
-                                            $PrecioUnitarioBs += ($precioUnitarioUSD * $tasaDolarValor) * $quantity;
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-
-
-
-                                  $precioBsVenta = $PrecioUnitarioBs;
-                                  $precioPesoVenta = $PrecioUnitarioPeso;
-
-
-                                  $precioPesoVenta = redondearACentenaProxima($precioPesoVenta);
-                                  $precioPesoVenta =   number_format($precioPesoVenta, '0', ',', '.');
-
-                                  $precioBsVenta = round($precioBsVenta, 2, PHP_ROUND_HALF_DOWN);
-                                  $precioBsVenta =   number_format($precioBsVenta, '2', ',', '.');
-
-
-
-                                  ///////////////////////////////  OBTENER DIFERENCIA DE FECHAS
-
-                                  $intervalos = array("segundo", "minuto", "hora", "día", "semana", "mes", "año");
-                                  $duraciones = array("60", "60", "24", "7", "4.35", "12");
-
-                                  $ahora = time();
-                                  $Fecha_Unix = strtotime($desde);   ////// AQUI VA LA FECHA A COMPARAR
-
-                                  if (empty($Fecha_Unix)) {
-                                    return "Fecha incorracta";
-                                  }
-                                  if ($ahora > $Fecha_Unix) {
-                                    $diferencia     = $ahora - $Fecha_Unix;
-                                    $tiempo         = "Hace";
-                                  } else {
-                                    $diferencia     = $Fecha_Unix - $ahora;
-                                    $tiempo         = "Dentro de";
-                                  }
-                                  for ($j = 0; $diferencia >= $duraciones[$j] && $j < count($duraciones) - 1; $j++) {
-                                    $diferencia /= $duraciones[$j];
-                                  }
-
-                                  $diferencia = round($diferencia);
-
-                                  if ($diferencia != 1) {
-                                    $intervalos[5] .= "e"; //MESES
-                                    $intervalos[$j] .= "s";
-                                  }
-
-                                  $var1 = $tiempo . " " . $diferencia . " " . $intervalos[$j];
-
-
-
-
-                                  ///////////////////////////////  OBTENER DIFERENCIA DE FECHAS
-
-
-
-
-
+                                  $total = $row6["total"];
 
                                   $tabla6 .= '
-          <tr class="even pointer">
-          <td class=" "><a data-toggle="tooltip" data-placement="top" title="' . $var1 . '"><i style="font-size: 18px;" class="icono2 fa fa-calendar"></i></a> </td>
-                   
-                               <td class=" ">' . $row6["telefono"] . '</td>
-                                <td class=" ">' . $row6["negocio"] . '</td>
-                                <td class=" ">' . $productos . '</td>
-                                <td class=" ">' . round($valor, 2, PHP_ROUND_HALF_DOWN) . ' <small>$</small></td>
-                                <td class=" ">' . $precioPesoVenta . ' <small>COP</small></td>
-                                <td class="a-right a-right ">' . $precioBsVenta . ' <small>BS</small></td>
-                               <form method="POST" action="../../configurar/pagar.php?id=' . $row6["order_id"] . '">
-                               
-                               <td class=" "><input type="text" name="tipo" hidden value="' . $row6["tipoCompra"] . '">
-                               
-                               <input type="text" name="precioPesoVenta" hidden value="' . redondearACentenaProxima($PrecioUnitarioPeso) . '">
-                               <input type="text" name="precioBsVenta" hidden value="' . $PrecioUnitarioBs . '">
-                                                             <div class="col-lg-12 ">
-                                                                 <select class="form-control" name="pagoTipo" required>
-                                                                     <option value="">-- SELECCIONE --</option>
-                                                                     <option value="1">Punto de venta</option>
-                                                                     <option value="2">Pago Movil</option>
-                                                                     <option value="3">Transferencia</option>
-                                                                     <option value="7">Biopago</option>
-                                                                     <option value="4">BS efectivo</option>
-                                                                     <option value="5">Dolares</option>
-                                                                     <option value="6">Pesos</option>
+                                    <tr class="even pointer">
+                                      <td>' . $count++ . '</td>
+                                      <td>' . $row6["negocio"] . '</td>
+                                      <td class="text-center">' . $total . '</td>
+                                      <td class="text-center">
+                                        <a class="btn btn-info btn-sm" href="creditos_cliente.php?cliente=' . $row6["negocio"] . '">
+                                          <i class="line icon-info"></i>
+                                        </a>
+                                      </td>
 
-                                                                 </select>
-                                                             </div>
-                                                        </td>
-                                                        
-                                                        
-                                                        
-                                <td><button class="btn"><i class="fa gray fa-credit-card"></i></button></td>
-                                
-                          </form>
-                                
-                            </td>
-                          </tr>
-                          
-                          
-                          
-        
-        
-        
-        
-       ';
+                                    </tr>';
                                 }
                                 echo $tabla6;
                               }

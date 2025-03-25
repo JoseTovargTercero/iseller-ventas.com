@@ -80,3 +80,20 @@ function formatPeso($amount)
 	// Convertir el número a un formato con separadores de miles
 	return number_format($roundedAmount);
 }
+
+
+function formatPesoVista($amount)
+{
+	// convierte $amount a un entero
+	$amount = (int)$amount;
+
+	// Eliminar comas y espacios, convertir a float
+	$amount = floatval(str_replace(',', '', trim($amount)));
+
+	// Redondear a la centena más cercana
+	$roundedAmount = round($amount / 100) * 100;
+
+	// Formatear con separadores de miles
+
+	return $roundedAmount;
+}

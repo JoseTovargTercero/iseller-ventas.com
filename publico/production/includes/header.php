@@ -78,10 +78,11 @@ function topnav()
 
 
 
+
     if ($notificacionStockCritico == "1") {
 
 
-        $stmt = mysqli_prepare($conexion, "SELECT * FROM productos WHERE stock<='$stockCritico' AND activo='0'");
+        $stmt = mysqli_prepare($conexion, "SELECT * FROM productos WHERE stock<='$stockCritico' AND activo='0' LIMIT 7");
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result->num_rows > 0) {
@@ -92,12 +93,9 @@ function topnav()
 
                 $cantidad += 1;
                 $tabla66 .= "
-                        
                         <li class='nav-item'>
                                         <a class='dropdown-item'>
-                                         
                                                 <span><strong>" . $row6['nombre'] . "</strong></span>
-                                                
                                                 <span class='time'><small>Stock Critico</small></span>
                                             </span>
                                             <span class='message'>
@@ -197,14 +195,20 @@ function topnav()
                     return 0;
                 }
                 $data = json_decode($response, true);
-                echo $data['conversion_rate'];
                 return $data['conversion_rate'];
             } catch (Exception $e) {
                 $internetError = true;
             }
         }
 
-        if ($hora_actual > $hora_limite && $diaActualizacion != $tofday) {
+        $consultar_tasa = false;
+
+        if ($tipo_tasa_bs == '3' || $tipo_tasa_bs == '2') {
+            $consultar_tasa = true;
+        }
+
+        if ($hora_actual > $hora_limite && $diaActualizacion != $tofday && $consultar_tasa) {
+            // if ($consultar_tasa) {
             $tasa_banco = obtenerTasaDeApi($internetError);
             $bcvNeto = $tasa_banco;
             if (!$internetError) {
@@ -226,13 +230,10 @@ function topnav()
             }
         }
 
+
         $menu .= "<span class='bot'>" . ($internetError ? '<span class="text-danger">Sin conexión, la tasa no fue comprobada.</span>' : '') . "
             <span class='text-success'>" . ($bcvNeto ?? $bcv) . " Bs</span> - <span class='text-muted'>UA: <span class='text-info'>" . date('d/m/Y h:i a', $last_u_bcv) . "</span></span>
         </span>";
-
-
-
-
 
         $menu .= "<a type='button' id='tasas' href='cambiar_tasas.php'  class='bot' style='color: #909090 !important'>
                     <i class='line icon-anchor'></i>

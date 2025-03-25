@@ -36,7 +36,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($buscarAlumnos->num_rows > 0) {
         while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
             $dolarBolivar = $filaAlumnos['DolarBolivar'];
-            $pesoBolivarPublicacion = $filaAlumnos['bolivarPesoVenta'];
         }
     }
 
@@ -53,7 +52,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     $_SESSION["ventas"] = "activa";
-    if ($_SESSION["dist_ventas"] == "activa") {
+    if (@$_SESSION["dist_ventas"] == "activa") {
         unset($_SESSION["dist_ventas"]);
         $cart->destroy();
     }
@@ -91,7 +90,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../assets/sweetalert2.all.min.js"></script>
 
         <?php
-        switch ($_GET['accion']) {
+        switch (@$_GET['accion']) {
             case ('vendido'):
                 $mensaje = 'venta';
                 break;
@@ -476,7 +475,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                     <tbody>
                                                         <?php
-
+                                                        $porductos = '';
                                                         $query77 = "SELECT * FROM orden ORDER BY id DESC LIMIT 3";
                                                         $buscarAlumnos77 = $conexion->query($query77);
                                                         if ($buscarAlumnos77->num_rows > 0) {
@@ -544,6 +543,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                     case ('8'):
                                                                         $pagoPor = 'Fraccionado';
                                                                         break;
+                                                                    default:
+                                                                        $pagoPor = 'Pendiente';
                                                                 }
 
                                                                 if ($filaAlumnos77['status'] == '4') {
@@ -552,6 +553,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                     $tVenta = 'Al detal';
                                                                 } elseif ($filaAlumnos77['status'] == '3') {
                                                                     $tVenta = 'Descuento';
+                                                                } else {
+                                                                    $tVenta = 'Crédito';
                                                                 }
 
                                                                 echo '
@@ -777,7 +780,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 function calcularVuelto() {
 
-                    total_pesos = total_pesos.replace(',', '')
+                    total_pesos = String(total_pesos).replace(',', '');
 
                     Swal.fire({
                         title: 'Indique la cantidad recibida',
