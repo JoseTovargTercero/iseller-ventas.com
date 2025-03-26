@@ -683,16 +683,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     }
 
                     const opcionesPago = `
-                <select id="metodoPago" class="form-control">
-                    <option value="">Seleccione</option>
-                    <option value="option1">Punto</option>
-                    <option value="option2">Pago Movil</option>
-                    <option value="option3">Transferencia</option>
-                    <option value="option7">BioPago</option>
-                    <option value="option4">Efectivo</option>
-                    <option value="option5">Dolares</option>
-                    <option value="option6">Pesos</option>
-                </select>`;
+                    <select id="metodoPago" class="form-control">
+                        <option value="">Seleccione</option>
+                        <option value="option1">Punto</option>
+                        <option value="option2">Pago Movil</option>
+                        <option value="option3">Transferencia</option>
+                        <option value="option7">BioPago</option>
+                        <option value="option4">Efectivo</option>
+                        <option value="option5">Dolares</option>
+                        <option value="option6">Pesos</option>
+                    </select>`;
 
                     // Mostrar el diálogo
                     Swal.fire({

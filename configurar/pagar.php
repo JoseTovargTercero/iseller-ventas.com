@@ -1,9 +1,9 @@
 <?php
 require_once("configuracion.php");
 
-$id = $_GET['id'];
-$pagoTipo = $_POST['pagoTipo'];
-$tipo = $_POST['tipo'];
+$id = $_GET['order_id'];
+$pagoTipo = $_GET['pagoTipo'];
+$tipo = $_GET['tipo'];
 
 $date1 = date('Y-m-d h:i:s');
 $date2 = date('Y-m-d');
@@ -11,8 +11,8 @@ $date3 = date('Y-m');
 $date4 = date('Y-W');
 $date5 = date('Y');
 
-$precioPesoVenta = $_POST['precioPesoVenta'];
-$precioBsVenta = $_POST['precioBsVenta'];
+$precioPesoVenta = $_GET['precioPesoVenta'];
+$precioBsVenta = $_GET['precioBsVenta'];
 
 
 
@@ -30,9 +30,8 @@ if ($result->num_rows > 0) {
     $stmt->execute();
     $stmt->close();
 
-
-
-    header("Location: ../publico/production/creditos.php?accion=pagado");
+    header("Location: " . $_SERVER['HTTP_REFERER']);
+    exit();
 } else {
     header("Location: ../publico/production/creditos.php?accion=error");
 }

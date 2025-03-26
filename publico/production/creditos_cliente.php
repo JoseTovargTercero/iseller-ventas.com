@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
@@ -93,6 +94,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <script src="ex/jquery.min.js"></script>
     <script src="ex/bootstrap.min.js"></script>
 
+
+    <script src="../assets/sweetalert.min.js"></script>
+    <script src="../assets/sweetalert2.all.min.js"></script>
 
     <script>
       function updateCartItem(obj, id) {
@@ -224,6 +228,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <th class="column-title text-center">Valor ($)</th>
                                 <th class="column-title text-center">Valor (COP)</th>
                                 <th class="column-title text-center">Valor (BS)</th>
+                                <th class="column-title text-center"></th>
                               </tr>
                             </thead>
 
@@ -306,7 +311,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                               $productos_by_order = [];
 
-                              $stmt = mysqli_prepare($conexion, "SELECT creditos.order_id, orden.created, orden.total_price FROM creditos LEFT JOIN orden ON orden.id = creditos.order_id WHERE estado='2' AND negocio = ? ORDER BY negocio DESC");
+                              $stmt = mysqli_prepare($conexion, "SELECT creditos.tipoCompra, creditos.id AS id_credito, creditos.order_id, orden.created, orden.total_price FROM creditos LEFT JOIN orden ON orden.id = creditos.order_id WHERE estado='2' AND negocio = ? ORDER BY negocio DESC");
                               $stmt->bind_param('s', $cliente);
                               $stmt->execute();
                               $result = $stmt->get_result();
@@ -314,11 +319,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 while ($row = $result->fetch_assoc()) {
                                   $productos_by_order[] = [
                                     'id' => $row['order_id'],
+                                    'id_credito' => $row['id_credito'],
+                                    'tipoCompra' => $row['tipoCompra'],
                                     'fecha' => $row['created'],
                                     'total' => $row['total_price'],
                                     'productos' => getProductos($row['order_id'])
                                   ];
                                 }
+                              } else {
+                                header("Location: creditos.php");
+                                exit;
                               }
                               $stmt->close();
 
@@ -350,14 +360,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                   $total_general_cop += $precio_cop;
                                   $total_general_bss += $precio_bss;
 
-
                                   echo '<tr>';
                                   echo '
                                     <td></td>
                                     <td>' . htmlspecialchars($sub_item['datos']['nombre']) . '</td>
                                     <td class="text-center">' . $precio_usd . ' <small>$</small></td>
                                     <td class="text-center">' . number_format($precio_cop, 0, '.', ',') . ' <small>Cop</small></td>
-                                    <td class="text-center">' . number_format($precio_bss, 2, '.', ',') . ' <small>Bs</small></td>';
+                                    <td class="text-center">' . number_format($precio_bss, 2, '.', ',') . ' <small>Bs</small></td>
+                                    <td></td>
+                                    
+                                    ';
                                   echo '</tr>';
                                 }
 
@@ -367,7 +379,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                   <td>Fecha: ' . $item['fecha'] . '</td>
                                   <td class="text-center"><b>TOTAL: ' . $total_seccion_usd . '<small></small></b></td>
                                   <td class="text-center"><b>TOTAL: ' . number_format($total_seccion_cop, 0, '.', ',') . '<small></small></b></td>
-                                  <td class="text-center"><b>TOTAL: ' . number_format($total_seccion_bss, 2, '.', ',') . '<small></small></b></td>';
+                                  <td class="text-center"><b>TOTAL: ' . number_format($total_seccion_bss, 2, '.', ',') . '<small></small></b></td>
+                                  <td class="text-center">
+                                  <button data-tipoCompra="' . $item['tipoCompra'] . '" data-precioPesoVenta = "' . $total_seccion_cop . '" data-precioBsVenta="' . $total_seccion_bss . '" data-id_credito="' . $item['id_credito'] . '" data-id="' . $item['id'] . '" class="btn btn-pagar btn-sm btn-info">Pagar</button>
+                                  </td>';
                                 echo '</tr>';
                               }
 
@@ -377,7 +392,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <td colspan=2 >DEUDA TOTAL:</td>
                                 <td class="text-center"><b>' . $total_general_usd . '<small>$</small></b></td>
                                 <td class="text-center"><b>' . number_format($total_general_cop, 0, '.', ',') . '<small>Cop</small></b></td>
-                                <td class="text-center"><b>' . number_format($total_general_bss, 2, '.', ',') . '<small>Bs</small></b></td>';
+                                <td class="text-center"><b>' . number_format($total_general_bss, 2, '.', ',') . '<small>Bs</small></b></td>
+                                    <td></td>
+                                ';
                               echo '</tr>';
 
 
@@ -389,7 +406,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                           <br>
 
 
-                          
+
                         </div>
                       </div>
                     </div>
@@ -439,6 +456,92 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <!-- Custom Theme Scripts -->
     <script src="../build/js/custom.min.js"></script>
+
+
+    <script>
+      const opcionesPago = `
+                    <select id="metodoPago" class="form-control">
+                        <option value="">Seleccione</option>
+                        <option value="option1">Punto</option>
+                        <option value="option2">Pago Movil</option>
+                        <option value="option3">Transferencia</option>
+                        <option value="option7">BioPago</option>
+                        <option value="option4">Efectivo</option>
+                        <option value="option5">Dolares</option>
+                        <option value="option6">Pesos</option>
+                    </select>`;
+
+      document.addEventListener('click', function(event) {
+
+        if (event.target.closest('.btn-pagar')) { // ACCION DE ELIMINAR
+          const elemento = event.target.closest('.btn-pagar')
+
+          const data_id_credito = elemento.getAttribute('data-id_credito');
+          const data_id = elemento.getAttribute('data-id');
+          const precioPesoVenta = elemento.getAttribute('data-precioPesoVenta')
+          const precioBsVenta = elemento.getAttribute('data-precioBsVenta')
+          const tipoCompra = elemento.getAttribute('data-tipoCompra')
+
+          pagar(data_id_credito, data_id, precioPesoVenta, precioBsVenta, tipoCompra);
+        }
+
+      });
+
+
+
+
+
+
+
+      function pagar(credito, compra, precioPesoVenta, precioBsVenta, tipoCompra) {
+        // Mostrar el diálogo
+        Swal.fire({
+          title: 'Selecciona un método de pago',
+          html: opcionesPago,
+          confirmButtonText: 'Continuar',
+          confirmButtonColor: '#32d7c0',
+          preConfirm: () => {
+            // Obtener el valor seleccionado
+            const metodoPago = document.getElementById('metodoPago').value;
+            if (!metodoPago) {
+              Swal.showValidationMessage('Por favor, selecciona un método de pago');
+            }
+            return metodoPago; // Retornar el valor seleccionado
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            const metodoPago = result.value;
+            // Redirigir a pagos_Venta.php con el método de pago en la URL
+            //console.log(`../creditos.php?pagoTipo=${encodeURIComponent(metodoPago)}&order_id=${compra}&precioPesoVenta=${precioPesoVenta}&precioBsVenta=${precioBsVenta}`)
+            window.location.href = `../../configurar/pagar.php?pagoTipo=${encodeURIComponent(metodoPago)}&order_id=${compra}&precioPesoVenta=${precioPesoVenta}&precioBsVenta=${precioBsVenta}`;
+          }
+        });
+
+
+
+
+        /*
+          <form method="POST" action="../../configurar/pagar.php?id=' . $row6["order_id"] . '">
+          <td class=" "><input type="text" name="tipo" hidden value="' . $row6["tipoCompra"] . '">
+-lg-12 ">
+          <select class="form-control" name="pagoTipo" required>
+          <option value="">-- SELECCIONE --</option>
+          <option value="1">Punto de venta</option>
+          <option value="2">Pago Movil</option>
+          <option value="3">Transferencia</option>
+          <option value="7">Biopago</option>
+          <option value="4">BS efectivo</option>
+          <option value="5">Dolares</option>
+          <option value="6">Pesos</option>
+          </select>
+          </div>
+          </td>
+          <td><button class="btn"><i class="fa gray fa-credit-card"></i></button></td>
+          </form>
+
+        */
+      }
+    </script>
   </body>
 
   </html>
@@ -447,4 +550,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   define('PAGINA_INICIO', '../../index.php');
   header('Location: ' . PAGINA_INICIO);
 }
+
+ob_end_flush();
 ?>
