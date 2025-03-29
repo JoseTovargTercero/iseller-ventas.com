@@ -31,14 +31,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-            $dolarBolivar = $filaAlumnos['DolarBolivar'];
+
+    $query7 = $conexion->query("SELECT * FROM cambio WHERE id='1'");
+    if ($query7->num_rows > 0) {
+        while ($row7 = $query7->fetch_assoc()) {
+            $pesoDolar = $row7['pesoDolar'];
+            $DolarBolivar = $row7['DolarBolivar'];
+            $bolivarPesoTrans = $row7['bolivarPesoTrans'];
         }
     }
-
     $query3 = "SELECT * FROM empresa";
     $buscarAlumnos2 = $conexion->query($query3);
     if ($buscarAlumnos2->num_rows > 0) {
@@ -56,6 +57,65 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         unset($_SESSION["dist_ventas"]);
         $cart->destroy();
     }
+
+
+
+
+
+
+
+    /* CARGAR PRODUCTOS PARA EL LECTOR */
+
+    $query = $conexion->query("SELECT cantidad_unidades, origen, precio_compra, porcentaje, nombre, id, stock, codigo_barras FROM productos  WHERE activo= 0  AND codigo_barras!=''");
+    $data = [];
+    $codigos = [];
+
+
+    if ($query->num_rows > 0) {
+        while ($row = $query->fetch_assoc()) {
+
+            if (strlen(trim($row['codigo_barras'])) > 5) {
+
+                $cantidadUnidad = $row["cantidad_unidades"];
+                $origen = $row["origen"];
+
+                $precioDolarCompra = (float) $row["precio_compra"] / (float) $cantidadUnidad;
+                $porcentaje = $row["porcentaje"];
+                $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
+
+                $precioDolarVenta = number_format($precioDolarVenta, '2', '.', ',');
+
+                $precioPesoVenta = $precioDolarVenta * $pesoDolar;
+                if ($origen == 'c') {
+                    $precioBsVenta = ($precioPesoVenta / $bolivarPesoTrans) / 1000;
+                } else {
+                    $precioBsVenta = $precioDolarVenta * $DolarBolivar;
+                }
+
+
+                //        $precioPesoVenta  = number_format(, '0', ',', '.');
+                //        $precioBsVenta = number_format(, '2', ',', '.');
+
+                $nombre = strtoupper($row["nombre"]);
+                // quitar caracteres especiales del nombre
+                $nombre = preg_replace('/[^A-Za-z0-9\s]/', '', $nombre);
+
+                $codigo = $row['codigo_barras'];
+                $data[trim($codigo)] = [
+                    'id' => $row['id'],
+                    'stock' => $row['stock'],
+                    'nombre' =>  "$nombre",
+                    'precio_dolar_visible' => $precioDolarVenta,
+                    'precio_peso_visible' => $precioPesoVenta,
+                    'precio_bs_visible' => $precioBsVenta,
+                ];
+
+                array_push($codigos, $codigo);
+            }
+        }
+    }
+
+    /* CARGAR PRODUCTOS PARA EL LECTOR */
 
 ?>
 
@@ -106,17 +166,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
         ?>
     </head>
+
+    <?php
+    /*   foreach ($data as $key => $value) {
+        # code...
+    }
+*/
+
+
+    ?>
     <script>
+        var productos = <?php echo json_encode($data); ?>;
         var codigos = []
+
         <?php
-        $query3 = "SELECT * FROM productos WHERE activo=0 AND codigo_barras!=''";
-        $buscarAlumnos2 = $conexion->query($query3);
-        if ($buscarAlumnos2->num_rows > 0) {
-            while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-                $codigo = $filaAlumnos2['codigo_barras'];
-                echo 'codigos.push("' . $codigo . '");';
-            }
+
+        foreach ($codigos as  $value) {
+            echo 'codigos.push("' . trim($value) . '");';
         }
+
         ?>
 
         const Toast = Swal.mixin({
@@ -734,8 +802,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             dataType: 'html'
                         })
                         .done(function(result) {
+
                             let resultado = JSON.parse(result)
-                            console.log(resultado)
                             $("#tabla-carrito").html('');
                             if (resultado.cantidad > 0) {
 
@@ -855,7 +923,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 });
                 document.addEventListener('click', function(event) {
-                    if (event.target.closest('.btn-add-to-car')) {
+                    if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                         $('#search').val('')
                         Toast.fire({
                             icon: 'success',
@@ -903,33 +971,89 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 // Cargar lista de productos
                 function buscarProducto(producto, modo) {
-                    console.log(producto)
-                    console.log(modo)
-                    $.ajax({
-                            url: 'consulta_producto.php',
-                            type: 'POST',
-                            dataType: 'html',
-                            data: {
-                                producto: producto,
-                                modo: modo
-                            },
-                        })
-                        .done(function(result) {
 
-                            const resultado = JSON.parse(result)
-                            console.log(resultado)
+                    if (modo == 2) {
+                        const codigo = producto.trim();
 
-                            if (modo == 1) {
-                                $("#tabla_resultado_codigo_producto").html('');
+                        if (!productos.hasOwnProperty(codigo)) {
+                            Toast.fire({
+                                icon: 'error',
+                                title: 'EL producto no existe, agrégalo de forma manual.'
+                            })
 
-                                // recorre resultado
-                                if (resultado.status == 'ok') {
+                        } else {
+                            const datos = productos[producto.trim()]
+
+                            $("#result-escaner").html(`
+                                       <p class="text-center"><b style="font-size: 1rem;">${datos.nombre}</b><br>
+                                                ${datos.stock} Restantes.
+                                            </p>
+                                            <ul class="p-0">
+
+                                                <li class="item d-flex justify-content-between">
+                                                    <span>Precio en <b>Dolar</b></span>
+                                                    <span class="precio">$${formatNumber(datos.precio_dolar_visible)}</span>
+                                                </li>
+                                                <li class="item d-flex justify-content-between">
+                                                    <span>Precio en <b>Peso</b></span>
+                                                    <span class="precio">${formatNumber(formatPeso(datos.precio_peso_visible))} P</span>
+                                                </li>
+                                                <li class="item d-flex justify-content-between">
+                                                    <span>Precio en <b>Bolivar</b></span>
+                                                    <span class="precio">${formatNumber(recortarADosDecimales(datos.precio_bs_visible))} Bs</span>
+                                                </li>
+                                            </ul>
+
+
+                                              <section class="dgrid-center">
+                                               <div class="my-3 text-center">
+                                                    <label class="form-label"><b>Cantidad de producto</b></label>
+                                                    <input type="number" class="cantidad-input text-center form-control" data-cantidad-id="${datos.id}" value="1"">
+                                                 </div>
+                                                         <button class="btn btn-success mt-2 btn-add-to-car no-send" id="btn_${datos.id}"
+                                                        data-add-id="${datos.id}"
+                                                        data-codigo="${datos.codigo}"
+                                                        data-P_D="${datos.precio_dolar_visible}"
+                                                        data-P_P="${datos.precio_peso_visible}"
+                                                        data-P_B="${datos.precio_bs_visible}">
+                                                    AGREGAR AL CARRITO
+                                                    </button>
+                                              </section>
+                                    `);
+
+                            setTimeout(() => {
+                                $(`#btn_${datos.id}`).removeClass('no-send')
+                            }, 500);
+                            ultimo_escaneado = datos.id;
+
+
+                        }
+
+
+                    } else {
+                        $.ajax({
+                                url: 'consulta_producto.php',
+                                type: 'POST',
+                                dataType: 'html',
+                                data: {
+                                    producto: producto,
+                                    modo: modo
+                                },
+                            })
+                            .done(function(result) {
+                                const resultado = JSON.parse(result)
+
+                                if (modo == 1) {
+                                    $("#tabla_resultado_codigo_producto").html('');
+
+                                    // recorre resultado
+                                    if (resultado.status == 'ok') {
 
 
 
 
-                                    resultado.data.forEach(item => {
-                                        $("#tabla_resultado_codigo_producto").append(`
+                                        resultado.data.forEach(item => {
+                                            $("#tabla_resultado_codigo_producto").append(`
                                         <tr>
                                             <td><span>${item.stock}</span></td>
                                             <td style="font-size: 15px;"><span>${item.nombre}</span></td>
@@ -955,72 +1079,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                                    });
+                                        });
+
+                                    }
 
                                 }
-
-                            } else {
-
-                                if (resultado.status == 'error') {
-                                    Swal.fire({
-                                        title: 'No encontrado!',
-                                        html: 'EL producto no existe, agrégalo de forma manual.',
-                                        icon: 'error',
-                                        confirmButtonText: 'OK',
-                                        confirmButtonColor: '#32d7c0',
-                                    })
-                                    return
-                                }
+                            })
+                    }
 
 
 
 
-
-                                $('#result-escaner').html('')
-                                ultimo_escaneado = 0;
-
-
-
-                                $("#result-escaner").append(`
-                                       <p class="text-center"><b style="font-size: 1rem;">${resultado.data[0].nombre}</b><br>
-                                                ${resultado.data[0].stock} Restantes.
-                                            </p>
-                                            <ul class="p-0">
-
-                                                <li class="item d-flex justify-content-between">
-                                                    <span>Precio en <b>Dolar</b></span>
-                                                    <span class="precio">$${formatNumber(resultado.data[0].precio_dolar_visible)}</span>
-                                                </li>
-                                                <li class="item d-flex justify-content-between">
-                                                    <span>Precio en <b>Peso</b></span>
-                                                    <span class="precio">${formatNumber(formatPeso(resultado.data[0].precio_peso_visible))} P</span>
-                                                </li>
-                                                <li class="item d-flex justify-content-between">
-                                                    <span>Precio en <b>Bolivar</b></span>
-                                                    <span class="precio">${formatNumber(recortarADosDecimales(resultado.data[0].precio_bs_visible))} Bs</span>
-                                                </li>
-                                            </ul>
-
-
-                                              <section class="dgrid-center">
-                                               <div class="my-3 text-center">
-                                                    <label class="form-label"><b>Cantidad de producto</b></label>
-                                                    <input type="number" class="cantidad-input  text-center form-control" data-cantidad-id="${resultado.data[0].id}" value="1"">
-                                                 </div>
-                                                         <button class="btn btn-success mt-2 btn-add-to-car" id="btn_${resultado.data[0].id}"
-                                                        data-add-id="${resultado.data[0].id}"
-                                                        data-codigo="${resultado.data[0].codigo}"
-                                                        data-P_D="${resultado.data[0].precio_dolar_visible}"
-                                                        data-P_P="${resultado.data[0].precio_peso_visible}"
-                                                        data-P_B="${resultado.data[0].precio_bs_visible}">
-                                                    AGREGAR AL CARRITO
-                                                    </button>
-                                              </section>
-                                    `);
-                                ultimo_escaneado = resultado.data[0].id;
-
-                            }
-                        })
                 }
 
 
@@ -1099,7 +1168,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                 document.addEventListener('click', function(event) {
-                    if (event.target.closest('.btn-add-to-car')) { // ACCION DE ELIMINAR
+                    if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) { // ACCION DE ELIMINAR
                         let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
                         let codigo_p = event.target.closest('.btn-add-to-car').getAttribute('data-codigo');
 
@@ -1240,7 +1309,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         showCancelButton: true,
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.open("AccionCarta.php?action=placeOrder&statusV=3&valorFinalBs=<?php echo $todoBolivar ?>&valorFinalCop=<?php echo $todoPeso ?>", "_self");
+                            window.open("AccionCarta.php?action=placeOrder&statusV=3&valorFinalBs=0&valorFinalCop=0", "_self");
                         }
                     })
 

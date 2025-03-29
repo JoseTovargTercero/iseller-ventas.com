@@ -576,7 +576,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </body>
 
 
+                                        <script>
+                                            document.addEventListener("DOMContentLoaded", function() {
+                                                let input = document.getElementById("codigo_barra"); // Asegúrate de que el ID coincide con tu input
+                                                let lastScan = 0; // Guarda el tiempo del último escaneo
+                                                let timeoutDuration = 6000; // Tiempo en milisegundos para bloquear (ajústalo según tu lector)
 
+                                                input.addEventListener("input", function() {});
+                                            });
+                                        </script>
 
 
                                         <div class='col-lg-6 '>

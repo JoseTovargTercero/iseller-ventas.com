@@ -1001,12 +1001,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         $('#tabla_resultado_alMayor').html('')
                         $('#compraTipo').val('1');
                     }
-
-
-
                 }
-
-
 
 
                 $(document).on('keyup', '#valorDescuento', function() {
