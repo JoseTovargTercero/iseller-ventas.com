@@ -41,7 +41,7 @@
       $producto = removeNonNumeric($producto);
 
 
-      $query = $conexion->query("SELECT * FROM productos  WHERE codigo_barras = '$producto' AND activo= 0");
+      $query = $conexion->query("SELECT * FROM productos  WHERE codigo_barras LIKE '%$producto%' AND activo= 0 LIMIT 1  ");
     }
 
 

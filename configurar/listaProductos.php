@@ -37,14 +37,16 @@ if (isset($_GET['favorito'])) {
 }
 
 if (isset($_POST['codigoEditar'])) {
-    $codigo = $_POST['codigoEditar'];
+    $id = $_POST['codigoEditar'];
     $nombre = $_POST['nombre'];
     $precio_compra = $_POST['precio'];
     $cantidad_unidades = $_POST['cantidad'];
     $porcentaje = $_POST['porcentaje'];
     $origenProducto = $_POST['origenProducto'];
+    $codigo_barra = $_POST['codigo_barra'];
+    $proveedor = $_POST['proveedor'];
 
-    $stmt = $conexion->prepare("UPDATE productos SET nombre='$nombre', precio_compra='$precio_compra', cantidad_unidades='$cantidad_unidades', porcentaje='$porcentaje', origen='$origenProducto' WHERE codigo='$codigo'");
+    $stmt = $conexion->prepare("UPDATE productos SET nombre='$nombre', precio_compra='$precio_compra', cantidad_unidades='$cantidad_unidades', porcentaje='$porcentaje', origen='$origenProducto', codigo_barras='$codigo_barra', proveedor='$proveedor' WHERE id='$id'");
     $stmt->execute();
     $stmt->close();
 

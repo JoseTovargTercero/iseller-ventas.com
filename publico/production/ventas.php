@@ -903,6 +903,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 // Cargar lista de productos
                 function buscarProducto(producto, modo) {
+                    console.log(producto)
+                    console.log(modo)
                     $.ajax({
                             url: 'consulta_producto.php',
                             type: 'POST',
@@ -959,7 +961,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                             } else {
 
-
                                 if (resultado.status == 'error') {
                                     Swal.fire({
                                         title: 'No encontrado!',
@@ -996,7 +997,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </li>
                                                 <li class="item d-flex justify-content-between">
                                                     <span>Precio en <b>Bolivar</b></span>
-                                                    <span class="precio">${formatNumber(resultado.data[0].precio_bs_visible)} Bs</span>
+                                                    <span class="precio">${formatNumber(recortarADosDecimales(resultado.data[0].precio_bs_visible))} Bs</span>
                                                 </li>
                                             </ul>
 

@@ -255,7 +255,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         if ($accionE == "editar") {
 
-                            $query7E = $conexion->query("SELECT * FROM productos WHERE codigo='$codeEditar' LIMIT 1");
+                            $query7E = $conexion->query("SELECT * FROM productos WHERE id='$codeEditar' LIMIT 1");
                             if ($query7E->num_rows > 0) {
                                 $tabla7E = '';
                                 while ($row7E = $query7E->fetch_assoc()) {
@@ -265,6 +265,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     $porcentajePro = $row7E["porcentaje"];
                                     $origen = $row7E["origen"];
                                     $codigo_barras = $row7E["codigo_barras"];
+                                    $proveedor = $row7E["proveedor"];
                                 }
                             }
                             $visible = "";
@@ -468,7 +469,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                                <form name='calculadora' action='../../configurar/listaProductos.php?codigo2=<?php echo $codeEditar ?>' method='post' id='demo-form2' data-parsley-validate class='form-horizontal form-label-left'>
+                                <form name='calculadora' action='../../configurar/listaProductos.php' method='POST' id='demo-form2' data-parsley-validate class='form-horizontal form-label-left'>
                                     <div class='row'>
                                         <div class='col-md-6 col-sm-6 '>
                                             <div class='x_panel'>
@@ -542,6 +543,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                             </select>
                                                         </div>
 
+                                                    </div>
+
+                                                    <div class='item form-group'>
+                                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Proveedor <span class='required'>*</span>
+                                                        </label>
+                                                        <div class='col-md-9 col-sm-9 '>
+                                                            <input type='text' id='proveedor' name='proveedor' value="<?php echo $proveedor; ?>" required='required' class='form-control ' placeholder='Proveedor'>
+                                                        </div>
                                                     </div>
 
                                                     <div class='item form-group'>
@@ -674,10 +683,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         $contador = 1;
                                                         while ($row6 = $query6->fetch_assoc()) {
                                                             $cantidadUnidad = $row6["cantidad_unidades"];
-                                                            $precioDolarCompra = $row6["precio_compra"] / $cantidadUnidad;
+                                                            $precioDolarCompra = (float) $row6["precio_compra"] / $cantidadUnidad;
                                                             $porcentaje = $row6["porcentaje"];
                                                             $foto = $row6["foto"];
                                                             $codeProducto = $row6["codigo"];
+                                                            $id_p = $row6["id"];
 
 
                                                             $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
@@ -699,16 +709,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                             } else {
                                                                 $favProducto =  '<a href="../../configurar/listaProductos.php?id=' . $codeProducto . '&favorito=SI"><i class="nofav line icon-star"></i></a>';
                                                             }
-                                                            $campoCategoria = $row6["categoria"];
-                                                            $query2222222222222 = "SELECT * FROM categorias WHERE id='$campoCategoria'";
-                                                            $buscarAlumnos2222222222222 = $conexion->query($query2222222222222);
-                                                            if ($buscarAlumnos2222222222222->num_rows > 0) {
-                                                                while ($filaAlumnos2222222222222 = $buscarAlumnos2222222222222->fetch_assoc()) {
-                                                                    $categoria = $filaAlumnos2222222222222['nombre_categoria'];
-                                                                }
-                                                            } else {
-                                                                $categoria = "Ninguna";
-                                                            }
+
+                                                            $categoria = "Ninguna";
 
 
 
@@ -725,7 +727,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                              <tr class="even pointer" id="row' . $row6["id"] . '">
                                                               <td class=" ">' . $contador++ . '</td>
                                                               <td class=" ">' . $row6["nombre"] . '</td>
-                                                              <td class=" ">' . number_format($row6["precio_compra"], '2', ',', '.') . ' $</td>
+                                                              <td class=" ">' . number_format((float) $row6["precio_compra"], '2', ',', '.') . ' $</td>
                                                               <td class=" ">' . $row6["cantidad_unidades"] . '</td>
                                                               <td class=" ">' . $row6["porcentaje"] . '%</td>
                                                               <td class=" ">' . $row6["stock"] . '</td>
@@ -735,7 +737,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                                                             $tabla6 .=  '
-                                                              <td style="text-align: center"  class=""><a href="?id=' . $codeProducto . '&accion=editar"><i class="gray  line icon-pencil"></i></a></td>
+                                                              <td style="text-align: center"  class=""><a href="?id=' . $id_p . '&accion=editar"><i class="gray  line icon-pencil"></i></a></td>
 
                                                               <td style="text-align: center" ><a href="ficha.php?id=' . $row6["id"] . '"><i style="color: #41c1af" class="gray line icon-chart"></i></a></td>
                                                               <td style="text-align: center"  class="">
