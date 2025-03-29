@@ -548,7 +548,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Código de barras <span class='required'>*</span>
                                                         </label>
                                                         <div class='col-md-9 col-sm-9 '>
-                                                            <input type='text' id='codigo_barra' name='codigo_barra' value="<?php echo $codigo_barras; ?>" required='required' class='form-control ' placeholder='Unidades' disabled>
+                                                            <input type='text' id='codigo_barra' name='codigo_barra' value="<?php echo $codigo_barras; ?>" required='required' class='form-control ' placeholder='Código de barras'>
                                                         </div>
                                                     </div>
 
