@@ -3,7 +3,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
@@ -50,7 +50,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-    function verificarProductoVenta($productoID, $ventaId){
+    function verificarProductoVenta($productoID, $ventaId)
+    {
         global $conexion;
 
 
@@ -64,14 +65,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             return 0;
         }
     }
-//////////////////////////// GANANCIAS /////////////////////////////////
-//////////////////////////// GANANCIAS /////////////////////////////////
-//////////////////////////// GANANCIAS /////////////////////////////////
+    //////////////////////////// GANANCIAS /////////////////////////////////
+    //////////////////////////// GANANCIAS /////////////////////////////////
+    //////////////////////////// GANANCIAS /////////////////////////////////
 
 
 
 
-    function verificarProductoVentaGanancias($productoID, $ventaId, $tipo, $porcentaje){
+    function verificarProductoVentaGanancias($productoID, $ventaId, $tipo, $porcentaje)
+    {
         global $conexion;
 
         $sql = "SELECT * FROM orden_articulos WHERE product_id='$productoID' AND order_id='$ventaId'";
@@ -81,8 +83,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 if ($tipo == '4') {
                     $valuePorcentual = ($filaAlumnos22['precio_venta_dolar'] * $filaAlumnos22['quantity']) - (($filaAlumnos22['precio_venta_dolar'] * $filaAlumnos22['quantity']) * $porcentaje / 100);
                     return  $valuePorcentual - ($filaAlumnos22['precio'] * $filaAlumnos22['quantity']);
-                }else {
-                    return  ($filaAlumnos22['precio_venta_dolar'] * $filaAlumnos22['quantity']) - ($filaAlumnos22['precio'] * $filaAlumnos22['quantity']);
+                } else {
+                    return ($filaAlumnos22['precio_venta_dolar'] * $filaAlumnos22['quantity']) - ($filaAlumnos22['precio'] * $filaAlumnos22['quantity']);
                 }
             }
         } else {
@@ -97,7 +99,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $ano = date('Y');
 
 
-    function ventasDiarias($tipo){
+    function ventasDiarias($tipo)
+    {
         global $conexion;
         global $id;
         global $dia;
@@ -109,28 +112,26 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         if ($buscarAlumnos22->num_rows > 0) {
             while ($filaAlumnos22 = $buscarAlumnos22->fetch_assoc()) {
                 $idVenta = $filaAlumnos22['id'];
-               
+
                 if ($tipo == '4') {
                     $por = $filaAlumnos22['descontado'];
                     $totalVentasDiarias += verificarProductoVenta($id, $idVenta) - (verificarProductoVenta($id, $idVenta) * $por / 100);
                     $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, $por);
-                }else {
+                } else {
                     $totalVentasDiarias += verificarProductoVenta($id, $idVenta);
                     $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, 0);
                 }
-
-
-
             }
         }
-        return $totalVentasDiarias.'*'.$totalGananciasDiarias;
+        return $totalVentasDiarias . '*' . $totalGananciasDiarias;
     }
 
 
 
 
 
-    function ventasSemanales($tipo){
+    function ventasSemanales($tipo)
+    {
         global $conexion;
         global $id;
         global $semana;
@@ -146,21 +147,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     $por = $filaAlumnos222['descontado'];
                     $totalVentasDiarias += verificarProductoVenta($id, $idVenta) - (verificarProductoVenta($id, $idVenta) * $por / 100);
                     $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, $por);
-
-                }else {
+                } else {
                     $totalVentasDiarias += verificarProductoVenta($id, $idVenta);
-                       $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, 0);
+                    $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, 0);
                 }
             }
         }
-       
-           return $totalVentasDiarias.'*'.$totalGananciasDiarias;
+
+        return $totalVentasDiarias . '*' . $totalGananciasDiarias;
     }
 
 
 
 
-    function ventasMensuales($tipo, $mes){
+    function ventasMensuales($tipo, $mes)
+    {
         global $conexion;
         global $id;
         $totalVentasDiarias = 0;
@@ -175,13 +176,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     $por = $filaAlumnos2222['descontado'];
                     $totalVentasDiarias += verificarProductoVenta($id, $idVenta) - (verificarProductoVenta($id, $idVenta) * $por / 100);
                     $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, $por);
-                }else {
+                } else {
                     $totalVentasDiarias += verificarProductoVenta($id, $idVenta);
-                       $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, 0);
+                    $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, 0);
                 }
             }
         }
-           return $totalVentasDiarias.'*'.$totalGananciasDiarias;
+        return $totalVentasDiarias . '*' . $totalGananciasDiarias;
     }
 
     $query6 = $conexion->query("SELECT * FROM productos WHERE id='$idProducto'");
@@ -222,7 +223,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
 
-    function ventasSemana($semana, $dia){
+    function ventasSemana($semana, $dia)
+    {
         global $conexion;
         $totalVentasMes0 = 0;
 
@@ -292,25 +294,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     $ultimaScala = 10;
     for ($i = 1; $i <= 7; $i++) {
-        if (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 1000) {
+        if (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 1000) {
             $scala = 200;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 900) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 900) {
             $scala = 100;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 800) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 800) {
             $scala = 90;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 700) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 700) {
             $scala = 80;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 600) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 600) {
             $scala = 70;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 500) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 500) {
             $scala = 60;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 400) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 400) {
             $scala = 50;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 300) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 300) {
             $scala = 40;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 200) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 200) {
             $scala = 30;
-        } elseif (explode('*', ventasMensuales('1', date('Y').'-'.$i))[1] > 100) {
+        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 100) {
             $scala = 20;
         } else {
             $scala = 10;
@@ -343,7 +345,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <title>Producto</title>
 
-      
+
         <!-- Bootstrap -->
         <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
         <!-- Font Awesome -->
@@ -385,7 +387,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href="assets/chart/css/jquerysctipttop.css" rel="stylesheet" type="text/css">
         <link href="assets/chart/plugins/morris/morris.css" rel="stylesheet" />
         <style>
-
             .gray {
                 color: rgba(52, 73, 94, 0.94);
                 font-size: 24px;
@@ -464,7 +465,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -584,20 +585,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         <div class="row">
 
-                        <div class="col-lg-12">
-                            
-                            <div class='x_panel tile '>
+                            <div class="col-lg-12">
+
+                                <div class='x_panel tile '>
                                     <div class='x_title'>
                                         <h5>Historico de ganancias del producto</h5>
-    
+
                                         <div class='clearfix'></div>
                                     </div>
-                                 
-    
+
+
                                     <div class='x_content' style="margin-top: -20px;">
-    
+
                                         <div id="graph"></div>
-    
+
                                     </div>
                                 </div>
                             </div>
@@ -684,9 +685,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-$totalcomprasdia = 0;
-$totalcomprasMes = 0;
-$totalcomprasSemana = 0;
+                                        $totalcomprasdia = 0;
+                                        $totalcomprasMes = 0;
+                                        $totalcomprasSemana = 0;
 
                                         $mesaso = date("Y-m");
                                         $diaso = date("Y-m-d");
@@ -1026,7 +1027,7 @@ $totalcomprasSemana = 0;
 
                         </div>
 
-                  
+
                     </div>
                 </div>
                 <!-- /page content -->
@@ -1056,7 +1057,7 @@ $totalcomprasSemana = 0;
 
         <script src="chart/js/graph2.js"></script>
         <script>
-//new Date().getFullYear()
+            //new Date().getFullYear()
 
 
             $(function() {
@@ -1073,33 +1074,33 @@ $totalcomprasSemana = 0;
                         scale: <?php echo $scala  ?>,
                         points: [
                             [
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-01'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-02'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-03'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-04'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-05'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-06'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-07'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-08'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-09'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-10'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-11'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y').'-12'))[1]  ?>
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-01'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-02'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-03'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-04'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-05'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-06'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-07'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-08'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-09'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-10'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-11'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-12'))[1]  ?>
                             ],
 
                             [
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-01'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-02'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-03'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-04'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-05'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-06'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-07'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-08'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-09'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-10'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-11'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y').'-12'))[1]  ?>
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-01'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-02'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-03'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-04'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-05'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-06'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-07'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-08'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-09'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-10'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-11'))[1]  ?>,
+                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-12'))[1]  ?>
 
                             ]
                         ],

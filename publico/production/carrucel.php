@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {

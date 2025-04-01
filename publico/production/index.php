@@ -3,7 +3,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 
@@ -28,6 +28,56 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
+
+
+
+
+
+
+
+    /* CALCULAR VALOR DEL STOCK */
+
+
+    // Inicializamos las variables para almacenar el valor del stock
+    $valor_stock_con_ganancia = 0;
+    $valor_stock_sin_ganancia = 0;
+
+    // Realizamos la consulta para obtener los productos inactivos
+
+    //addfiltrosu
+    $stmt = mysqli_prepare($conexion, "SELECT * FROM productos WHERE activo='0'");
+    //$stmt->bind_param('s', $var); 
+    $stmt->execute();
+    $buscar = $stmt->get_result();
+
+    // Verificamos si se encontraron productos
+    if ($buscar->num_rows > 0) {
+        // Iteramos sobre cada producto encontrado
+        while ($row = $buscar->fetch_assoc()) {
+            // Calculamos el valor de compra unitario
+            $valor_compra_unitario = (float) $row['precio_compra'] / (float) $row['cantidad_unidades'];
+
+            // Obtenemos el porcentaje de ganancia
+            $porcentaje_ganancia = $row['porcentaje'];
+
+            // Calculamos el valor de venta basado en el precio de compra y el porcentaje de ganancia
+            $valor_venta = $valor_compra_unitario * (1 + $porcentaje_ganancia / 100);
+
+            // Acumulamos el valor del stock con y sin ganancia
+            $valor_stock_con_ganancia += $valor_venta * (float) $row['stock'];
+            $valor_stock_sin_ganancia += $valor_compra_unitario * (float) $row['stock'];
+        }
+    } else {
+        // Si no hay productos, aseguramos que los valores sean cero
+        $valor_stock_con_ganancia = 0;
+        $valor_stock_sin_ganancia = 0;
+    }
+
+    // Calculamos las ganancias esperadas
+    $gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
+
+    /* CALCULAR VALOR DEL STOCK */
+
 
     $query2 = 'SELECT * FROM empresa';
     $buscarAlumnos2 = $conexion->query($query2);
@@ -185,7 +235,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
 
-  
+
     $ventas = contar("SELECT COUNT(*) FROM orden WHERE modified='$dia' AND status='1' OR modified='$dia' AND status='4'");
     $credit = contar("SELECT COUNT(*) FROM orden WHERE modified='$dia' AND status='2'");
 
@@ -260,38 +310,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     } else {
         $almacen = 0;
     }
-
-
-
-
-
-
-
-
-    $query2222222222222222 = "SELECT * FROM productos WHERE activo='0'";
-    $buscarAlumnos2222222222222222 = $conexion->query($query2222222222222222);
-    if ($buscarAlumnos2222222222222222->num_rows > 0) {
-        while ($filaAlumnos2222222222222222 = $buscarAlumnos2222222222222222->fetch_assoc()) {
-
-            $valPro = $filaAlumnos2222222222222222['precio_compra'] / $filaAlumnos2222222222222222['cantidad_unidades'];
-            $porPro = $filaAlumnos2222222222222222['porcentaje'];
-            $valRealPro = ($valPro * $porPro / 100) + $valPro;
-            $valRealPro =  $valRealPro;
-            $valSinPor1 =  $valPro;
-            $valRealProMult = $valRealPro * $filaAlumnos2222222222222222['stock'];
-            $valSinPor = $valSinPor1 * $filaAlumnos2222222222222222['stock'];
-
-            $totalVal += $valRealProMult;
-            $sinPorcentaje += $valSinPor;
-        }
-    } else {
-        $totalVal = 0;
-        $sinPorcentaje = 0;
-    }
-
-    $gananciasEsperadas = $totalVal - $sinPorcentaje;
-
-
 
 
     function ventasSemana($semana)
@@ -398,69 +416,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
-        <!-- Meta, title, CSS, favicons, etc. -->
-        <meta charset='utf-8'>
-        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-        <meta name='viewport' content='width=device-width, initial-scale=1'>
-        <link rel='icon' href='images/favicon.ico' type='image/ico' />
-
         <title>Inicio </title>
-
-
-        <!-- Bootstrap -->
-        <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
-        <!-- Font Awesome -->
-        <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
-        <!-- NProgress -->
-        <link href='../vendors/nprogress/nprogress.css' rel='stylesheet'>
-        <!-- iCheck -->
-
-
-        <!-- iCheck -->
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-        <link href='../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css' rel='stylesheet'>
-        <!-- JQVMap -->
-        <link href='../vendors/jqvmap/dist/jqvmap.min.css' rel='stylesheet' />
-        <!-- bootstrap-daterangepicker -->
-        <link href='../vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
-        <link href="js/jquerysctipttop.css" rel="stylesheet" type="text/css">
-        <!-- Custom Theme Style -->
-        <link href='../build/css/custom.min.css' rel='stylesheet'>
-
-
-
-
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-
-        <link href="assets/chart/css/jquerysctipttop.css" rel="stylesheet" type="text/css">
-        <link href="assets/chart/plugins/morris/morris.css" rel="stylesheet" />
-
-        <link rel="stylesheet" href="../vendors/amcharts5/examples/xy/index.css" />
-
-
-
-
-        <!-- 
-	<link rel="stylesheet" href="../../iseller.es/css/magnific-popup.css">
-
-	<link rel="stylesheet" href="../../iseller.es/css/bootstrap.css">
-
-    Magnific Popup -->
-
+        <?php require_once('includes/headers.php'); ?>
     </head>
 
     <body class='nav-md'>
@@ -471,7 +428,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>

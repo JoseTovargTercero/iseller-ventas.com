@@ -3,7 +3,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 
@@ -66,40 +66,40 @@ if ($_SESSION['nivel'] == 1) {
 
     if (isset($_POST['fechaSolic'])) {
         $semana = $_POST['fechaSolic'];
-    }else {
+    } else {
         $semana = date('Y-W');
     }
 
     $semanaPasada = date('W') - 1;
     $semanaAntePasada = date('W') - 2;
 
-    $semanaPasada = date('Y').'-'.$semanaPasada;    
-    $semanaAntePasada = date('Y').'-'.$semanaAntePasada;
+    $semanaPasada = date('Y') . '-' . $semanaPasada;
+    $semanaAntePasada = date('Y') . '-' . $semanaAntePasada;
 
 
 
 
     $registrosSemana = contar("SELECT COUNT(*) FROM cierres WHERE semana='$semana'");
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////Datos de ventas//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////Datos de ventas//////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-$semana = date('Y-W');
-$query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
-   $buscarAlumnos222 = $conexion->query($query222);
-   if ($buscarAlumnos222->num_rows > 0) {
-       while ($filaAlumnos222 = $buscarAlumnos222->fetch_assoc()) {
-           $VentasSemana = $filaAlumnos222['total_price'];
-           $totalVentasSemana += $VentasSemana;
-       }
-   } else {
-       $totalVentasSemana = 0;
-   }
+    $semana = date('Y-W');
+    $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
+    $buscarAlumnos222 = $conexion->query($query222);
+    if ($buscarAlumnos222->num_rows > 0) {
+        while ($filaAlumnos222 = $buscarAlumnos222->fetch_assoc()) {
+            $VentasSemana = $filaAlumnos222['total_price'];
+            $totalVentasSemana += $VentasSemana;
+        }
+    } else {
+        $totalVentasSemana = 0;
+    }
 
 
 ?>
@@ -144,7 +144,7 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
         <script src='ex/jquery.min.js'></script>
         <script src='ex/bootstrap.min.js'></script>
 
-          </head>
+    </head>
 
     <body class='nav-md'>
         <div class='container body'>
@@ -155,7 +155,7 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -184,7 +184,7 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
 
 
 
-                            
+
 
 
 
@@ -193,19 +193,19 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
                                 <div class='x_panel  '>
                                     <div class='x_title'>
                                         <h2 style="width: 100%;">
-                                        <span style="margin-top: 5px !important;position: absolute;">Registros de la semana</span>
-                                        <form action="" method="post" class='nav navbar-right panel_toolbox' >
-                                            <li>
-                                            <select class="form-control control2" required='required' name="fechaSolic" onchange="capturar()" division()>
-                                                            <option value="<?php echo date('Y-W') ?>">Semana actual</option>
-                                                            <option value="<?php echo $semanaPasada ?>">Semana pasada</option>
-                                                            <option style="display: none;" value="<?php echo $semanaAntePasada ?>">Semana antepasada</option>
-                                        </select>
+                                            <span style="margin-top: 5px !important;position: absolute;">Registros de la semana</span>
+                                            <form action="" method="post" class='nav navbar-right panel_toolbox'>
+                                                <li>
+                                                    <select class="form-control control2" required='required' name="fechaSolic" onchange="capturar()" division()>
+                                                        <option value="<?php echo date('Y-W') ?>">Semana actual</option>
+                                                        <option value="<?php echo $semanaPasada ?>">Semana pasada</option>
+                                                        <option style="display: none;" value="<?php echo $semanaAntePasada ?>">Semana antepasada</option>
+                                                    </select>
 
-                                        </li>
+                                                </li>
 
-                                            <li style="margin-left: 5px;"><input type="submit" class="btn btn-success info2" value="Filtrar"></li>
-                                        </form>
+                                                <li style="margin-left: 5px;"><input type="submit" class="btn btn-success info2" value="Filtrar"></li>
+                                            </form>
 
                                         </h2>
 
@@ -265,15 +265,15 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
                                                                                 $diaText = 'Domingo';
                                                                                 break;
                                                                         }
-                                                                    $subTotal = 0;
-                                                                    $subTotal +=  $filaAlumnos77['punto'] * $filaAlumnos77['bolivarDolar'];
-                                                                    $subTotal +=  $filaAlumnos77['bioPago'] * $filaAlumnos77['bolivarDolar'];
-                                                                    $subTotal +=  $filaAlumnos77['efectivo'] * $filaAlumnos77['bolivarDolar'];
-                                                                    $subTotal +=  $filaAlumnos77['pesos'] / $filaAlumnos77['pesoDolar'];
-                                                                    $subTotal +=  $filaAlumnos77['dolares'];
-                                                                    $totalDolares += $subTotal; 
-                                                                    $totalPesos += $filaAlumnos77['pesos'] / $filaAlumnos77['pesoDolar']; 
-                                                                    $totalesBs += ($filaAlumnos77['punto'] * $filaAlumnos77['bolivarDolar']) + ($filaAlumnos77['bioPago'] * $filaAlumnos77['bolivarDolar']) + $filaAlumnos77['efectivo'] * $filaAlumnos77['bolivarDolar']; 
+                                                                        $subTotal = 0;
+                                                                        $subTotal +=  $filaAlumnos77['punto'] * $filaAlumnos77['bolivarDolar'];
+                                                                        $subTotal +=  $filaAlumnos77['bioPago'] * $filaAlumnos77['bolivarDolar'];
+                                                                        $subTotal +=  $filaAlumnos77['efectivo'] * $filaAlumnos77['bolivarDolar'];
+                                                                        $subTotal +=  $filaAlumnos77['pesos'] / $filaAlumnos77['pesoDolar'];
+                                                                        $subTotal +=  $filaAlumnos77['dolares'];
+                                                                        $totalDolares += $subTotal;
+                                                                        $totalPesos += $filaAlumnos77['pesos'] / $filaAlumnos77['pesoDolar'];
+                                                                        $totalesBs += ($filaAlumnos77['punto'] * $filaAlumnos77['bolivarDolar']) + ($filaAlumnos77['bioPago'] * $filaAlumnos77['bolivarDolar']) + $filaAlumnos77['efectivo'] * $filaAlumnos77['bolivarDolar'];
 
 
 
@@ -282,15 +282,14 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
                                                                         <td class=" ">' . $contador++ . '</td>
                                                                         <td>' . $diaText . '</td>
                                                                         <td>' . $filaAlumnos77['semana'] . '</td>
-                                                                        <td>' .number_format($filaAlumnos77['punto'], '2', ',', '.') . '</td>
+                                                                        <td>' . number_format($filaAlumnos77['punto'], '2', ',', '.') . '</td>
                                                                         <td>' . number_format($filaAlumnos77['bioPago'], '2', ',', '.') . ' </td>
                                                                         <td>' . number_format($filaAlumnos77['efectivo'], '2', ',', '.') . ' </td>
                                                                         <td>$' . number_format($filaAlumnos77['dolares'], '2', ',', '.') . ' </td>
                                                                         <td>' . number_format($filaAlumnos77['pesos'], '0', ',', '.') . ' </td>
-                                                                        <td>' .number_format($subTotal, '2', ',', '.') . ' </td>
+                                                                        <td>' . number_format($subTotal, '2', ',', '.') . ' </td>
                                                                   
                                                                         </tr>';
-
                                                                     }
                                                                 }
 
@@ -300,12 +299,12 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
                                                                 if ($totalVentasSemana < $totalDolares) {
                                                                     $up = 'display: none';
                                                                     $down = 'display: block;  color: #ff9b9b';
-                                                                }else {
+                                                                } else {
                                                                     $up = 'display: block';
                                                                     $down = 'display: none;';
                                                                 }
 
-                                                                
+
 
                                                                 ?>
                                                             </tbody>
@@ -320,171 +319,170 @@ $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana
 
 
                                 <script>
-                                                  
+                                    function confirm(id) {
+                                        var confirm = alertify.confirm('Eliminar', 'Se eliminara el producto ¿desea continuar?', null, null).set('labels', {
+                                            ok: 'Confirmar',
+                                            cancel: 'Cancelar'
+                                        });
+                                        //callbak al pulsar botón positivo
+                                        confirm.set('onok', function() {
 
-                                                  function confirm(id){
-                                                      var confirm = alertify.confirm('Eliminar', 'Se eliminara el producto ¿desea continuar?', null, null).set('labels', {
-                                                           ok: 'Confirmar',
-                                                           cancel: 'Cancelar'
-                                                       });
-                                                         //callbak al pulsar botón positivo
-                                                     confirm.set('onok', function() {
-                                                          
-                                                      elimi(id)
-                                                  
-                                                  });
-                                                   
-                                                  }
+                                            elimi(id)
+
+                                        });
+
+                                    }
 
 
-                                                  function elimi(params) {
-                                                           $.ajax({
-                                                               url: '../../configurar/deleteCieAjax.php',
-                                                               type: 'POST',
-                                                               dataType: 'html',
-                                                               data: {
-                                                                   id: params
-                                                               },
-                                                           })
-   
-                                                           .done(function(resultado1) {
-                                                               $("#row"+params).hide(300);
-                                                           })
-   
-                                                             
-                                              }
-                                              </script>
+                                    function elimi(params) {
+                                        $.ajax({
+                                                url: '../../configurar/deleteCieAjax.php',
+                                                type: 'POST',
+                                                dataType: 'html',
+                                                data: {
+                                                    id: params
+                                                },
+                                            })
+
+                                            .done(function(resultado1) {
+                                                $("#row" + params).hide(300);
+                                            })
+
+
+                                    }
+                                </script>
 
                             </div>
 
 
-                            
-                        <div class='col-lg-3'>
+
+                            <div class='col-lg-3'>
 
 
 
-<div class='x_panel tile'>
-    <div class='x_title'>
-                                              <h2>
-                                                Comparativa
-                                              </h2>
-        <div class='clearfix'></div>
-    </div>
-    <div class='x_content'>
+                                <div class='x_panel tile'>
+                                    <div class='x_title'>
+                                        <h2>
+                                            Comparativa
+                                        </h2>
+                                        <div class='clearfix'></div>
+                                    </div>
+                                    <div class='x_content'>
 
 
 
-        <div class='col-lg-12'> <br>
+                                        <div class='col-lg-12'> <br>
 
-            <div class="fila ">
-                <div class="col-lg-9">
-                    <h5 class="h3edit">BOLIVARES</h5>
-                    <span><?php $sumaBolivar = $total1111111 + $total222222 + $total33333333 + $total4444444 + $total7777777 + $totalBs;
-                            echo number_format($sumaBolivar, '2', '.', '.'); ?> - Total de ventas </span>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br><img src='images/EFECTIVO-BOLIVAR.png' alt='BOLIVAR'>
-                    </div>
-                </div>
-            </div>
-
-
-
-
-
-            <div class="fila ">
-                <div class="col-lg-9">
-                    <h5 class="h3edit">DOLARES</h5>
-                    <span><?php echo number_format($total55555 + $dolares, '2', '.', '.'); ?> - Total de ventas </span>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br><img src='images/EFECTIVO-DOLAR.png' alt='BOLIVAR'>
-                    </div>
-                </div>
-            </div>
+                                            <div class="fila ">
+                                                <div class="col-lg-9">
+                                                    <h5 class="h3edit">BOLIVARES</h5>
+                                                    <span><?php $sumaBolivar = $total1111111 + $total222222 + $total33333333 + $total4444444 + $total7777777 + $totalBs;
+                                                            echo number_format($sumaBolivar, '2', '.', '.'); ?> - Total de ventas </span>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br><img src='images/EFECTIVO-BOLIVAR.png' alt='BOLIVAR'>
+                                                    </div>
+                                                </div>
+                                            </div>
 
 
 
 
 
-            <div class="fila ">
-                <div class="col-lg-9">
-                    <h5 class="h3edit">PESOS</h5>
-                    <span><?php echo number_format($total666666 + $pesos, '0', '.', '.'); ?> - Total de ventas </span>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br><img src='images/EFECTIVO-PESOS.png' alt='BOLIVAR'>
-                    </div>
-                </div>
-            </div>
+                                            <div class="fila ">
+                                                <div class="col-lg-9">
+                                                    <h5 class="h3edit">DOLARES</h5>
+                                                    <span><?php echo number_format($total55555 + $dolares, '2', '.', '.'); ?> - Total de ventas </span>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br><img src='images/EFECTIVO-DOLAR.png' alt='BOLIVAR'>
+                                                    </div>
+                                                </div>
+                                            </div>
 
 
 
 
 
-            <div class="fila  ">
-                <div class="col-lg-9">
-                    
-                    <h5 class="h3edit">
-
-
-                    <i style="position: absolute; margin-left: -25px; <?php echo $up ?>" class="fa fa-check"></i>
-                    <i style="position: absolute; margin-left: -25px; <?php echo $down ?>" class="fa fa-arrow-down"></i>
-
-
-
-
-                    DOLARES</h5>
-                    <span>$ <?php echo number_format($totalDolares, '2', '.', '.'); ?> / $ <?php echo number_format($totalVentasSemana, '2', '.', '.'); ?> </span>
-                    <p>Conversión a dolares.</p>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br>
-                        <i class="line icon-reload"></i>
-                    </div>
-                </div>
-            </div>
+                                            <div class="fila ">
+                                                <div class="col-lg-9">
+                                                    <h5 class="h3edit">PESOS</h5>
+                                                    <span><?php echo number_format($total666666 + $pesos, '0', '.', '.'); ?> - Total de ventas </span>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br><img src='images/EFECTIVO-PESOS.png' alt='BOLIVAR'>
+                                                    </div>
+                                                </div>
+                                            </div>
 
 
 
 
-        </div>
 
-        <style>
-            .iconPerso {
-                font-size: 28px !important;
-            }
+                                            <div class="fila  ">
+                                                <div class="col-lg-9">
 
-            .tile-stats {
-                box-shadow: none !important;
-            }
+                                                    <h5 class="h3edit">
 
-            .control2 {
-                max-width: 170px !important;
-                border: none;
-                margin-bottom: 0 !important;
-            }
 
-            .info2 {
-                max-height: 50px !important;
-                opacity: 0.4
-            }
+                                                        <i style="position: absolute; margin-left: -25px; <?php echo $up ?>" class="fa fa-check"></i>
+                                                        <i style="position: absolute; margin-left: -25px; <?php echo $down ?>" class="fa fa-arrow-down"></i>
 
-            .info2:hover {
-                opacity: 1
-            }
 
-            .subg {
-                color: #BAB8B8;
-                font-size: 12px !important;
-                margin-left: 0 !important;
-                margin-top: -5 !important;
-            }
-        </style>
 
-    </div>
-</div>
-</div>
+
+                                                        DOLARES
+                                                    </h5>
+                                                    <span>$ <?php echo number_format($totalDolares, '2', '.', '.'); ?> / $ <?php echo number_format($totalVentasSemana, '2', '.', '.'); ?> </span>
+                                                    <p>Conversión a dolares.</p>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br>
+                                                        <i class="line icon-reload"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+
+
+                                        </div>
+
+                                        <style>
+                                            .iconPerso {
+                                                font-size: 28px !important;
+                                            }
+
+                                            .tile-stats {
+                                                box-shadow: none !important;
+                                            }
+
+                                            .control2 {
+                                                max-width: 170px !important;
+                                                border: none;
+                                                margin-bottom: 0 !important;
+                                            }
+
+                                            .info2 {
+                                                max-height: 50px !important;
+                                                opacity: 0.4
+                                            }
+
+                                            .info2:hover {
+                                                opacity: 1
+                                            }
+
+                                            .subg {
+                                                color: #BAB8B8;
+                                                font-size: 12px !important;
+                                                margin-left: 0 !important;
+                                                margin-top: -5 !important;
+                                            }
+                                        </style>
+
+                                    </div>
+                                </div>
+                            </div>
 
 
                             <div class='row' style='display: block;'>

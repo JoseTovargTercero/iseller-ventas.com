@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -189,7 +189,7 @@ function mensaje(){
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -531,7 +531,7 @@ function mensaje(){
                                             <?php
                                             foreach ($_SESSION['facturaCompletaMostrada'] as $nombre2) {
                                                 echo $nombre2;
-                                             }
+                                            }
                                             ?>
 
 
@@ -629,7 +629,7 @@ function mensaje(){
                             </div>
                         </div>
 
-                        
+
                         <div class="row  fadeInUp animated" style="display: block;">
 
                             <body onload='capturar()'> </body>
@@ -637,15 +637,17 @@ function mensaje(){
                                 <div class="x_panel ">
                                     <div class="x_title">
                                         <h2>Lista de compras</h2>
-                                       <a href="?antiguas=SI"> <h2 style="float: right;"> <small> Ver entradas Antiguas</small></h2></a>
-                                     
+                                        <a href="?antiguas=SI">
+                                            <h2 style="float: right;"> <small> Ver entradas Antiguas</small></h2>
+                                        </a>
+
                                         <div class="clearfix"></div>
                                     </div>
                                     <div class="x_content alto">
                                         <div class="row">
                                             <div class="col-lg-12">
                                                 <div class="card-box table-responsive">
-                                                    
+
                                                     <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
                                                         <thead>
                                                             <tr class="headings">
@@ -667,14 +669,14 @@ function mensaje(){
 
                                                         <tbody>
                                                             <?php
-                                                            
 
-                                                            if($_GET["antiguas"] == "SI"){
-                                                                $query6 = $conexion->query("SELECT * FROM compras WHERE tipo!='dist' ORDER BY id DESC"); 
-                                                            }else{
-                                                                $query6 = $conexion->query("SELECT * FROM compras WHERE tipo!='dist' ORDER BY id DESC LIMIT 15"); 
+
+                                                            if ($_GET["antiguas"] == "SI") {
+                                                                $query6 = $conexion->query("SELECT * FROM compras WHERE tipo!='dist' ORDER BY id DESC");
+                                                            } else {
+                                                                $query6 = $conexion->query("SELECT * FROM compras WHERE tipo!='dist' ORDER BY id DESC LIMIT 15");
                                                             }
-                                                          
+
 
 
 
@@ -745,7 +747,7 @@ function mensaje(){
                                                                 }
                                                                 echo $tabla6;
                                                             }
-                                                   ?>
+                                                            ?>
 
                                                         </tbody>
                                                     </table>

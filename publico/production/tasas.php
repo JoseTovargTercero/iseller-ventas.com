@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 
@@ -12,7 +12,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     } else {
         $menu = MenuStandar();
     }
-    
+
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
@@ -130,10 +130,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <div class='container body'>
             <div class='main_container'>
                 <div class='col-md-3 left_col'>
-                <div class='left_col scroll-view'>
+                    <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -148,11 +148,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- page content -->
                 <div class='right_col' role='main'>
                     <div class=''>
-                      
-                    <h4>Tasas de cambio</h4>
-                <p style="margin-top: -10px;">Registro de tasas de cambio</p>
 
-          
+                        <h4>Tasas de cambio</h4>
+                        <p style="margin-top: -10px;">Registro de tasas de cambio</p>
+
+
                         <div class='clearfix'></div>
 
 
@@ -204,7 +204,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class='x_panel'>
                                     <div class='x_title'>
                                         <h2>Agregar Nueva tasa de cambio</h2>
-                                       
+
                                         <div class='clearfix'></div>
                                     </div>
                                     <div class='x_content'>
@@ -246,42 +246,42 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class='x_panel'>
                                     <div class='x_title'>
                                         <h2>Tasas Activas</h2>
-                                      
+
                                         <div class='clearfix'></div>
                                     </div>
                                     <div class='x_content'>
-                                        
-                                    <style>
-.icono{
-    font-size: 28px !important;
-    color: darkgray !important;
-}
-.icono:hover{
-    font-size: 29px !important;
-    color: gray !important;
-    cursor: pointer;
-}
 
-                                    </style>    
+                                        <style>
+                                            .icono {
+                                                font-size: 28px !important;
+                                                color: darkgray !important;
+                                            }
 
-                                    <ul class="list-unstyled timeline">
-                   
-                   
-                   
-                   
-<?php
+                                            .icono:hover {
+                                                font-size: 29px !important;
+                                                color: gray !important;
+                                                cursor: pointer;
+                                            }
+                                        </style>
 
-$query = "SELECT * FROM tasas_dolar";
-$buscarAlumnos = $conexion->query( $query );
-if ( $buscarAlumnos->num_rows > 0 ) {
-    while( $filaAlumnos = $buscarAlumnos->fetch_assoc() ){
+                                        <ul class="list-unstyled timeline">
 
-        $id = $filaAlumnos['id'];
-        $cantidad = contar("SELECT COUNT(*) FROM productos WHERE tasaDolar='$id'");
-        if($cantidad == "0"){
-            $trash = ' <a href="../../configurar/nuevaTasa.php?idBorrar='.$id.'&tipo=dolar"><i class="fa fa-trash icono right"></i></a>';
-        }        
-            echo '
+
+
+
+                                            <?php
+
+                                            $query = "SELECT * FROM tasas_dolar";
+                                            $buscarAlumnos = $conexion->query($query);
+                                            if ($buscarAlumnos->num_rows > 0) {
+                                                while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
+
+                                                    $id = $filaAlumnos['id'];
+                                                    $cantidad = contar("SELECT COUNT(*) FROM productos WHERE tasaDolar='$id'");
+                                                    if ($cantidad == "0") {
+                                                        $trash = ' <a href="../../configurar/nuevaTasa.php?idBorrar=' . $id . '&tipo=dolar"><i class="fa fa-trash icono right"></i></a>';
+                                                    }
+                                                    echo '
             <li>
             <div class="block">
               <div class="tags">
@@ -291,37 +291,36 @@ if ( $buscarAlumnos->num_rows > 0 ) {
               </div>
               <div class="block_content">
                 <h2 class="title">
-                                <a>'.$filaAlumnos['tasa'].'</a>
+                                <a>' . $filaAlumnos['tasa'] . '</a>
                             </h2>
                 <div class="byline">
-                  <span>'.$cantidad.' Productos asociados a esta tasa</a>
-               '.$trash.'
+                  <span>' . $cantidad . ' Productos asociados a esta tasa</a>
+               ' . $trash . '
                 </div>
-                <p class="excerpt">Valor de la tasa es: <strong>'.number_format($filaAlumnos['recepcion'], '2', '.', '.').'</strong> BS </p>
+                <p class="excerpt">Valor de la tasa es: <strong>' . number_format($filaAlumnos['recepcion'], '2', '.', '.') . '</strong> BS </p>
               </div>
             </div>
             </li>
             ';
-
-    }
-}
-echo "
+                                                }
+                                            }
+                                            echo "
 <div class='col-lg-12'>
 <div class='ln_solid'></div>
 </div>
 ";
 
-$query2 = "SELECT * FROM tasas_pesos";
-$buscarAlumnos2 = $conexion->query( $query2 );
-if ( $buscarAlumnos2->num_rows > 0 ) {
-    while( $filaAlumnos2 = $buscarAlumnos2->fetch_assoc() ){
+                                            $query2 = "SELECT * FROM tasas_pesos";
+                                            $buscarAlumnos2 = $conexion->query($query2);
+                                            if ($buscarAlumnos2->num_rows > 0) {
+                                                while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
 
-        $id2 = $filaAlumnos2['id_peso'];
-        $cantidad2 = contar("SELECT COUNT(*) FROM productos WHERE TasaPeso='$id2'");
-        if($cantidad2 == "0"){
-            $trash2 = ' <a href="../../configurar/nuevaTasa.php?idBorrar='.$id2.'&tipo=peso"><i class="fa fa-trash icono right"></i></a>';
-        }        
-            echo '
+                                                    $id2 = $filaAlumnos2['id_peso'];
+                                                    $cantidad2 = contar("SELECT COUNT(*) FROM productos WHERE TasaPeso='$id2'");
+                                                    if ($cantidad2 == "0") {
+                                                        $trash2 = ' <a href="../../configurar/nuevaTasa.php?idBorrar=' . $id2 . '&tipo=peso"><i class="fa fa-trash icono right"></i></a>';
+                                                    }
+                                                    echo '
             <li>
             <div class="block">
               <div class="tags">
@@ -331,21 +330,19 @@ if ( $buscarAlumnos2->num_rows > 0 ) {
               </div>
               <div class="block_content">
                 <h2 class="title">
-                                <a>'.$filaAlumnos2['tasa_peso'].'</a>
+                                <a>' . $filaAlumnos2['tasa_peso'] . '</a>
                             </h2>
                 <div class="byline">
-                  <span>'.$cantidad2.' Productos asociados a esta tasa</a>
-               '.$trash2.'
+                  <span>' . $cantidad2 . ' Productos asociados a esta tasa</a>
+               ' . $trash2 . '
                 </div>
-                <p class="excerpt">El valor de recepción de la tasa es: <strong>'.$filaAlumnos2['recepcion_peso'].'</strong>, y de publicación: <strong>'.$filaAlumnos2['publicacion_peso'].'</strong></p>
+                <p class="excerpt">El valor de recepción de la tasa es: <strong>' . $filaAlumnos2['recepcion_peso'] . '</strong>, y de publicación: <strong>' . $filaAlumnos2['publicacion_peso'] . '</strong></p>
               </div>
             </div>
             </li>
             ';
-
-    }
-}
-
+                                                }
+                                            }
 
 
 
@@ -353,11 +350,12 @@ if ( $buscarAlumnos2->num_rows > 0 ) {
 
 
 
-?>
+
+                                            ?>
 
 
 
-</ul>
+                                        </ul>
 
                                     </div>
                                 </div>

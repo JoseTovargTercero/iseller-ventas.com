@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -179,93 +179,94 @@ function mensaje(){
         ?>
     </head>
     <style>
-                            a {
-                                cursor: pointer;
-                            }
+        a {
+            cursor: pointer;
+        }
 
-                            a:hover {
-                                color: #40c1af !important;
-                            }
+        a:hover {
+            color: #40c1af !important;
+        }
 
-                            .ancho {
-                                overflow-x: hidden;
-                            }
+        .ancho {
+            overflow-x: hidden;
+        }
 
-                            .ln_solid2 {
-                                border-top: 1px solid #e5e5e5;
-                                height: 1px;
-                            }
+        .ln_solid2 {
+            border-top: 1px solid #e5e5e5;
+            height: 1px;
+        }
 
-                            .table td {
-                                padding-top: .35rem !important;
-                                vertical-align: top;
-                                border-top: none !important;
-                            }
+        .table td {
+            padding-top: .35rem !important;
+            vertical-align: top;
+            border-top: none !important;
+        }
 
-                            .membrete {
-                                text-align: center;
-                                margin: 15px;
-                            }
+        .membrete {
+            text-align: center;
+            margin: 15px;
+        }
 
-                            .factura {
-                                border: 1px solid lightgray;
-                                min-height: 380px;
-                                border-radius: 10px;
-                            }
+        .factura {
+            border: 1px solid lightgray;
+            min-height: 380px;
+            border-radius: 10px;
+        }
 
-                            .icono {
-                                font-size: 25px;
-                            }
+        .icono {
+            font-size: 25px;
+        }
 
-                            .btn2 {
-                                font-weight: 400;
-                                color: #797979;
-                                background-color: lightgray;
-                                text-align: center;
-                                vertical-align: middle;
-                                -webkit-user-select: none;
-                                -moz-user-select: none;
-                                -ms-user-select: none;
-                                user-select: none;
-                                background-color: transparent;
-                                border: 1px solid transparent;
-                                padding: .375rem .75rem;
-                                font-size: 1rem;
-                                line-height: 1.5;
-                                border-radius: .25rem;
-                                transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-                            }
+        .btn2 {
+            font-weight: 400;
+            color: #797979;
+            background-color: lightgray;
+            text-align: center;
+            vertical-align: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background-color: transparent;
+            border: 1px solid transparent;
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: .25rem;
+            transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
 
-                            .gray {
-                                color: rgba(52, 73, 94, 0.94);
-                                font-size: 26px;
-
-
-                            }
-
-                            .minus {
-                                color: lightgray !important;
-                                border: none !important;
-                                margin-top: 3px;
-                            }
-
-                            .fotoProducto {
-                                width: 99.4%;
-                                height: 298px;
-                                margin-left: 0.3%;
-                                margin-top: 1px;
-
-                            }
-
-                            .bordeFoto {
-                                border: 2px solid #909090;
-                                margin-left: 10%;
-                                height: 304px;
-                                background-color: lightgray;
+        .gray {
+            color: rgba(52, 73, 94, 0.94);
+            font-size: 26px;
 
 
-                            }
-                        </style>
+        }
+
+        .minus {
+            color: lightgray !important;
+            border: none !important;
+            margin-top: 3px;
+        }
+
+        .fotoProducto {
+            width: 99.4%;
+            height: 298px;
+            margin-left: 0.3%;
+            margin-top: 1px;
+
+        }
+
+        .bordeFoto {
+            border: 2px solid #909090;
+            margin-left: 10%;
+            height: 304px;
+            background-color: lightgray;
+
+
+        }
+    </style>
+
     <body class='nav-md'>
 
 
@@ -276,7 +277,7 @@ function mensaje(){
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -517,13 +518,13 @@ function mensaje(){
                                                 </div>
 
                                                 <p style="font-size: 11px !important; width: 100%; text-align: center; margin-top: -5px"> <?php
-                                                     if ($_SESSION['statusFactura'] == "1") {
-                                                         echo "*Factura pagada.";
-                                                     } elseif ($_SESSION['statusFactura'] == "2") {
-                                                         echo "*Factura pendiente.";
-                                                     } else {
-                                                     }                                                  
-                                                     ?></p>
+                                                                                                                                            if ($_SESSION['statusFactura'] == "1") {
+                                                                                                                                                echo "*Factura pagada.";
+                                                                                                                                            } elseif ($_SESSION['statusFactura'] == "2") {
+                                                                                                                                                echo "*Factura pendiente.";
+                                                                                                                                            } else {
+                                                                                                                                            }
+                                                                                                                                            ?></p>
                                                 <?php
 
                                                 if ($_SESSION['statusFactura'] == "") {
@@ -556,81 +557,81 @@ function mensaje(){
 
 
 
-                            <div class="col-lg-12"  style="display: none;" id="divFactura" >
-                                <div class="x_panel">
-                                    <div class="x_title">
-                                        <h2>Detalles</h2>
-                                        <ul class="nav navbar-right panel_toolbox">
-                                            <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
-                                            <li><a onclick="$('#divFactura').hide(300)"><i class="fa fa-close"></i></a></li>
-                                        </ul>
-                                        <div class="clearfix"></div>
-                                    </div>
-                                    <div class="x_content" id="contenidoFactura">
+                        <div class="col-lg-12" style="display: none;" id="divFactura">
+                            <div class="x_panel">
+                                <div class="x_title">
+                                    <h2>Detalles</h2>
+                                    <ul class="nav navbar-right panel_toolbox">
+                                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
+                                        <li><a onclick="$('#divFactura').hide(300)"><i class="fa fa-close"></i></a></li>
+                                    </ul>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="x_content" id="contenidoFactura">
                                     Lorem ipsum dolor sit amet consectetur adipisicing elit. Deleniti fugit unde hic exercitationem, qui iusto itaque dolorum sit totam harum vero libero veritatis ipsum animi incidunt. Blanditiis vero pariatur libero.
-                                    </div>
                                 </div>
                             </div>
-                         
-
-                            <div class="col-lg-12">
-                                <div class="x_panel">
-                                    <div class="x_title">
-                                        <h2>Compras</h2>
-                                        <ul class="nav navbar-right panel_toolbox">
-                                            <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                            </li>
-                                        </ul>
-                                        <div class="clearfix"></div>
-                                    </div>
-                                    <div class="x_content">
-                                        <div class="card-box table-responsive">
-                                            <p class="text-muted font-13 m-b-30">
-                                                Lista general de los productos agregados al inventario.
-                                            </p>
-                                            <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
-                                                <thead>
-                                                    <tr class="headings">
-                                                        <th class="column-title">#</th>
-                                                        <th class="column-title">Proveedor </th>
-                                                        <th class="column-title">Factura </th>
-                                                        <th class="column-title">Fecha </th>
-                                                        <th class="column-title">Producto</th>
-                                                        <th class="column-title">Cantidad</th>
-                                                        <th class="column-title">Status</th>
-                                                        <th class="column-title">Ver</th>
-                                                        <th class="column-title"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php
-                                                   
-                                                    $query6 = $conexion->query("SELECT * FROM compras  ORDER BY id DESC LIMIT 150");
-                                                    if ($query6->num_rows > 0) {
-                                                        $tabla6 = '';
-                                                        $contador = 1;
-                                                        while ($row6 = $query6->fetch_assoc()) {
-                                                            $id = $row6["factura"];
+                        </div>
 
 
-                                                            if ($contador <= $deshacerCompra) {
-                                                                $deshacer = '<a  class="btn2 btn-secondary" href="../../configurar/borrarUltimaCompraFacturada.php?idDeshacer=' . $row6["factura"] . '&fecha='.$row6["fecha"].'">Deshacer</a>';
-                                                            } else {
-                                                                $deshacer = '';
-                                                            }
+                        <div class="col-lg-12">
+                            <div class="x_panel">
+                                <div class="x_title">
+                                    <h2>Compras</h2>
+                                    <ul class="nav navbar-right panel_toolbox">
+                                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                                        </li>
+                                    </ul>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="x_content">
+                                    <div class="card-box table-responsive">
+                                        <p class="text-muted font-13 m-b-30">
+                                            Lista general de los productos agregados al inventario.
+                                        </p>
+                                        <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
+                                            <thead>
+                                                <tr class="headings">
+                                                    <th class="column-title">#</th>
+                                                    <th class="column-title">Proveedor </th>
+                                                    <th class="column-title">Factura </th>
+                                                    <th class="column-title">Fecha </th>
+                                                    <th class="column-title">Producto</th>
+                                                    <th class="column-title">Cantidad</th>
+                                                    <th class="column-title">Status</th>
+                                                    <th class="column-title">Ver</th>
+                                                    <th class="column-title"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php
 
-                                                            if ($row6["status"] == 1) {
-                                                                $status = 'Pagada';
-                                                                $link = '<a onclick="mostrarFacutura(\'' . $id . '\')"><i class="line icon-notebook"></a>';
-                                                            } elseif ($row6["status"] == '2') {
-                                                                $status = 'Sin factura';
-                                                                $link = '';
-                                                            } else {
-                                                                $status = 'Pendiente';
-                                                                $link = '<a onclick="mostrarFacutura(\'' . $id . '\')"><i class="line icon-notebook"></a>';
-                                                            }
+                                                $query6 = $conexion->query("SELECT * FROM compras  ORDER BY id DESC LIMIT 150");
+                                                if ($query6->num_rows > 0) {
+                                                    $tabla6 = '';
+                                                    $contador = 1;
+                                                    while ($row6 = $query6->fetch_assoc()) {
+                                                        $id = $row6["factura"];
 
-                                                            $tabla6 .= '
+
+                                                        if ($contador <= $deshacerCompra) {
+                                                            $deshacer = '<a  class="btn2 btn-secondary" href="../../configurar/borrarUltimaCompraFacturada.php?idDeshacer=' . $row6["factura"] . '&fecha=' . $row6["fecha"] . '">Deshacer</a>';
+                                                        } else {
+                                                            $deshacer = '';
+                                                        }
+
+                                                        if ($row6["status"] == 1) {
+                                                            $status = 'Pagada';
+                                                            $link = '<a onclick="mostrarFacutura(\'' . $id . '\')"><i class="line icon-notebook"></a>';
+                                                        } elseif ($row6["status"] == '2') {
+                                                            $status = 'Sin factura';
+                                                            $link = '';
+                                                        } else {
+                                                            $status = 'Pendiente';
+                                                            $link = '<a onclick="mostrarFacutura(\'' . $id . '\')"><i class="line icon-notebook"></a>';
+                                                        }
+
+                                                        $tabla6 .= '
                                                                                     <tr class="even pointer">
                                                                                             <td class=" ">' . $contador++ . '</td>
                                                                                             <td class=" ">' . $row6["proveedor"] . '</td>
@@ -644,65 +645,65 @@ function mensaje(){
                                                                                           </tr>
 
                                                                                    ';
-                                                        }
-                                                        echo $tabla6;
                                                     }
-                                                    ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    echo $tabla6;
+                                                }
+                                                ?>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
-                         
                         </div>
 
-                        <script>
-                            function mostrarFacutura(id) {
-                                 $.ajax({
-                                        url: 'mostrarFactura.php',
-                                        type: 'POST',
-                                        dataType: 'html',
-                                        data: {
-                                            nFactura: id
-                                        },
-                                    })
-
-                                    .done(function(resultadoPrecio) {
-                                        $('#divFactura').show(300);
-                                        $("#contenidoFactura").html(resultadoPrecio);
-                                    })
-
-                            }
-                        </script>
-
-                        <body onload='capturar()'> </body>
-
-<style>
-    .statusFactura{
-        position: absolute;
-    z-index: 99;
-    margin-top: -349px;
-    margin-left: -238px;
-    opacity: 0.14;
-    height: 400px;
-    }
-</style>
-                        
-
                     </div>
+
+                    <script>
+                        function mostrarFacutura(id) {
+                            $.ajax({
+                                    url: 'mostrarFactura.php',
+                                    type: 'POST',
+                                    dataType: 'html',
+                                    data: {
+                                        nFactura: id
+                                    },
+                                })
+
+                                .done(function(resultadoPrecio) {
+                                    $('#divFactura').show(300);
+                                    $("#contenidoFactura").html(resultadoPrecio);
+                                })
+
+                        }
+                    </script>
+
+                    <body onload='capturar()'> </body>
+
+                    <style>
+                        .statusFactura {
+                            position: absolute;
+                            z-index: 99;
+                            margin-top: -349px;
+                            margin-left: -238px;
+                            opacity: 0.14;
+                            height: 400px;
+                        }
+                    </style>
+
+
                 </div>
-                <!-- /page content -->
-
-                <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
-                <!-- /footer content -->
             </div>
+            <!-- /page content -->
+
+            <!-- footer content -->
+            <footer>
+                <div class='pull-right'>
+                    i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
+                </div>
+                <div class='clearfix'></div>
+            </footer>
+            <!-- /footer content -->
+        </div>
         </div>
 
         <!-- jQuery -->

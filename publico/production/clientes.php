@@ -2,60 +2,58 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
 
 
-if($_SESSION['nivel']==1 || $_SESSION['nivel']==2){
-$topnav = topnav();
-if($_SESSION["validate"]!="ok"){
-    define('PAGINA_INICIO','../../index.php');
-	header('Location: '.PAGINA_INICIO);
-}
 
-if ( $_SESSION['nivel'] == '1' ) {
+if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
+  $topnav = topnav();
+  if ($_SESSION["validate"] != "ok") {
+    define('PAGINA_INICIO', '../../index.php');
+    header('Location: ' . PAGINA_INICIO);
+  }
+
+  if ($_SESSION['nivel'] == '1') {
     $menu = MenuAdministrador();
-} else {
+  } else {
     $menu = MenuStandar();
-        if($Clientes == 0){
-    define( 'PAGINA_INICIO', '../../index.php' );
-    header( 'Location: '.PAGINA_INICIO );
-           }
-
-}
-
-$nivelUsuario = $_SESSION['nivel'];
-$nombreUsuario = $_SESSION['nombre'];
-
-$query = "SELECT * FROM cambio WHERE id='1'";
-$buscarAlumnos = $conexion->query( $query );
-if ( $buscarAlumnos->num_rows > 0 ) {
-    while( $filaAlumnos = $buscarAlumnos->fetch_assoc() )
-    {
-
-        $PesoDolar = $filaAlumnos['pesoDolar'];
-        $Pesobolivar = $filaAlumnos['peso_bolivar'];
-        $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
-  $dolarBolivar = $filaAlumnos['DolarBolivar'];
+    if ($Clientes == 0) {
+      define('PAGINA_INICIO', '../../index.php');
+      header('Location: ' . PAGINA_INICIO);
     }
-}
-$query2 = "SELECT * FROM empresa";
-$buscarAlumnos2 = $conexion->query( $query2 );
-if ( $buscarAlumnos2->num_rows > 0 ) {
-    while( $filaAlumnos2 = $buscarAlumnos2->fetch_assoc() )
-    {
-        $nombreEmpresa = $filaAlumnos2['emp'];
-        $stockCritico = $filaAlumnos2['stockCritico'];
+  }
+
+  $nivelUsuario = $_SESSION['nivel'];
+  $nombreUsuario = $_SESSION['nombre'];
+
+  $query = "SELECT * FROM cambio WHERE id='1'";
+  $buscarAlumnos = $conexion->query($query);
+  if ($buscarAlumnos->num_rows > 0) {
+    while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
+
+      $PesoDolar = $filaAlumnos['pesoDolar'];
+      $Pesobolivar = $filaAlumnos['peso_bolivar'];
+      $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
+      $dolarBolivar = $filaAlumnos['DolarBolivar'];
     }
-}
-// initializ shopping cart class
-include 'La-carta.php';
-$cart = new Cart;
+  }
+  $query2 = "SELECT * FROM empresa";
+  $buscarAlumnos2 = $conexion->query($query2);
+  if ($buscarAlumnos2->num_rows > 0) {
+    while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
+      $nombreEmpresa = $filaAlumnos2['emp'];
+      $stockCritico = $filaAlumnos2['stockCritico'];
+    }
+  }
+  // initializ shopping cart class
+  include 'La-carta.php';
+  $cart = new Cart;
 
 ?>
-<!DOCTYPE html>
-<html lang="en">
+  <!DOCTYPE html>
+  <html lang="en">
+
   <head>
-      <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
+    <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
     <!-- Meta, title, CSS, favicons, etc. -->
     <meta charset='utf-8'>
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
@@ -73,7 +71,7 @@ $cart = new Cart;
     <!-- iCheck -->
     <link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
     <!-- Datatables -->
-    
+
     <link href="../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
@@ -82,209 +80,208 @@ $cart = new Cart;
 
     <!-- Custom Theme Style -->
     <link href="../build/css/custom.min.css" rel="stylesheet">
-      
+
     <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-      
+    <!-- Icomoon Icon Fonts-->
+    <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
+    <!-- Simple Line Icons -->
+    <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
+
     <script src='js/jquery.min.js'></script>
-      <script src='peticion.js'></script>
+    <script src='peticion.js'></script>
     <script src='peticion_producto.js'></script>
     <link rel='stylesheet' href='../assets/AlertifyJS/css/alertify.min.css' />
     <link rel='stylesheet' href='../assets/AlertifyJS/css/themes/semantic.min.css' />
     <script src='..//assets/AlertifyJS/alertify.min.js'></script>
     <script src="ex/jquery.min.js"></script>
     <script src="ex/bootstrap.min.js"></script>
-     
+
     <?php
 
-@$accion = $_GET['accion'];
+    @$accion = $_GET['accion'];
 
-switch( $accion ) {
-    case( 'borrado' ):
-    echo '<script>
+    switch ($accion) {
+      case ('borrado'):
+        echo '<script>
             function mensaje(){	
 			alertify.success("Producto borrado correctamente"); }
             </script>
             <body onload="mensaje()">
             </body>';
 
-    break;
+        break;
 
-    case( 'editado' ):
-    echo '<script>
+      case ('editado'):
+        echo '<script>
             function mensaje(){	
 			alertify.success("Producto Actualizado."); }
             </script>
             <body onload="mensaje()">
             </body>';
-    break;
+        break;
 
-    case( 'favorito-SI' ):
-    echo '<script>
+      case ('favorito-SI'):
+        echo '<script>
             function mensaje(){	
 			alertify.success("Agregado a favoritos.");}
             </script>
             <body onload="mensaje()">
             </body>';
-    break;
+        break;
 
-    case( 'favorito-NO' ):
-    echo '<script>
+      case ('favorito-NO'):
+        echo '<script>
             function mensaje(){	
 			alertify.success("Quitado de favoritos.");}
             </script>
             <body onload="mensaje()">
             </body>';
-    break;
-    case( 'editado' ):
-    echo '<script>
+        break;
+      case ('editado'):
+        echo '<script>
             function mensaje(){	
 			alertify.success("Editado correctamente.");}
             </script>
             <body onload="mensaje()">
             </body>';
-    break;
-    case( 'editado_error_letra' ):
-    echo '<script>
+        break;
+      case ('editado_error_letra'):
+        echo '<script>
             function mensaje(){	
 			alertify.error("No puede cambiar la inicial del nombre del producto.");}
             </script>
             <body onload="mensaje()">
             </body>';
-    break;
+        break;
+    }
+
+    ?>
 
 
-}
 
-?>
-
-
-    
   </head>
 
   <body class="nav-md">
     <div class="container body">
       <div class="main_container">
         <div class="col-md-3 left_col">
-          
-          
-        <div class='left_col scroll-view'>
-                        <div class='navbar nav_title' style='border: 0;'>
-                            <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
-                                    <img style='max-width:140px'><span> </a>
-                        </div>
-                        <div class='clearfix'></div>
-                        <!-- /menu profile quick info -->
-                        <br />
-                        <?php echo $menu ?>
-                    </div>
+
+
+          <div class='left_col scroll-view'>
+            <div class='navbar nav_title' style='border: 0;'>
+              <a href='index.php' class='site_title'>
+                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                  <img style='max-width:140px'><span> </a>
+            </div>
+            <div class='clearfix'></div>
+            <!-- /menu profile quick info -->
+            <br />
+            <?php echo $menu ?>
+          </div>
         </div>
 
         <!-- top navigation -->
-               <?php echo $topnav ?>
-   
-      		
+        <?php echo $topnav ?>
+
+
         <!-- page content -->
-        <div class="right_col " >
-
- 
-                    
-
-           <h4>Cliente</h4>
-            <p style="margin-top: -10px;">Libro de clientes</p>
-
-        
-                <div class="x_panel  fadeInUp animated">
-                  <div class="x_title">
-                    <h2>Clientes</h2>
-                  
-                    <div class="clearfix"></div>
-                  </div>
-                  <div class="x_content">
+        <div class="right_col ">
 
 
-                  
-                      <div class="row">
-                          
-                           
-                           
-                
-        
-                 
-                  
-            <div class="col-lg-12">
-                            <div class="card-box table-responsive">
-                    
+
+
+          <h4>Cliente</h4>
+          <p style="margin-top: -10px;">Libro de clientes</p>
+
+
+          <div class="x_panel  fadeInUp animated">
+            <div class="x_title">
+              <h2>Clientes</h2>
+
+              <div class="clearfix"></div>
+            </div>
+            <div class="x_content">
+
+
+
+              <div class="row">
+
+
+
+
+
+
+
+                <div class="col-lg-12">
+                  <div class="card-box table-responsive">
+
                     <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
                       <thead>
-                          <tr class="headings">
-                            <th>#</th>
-                            <th>Nombre</th>
-                            <th>Documento</th>
-                            <th>Telefono</th>
-                            <th>Compras</th>
-                            <th>Gastado</th>
-                          </tr>
+                        <tr class="headings">
+                          <th>#</th>
+                          <th>Nombre</th>
+                          <th>Documento</th>
+                          <th>Telefono</th>
+                          <th>Compras</th>
+                          <th>Gastado</th>
+                        </tr>
                       </thead>
 
-                   
-                   
-                   
-                   <tbody>
-                               <?php
-
-    
 
 
-          $query6 = $conexion->query("SELECT * FROM clientes WHERE status=1 AND id='1' ORDER BY created DESC");
-        if($query6->num_rows > 0){ 
-           $tabla6='';
-           $contador = 1;
-            while($row6 = $query6->fetch_assoc()){
-    	$tabla6.='
+
+                      <tbody>
+                        <?php
+
+
+
+
+                        $query6 = $conexion->query("SELECT * FROM clientes WHERE status=1 AND id='1' ORDER BY created DESC");
+                        if ($query6->num_rows > 0) {
+                          $tabla6 = '';
+                          $contador = 1;
+                          while ($row6 = $query6->fetch_assoc()) {
+                            $tabla6 .= '
           <tr class="even pointer">
-                            <td class=" ">'.$contador++.'</td>
-                            <td class=" ">'.$row6["name"].'</td>
-                            <td class=" ">'.number_format($row6["email"],'0', ',','.').'</td>
-                            <td class=" ">'.$row6["phone"].'</td>
-                            <td class=" ">'.$row6["address"].'</td>
-                            <td class=" ">$'.number_format($row6["created"],'2', ',','.').'</td>
+                            <td class=" ">' . $contador++ . '</td>
+                            <td class=" ">' . $row6["name"] . '</td>
+                            <td class=" ">' . number_format($row6["email"], '0', ',', '.') . '</td>
+                            <td class=" ">' . $row6["phone"] . '</td>
+                            <td class=" ">' . $row6["address"] . '</td>
+                            <td class=" ">$' . number_format($row6["created"], '2', ',', '.') . '</td>
                           </tr>
        ';
-   }echo $tabla6;
-  }
-?> 
-                        </tbody>
+                          }
+                          echo $tabla6;
+                        }
+                        ?>
+                      </tbody>
                     </table>
                   </div>
-                  </div>
-                  </div>
-                  </div>
-                  </div>
-                  </div>
-              
+                </div>
+              </div>
             </div>
-     
-        <!-- /page content -->
- 
-        <!-- footer content -->
-        <footer>
-          <div class="pull-right">
-            i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
           </div>
-          <div class="clearfix"></div>
-        </footer>
-        <!-- /footer content -->
+        </div>
+
+      </div>
+
+      <!-- /page content -->
+
+      <!-- footer content -->
+      <footer>
+        <div class="pull-right">
+          i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
+        </div>
+        <div class="clearfix"></div>
+      </footer>
+      <!-- /footer content -->
     </div>
 
     <!-- jQuery -->
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <!-- Bootstrap -->
-   <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <!-- FastClick -->
     <script src="../vendors/fastclick/lib/fastclick.js"></script>
     <!-- NProgress -->
@@ -311,10 +308,11 @@ switch( $accion ) {
     <!-- Custom Theme Scripts -->
     <script src="../build/js/custom.min.js"></script>
   </body>
-</html>
+
+  </html>
 <?php
-}else{
-    define('PAGINA_INICIO','../../index.php');
-    header('Location: '.PAGINA_INICIO);
+} else {
+  define('PAGINA_INICIO', '../../index.php');
+  header('Location: ' . PAGINA_INICIO);
 }
 ?>

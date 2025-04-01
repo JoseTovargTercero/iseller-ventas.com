@@ -3,7 +3,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 
@@ -290,7 +290,7 @@ if ($_SESSION['nivel'] == 1) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -445,7 +445,7 @@ if ($_SESSION['nivel'] == 1) {
                                             ?>
 
 
-                                            <br> <small><br></small> Imprime tickets al realizar una venta. <br> <br> 
+                                            <br> <small><br></small> Imprime tickets al realizar una venta. <br> <br>
 
                                         </div>
 
@@ -471,7 +471,7 @@ if ($_SESSION['nivel'] == 1) {
                                             ?>
 
 
-                                            <br> <small><br></small> Si está desactivado, los ticket se imprimiran en la moneda por la cual este paganado el cliente. <br>  
+                                            <br> <small><br></small> Si está desactivado, los ticket se imprimiran en la moneda por la cual este paganado el cliente. <br>
 
                                         </div>
 

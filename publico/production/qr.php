@@ -3,16 +3,16 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-    
+
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
-   
+
 
     $topnav = topnav();
 
@@ -67,12 +67,11 @@ if(isset($_GET['id'])){
 }*/
 
 
-$_SESSION["ventas"] = "activa";
-if($_SESSION["dist_ventas"] == "activa"){
-    unset($_SESSION["dist_ventas"]);
-    $cart->destroy();
-
-}
+    $_SESSION["ventas"] = "activa";
+    if ($_SESSION["dist_ventas"] == "activa") {
+        unset($_SESSION["dist_ventas"]);
+        $cart->destroy();
+    }
 
 
 
@@ -172,12 +171,12 @@ if($_SESSION["dist_ventas"] == "activa"){
     <body class='nav-md'>
         <div class='container body'>
             <div class='main_container'>
-               
+
                 <div class='col-md-3 left_col'>
-                <div class='left_col scroll-view'>
+                    <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -197,9 +196,9 @@ if($_SESSION["dist_ventas"] == "activa"){
 
                 <div class='right_col' role='main'>
                     <div class=''>
-                        
-                    <h4>Ventas</h4>
-                         <p style="margin-top: -10px;">Caja de despacho</p>
+
+                        <h4>Ventas</h4>
+                        <p style="margin-top: -10px;">Caja de despacho</p>
 
 
 
@@ -214,27 +213,27 @@ if($_SESSION["dist_ventas"] == "activa"){
                                         <h2 style="font-size: 15px; font-weight: bold">Escanear codigo </h2>
                                         <div class="clearfix"></div>
                                     </div>
-                                        <div class="col-lg-12" style="display: grid; place-items: center;">
+                                    <div class="col-lg-12" style="display: grid; place-items: center;">
                                         <?php
-                                            
-                                         $endCode = $_SESSION['qrcode'];
 
-                                            echo $endCode;
+                                        $endCode = $_SESSION['qrcode'];
+
+                                        echo $endCode;
                                         ?>
 
-                                            
 
-                                            <br>
-                                            <img alt="Código QR" id="codigo">
-                                            <br>
-                                            <br>
-                                            Lorem ipsum dolor, sit amet consectetur adipisicing elit. Reiciendis aut distinctio suscipit illo ipsam! Natus sequi ipsam vero accusamus a consequatur aliquam, pariatur eligendi in! Voluptas non inventore fuga similique?
-                                            <br>
-                                            <br>
 
-                                            
+                                        <br>
+                                        <img alt="Código QR" id="codigo">
+                                        <br>
+                                        <br>
+                                        Lorem ipsum dolor, sit amet consectetur adipisicing elit. Reiciendis aut distinctio suscipit illo ipsam! Natus sequi ipsam vero accusamus a consequatur aliquam, pariatur eligendi in! Voluptas non inventore fuga similique?
+                                        <br>
+                                        <br>
 
-                                        </div>
+
+
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -244,18 +243,17 @@ if($_SESSION["dist_ventas"] == "activa"){
 
 
                     <script>
-		const $imagen = document.querySelector("#codigo");
-        var valor = "<?php echo $endCode ?>";
-		new QRious({
-			element: $imagen,
-			value: valor, // La URL o el texto
-			size: 400,
-			backgroundAlpha: 0, // 0 para fondo transparente
-			foreground: "#000", // Color del QR
-			level: "H", // Puede ser L,M,Q y H (L es el de menor nivel, H el mayor)
-		});
-		
-	</script>
+                        const $imagen = document.querySelector("#codigo");
+                        var valor = "<?php echo $endCode ?>";
+                        new QRious({
+                            element: $imagen,
+                            value: valor, // La URL o el texto
+                            size: 400,
+                            backgroundAlpha: 0, // 0 para fondo transparente
+                            foreground: "#000", // Color del QR
+                            level: "H", // Puede ser L,M,Q y H (L es el de menor nivel, H el mayor)
+                        });
+                    </script>
 
                 </div>
                 <!-- /page content -->
@@ -390,13 +388,15 @@ if($_SESSION["dist_ventas"] == "activa"){
                         top: 0;
                         opacity: 1:
                     }
+
                     .card:hover .contentBx h2 {
                         color: #6e6e6e !important;
-                      
+
                     }
+
                     .card:hover .contentBx h3 {
                         color: #6e6e6e !important;
-                      
+
                     }
 
                     .divisas {
@@ -558,7 +558,7 @@ if($_SESSION["dist_ventas"] == "activa"){
 
                     .table {
                         width: 100%;
-                       
+
                         color: #909090 !important;
                     }
 

@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 
@@ -123,31 +123,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
-        <!-- Meta, title, CSS, favicons, etc. -->
-        <meta charset='utf-8'>
-        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-        <meta name='viewport' content='width=device-width, initial-scale=1'>
-        <link rel='icon' href='images/favicon.ico' type='image/ico' />
 
         <title>Ventas </title>
-
-        <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
-        <!-- Font Awesome -->
-        <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
-        <!-- NProgress -->
-        <link href='../vendors/nprogress/nprogress.css' rel='stylesheet'>
-        <!-- iCheck -->
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-        <!-- bootstrap-wysiwyg -->
-        <link href='../build/css/custom.min.css' rel='stylesheet'>
-
-        <script src='js/jquery.min.js'></script>
-
-        <script src="../assets/sweetalert.min.js"></script>
-        <script src="../assets/sweetalert2.all.min.js"></script>
+        <?php require_once('includes/headers.php'); ?>
 
         <?php
         switch (@$_GET['accion']) {
@@ -310,10 +288,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             border-radius: 5px;
         }
 
-        .table {
-            width: 100%;
-            color: #909090 !important;
-        }
+
 
         .table thead th {
             vertical-align: bottom;
@@ -348,7 +323,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             position: absolute;
             width: 100%;
             height: 50vh;
-            background-image: url(images/75697.png);
             /* Mezcla la imagen y el color */
             background-position: center;
             background-size: 48%;
@@ -362,55 +336,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, .9);
             /* Color semitransparente */
             pointer-events: none;
             /* Asegura que el contenido sea accesible */
         }
 
-        /* Ocultar el modal por defecto */
-        .modal-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Mostrar el modal cuando está activo */
-        .modal-container.active {
-            display: flex;
-        }
-
-        /* Estilizar el overlay (fondo oscuro) */
-        .details-modal-overlay {
-            background: rgba(0, 0, 0, 0.7);
-            /* Fondo semi-transparente */
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        /* Estilizar el modal */
-        .details-modal {
-            background: #ffffff;
-            border-radius: 0.5em;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            width: 80%;
-            height: 90vh;
-            max-width: 90%;
-            padding: 1.5em;
-            z-index: 2;
-            text-align: left;
-            overflow-y: auto;
-        }
 
         .text-total {
             font-size: 18px !important;
@@ -430,7 +360,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -442,7 +372,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- top navigation -->
                 <?php echo $topnav ?>
                 <!-- /top navigation -->
-                <div class="right_col" style="background-color: #ebebeb;" role='main'>
+                <div class="right_col" role='main'>
                     <div class=''>
 
                         <h4 class="mb-0">Ventas</h4>
@@ -668,40 +598,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>
 
 
-                    <div class="modal-container" id="modal-container">
-                        <div class="details-modal-overlay" id="modal-overlay"></div>
-                        <div class="details-modal">
-
-                            <div class="details-modal-content">
-
-                                <section class="mb-3 d-flex justify-content-between">
-                                    <input placeholder="Nombre del producto" type='text' class='form-control' id="search" name='search'>
-
-                                    <button class="m-auto btn details-modal-close" id="modal-close">
-                                        <i class="line icon-logout"></i>
-                                    </button>
-                                </section>
-
-
-
-                                <table class="table table-hover" id="section_tabla">
-                                    <thead class="thead-dark">
-                                        <tr>
-                                            <th style="width: 10%;">Rest</th>
-                                            <th style=" width: 40%">Producto</th>
-                                            <th class="pl-0 text-center">Dolares</th>
-                                            <th class="pl-0 text-center">Pesos</th>
-                                            <th class="pl-0 text-center">Bolivares</th>
-                                            <th class="pl-0 text-center">Agregar</th>
-                                            <th class="pl-0 text-center"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabla_resultado_codigo_producto">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <?php require('../assets/templates/modal.html'); ?>
 
                     <!-- /page content -->
 
@@ -726,6 +623,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="../vendors/fastclick/lib/fastclick.js"></script>
             <script src="../vendors/nprogress/nprogress.js"></script>
             <script src="../build/js/custom.min.js"></script>
+            <script src="../build/js/modal.js"></script>
             <!-- FastClick -->
             <script>
                 let total_pesos = 0;
@@ -901,27 +799,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 let modo = 2
 
-                const modalContainer = document.getElementById("modal-container");
-                const openModalButton = document.getElementById("open-modal");
-                const closeModalButton = document.getElementById("modal-close");
-                const modalOverlay = document.getElementById("modal-overlay");
                 // Abrir el modal
                 openModalButton.addEventListener("click", () => {
-                    modalContainer.classList.add("active");
-                    modo = 1
 
+                    modo = 1
                 });
+
                 // Cerrar el modal al hacer clic en el botón de cerrar o en el overlay
                 closeModalButton.addEventListener("click", () => {
-                    modalContainer.classList.remove("active");
+
                     modo = 2
                 });
 
                 modalOverlay.addEventListener("click", () => {
-                    modalContainer.classList.remove("active");
                     modo = 2
 
                 });
+
+
+
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                         $('#search').val('')

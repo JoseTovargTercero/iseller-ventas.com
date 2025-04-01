@@ -33,6 +33,15 @@ function MenuAdministrador()
                   <li><a href="index.php"><i class="line icon-home"></i>Inicio</a></li>
 
                   <li><a href="registroCierre.php"><i class="line icon-note"></i>Ingresos Diarios</a></li>
+               
+                  <li>
+                    <a href="sucursales.php">
+                      <i class="line bx icon-smenu bx-store"></i>
+                    Sucursales
+                    </a>
+                  </li>
+              
+              
                   <li><a href="gastos.php"><i class="line icon-briefcase"></i>Gestion de Gastos</a></li>
                    <li><a><i class="line icon-wallet"></i> Ventas <span class="fa fa-chevron-down"></span></a>
                     <ul class="nav child_menu">

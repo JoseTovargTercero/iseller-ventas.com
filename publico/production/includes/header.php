@@ -2,7 +2,6 @@
     .bot {
         font-family: cursive;
         color: white !important;
-        border: 1px solid white !important;
         margin: -2px 0px 0px 0px !important;
         padding: 3px 10px 0 10px !important;
         height: 25px !important;
@@ -143,15 +142,15 @@ function topnav()
                                    <img src='images/img.png' style='margin-top: -5px' hegiht='50px'>
                                 </a>
                                 <div class='dropdown-menu dropdown-usermenu pull-right' aria-labelledby='navbarDropdown'>
-                                  <a class='dropdown-item' style='color: #797979 !important' >" . $_SESSION['nombre'] . "</a>
-                                  <a class='dropdown-item' style='color: #797979 !important' >" . $tipoUser . "</a>
+                                  <a class='dropdown-item' >" . $_SESSION['nombre'] . "</a>
+                                  <a class='dropdown-item' >" . $tipoUser . "</a>
                                   <hr class='hr-dr'>";
     if ($_SESSION['nivel'] == '1') {
-        $menu .= "<a class='dropdown-item' style='color: #797979 !important' href='configuracion.php'><i class='line icon-settings pull-left'></i> &nbsp; Configuración</a>
-                                                                    <a class='dropdown-item' style='color: #797979 !important' href='actualizar.php'><i class='line icon-heart pull-left'></i> &nbsp; Actualizaciones</a>";
+        $menu .= "<a class='dropdown-item' href='configuracion.php'><i class='line icon-settings pull-left'></i> &nbsp; Configuración</a>
+                                                                    <a class='dropdown-item' href='actualizar.php'><i class='line icon-heart pull-left'></i> &nbsp; Actualizaciones</a>";
     }
     $menu .= "<hr class='hr-dr'>
-                                      <a class='dropdown-item' style='color: #797979 !important' href='../../login/salir.php'> Cerrar Sesión</a>
+                                      <a class='dropdown-item' href='../../login/salir.php'> Cerrar Sesión</a>
                                     </div>
                                 </li>
                                     <li role='presentation' class='nav-item dropdown open'>";
@@ -239,7 +238,7 @@ function topnav()
                     <i class='line icon-anchor'></i>
                   </a>
                   <a type='button' href='../../configurar/darkMode.php' class='bot' style='color: #909090 !important'>  
-                    <i class='line icon-sun'></i>
+                    <i class='bx bx-sun'></i>
                                 </a>
                                 <a type='button'  " . $solo . "><i style='color: #979897;' class='" . $ico . " '></i></a>
                                 <ul class='dropdown-menu list-unstyled msg_list' role='menu' aria-labelledby='navbarDropdown1'>

@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -106,7 +106,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -150,26 +150,26 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                                             <div class='col-lg-12'>
-                                                
+
                                                 <br>
                                                 <p style="margin-left: 20px">
-                                                <?php
-                                                $id = $_GET['id'];
-                                                
-                                                $query77 = "SELECT * FROM orden WHERE id='$id'";
-                                                $buscarAlumnos77 = $conexion->query($query77);
-                                                if ($buscarAlumnos77->num_rows > 0) {
-                                                    $contador = 1;
-                                                    while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
-                                                            echo 'Despachado el <strong>'.$filaAlumnos77['created'].'</strong>';
-                                                        if ($filaAlumnos77['status'] == '4') {
-                                                           echo '<br>Esta venta se realizo bajo la modalidad "al mayor" y se le aplico un descuento del <strong>'.number_format($filaAlumnos77['descontado'], '2', ',', '.').'%</strong>';
-                                                        }
+                                                    <?php
+                                                    $id = $_GET['id'];
 
-                                                        echo '<br>Valor de la venta: <strong>'.number_format($filaAlumnos77['total_price'], '2', ',', '.').'$</strong>';
+                                                    $query77 = "SELECT * FROM orden WHERE id='$id'";
+                                                    $buscarAlumnos77 = $conexion->query($query77);
+                                                    if ($buscarAlumnos77->num_rows > 0) {
+                                                        $contador = 1;
+                                                        while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
+                                                            echo 'Despachado el <strong>' . $filaAlumnos77['created'] . '</strong>';
+                                                            if ($filaAlumnos77['status'] == '4') {
+                                                                echo '<br>Esta venta se realizo bajo la modalidad "al mayor" y se le aplico un descuento del <strong>' . number_format($filaAlumnos77['descontado'], '2', ',', '.') . '%</strong>';
+                                                            }
+
+                                                            echo '<br>Valor de la venta: <strong>' . number_format($filaAlumnos77['total_price'], '2', ',', '.') . '$</strong>';
+                                                        }
                                                     }
-                                                }
-                                                ?>
+                                                    ?>
                                                 </p>
 
                                                 <div class='card-box table-responsive' style="margin-top: 20px;">
@@ -199,7 +199,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                     $orderid = $filaAlumnos77['id'];
                                                                     $tipopago = $filaAlumnos77['tipoPago'];
                                                                     $users = $filaAlumnos77['customer_id'];
-                                                                   
+
 
                                                                     switch ($filaAlumnos77['tipoPago']) {
 
@@ -243,9 +243,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                         }
                                                                     }
 
-                                                                    echo '<span style="margin-left: 21px; ">Usuario: <strong>'.$usuario1.'</strong><br><br></span>';
+                                                                    echo '<span style="margin-left: 21px; ">Usuario: <strong>' . $usuario1 . '</strong><br><br></span>';
 
-                                                                
+
 
                                                                     $query7E = $conexion->query("SELECT * FROM orden_articulos WHERE order_id='$orderid' ");
                                                                     if ($query7E->num_rows > 0) {
@@ -254,7 +254,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                             $producto  = $row7E['product_id'];
                                                                             $productoquanty  = $row7E['quantity'];
                                                                             $precioP = $row7E['precio_venta_dolar'];
-                                                                            $precioFinal = $precioP * $productoquanty;  
+                                                                            $precioFinal = $precioP * $productoquanty;
                                                                             $precio_venta_dolar = $row7E['precio_venta_dolar'];
                                                                             $precio_venta_bs = $row7E['precio_venta_bs'];
                                                                             $precio_venta_cop = $row7E['precio_venta_cop'];
@@ -264,14 +264,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                             $buscarAlumnos9999999999 = $conexion->query($query9999999999);
                                                                             if ($buscarAlumnos9999999999->num_rows > 0) {
                                                                                 while ($filaAlumnos9999999999 = $buscarAlumnos9999999999->fetch_assoc()) {
-                                                                                   
+
 
                                                                                     if ($tipoV = 4) {
                                                                                         $precioDescontado = $precioP - ($precioP * $descuentoDel / 100);
                                                                                         $precioDescontado = $precioDescontado;
-                                                                                        $precioFinal = $precioDescontado * $productoquanty;  
-    
-                                                                                    }else {
+                                                                                        $precioFinal = $precioDescontado * $productoquanty;
+                                                                                    } else {
                                                                                         $precioDescontado = 'No aplica';
                                                                                     }
 
@@ -282,42 +281,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                                         // Bolivar...
                                                                                         $precioFinalMoneda = $precio_venta_bs * $productoquanty;
                                                                                         $moneda = '<small>BS</small>';
-                                                                                      } elseif ($tipopago == '5') {
+                                                                                    } elseif ($tipopago == '5') {
                                                                                         // Dolar...
                                                                                         $precioFinalMoneda = $precio_venta_dolar * $productoquanty;
                                                                                         $moneda = '<small>$</small>';
-                                                                                      } else {
+                                                                                    } else {
                                                                                         // pesos...
                                                                                         $precioFinalMoneda = $precio_venta_cop * $productoquanty;
                                                                                         $moneda = '<small>COP</small>';
-                                                                                      }
-                                                                                 
+                                                                                    }
 
 
 
-                                                                                   echo '
+
+                                                                                    echo '
                                                                                    <tr class="even pointer">
                                                                                   <td class=" ">' . $contador++ . '</td>
                                                                                   <td>' . $pagoPor . '</td>
-                                                                                  <td>' .$filaAlumnos9999999999['nombre'] . '</td>
-                                                                                  <td>' .$productoquanty . '</td>
+                                                                                  <td>' . $filaAlumnos9999999999['nombre'] . '</td>
+                                                                                  <td>' . $productoquanty . '</td>
                                                                                   <td>$' . number_format($precioFinal, '2', ',', '.') . '</td>
-                                                                                  <td>' . number_format($precioFinalMoneda, '2', ',', '.') .' '.$moneda.'</td>
+                                                                                  <td>' . number_format($precioFinalMoneda, '2', ',', '.') . ' ' . $moneda . '</td>
                                                                                   </tr>';
-
-
-
-
-
-
-
                                                                                 }
                                                                             }
                                                                         }
                                                                     }
-                                                               
-                                                                 
-
                                                                 }
                                                             }
 
@@ -332,7 +321,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
 
 
-                   
+
                         </div>
 
                         <div class='row' style='display: block;'>

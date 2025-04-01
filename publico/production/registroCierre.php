@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1) {
@@ -63,7 +63,7 @@ if ($_SESSION['nivel'] == 1) {
 
     if (isset($_POST['fechaSolic'])) {
         $semana = $_POST['fechaSolic'];
-    }else {
+    } else {
         $semana = date('Y-W');
     }
 
@@ -96,20 +96,18 @@ if ($_SESSION['nivel'] == 1) {
     $buscarAlumnos77as = $conexion->query($query77sa);
     if ($buscarAlumnos77as->num_rows > 0) {
         while ($filaAlumnos77we = $buscarAlumnos77as->fetch_assoc()) {
-       
-        $subTotal2 = 0;
-        $subTotal2 +=  $filaAlumnos77we['punto'] / $filaAlumnos77we['bolivarDolar'];
-        $subTotal2 +=  $filaAlumnos77we['bioPago'] / $filaAlumnos77we['bolivarDolar'];
-        $subTotal2 +=  $filaAlumnos77we['efectivo'] / $filaAlumnos77we['bolivarDolar'];
-        $subTotal2 +=  $filaAlumnos77we['pesos'] / $filaAlumnos77we['pesoDolar'];
-        $subTotal2 +=  $filaAlumnos77we['dolares'];
 
-        $totalDolares += $subTotal2; 
-        $totalDolaresNetos += $filaAlumnos77we['dolares'];
-        $totalPesos += $filaAlumnos77we['pesos']; 
-        $totalesBs += $filaAlumnos77we['punto'] + $filaAlumnos77we['bioPago'] + $filaAlumnos77we['efectivo']; 
+            $subTotal2 = 0;
+            $subTotal2 +=  $filaAlumnos77we['punto'] / $filaAlumnos77we['bolivarDolar'];
+            $subTotal2 +=  $filaAlumnos77we['bioPago'] / $filaAlumnos77we['bolivarDolar'];
+            $subTotal2 +=  $filaAlumnos77we['efectivo'] / $filaAlumnos77we['bolivarDolar'];
+            $subTotal2 +=  $filaAlumnos77we['pesos'] / $filaAlumnos77we['pesoDolar'];
+            $subTotal2 +=  $filaAlumnos77we['dolares'];
 
-
+            $totalDolares += $subTotal2;
+            $totalDolaresNetos += $filaAlumnos77we['dolares'];
+            $totalPesos += $filaAlumnos77we['pesos'];
+            $totalesBs += $filaAlumnos77we['punto'] + $filaAlumnos77we['bioPago'] + $filaAlumnos77we['efectivo'];
         }
     }
 
@@ -117,15 +115,15 @@ if ($_SESSION['nivel'] == 1) {
     if ($totalDolares < $totalVentasSemana) {
         $down = 'fa-arrow-down';
         $display = 'color: #ff9b9b; opacity: 1';
-    }elseif ($totalDolares > $totalVentasSemana) {
+    } elseif ($totalDolares > $totalVentasSemana) {
         $down = 'fa-question';
         $display = ' opacity: 0';
-    }else {
+    } else {
         $display = ' opacity: 0';
         $down = '';
     }
-    
-    
+
+
 
 ?>
     <!DOCTYPE html>
@@ -164,14 +162,14 @@ if ($_SESSION['nivel'] == 1) {
         <script src='peticion.js'></script>
         <script src='peticion_producto.js'></script>
 
-        
+
         <script src='ex/jquery.min.js'></script>
         <script src='ex/bootstrap.min.js'></script>
 
-        
+
         <script src="../assets/sweetalert.min.js"></script>
         <script src="../assets/sweetalert2.all.min.js"></script>
-          </head>
+    </head>
 
     <body class='nav-md'>
 
@@ -179,80 +177,78 @@ if ($_SESSION['nivel'] == 1) {
 
 
 
-    <style>
-      
-        button {
-            background-color: #32d7c0;
-            border: 0;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            color: #fff;
-            font-size: 14px;
-            padding: 5px;
-        }
+        <style>
+            button {
+                background-color: #32d7c0;
+                border: 0;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                color: #fff;
+                font-size: 14px;
+                padding: 5px;
+            }
 
-        .modal-container5 {
-            z-index: 99;
-            display: flex;
-            background-color: rgba(0, 0, 0, 0.3);
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            pointer-events: none;
-            opacity: 0;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 100vw;
-            transition: opacity 0.3s ease;
-        }
+            .modal-container5 {
+                z-index: 99;
+                display: flex;
+                background-color: rgba(0, 0, 0, 0.3);
+                align-items: center;
+                justify-content: center;
+                position: fixed;
+                pointer-events: none;
+                opacity: 0;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 100vw;
+                transition: opacity 0.3s ease;
+            }
 
-        .show {
-            pointer-events: auto;
-            opacity: 1;
-        }
+            .show {
+                pointer-events: auto;
+                opacity: 1;
+            }
 
-        .modal5 {
-            background-color: #fff;
-            width: 600px;
-            max-width: 100%;
-            padding: 30px 50px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
+            .modal5 {
+                background-color: #fff;
+                width: 600px;
+                max-width: 100%;
+                padding: 30px 50px;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                text-align: center;
+            }
 
-        .modal5 h1 {
-            margin: 0;
-        }
+            .modal5 h1 {
+                margin: 0;
+            }
 
-        .modal5 p {
-            opacity: 0.7;
-            font-size: 14px;
-        }
-
-    </style>
+            .modal5 p {
+                opacity: 0.7;
+                font-size: 14px;
+            }
+        </style>
 
 
-    <div id="modal_container" class="modal-container5">
+        <div id="modal_container" class="modal-container5">
             <div class="modal5">
-                    <h2>Filtrar por semana</h2>
-                    <form action="" method="post">
-                        <p>
-                            <select class="form-control" required='required' name="fechaSolic" onchange="capturar()" division()>
-                                <option value="<?php echo date('Y-W') ?>"> <?php echo date('Y-W') ?> (actual)</option>
-                                <?php
-                                $semanaPasada = date('W') - 1;
-                                while ($semanaPasada >= 3) {
-                                    echo '<option value="' . date('Y-') . $semanaPasada . '">' . date('Y-') . $semanaPasada . '</option>';
-                                    $semanaPasada -= 1;
-                                }
-                                ?>
-                            </select>
-                        </p>
-                        <button class="btn btn-success">Filtrar</button>
-                        <a style="color: white; cursor: pointer" class="btn btn-info" onclick="cerrarModal()">Cerrar</a>
-                    </form>
+                <h2>Filtrar por semana</h2>
+                <form action="" method="post">
+                    <p>
+                        <select class="form-control" required='required' name="fechaSolic" onchange="capturar()" division()>
+                            <option value="<?php echo date('Y-W') ?>"> <?php echo date('Y-W') ?> (actual)</option>
+                            <?php
+                            $semanaPasada = date('W') - 1;
+                            while ($semanaPasada >= 3) {
+                                echo '<option value="' . date('Y-') . $semanaPasada . '">' . date('Y-') . $semanaPasada . '</option>';
+                                $semanaPasada -= 1;
+                            }
+                            ?>
+                        </select>
+                    </p>
+                    <button class="btn btn-success">Filtrar</button>
+                    <a style="color: white; cursor: pointer" class="btn btn-info" onclick="cerrarModal()">Cerrar</a>
+                </form>
             </div>
         </div>
 
@@ -281,7 +277,7 @@ if ($_SESSION['nivel'] == 1) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -306,7 +302,7 @@ if ($_SESSION['nivel'] == 1) {
                         <div class='clearfix'></div>
 
                         <div class='row   fadeInUp animated'>
-                
+
 
 
 
@@ -315,25 +311,25 @@ if ($_SESSION['nivel'] == 1) {
                                     <div class='x_title'>
                                         <h2>Detalles <small>Semana consultada: <strong><?php echo $semana ?></strong> / Semana actual: <strong><?php echo date('Y-W') ?></strong></small> </h2>
                                         <span style="float: right;">
-                                     
-
-                                        <button onclick="mostrarModal()">
-                                            <i title="Filtrar por semana" class="fa fa-filter"></i>
-                                        </button>
-
-                                    </span>
 
 
+                                            <button onclick="mostrarModal()">
+                                                <i title="Filtrar por semana" class="fa fa-filter"></i>
+                                            </button>
 
-<script>
-       function mostrarModal() {
-                modal_container.classList.add('show');
-            }
+                                        </span>
 
-            function cerrarModal() {
-                modal_container.classList.remove('show');
-            }
-</script>
+
+
+                                        <script>
+                                            function mostrarModal() {
+                                                modal_container.classList.add('show');
+                                            }
+
+                                            function cerrarModal() {
+                                                modal_container.classList.remove('show');
+                                            }
+                                        </script>
 
 
 
@@ -402,7 +398,7 @@ if ($_SESSION['nivel'] == 1) {
 
 
 
-                                               <input hidden type="text" class="form-control" id="semana" value="<?php echo $semana ?>">
+                                                <input hidden type="text" class="form-control" id="semana" value="<?php echo $semana ?>">
 
 
 
@@ -431,36 +427,35 @@ if ($_SESSION['nivel'] == 1) {
                                                 </div>
                                             </div>
                                             <p style="    float: right;width: 100%;text-align: right;margin-right: 40px;">
-<br>
-<br> * El registro de ingreso diario quedara anclado a la tasa de cambio configurada actualmente.
-</p>
+                                                <br>
+                                                <br> * El registro de ingreso diario quedara anclado a la tasa de cambio configurada actualmente.
+                                            </p>
 
                                             <script>
-
                                                 function verificarContenido(campo) {
-                                                    let contenido = $('#'+campo).val();
+                                                    let contenido = $('#' + campo).val();
 
                                                     if (contenido.indexOf(',') != '-1') {
                                                         contenido = contenido.replaceAll(',', '')
-                                                        $('#'+campo).val(contenido);
+                                                        $('#' + campo).val(contenido);
                                                         alert('1: No utilice separador de miles. 2: Si desea indicar un valor decimal utilice el punto "."')
                                                     }
 
                                                     var indices = [];
-                                                    for(var i = 0; i < contenido.length; i++) {
+                                                    for (var i = 0; i < contenido.length; i++) {
                                                         if (contenido[i].toLowerCase() === ".") indices.push(i);
                                                     }
 
                                                     if (indices.length >= 2) {
-                                                        $('#'+campo).val(contenido.substring(0, contenido.length - 1));
+                                                        $('#' + campo).val(contenido.substring(0, contenido.length - 1));
                                                     }
 
 
                                                     contenido = contenido.replace(/[^0-9.]/g, '');
-                                                    $('#'+campo).val(contenido);
+                                                    $('#' + campo).val(contenido);
 
 
-                                                    
+
                                                 }
 
                                                 function saveDiaZ() {
@@ -474,7 +469,7 @@ if ($_SESSION['nivel'] == 1) {
 
 
                                                     if (punto == '' || biopago == '' || efectivo == '' || dolares == '' || pesos == '' || semana == '' || dia == '') {
-                                                        
+
                                                         alert('Campos vacios')
                                                         return;
                                                     }
@@ -485,30 +480,28 @@ if ($_SESSION['nivel'] == 1) {
 
 
                                                     $.ajax({
-                                                        url: '../../configurar/addCierre.php',
-                                                        type: 'POST',
-                                                        dataType: 'html',
-                                                        data: {
-                                                            punto : punto,
-                                                            biopago : biopago,
-                                                            efectivo : efectivo,
-                                                            dolares : dolares,
-                                                            pesos : pesos,
-                                                            semana : semana,
-                                                            dia: dia
-                                                        },
+                                                            url: '../../configurar/addCierre.php',
+                                                            type: 'POST',
+                                                            dataType: 'html',
+                                                            data: {
+                                                                punto: punto,
+                                                                biopago: biopago,
+                                                                efectivo: efectivo,
+                                                                dolares: dolares,
+                                                                pesos: pesos,
+                                                                semana: semana,
+                                                                dia: dia
+                                                            },
                                                         })
 
                                                         .done(function(resultado) {
                                                             if (resultado.trim() == 'ok') {
                                                                 location.reload()
-                                                            }else{
+                                                            } else {
                                                                 alert(resultado);
                                                             }
                                                         })
                                                 }
-
-
                                             </script>
                                         </div>
                                     </div>
@@ -519,138 +512,139 @@ if ($_SESSION['nivel'] == 1) {
 
 
 
-<div class='x_panel tile'  style="min-height: 500px;">
-    <div class='x_title' >
-        <h2>Comparativa</h2>
-        <div class='clearfix'></div>
-    </div>
-    <div class='x_content' >
+                                <div class='x_panel tile' style="min-height: 500px;">
+                                    <div class='x_title'>
+                                        <h2>Comparativa</h2>
+                                        <div class='clearfix'></div>
+                                    </div>
+                                    <div class='x_content'>
 
 
 
-        <div class='col-lg-12'> <br>
+                                        <div class='col-lg-12'> <br>
 
-            <div class="fila ">
-                <div class="col-lg-9">
-                    <h5 class="h3edit">BOLIVARES</h5>
-                    <span><?php  echo number_format($totalesBs, '2', '.', '.'); ?> - Total de ingresos </span>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br><img src='images/EFECTIVO-BOLIVAR.png' alt='BOLIVAR'>
-                    </div>
-                </div>
-            </div>
-
-
-
-
-            <div class="fila ">
-                <div class="col-lg-9">
-                    <h5 class="h3edit">PESOS</h5>
-                    <span><?php echo number_format($totalPesos, '0', '.', '.'); ?> - Total de ingresos </span>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br><img src='images/EFECTIVO-PESOS.png' alt='BOLIVAR'>
-                    </div>
-                </div>
-            </div>
-
-
-            <div class="fila ">
-                <div class="col-lg-9">
-                    <h5 class="h3edit">Dolares</h5>
-                    <span>$<?php echo number_format($totalDolaresNetos, '0', '.', '.'); ?> - Total de ingresos </span>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br><img src='images/EFECTIVO-DOLAR.png' alt='BOLIVAR'>
-                    </div>
-
-                </div>
-                
-            </div>
-
-
-<div class="col-lg-12">
-    <br>
-<hr>
-<br>
-</div>
-
-
-            <div class="fila">
-                <div class="col-lg-9">
-                    
-                    <h5 class="h3edit">
-
-
-                    <i style="position: absolute; margin-left: -25px; display: block;  color: #ff9b9b" class="fa <?php echo $down ?>"></i>
+                                            <div class="fila ">
+                                                <div class="col-lg-9">
+                                                    <h5 class="h3edit">BOLIVARES</h5>
+                                                    <span><?php echo number_format($totalesBs, '2', '.', '.'); ?> - Total de ingresos </span>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br><img src='images/EFECTIVO-BOLIVAR.png' alt='BOLIVAR'>
+                                                    </div>
+                                                </div>
+                                            </div>
 
 
 
 
-                    DOLARES</h5>
-                    <span>$<?php echo number_format($totalDolares, '2', '.', '.'); ?> / $<?php echo number_format($totalVentasSemana, '2', '.', '.'); ?> </span>
-                    <span style="<?php echo $display ?>">/ - $<?php echo number_format($totalVentasSemana - $totalDolares, '2', '.', '.'); ?></span>
-                    <p>Conversión a dolares.</p>
-                    <p>Total de ingresos declarados por 'Cierres diarios' <strong>($<?php echo number_format($totalDolares, '2', '.', '.'); ?>)</strong> / total de ingresos por el valor de la ventas realizadas <strong>($<?php echo number_format($totalVentasSemana, '2', '.', '.'); ?>)</strong></p>
-                </div>
-                <div class="col-lg-3">
-                    <div class="icon"><br>
-                        <i class="line icon-reload"></i>
-                    </div>
-                </div>
-            </div>
+                                            <div class="fila ">
+                                                <div class="col-lg-9">
+                                                    <h5 class="h3edit">PESOS</h5>
+                                                    <span><?php echo number_format($totalPesos, '0', '.', '.'); ?> - Total de ingresos </span>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br><img src='images/EFECTIVO-PESOS.png' alt='BOLIVAR'>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+                                            <div class="fila ">
+                                                <div class="col-lg-9">
+                                                    <h5 class="h3edit">Dolares</h5>
+                                                    <span>$<?php echo number_format($totalDolaresNetos, '0', '.', '.'); ?> - Total de ingresos </span>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br><img src='images/EFECTIVO-DOLAR.png' alt='BOLIVAR'>
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <div class="col-lg-12">
+                                                <br>
+                                                <hr>
+                                                <br>
+                                            </div>
+
+
+                                            <div class="fila">
+                                                <div class="col-lg-9">
+
+                                                    <h5 class="h3edit">
+
+
+                                                        <i style="position: absolute; margin-left: -25px; display: block;  color: #ff9b9b" class="fa <?php echo $down ?>"></i>
 
 
 
 
-        </div>
+                                                        DOLARES
+                                                    </h5>
+                                                    <span>$<?php echo number_format($totalDolares, '2', '.', '.'); ?> / $<?php echo number_format($totalVentasSemana, '2', '.', '.'); ?> </span>
+                                                    <span style="<?php echo $display ?>">/ - $<?php echo number_format($totalVentasSemana - $totalDolares, '2', '.', '.'); ?></span>
+                                                    <p>Conversión a dolares.</p>
+                                                    <p>Total de ingresos declarados por 'Cierres diarios' <strong>($<?php echo number_format($totalDolares, '2', '.', '.'); ?>)</strong> / total de ingresos por el valor de la ventas realizadas <strong>($<?php echo number_format($totalVentasSemana, '2', '.', '.'); ?>)</strong></p>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <div class="icon"><br>
+                                                        <i class="line icon-reload"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-        <style>
-            .iconPerso {
-                font-size: 28px !important;
-            }
 
-            .tile-stats {
-                box-shadow: none !important;
-            }
 
-            .control2 {
-                max-width: 170px !important;
-                border: none;
-                margin-bottom: 0 !important;
-            }
 
-            .info2 {
-                max-height: 50px !important;
-                opacity: 0.4
-            }
+                                        </div>
 
-            .info2:hover {
-                opacity: 1
-            }
+                                        <style>
+                                            .iconPerso {
+                                                font-size: 28px !important;
+                                            }
 
-            .subg {
-                color: #BAB8B8;
-                font-size: 12px !important;
-                margin-left: 0 !important;
-                margin-top: -5 !important;
-            }
-        </style>
+                                            .tile-stats {
+                                                box-shadow: none !important;
+                                            }
 
-    </div>
-</div>
-</div>
+                                            .control2 {
+                                                max-width: 170px !important;
+                                                border: none;
+                                                margin-bottom: 0 !important;
+                                            }
+
+                                            .info2 {
+                                                max-height: 50px !important;
+                                                opacity: 0.4
+                                            }
+
+                                            .info2:hover {
+                                                opacity: 1
+                                            }
+
+                                            .subg {
+                                                color: #BAB8B8;
+                                                font-size: 12px !important;
+                                                margin-left: 0 !important;
+                                                margin-top: -5 !important;
+                                            }
+                                        </style>
+
+                                    </div>
+                                </div>
+                            </div>
 
 
 
 
                             <div class='col-lg-12'>
-                                <div class='x_panel  ' >
+                                <div class='x_panel  '>
                                     <div class='x_title'>
                                         <h2 style="width: 100%;">Registros de la semana
 
-                                        <span style="float: right; margin-right: 15px"><?php echo $registrosSemana ?>/7</span>
+                                            <span style="float: right; margin-right: 15px"><?php echo $registrosSemana ?>/7</span>
                                         </h2>
 
                                         <div class='clearfix'></div>
@@ -722,18 +716,17 @@ if ($_SESSION['nivel'] == 1) {
                                                                         <td class=" ">' . $contador++ . '</td>
                                                                         <td>' . $diaText . '</td>
                                                                         <td>' . $filaAlumnos77['semana'] . '</td>
-                                                                        <td>' .number_format($filaAlumnos77['punto'], '2', ',', '.') . '</td>
+                                                                        <td>' . number_format($filaAlumnos77['punto'], '2', ',', '.') . '</td>
                                                                         <td>' . number_format($filaAlumnos77['bioPago'], '2', ',', '.') . ' </td>
                                                                         <td>' . number_format($filaAlumnos77['efectivo'], '2', ',', '.') . ' </td>
                                                                         <td>$' . number_format($filaAlumnos77['dolares'], '2', ',', '.') . ' </td>
                                                                         <td>' . number_format($filaAlumnos77['pesos'], '0', ',', '.') . ' </td>
-                                                                        <td>' .number_format($subTotal, '2', ',', '.') . ' </td>
+                                                                        <td>' . number_format($subTotal, '2', ',', '.') . ' </td>
 
                                                                         <td style="text-align: center"  class="">
-                                                              <a style="cursor: pointer" onclick="confirm('.$filaAlumnos77["id"].')"><i class="gray line icon-trash"></i></a>
+                                                              <a style="cursor: pointer" onclick="confirm(' . $filaAlumnos77["id"] . ')"><i class="gray line icon-trash"></i></a>
                                                             </tr>
                                                                         </tr>';
-
                                                                     }
                                                                 }
 
@@ -750,49 +743,47 @@ if ($_SESSION['nivel'] == 1) {
 
 
                                 <script>
-                                                  
-
-                                                  function confirm(id){
+                                    function confirm(id) {
 
 
 
-                                                            Swal.fire({
-                                                                title: 'Esta seguro?',
-                                                                html: 'Se eliminara el registro ¿desea continuar?',
-                                                                icon: 'question',
-                                                                confirmButtonText: 'Eliminar',
-                                                                cancelButtonText: 'Cancelar',
-                                                                confirmButtonColor: '#32d7c0',
-                                                                showCancelButton: true,
+                                        Swal.fire({
+                                            title: 'Esta seguro?',
+                                            html: 'Se eliminara el registro ¿desea continuar?',
+                                            icon: 'question',
+                                            confirmButtonText: 'Eliminar',
+                                            cancelButtonText: 'Cancelar',
+                                            confirmButtonColor: '#32d7c0',
+                                            showCancelButton: true,
 
-                                                            }).then((result) => {
-                                                                if (result.isConfirmed) {
-                                                                    elimi(id)
-                                                                }
-                                                            })
-
-
-
-                                                  }
+                                        }).then((result) => {
+                                            if (result.isConfirmed) {
+                                                elimi(id)
+                                            }
+                                        })
 
 
-                                                  function elimi(params) {
-                                                           $.ajax({
-                                                               url: '../../configurar/deleteCieAjax.php',
-                                                               type: 'POST',
-                                                               dataType: 'html',
-                                                               data: {
-                                                                   id: params
-                                                               },
-                                                           })
-   
-                                                           .done(function(resultado1) {
-                                                               $("#row"+params).hide(300);
-                                                           })
-   
-                                                             
-                                              }
-                                              </script>
+
+                                    }
+
+
+                                    function elimi(params) {
+                                        $.ajax({
+                                                url: '../../configurar/deleteCieAjax.php',
+                                                type: 'POST',
+                                                dataType: 'html',
+                                                data: {
+                                                    id: params
+                                                },
+                                            })
+
+                                            .done(function(resultado1) {
+                                                $("#row" + params).hide(300);
+                                            })
+
+
+                                    }
+                                </script>
 
                             </div>
 

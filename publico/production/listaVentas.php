@@ -3,7 +3,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -258,7 +258,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     ///////////// MFS /////////////
-    function returnGanancias($tipo){
+    function returnGanancias($tipo)
+    {
         global $conexion;
         global $today;
         $ganancias = 0;
@@ -274,26 +275,24 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 $buscarAlumnos0000003344 = $conexion->query($query0000003344);
                 if ($buscarAlumnos0000003344->num_rows > 0) {
                     while ($filaAlumnos0000003344 = $buscarAlumnos0000003344->fetch_assoc()) {
-    
+
                         $precioCompra = $filaAlumnos0000003344['precio'] * $filaAlumnos0000003344['quantity'];
                         $precioVenta = $filaAlumnos0000003344['precio_venta_dolar'] * $filaAlumnos0000003344['quantity'];
 
-                        
+
                         if ($tipo == '4') {
                             $precioVenta = $precioVenta - ($precioVenta * $descontado / 100);
-                            $ganancias += $precioVenta - $precioCompra; 
-                        }else {
-                            $ganancias += $precioVenta - $precioCompra; 
+                            $ganancias += $precioVenta - $precioCompra;
+                        } else {
+                            $ganancias += $precioVenta - $precioCompra;
                         }
-
-    
                     }
                 }
             }
         }
         return $ganancias;
     }
-     ///////////// MFS /////////////
+    ///////////// MFS /////////////
 
     $totalVentas1111111 = 0;
     $query1111111 = "SELECT * FROM orden WHERE modified='$today' AND tipoPago='1' AND status='1' OR modified='$today' AND tipoPago='1' AND status='4'";
@@ -481,7 +480,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         } else {
             return 0;
         }
-    
     }
 
     $query5 = "SELECT * FROM orden WHERE modified='$today' AND status='1' OR modified='$today' AND status='4'";
@@ -684,7 +682,7 @@ modified='$today' AND status='4' AND tipoPago='6'";
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -929,7 +927,7 @@ modified='$today' AND status='4' AND tipoPago='6'";
                             <td>$' . number_format($filaAlumnos77['total_price'], '2', ',', '.') . '</td>
                             <td>' . number_format($valorPeso, '0', ',', '.') . ' </td>
                             <td>' . number_format($valorbolivar, '2', ',', '.') . ' </td>
-                            <td><a href="detallesVenta.php?id='.$filaAlumnos77['id'].'">Detalles</a></td>
+                            <td><a href="detallesVenta.php?id=' . $filaAlumnos77['id'] . '">Detalles</a></td>
 
                       
                             
@@ -978,7 +976,7 @@ modified='$today' AND status='4' AND tipoPago='6'";
                                                     <p><?php echo number_format($gananciasMesBolivar + $residuoBs, '2', '.', '.'); ?> - Ganancias.</p>
                                                 </div>
                                                 <div class="col-lg-3">
-                                                    <div  class="icon"><br><img src='images/EFECTIVO-BOLIVAR.png' alt='BOLIVAR'>
+                                                    <div class="icon"><br><img src='images/EFECTIVO-BOLIVAR.png' alt='BOLIVAR'>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1072,124 +1070,124 @@ modified='$today' AND status='4' AND tipoPago='6'";
                                                 <div class="col-lg-9">
                                                     <h5 class="h3edit">Mayor</h5>
                                                     <span>$<?php echo number_format(total('4'), '2', '.', '.'); ?> </span>
-                                                      <p>$<?php echo number_format(returnGanancias('4'), '2', '.', '.') ?> Ganancias.</p>
+                                                    <p>$<?php echo number_format(returnGanancias('4'), '2', '.', '.') ?> Ganancias.</p>
                                                 </div>
                                                 <div class="col-lg-3">
                                                     <div class="icon"><br>
-                                                    <div class="icon"><br><img src='images/icono/ganancia.png' alt='BOLIVAR'>
+                                                        <div class="icon"><br><img src='images/icono/ganancia.png' alt='BOLIVAR'>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div class="fila  ">
-                                                <div class="col-lg-9">
-                                                    <h5 class="h3edit">Detal</h5>
-                                                    <span>$<?php echo number_format(total('1'), '2', '.', '.'); ?> </span>
-                                                    <p>$<?php echo number_format(returnGanancias('1'), '2', '.', '.') ?> Ganancias.</p>
-                                                </div>
-                                                <div class="col-lg-3">
-                                                    <div class="icon"><br>
-                                                    <div class="icon"><br><img src='images/icono/valordelstock.png' alt='BOLIVAR'>
+                                                <div class="fila  ">
+                                                    <div class="col-lg-9">
+                                                        <h5 class="h3edit">Detal</h5>
+                                                        <span>$<?php echo number_format(total('1'), '2', '.', '.'); ?> </span>
+                                                        <p>$<?php echo number_format(returnGanancias('1'), '2', '.', '.') ?> Ganancias.</p>
                                                     </div>
+                                                    <div class="col-lg-3">
+                                                        <div class="icon"><br>
+                                                            <div class="icon"><br><img src='images/icono/valordelstock.png' alt='BOLIVAR'>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+
+
+
+
+
+
+
+
+
                                                 </div>
+
+                                                <style>
+                                                    .iconPerso {
+                                                        font-size: 28px !important;
+                                                    }
+
+                                                    .tile-stats {
+                                                        box-shadow: none !important;
+                                                    }
+
+                                                    .control2 {
+                                                        max-width: 170px !important;
+                                                        border: none;
+                                                        margin-bottom: 0 !important;
+                                                    }
+
+                                                    .info2 {
+                                                        max-height: 50px !important;
+                                                        opacity: 0.4
+                                                    }
+
+                                                    .info2:hover {
+                                                        opacity: 1
+                                                    }
+
+                                                    .subg {
+                                                        color: #BAB8B8;
+                                                        font-size: 12px !important;
+                                                        margin-left: 0 !important;
+                                                        margin-top: -5 !important;
+                                                    }
+                                                </style>
+
                                             </div>
-
-
-
-
-
-
-
-
-
-
                                         </div>
-
-                                        <style>
-                                            .iconPerso {
-                                                font-size: 28px !important;
-                                            }
-
-                                            .tile-stats {
-                                                box-shadow: none !important;
-                                            }
-
-                                            .control2 {
-                                                max-width: 170px !important;
-                                                border: none;
-                                                margin-bottom: 0 !important;
-                                            }
-
-                                            .info2 {
-                                                max-height: 50px !important;
-                                                opacity: 0.4
-                                            }
-
-                                            .info2:hover {
-                                                opacity: 1
-                                            }
-
-                                            .subg {
-                                                color: #BAB8B8;
-                                                font-size: 12px !important;
-                                                margin-left: 0 !important;
-                                                margin-top: -5 !important;
-                                            }
-                                        </style>
-
                                     </div>
+                                </div>
+
+                                <div class='row' style='display: block;'>
+
+
                                 </div>
                             </div>
                         </div>
+                        <!-- /page content -->
 
-                        <div class='row' style='display: block;'>
-
-
-                        </div>
+                        <!-- footer content -->
+                        <footer>
+                            <div class='pull-right'>
+                                I-SELLER - by <a href='#'>Jose Ricardo Tovarg III</a>
+                            </div>
+                            <div class='clearfix'></div>
+                        </footer>
+                        <!-- /footer content -->
                     </div>
                 </div>
-                <!-- /page content -->
 
-                <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        I-SELLER - by <a href='#'>Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
-                <!-- /footer content -->
-            </div>
-        </div>
+                <!-- jQuery -->
+                <script src='../vendors/jquery/dist/jquery.min.js'></script>
+                <!-- Bootstrap -->
+                <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
+                <!-- FastClick -->
+                <script src='../vendors/fastclick/lib/fastclick.js'></script>
+                <!-- NProgress -->
+                <script src='../vendors/nprogress/nprogress.js'></script>
+                <!-- iCheck -->
+                <script src='../vendors/iCheck/icheck.min.js'></script>
+                <!-- Datatables -->
+                <script src='../vendors/datatables.net/js/jquery.dataTables.min.js'></script>
+                <script src='../vendors/datatables.net-bs/js/dataTables.bootstrap.min.js'></script>
+                <script src='../vendors/datatables.net-buttons/js/dataTables.buttons.min.js'></script>
+                <script src='../vendors/datatables.net-buttons-bs/js/buttons.bootstrap.min.js'></script>
+                <script src='../vendors/datatables.net-buttons/js/buttons.flash.min.js'></script>
+                <script src='../vendors/datatables.net-buttons/js/buttons.html5.min.js'></script>
+                <script src='../vendors/datatables.net-buttons/js/buttons.print.min.js'></script>
+                <script src='../vendors/datatables.net-fixedheader/js/dataTables.fixedHeader.min.js'></script>
+                <script src='../vendors/datatables.net-keytable/js/dataTables.keyTable.min.js'></script>
+                <script src='../vendors/datatables.net-responsive/js/dataTables.responsive.min.js'></script>
+                <script src='../vendors/datatables.net-responsive-bs/js/responsive.bootstrap.js'></script>
+                <script src='../vendors/datatables.net-scroller/js/dataTables.scroller.min.js'></script>
+                <script src='../vendors/jszip/dist/jszip.min.js'></script>
+                <script src='../vendors/pdfmake/build/pdfmake.min.js'></script>
+                <script src='../vendors/pdfmake/build/vfs_fonts.js'></script>
 
-        <!-- jQuery -->
-        <script src='../vendors/jquery/dist/jquery.min.js'></script>
-        <!-- Bootstrap -->
-        <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
-        <!-- FastClick -->
-        <script src='../vendors/fastclick/lib/fastclick.js'></script>
-        <!-- NProgress -->
-        <script src='../vendors/nprogress/nprogress.js'></script>
-        <!-- iCheck -->
-        <script src='../vendors/iCheck/icheck.min.js'></script>
-        <!-- Datatables -->
-        <script src='../vendors/datatables.net/js/jquery.dataTables.min.js'></script>
-        <script src='../vendors/datatables.net-bs/js/dataTables.bootstrap.min.js'></script>
-        <script src='../vendors/datatables.net-buttons/js/dataTables.buttons.min.js'></script>
-        <script src='../vendors/datatables.net-buttons-bs/js/buttons.bootstrap.min.js'></script>
-        <script src='../vendors/datatables.net-buttons/js/buttons.flash.min.js'></script>
-        <script src='../vendors/datatables.net-buttons/js/buttons.html5.min.js'></script>
-        <script src='../vendors/datatables.net-buttons/js/buttons.print.min.js'></script>
-        <script src='../vendors/datatables.net-fixedheader/js/dataTables.fixedHeader.min.js'></script>
-        <script src='../vendors/datatables.net-keytable/js/dataTables.keyTable.min.js'></script>
-        <script src='../vendors/datatables.net-responsive/js/dataTables.responsive.min.js'></script>
-        <script src='../vendors/datatables.net-responsive-bs/js/responsive.bootstrap.js'></script>
-        <script src='../vendors/datatables.net-scroller/js/dataTables.scroller.min.js'></script>
-        <script src='../vendors/jszip/dist/jszip.min.js'></script>
-        <script src='../vendors/pdfmake/build/pdfmake.min.js'></script>
-        <script src='../vendors/pdfmake/build/vfs_fonts.js'></script>
-
-        <!-- Custom Theme Scripts -->
-        <script src='../build/js/custom.min.js'></script>
+                <!-- Custom Theme Scripts -->
+                <script src='../build/js/custom.min.js'></script>
     </body>
 
     </html>

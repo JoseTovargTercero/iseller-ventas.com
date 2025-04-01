@@ -2,17 +2,17 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-require_once('includes/darkModeAct.php');
+
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-   
-    
+
+
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
-  
+
 
     $topnav = topnav();
 
@@ -51,7 +51,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             $nombreEmpresa = $filaAlumnos2['emp'];
         }
     }
-    
+
     include 'La-carta.php';
     $cart = new Cart;
 
@@ -347,7 +347,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     $stockCritico = $filaAlumnos22['stockCritico'];
                                                 }
                                             }
-                                           
+
                                             $query6 = $conexion->query("SELECT * FROM productos WHERE favorito=1  AND activo= 0 ORDER BY nombre ASC");
                                             if ($query6->num_rows > 0) {
                                                 $tabla6 = '';
