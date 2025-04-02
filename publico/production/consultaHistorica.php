@@ -101,29 +101,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
-        <!-- Meta, title, CSS, favicons, etc. -->
-        <meta charset='utf-8'>
-        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-        <meta name='viewport' content='width=device-width, initial-scale=1'>
-        <link rel='icon' href='images/favicon.ico' type='image/ico' />
-
+       
         <title>Consultas</title>
-        <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
-        <!-- Font Awesome -->
-        <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
-        <!-- NProgress -->
-        <link href='../vendors/nprogress/nprogress.css' rel='stylesheet'>
-        <!-- bootstrap-daterangepicker -->
-        <link href='../vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
-        <!-- bootstrap-datetimepicker -->
-        <link href='../vendors/bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css' rel='stylesheet'>
-        <!-- Ion.RangeSlider -->
-        <link href='../vendors/normalize-css/normalize.css' rel='stylesheet'>
-        <link href='../vendors/ion.rangeSlider/css/ion.rangeSlider.css' rel='stylesheet'>
-        <link href='../vendors/ion.rangeSlider/css/ion.rangeSlider.skinFlat.css' rel='stylesheet'>
-        <!-- Bootstrap Colorpicker -->
-        <link href='../vendors/mjolnic-bootstrap-colorpicker/dist/css/bootstrap-colorpicker.min.css' rel='stylesheet'>
+       
+        <?php require_once('includes/headers.php'); ?>
 
         <link href='../vendors/cropper/dist/cropper.min.css' rel='stylesheet'>
         <link href="../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css" rel="stylesheet">
@@ -131,21 +112,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-        <!-- Custom Theme Style -->
-        <link href='../build/css/custom.min.css' rel='stylesheet'>
-        <script src='js/jquery.min.js'></script>
+      
         <script src='peticion.js'></script>
         <script src='peticion_producto.js'></script>
-        <link rel='stylesheet' href='../assets/AlertifyJS/css/alertify.min.css' />
-        <link rel='stylesheet' href='../assets/AlertifyJS/css/themes/semantic.min.css' />
-        <script src='..//assets/AlertifyJS/alertify.min.js'></script>
-        <script src='ex/jquery.min.js'></script>
-        <script src='ex/bootstrap.min.js'></script>
+
         <?php
         @$accion = $_GET['accion'];
 

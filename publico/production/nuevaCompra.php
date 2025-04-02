@@ -44,29 +44,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
-        <!-- Meta, title, CSS, favicons, etc. -->
-        <meta charset='utf-8'>
-        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-        <meta name='viewport' content='width=device-width, initial-scale=1'>
-        <link rel='icon' href='images/favicon.ico' type='image/ico' />
-
+     
         <title>Compras</title>
+        <?php require_once('includes/headers.php'); ?>
 
-        <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
-        <!-- Font Awesome -->
-        <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
-        <!-- NProgress -->
-        <link href='../vendors/nprogress/nprogress.css' rel='stylesheet'>
-        <!-- iCheck -->
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-        <!-- bootstrap-wysiwyg -->
-        <link href='../vendors/google-code-prettify/bin/prettify.min.css' rel='stylesheet'>
-        <!-- Select2 -->
         <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
         <!-- Switchery -->
         <link href='../vendors/switchery/dist/switchery.min.css' rel='stylesheet'>
@@ -80,17 +61,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
 
-        <!-- Custom Theme Style -->
-        <link href='../build/css/custom.min.css' rel='stylesheet'>
-
-        <script src='js/jquery.min.js'></script>
+     
         <script src='peticion.js'></script>
         <script src='peticion_codigo_producto.js'></script>
 
 
-        <link rel='stylesheet' href='../assets/AlertifyJS/css/alertify.min.css' />
-        <link rel='stylesheet' href='../assets/AlertifyJS/css/themes/semantic.min.css' />
-        <script src='..//assets/AlertifyJS/alertify.min.js'></script>
 
 
         <?php

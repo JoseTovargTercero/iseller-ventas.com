@@ -4,8 +4,6 @@ require_once('includes/header.php');
 require_once('includes/menu.php');
 
 
-
-
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     if ($_SESSION["validate"] != "ok") {
@@ -199,6 +197,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     <style>
+          .form-control{
+                background-color:  #fff !important;
+            }
         .swal2-container {
             z-index: 99999;
         }
