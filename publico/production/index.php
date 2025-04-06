@@ -63,8 +63,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             // Calculamos el valor de venta basado en el precio de compra y el porcentaje de ganancia
             $valor_venta = $valor_compra_unitario * (1 + $porcentaje_ganancia / 100);
 
+
             // Acumulamos el valor del stock con y sin ganancia
             $valor_stock_con_ganancia += $valor_venta * (float) $row['stock'];
+
+
+            /*
+            if ($valor_venta * (float) $row['stock'] > 80) {
+                echo $row['nombre'] . '-' . $valor_venta * (float) $row['stock'] . '<br>';
+            }*/
+
             $valor_stock_sin_ganancia += $valor_compra_unitario * (float) $row['stock'];
         }
     } else {
@@ -77,7 +85,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
 
     /* CALCULAR VALOR DEL STOCK */
-
 
     $query2 = 'SELECT * FROM empresa';
     $buscarAlumnos2 = $conexion->query($query2);
@@ -699,7 +706,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class="fila">
                                     <div class="col-lg-9">
                                         <h5 class="h3edit">Almacen <small>(valor)</small></h5>
-                                        <span><strong><?php echo number_format($sinPorcentaje, '2', '.', '.'); ?></strong> Dolares</span>
+                                        <span><strong><?php echo number_format($valor_stock_sin_ganancia, '2', '.', '.'); ?></strong> Dolares</span>
                                         <p>Valor del stock
                                         <p>
                                     </div>
