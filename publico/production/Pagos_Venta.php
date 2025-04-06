@@ -233,7 +233,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 color: #ff9494;
                 text-decoration: line-through
             }
-         
         </style>
 
         <body class='nav-sm'>
@@ -504,7 +503,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <section id="prueba"></section>
                                                 <section id="desactivar">
                                                     <a href='ventas.php' class='btn btn2 btn-danger'> Cancelar</a>
-                                                    <button class='btn btn2 btn-success '>Continuar</button>
+                                                    <button class='btn btn2 btn-success ' id="btnVender">Continuar</button>
                                                 </section>
 
                                                 <section id="desactivar2">
@@ -1059,6 +1058,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         </body>
 
+
+        <script>
+            // Control de funciones desde el teclado
+            document.addEventListener('keyup', function(event) {
+                const key = event.key.toLowerCase();
+                const btnVender = document.getElementById('btnVender');
+
+                if (key === 'enter') {
+                    btnVender?.click(); // El ? asegura que solo haga click si existe
+                }
+            });
+            // Control de funciones desde el teclado
+        </script>
     </body>
 
     </html>

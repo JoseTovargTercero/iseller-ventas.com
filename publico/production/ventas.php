@@ -197,9 +197,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     <style>
-          .form-control{
-                background-color:  #fff !important;
-            }
+        .form-control {
+            background-color: #fff !important;
+        }
+
         .swal2-container {
             z-index: 99999;
         }
@@ -383,7 +384,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="col-lg-4" id="sect-left">
                                 <div class="x_panel" style="height: min-content;">
                                     <div class="x_title d-flex justify-content-between">
-                                        <button class="btn btn-success btn-sm" id="open-modal">Consulta</button>
+                                        <button class="btn btn-success btn-sm" id="open-modal">Buscar</button>
 
                                         <button class="btn btn-danger btn-sm" id="delete-scan">Descartar</button>
 
@@ -420,6 +421,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <th style="width:20%" class="column-title">BS</th>
                                                         <th style="width:10%" class="column-title">Dolares</th>
                                                         <th style="width:5%" class="column-title"></th>
+                                                        <th style="width:5%" class="column-title"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="tabla-carrito">
@@ -434,8 +436,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         <div class="footer d-flex justify-content-between hide" id="botones_acciones">
                                             <a onclick="confirmarDescuento()" class="btn btn-danger " style="color:white; cursor: pointer">Descontar</a>
-                                            <button class="btn btn-light" id="calcularVuelto">Vuelto</button>
-                                            <button class="btn btn-warning text-dark" id="calcularDiferencia">Diferencia</button>
+                                            <button class="btn btn-light" id="calcularVuelto">Cambio</button>
+                                            <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
 
                                             <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">Vender</button>
                                         </div>
@@ -615,6 +617,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             </div>
 
 
+
             <script src='peticion.js'></script>
             <!-- jQuery -->
             <script src="../vendors/jquery/dist/jquery.min.js"></script>
@@ -627,12 +630,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="../build/js/modal.js"></script>
             <!-- FastClick -->
             <script>
-                let total_pesos = 0;
-                let total_dolares = 0;
-                let total_bolivares = 0;
-                //pagos_Venta.php
+                var total_pesos = 0;
+                var total_dolares = 0;
+                var total_bolivares = 0;
+
+
+
                 function confirmarVenta(param) {
                     // Opciones de pago habituales
+                    if (total_dolares == 0) {
+                        return
+                    }
 
                     // quitar el focus de btn-vender
 
@@ -650,15 +658,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     }
 
                     const opcionesPago = `
+                    <p>
+                        (1) Punto, (2) BioPago, (3) Pesos,<br> (4) Efectivo, (5) Pago Movil, (6) Transferencia, (7) Dolares.
+                    </p>
+
+
                     <select id="metodoPago" class="form-control">
                         <option value="">Seleccione</option>
-                        <option value="option1">Punto</option>
-                        <option value="option2">Pago Movil</option>
-                        <option value="option3">Transferencia</option>
-                        <option value="option7">BioPago</option>
-                        <option value="option4">Efectivo</option>
-                        <option value="option5">Dolares</option>
-                        <option value="option6">Pesos</option>
+                        <option value="option1">(1) Punto</option>
+                        <option value="option7">(2) BioPago</option>
+                        <option value="option6">(3) Pesos</option>
+                        <option value="option4">(4) Efectivo</option>
+                        <option value="option2">(5) Pago Movil</option>
+                        <option value="option3">(6) Transferencia</option>
+                        <option value="option5">(7) Dolares</option>
                     </select>`;
 
                     // Mostrar el diálogo
@@ -667,21 +680,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         html: opcionesPago,
                         confirmButtonText: 'Continuar',
                         confirmButtonColor: '#32d7c0',
+                        customClass: {
+                            popup: 'swal-metodo-pago'
+                        },
+                        didOpen: () => {
+                            const btn = Swal.getConfirmButton();
+                            btn.setAttribute('id', 'btnVender');
+                        },
                         preConfirm: () => {
-                            // Obtener el valor seleccionado
                             const metodoPago = document.getElementById('metodoPago').value;
                             if (!metodoPago) {
                                 Swal.showValidationMessage('Por favor, selecciona un método de pago');
                             }
-                            return metodoPago; // Retornar el valor seleccionado
+                            return metodoPago;
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
                             const metodoPago = result.value;
-                            // Redirigir a pagos_Venta.php con el método de pago en la URL
                             window.location.href = `pagos_Venta.php?metodo=${encodeURIComponent(metodoPago)}`;
                         }
                     });
+
                 }
 
 
@@ -694,65 +713,92 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 })
 
-                function tabla_carrito() {
+
+                /* 
+                ACTUALIZAR CARRITO
+                   Gestiona el carrito y actualiza las cantidades de productos
+                */
+
+                function actualizar_carrito(id = null, accion = null) {
                     $.ajax({
-                            url: 'carrito.php',
+                            url: id && accion ? 'cantidades.php' : 'carrito.php',
                             type: 'POST',
+                            data: id && accion ? {
+                                id,
+                                accion
+                            } : {},
                             dataType: 'html'
                         })
                         .done(function(result) {
+                            total_pesos = 0
+                            total_dolares = 0
+                            total_bolivares = 0
 
-                            let resultado = JSON.parse(result)
+                            const resultado = JSON.parse(result);
                             $("#tabla-carrito").html('');
-                            if (resultado.cantidad > 0) {
 
+                            if (resultado.cantidad > 0) {
                                 resultado.carrito.forEach(element => {
-                                    $("#tabla-carrito").append(`<tr>
-                                        <td>${element.cantidad}</td>
-                                        <td>${element.nombre}</td>
-                                        <td>${element.subtotalPeso} P</td>
-                                        <td>${formatNumber(element.subtotalBolivar)} Bs</td>
-                                        <td>$${formatNumber(element.subtotalDolar)}</td>
-                                        <td>
-                                            <button class="btn btn-info btn-sm" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
-                                        </td>
-                                    </tr>`);
+                                    $("#tabla-carrito").append(`
+                                <tr>
+                                    <td>${element.cantidad}</td>
+                                    <td>${element.nombre}</td>
+                                    <td>${element.subtotalPeso} P</td>
+                                    <td>${formatNumber(element.subtotalBolivar)} Bs</td>
+                                    <td>$${formatNumber(element.subtotalDolar)}</td>
+                                    <td>
+                                        <div class="d-flex">
+                                            <button class="btn btn-secondary btn-sm" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
+                                            <button class="btn btn-secondary btn-sm" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-info btn-sm" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
+                                    </td>
+                                </tr>`);
                                 });
 
+                                total_pesos = parseFloat(resultado.total.pesos);
+                                total_dolares = parseFloat(resultado.total.dolares);
+                                total_bolivares = parseFloat(resultado.total.bolivares);
 
-                                total_pesos = formatPeso(resultado.total.pesos);
-                                total_dolares = resultado.total.dolares;
-                                total_bolivares = resultado.total.bolivares;
-
-                                $("#tabla-carrito").append(`<tr>
+                                $("#tabla-carrito").append(`
+                                    <tr>
                                         <td></td>
-                                        <td><b>TOTAL:</b> </td>
-                                        <td class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
-                                        <td class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
-                                        <td class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
-                                        <td>
-                                        </td>
+                                        <td><b>TOTAL:</b></td>
+                                        <td id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
+                                        <td id="precio-total-bolivar" class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
+                                        <td id="precio-total-dolar" class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
+                                        <td></td>
+                                        <td></td>
                                     </tr>`);
 
-                                $('#botones_acciones').removeClass('hide')
+                                $('#botones_acciones').removeClass('hide');
                             } else {
-                                $('#botones_acciones').addClass('hide')
+                                $('#botones_acciones').addClass('hide');
                             }
-
-                        })
+                        });
                 }
+                actualizar_carrito()
 
-                tabla_carrito()
+                // ACTUALIZAR CARRITO
+
+
 
 
                 function calcularVuelto() {
+                    if (total_dolares == 0) {
+                        return
+                    }
+
+                    document.getElementById("cantidadRecibida").focus();
 
                     total_pesos = String(total_pesos).replace(',', '');
 
                     Swal.fire({
                         title: 'Indique la cantidad recibida',
                         html: `<input type="number" id="cantidadRecibida" class="swal2-input" placeholder="Cantidad recibida">
-        `,
+                        `,
                         confirmButtonText: 'Calcular vuelto',
                         confirmButtonColor: '#32d7c0',
                         preConfirm: () => {
@@ -785,7 +831,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <p><strong class="text-total text-info">Pesos:</strong> <span style="font-size: 18px">${formatNumber(vueltoPesos.toFixed(2))}</span></p>
                     <p><strong class="text-total text-danger">Dólares:</strong> <span style="font-size: 18px">${formatNumber(vueltoDolares.toFixed(2))}</span></p>
                     <p><strong class="text-total text-success">Bolívares:</strong> <span style="font-size: 18px">${formatNumber(vueltoBolivares.toFixed(2))}</span></p>
-                `,
+                            `,
                                 confirmButtonText: 'Aceptar',
                                 confirmButtonColor: '#32d7c0',
                             });
@@ -852,7 +898,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     action: 'removeCartItem'
                                 }, // Pasar el parámetro id en la solicitud
                                 success: function(response) {
-                                    tabla_carrito()
+                                    actualizar_carrito()
                                 },
                                 error: function(xhr, status, error) {
                                     // Manejar cualquier error
@@ -863,6 +909,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     })
                 }
                 let ultimo_escaneado = 0
+
+
+
+
 
 
 
@@ -947,18 +997,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     if (resultado.status == 'ok') {
 
 
-
-
                                         resultado.data.forEach(item => {
+                                            let pesos = formatNumber(formatPeso(item.precio_peso_visible))
+                                            let dolar = formatNumber(item.precio_dolar_visible)
+                                            let bolivares = formatNumber(recortarADosDecimales(item.precio_bs_visible))
+
                                             $("#tabla_resultado_codigo_producto").append(`
                                         <tr>
                                             <td><span>${item.stock}</span></td>
                                             <td style="font-size: 15px;"><span>${item.nombre}</span></td>
-                                            <td style="place-content: center" class="text-center text-total text-success"><span>${formatNumber(item.precio_dolar_visible)}$</span></td>
-                                            <td style="place-content: center" class="text-center text-total text-info"><span>${formatNumber(formatPeso(item.precio_peso_visible))} Cop</span></td>
-                                            <td style="place-content: center" class="text-center text-total text-danger"><span>${formatNumber(recortarADosDecimales(item.precio_bs_visible))} Bs</span></td>
+                                            <td style="place-content: center" class="text-center text-total text-success"><span>${dolar}$</span></td>
+                                            <td style="place-content: center" class="text-center text-total text-info"><span>${pesos} Cop</span></td>
+                                            <td style="place-content: center" class="text-center text-total text-danger"><span>${bolivares} Bs</span></td>
                                             <td class="text-center" >
-                                                 <input type="number" style="color: black !important; width: 70px; text-align: center;" class="mt-2 form-control cantidad-input" data-cantidad-id="${item.id}" value="1"">
+                                                 <input data-nombre='${item.nombre}' data-precios='${item.precio_peso_visible}/${item.precio_dolar_visible}/${item.precio_bs_visible}' type="number" style="color: black !important; width: 70px; text-align: center;" class="mt-2 form-control cantidad-input" data-cantidad-id="${item.id}" value="1"">
                                             </td>
                                             <td style="place-content: center" class="text-center">
                                                 <button class="btn btn-success btn-add-to-car" 
@@ -993,14 +1045,57 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 document.addEventListener('keyup', function(event) {
                     $('button').blur();
-
                     if (modo == 2 && ultimo_escaneado != 0) {
                         $('#btn_' + ultimo_escaneado).click();
                     }
-
-
-
                 });
+
+
+
+
+
+                document.addEventListener('keyup', function(event) {
+                    if (event.target.closest('.cantidad-input')) {
+                        const input = event.target.closest('.cantidad-input');
+
+                        const cantidad = input.value;
+                        const nombre = input.getAttribute('data-nombre');
+
+                        let precio_dolar = parseFloat(input.getAttribute('data-precios').split('/')[1]);
+                        let precio_peso = parseFloat(input.getAttribute('data-precios').split('/')[0]);
+                        let precio_bs = parseFloat(input.getAttribute('data-precios').split('/')[2]);
+
+                        precio_peso = Math.round(precio_peso / 100) * 100
+
+                        const modal_footer = document.getElementById('modal-footer')
+                        modal_footer.classList.remove('hide')
+
+
+                        let carrito_total_pesos = total_pesos + (precio_peso * cantidad);
+                        let carrito_total_dolar = total_dolares + (precio_dolar * cantidad);
+                        let carrito_total_bolivar = total_bolivares + (precio_bs * cantidad);
+
+
+                        modal_footer.innerHTML = `
+                           <div class="d-flex" style='gap: 15px;'>
+                         <div class="me-2 vista_precio">TOTAL CARRITO: </div>
+                        <div class="me-2 vista_precio text-success">$${recortarADosDecimales(carrito_total_dolar)}</div>
+                        <div class="me-2 vista_precio text-info">${formatNumber(formatPeso(carrito_total_pesos))} Cop</div>
+                        <div class="me-2 vista_precio text-danger">${formatNumber(recortarADosDecimales(carrito_total_bolivar))} Bs</div>
+                        </div>
+
+                        <div class="d-flex" style='gap: 15px;'>
+                         <div class="me-2 vista_precio">${nombre}</div>
+                        <div class="me-2 vista_precio text-success">$${recortarADosDecimales(precio_dolar * cantidad)}</div>
+                        <div class="me-2 vista_precio text-info">${precio_peso * cantidad} Cop</div>
+                        <div class="me-2 vista_precio text-danger">${formatNumber(recortarADosDecimales(precio_bs * cantidad))} Bs</div>
+                        </div>
+                        `
+                    }
+                    //here
+                })
+
+
 
 
 
@@ -1015,19 +1110,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     }
                 });
 
-                /*
-                $(document).on('change', '#search', function() {
-                    let valor = $(this).val();
-                    // verifica si valor son solo numeros
-                    if (!isNaN(valor)) {
-                        // verifica si valor existe en el array codigos
-                        buscarProducto(valor, 2);
-                    }
-                    console.log('cambio' + valor)
-                });*/
-
-
-                // LA CANTIDAD ESTA DANDO PROBLEMAS
 
 
                 function addtocar(id, codigo, dolarventa_p, pesoventa_p, bolivarventa_p) {
@@ -1055,7 +1137,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         })
                         .done(function(result) {
                             console.log(result)
-                            tabla_carrito()
+                            actualizar_carrito()
                             $("#tabla_resultado_codigo_producto").html('');
                             if (modo == 1) {
                                 $("#search").val('');
@@ -1077,6 +1159,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         $('#search').val('')
 
                         addtocar(id_p, codigo_p, dolarventa_p, pesoventa_p, bolivarventa_p);
+
+                        // ocultar footer del modal
+                        const modal_footer = document.getElementById('modal-footer')
+                        modal_footer.classList.add('hide')
                     }
                 });
 
@@ -1180,22 +1266,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                        }, 2000);
                    */
 
-                function updateCartItem(obj, id) {
-                    $.get("cartAction.php", {
-                        action: "updateCartItem",
-                        id: id,
-                        qty: obj.value
-                    }, function(data) {
-                        if (data == 'ok') {
-                            location.reload();
-                        } else {
-                            alert('Cart update failed, please try again.');
-                        }
-                    });
-                }
+
 
                 function confirmarDescuento() {
-
                     Swal.fire({
                         title: 'Esta seguro?',
                         html: 'Se descontaran productos del almacen ¿desea continuar?',
@@ -1212,47 +1285,68 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 }
 
-                var min = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "u", "v", "w", "x", "y", "z", ",", "[", "]", "{", "}", "'", '"', "?", "-", "=", "`", ";", "ñ", " "];
 
-                function cantVlue(params) {
+                // Control de funciones desde el teclado
+                document.addEventListener('keyup', function(event) {
+                    const modal = document.querySelector('#modal-container');
+                    const swalPersonalizado = document.querySelector('.swal2-popup.swal-metodo-pago');
 
-                    let value = $('#cant').val();
 
-                    min.forEach(element => {
-                        if (value.indexOf(element) != '-1') {
-                            while (value.indexOf(element) != '-1') {
-                                value = value.replace(element, "")
-                            }
-                            $('#cant').val(value);
+
+                    if (!modal.classList.contains('active') && !swalPersonalizado) {
+                        switch (event.key.toLowerCase()) {
+                            case 'b':
+                                openModalButton.click()
+                                document.getElementById("search").focus();
+                                document.getElementById("search").value = "";
+
+                                break;
+                            case 'v':
+                                confirmarVenta()
+                                break;
+                            case 'c':
+                                document.getElementById('calcularVuelto').click()
+                                break;
                         }
-                    });
-
-                    if (value.indexOf('.') > 1) {
-                        let mdi
+                    } else {
+                        switch (event.key.toLowerCase()) {
+                            case 'escape':
+                                closeModalButton.click()
+                                break;
+                        }
                     }
 
-                    var cadena = value
+                    if (swalPersonalizado) {
+                        const select = document.getElementById('metodoPago');
+                        const btnVender = document.getElementById('btnVender');
 
-                    var indices = [];
-                    for (var i = 0; i < cadena.length; i++) {
-                        if (cadena[i] === ".") indices.push(i);
-                    }
+                        // Mapeo de teclas a valores del select
+                        const opciones = {
+                            '1': 'option1',
+                            '2': 'option7',
+                            '3': 'option6',
+                            '4': 'option4',
+                            '5': 'option2',
+                            '6': 'option3',
+                            '7': 'option5',
+                        };
 
-                    if (indices.length > 1) {
+                        const key = event.key.toLowerCase();
 
-                        cadena = [...cadena].reverse().join("");
-                        for (let index = 0; index < indices.length - 1; index++) {
-                            cadena = cadena.replace('.', "")
+                        if (opciones[key]) {
+                            select.value = opciones[key];
+                            // Lanzar manualmente el evento change si es necesario
+                            select.dispatchEvent(new Event('change'));
                         }
 
-
-                        cadena = [...cadena].reverse().join("");
-
-                        $('#cant').val(cadena);
-
+                        if (key === 'enter') {
+                            btnVender?.click(); // El ? asegura que solo haga click si existe
+                        }
                     }
 
-                }
+
+                });
+                // Control de funciones desde el teclado
             </script>
     </body>
 
