@@ -30,7 +30,6 @@ if (modalOverlay) {
   });
 }
 
-
 const showModal = () => {
   if (modalContainer) {
     modalContainer.classList.add("active");
