@@ -6290,7 +6290,7 @@ ul.notifications {
     font-weight: 400;
     line-height: 1.5;
     color: #b1b1b1 !important;
-    background-color:  #252525 !important;
+    background-color: #252525 !important;
     background-clip: padding-box;
     border: 1px solid #ced4da;
     border-radius: .25rem;
@@ -6567,4 +6567,51 @@ input[type="number"] {
 }
 
 
+
 /* MODAL */
+
+
+.details-modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+    /* o ajusta según necesidad */
+    height: 85vh;
+}
+
+.modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.table-scroll {
+    flex: 1;
+    overflow-y: auto;
+    border-top: 1px solid #dee2e6;
+}
+
+.table-scroll thead th {
+    position: sticky;
+    top: 0;
+    background-color: #343a40;
+    /* el color de tu thead-dark */
+    color: white;
+    z-index: 1;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 10px;
+    display: flex !important;
+    justify-content: space-between !important;
+
+}
+
+
+.vista_precio {
+    text-align: center;
+    font-size: 15px;
+    font-weight: bold;
+}

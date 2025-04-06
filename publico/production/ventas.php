@@ -197,9 +197,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     <style>
-          .form-control{
-                background-color:  #fff !important;
-            }
+        .form-control {
+            background-color: #fff !important;
+        }
+
         .swal2-container {
             z-index: 99999;
         }
@@ -615,6 +616,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             </div>
 
 
+
             <script src='peticion.js'></script>
             <!-- jQuery -->
             <script src="../vendors/jquery/dist/jquery.min.js"></script>
@@ -627,10 +629,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="../build/js/modal.js"></script>
             <!-- FastClick -->
             <script>
-                let total_pesos = 0;
-                let total_dolares = 0;
-                let total_bolivares = 0;
-                //pagos_Venta.php
+                var total_pesos = 0;
+                var total_dolares = 0;
+                var total_bolivares = 0;
+
+
+
                 function confirmarVenta(param) {
                     // Opciones de pago habituales
 
@@ -727,9 +731,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 $("#tabla-carrito").append(`<tr>
                                         <td></td>
                                         <td><b>TOTAL:</b> </td>
-                                        <td class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
-                                        <td class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
-                                        <td class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
+                                        <td id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
+                                        <td id="precio-total-bolivar" class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
+                                        <td id="precio-total-dolar" class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
                                         <td>
                                         </td>
                                     </tr>`);
@@ -866,6 +870,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
+
+
+
+
                 // Cargar lista de productos
                 function buscarProducto(producto, modo) {
 
@@ -958,7 +966,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <td style="place-content: center" class="text-center text-total text-info"><span>${formatNumber(formatPeso(item.precio_peso_visible))} Cop</span></td>
                                             <td style="place-content: center" class="text-center text-total text-danger"><span>${formatNumber(recortarADosDecimales(item.precio_bs_visible))} Bs</span></td>
                                             <td class="text-center" >
-                                                 <input type="number" style="color: black !important; width: 70px; text-align: center;" class="mt-2 form-control cantidad-input" data-cantidad-id="${item.id}" value="1"">
+                                                 <input data-nombre='${item.nombre}' data-precios='${item.precio_dolar_visible}/${item.precio_peso_visible}/${item.precio_bs_visible}' type="number" style="color: black !important; width: 70px; text-align: center;" class="mt-2 form-control cantidad-input" data-cantidad-id="${item.id}" value="1"">
                                             </td>
                                             <td style="place-content: center" class="text-center">
                                                 <button class="btn btn-success btn-add-to-car" 
@@ -993,14 +1001,52 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 document.addEventListener('keyup', function(event) {
                     $('button').blur();
-
                     if (modo == 2 && ultimo_escaneado != 0) {
                         $('#btn_' + ultimo_escaneado).click();
                     }
-
-
-
                 });
+
+
+                document.addEventListener('keyup', function(event) {
+                    if (event.target.closest('.cantidad-input')) {
+                        const input = event.target.closest('.cantidad-input');
+
+                        const cantidad = input.value;
+                        const nombre = input.getAttribute('data-nombre');
+                        const precio_dolar = input.getAttribute('data-precios').split('/')[0];
+                        const precio_peso = input.getAttribute('data-precios').split('/')[1];
+                        const precio_bs = input.getAttribute('data-precios').split('/')[2];
+
+
+                        const modal_footer = document.getElementById('modal-footer')
+                        modal_footer.classList.remove('hide')
+
+
+                        let carrito_total_pesos = parseFloat(total_pesos) + (precio_peso * cantidad);
+                        let carrito_total_dolar = parseFloat(total_dolares) + (precio_dolar * cantidad);
+                        let carrito_total_bolivar = parseFloat(total_bolivares) + (precio_bs * cantidad);
+
+
+                        modal_footer.innerHTML = `
+                           <div class="d-flex" style='gap: 15px;'>
+                         <div class="me-2 vista_precio">TOTAL CARRITO: </div>
+                        <div class="me-2 vista_precio text-success">$${recortarADosDecimales(carrito_total_dolar)}</div>
+                        <div class="me-2 vista_precio text-info">${formatNumber(formatPeso(carrito_total_pesos))} Cop</div>
+                        <div class="me-2 vista_precio text-danger">${formatNumber(recortarADosDecimales(carrito_total_bolivar))} Bs</div>
+                        </div>
+
+                        <div class="d-flex" style='gap: 15px;'>
+                         <div class="me-2 vista_precio">${nombre}</div>
+                        <div class="me-2 vista_precio text-success">$${recortarADosDecimales(precio_dolar * cantidad)}</div>
+                        <div class="me-2 vista_precio text-info">${formatNumber(formatPeso(precio_peso * cantidad))} Cop</div>
+                        <div class="me-2 vista_precio text-danger">${formatNumber(recortarADosDecimales(precio_bs * cantidad))} Bs</div>
+                        </div>
+                        `
+                    }
+                    //here
+                })
+
+
 
 
 
@@ -1077,6 +1123,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         $('#search').val('')
 
                         addtocar(id_p, codigo_p, dolarventa_p, pesoventa_p, bolivarventa_p);
+
+                        // ocultar footer del modal
+                        const modal_footer = document.getElementById('modal-footer')
+                        modal_footer.classList.add('hide')
                     }
                 });
 

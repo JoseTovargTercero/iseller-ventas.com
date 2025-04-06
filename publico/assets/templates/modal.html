@@ -1,16 +1,19 @@
 
+<!--
 <div class="modal-container" id="modal-container">
     <div class="details-modal-overlay" id="modal-overlay"></div>
     <div class="details-modal" id="w-modal">
 
         <div class="details-modal-content" id="modal">
 
-            <section class="mb-3 d-flex justify-content-between">
-                <input placeholder="Nombre del producto" type='text' class='form-control' id="search" name='search'>
+            <div>
 
-                <button class="m-auto btn details-modal-close" id="modal-close">
-                    <i class="line icon-logout"></i>
-                </button>
+                <section class="mb-3 d-flex justify-content-between">
+                    <input placeholder="Nombre del producto" type='text' class='form-control' id="search" name='search'>
+                    
+                    <button class="m-auto btn details-modal-close text-white" id="modal-close">
+                        <i class="line icon-logout"></i>
+                    </button>
             </section>
 
 
@@ -30,6 +33,52 @@
                 <tbody id="tabla_resultado_codigo_producto">
                 </tbody>
             </table>
+        </div>
+
+            <div class="modal-footer">
+                Lorem ipsum dolor sit, amet consectetur adipisicing elit. Nemo rem totam reiciendis corrupti sed accusamus! Alias esse laborum amet fugit quidem consectetur porro saepe autem omnis, iusto, explicabo at. Facilis.
+            </div>
+        </div>
+    </div>
+</div> -->
+
+
+<div class="modal-container" id="modal-container">
+    <div class="details-modal-overlay" id="modal-overlay"></div>
+    <div class="details-modal" id="w-modal">
+
+        <div class="details-modal-content" id="modal">
+
+            <div class="modal-body">
+                <section class="mb-3 d-flex justify-content-between">
+                    <input placeholder="Nombre del producto" type='text' class='form-control' id="search" name='search'>
+                    
+                    <button class="m-auto btn details-modal-close text-white" id="modal-close">
+                        <i class="line icon-logout"></i>
+                    </button>
+                </section>
+
+                <div class="table-scroll">
+                    <table class="table table-hover" id="section_tabla">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th style="width: 10%;">Rest</th>
+                                <th style=" width: 40%">Producto</th>
+                                <th class="pl-0 text-center">Dolares</th>
+                                <th class="pl-0 text-center">Pesos</th>
+                                <th class="pl-0 text-center">Bolivares</th>
+                                <th class="pl-0 text-center">Agregar</th>
+                                <th class="pl-0 text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla_resultado_codigo_producto">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer hide" id="modal-footer">
+            </div>
         </div>
     </div>
 </div>
