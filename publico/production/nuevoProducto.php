@@ -85,21 +85,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         switch ($_GET['accion']) {
             case ('borrado'):
-                echo '<script>
+             /*   echo '<script>
             function mensaje(){	
 			alertify.success("Producto eliminado.");}
             </script>
             <body onload="mensaje()">
-            </body>';
+            </body>';*/
                 break;
 
             case ('editado'):
-                echo '<script>
+            /*    echo '<script>
             function mensaje(){	
 			alertify.success("Se modifico un producto.");}
             </script>
             <body onload="mensaje()">
-            </body>';
+            </body>';*/
                 break;
         }
 
@@ -723,7 +723,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     processData: false,
                     contentType: false,
                     success: function(data) {
-                        alertify.success("El producto se agrego correctamente.");
+                       // alertify.success("El producto se agrego correctamente.");
                         form[0].reset();
                     }
                 });
