@@ -65,7 +65,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
     // initializ shopping cart class
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
     $today = date('Y-m-d');
@@ -1115,7 +1115,7 @@ echo number_format($totalBOLIVAR * 100 / $total, '1', '.', '.' );
     <html lang='es'>
 
     <head>
-        
+
 
         <title>Ventas de la Semana </title>
         <?php require_once('includes/headers.php'); ?>

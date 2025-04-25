@@ -42,7 +42,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($buscarAlumnos225->num_rows > 0) {
         while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
             $pesoDolar = $filaAlumnos225['pesoDolar'];
-            $bolivarPesoTrans = $filaAlumnos225['bolivarPesoTrans'];
+            $peso_bolivar = $filaAlumnos225['peso_bolivar'];
             $bsDolar = $filaAlumnos225['DolarBolivar'];
         }
     }
@@ -54,19 +54,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-     
+
         <title>Agregar Producto</title>
 
-        
+
         <?php require_once('includes/headers.php'); ?>
 
 
 
         <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
-   
+
         <script src='peticion.js'></script>
         <script src='peticion_codigo.js'></script>
-  
+
 
         <?php
         @$registrado = $_GET['agregado'];
@@ -190,7 +190,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     const precioDolarCompra = parseFloat(precioUnitario);
                                     const precioDolarVenta = ((precioDolarCompra * porcentaje / 100) + precioDolarCompra).toFixed(2);
                                     const pesoSalida = Math.round(precioDolarVenta * parseFloat(<?php echo $pesoDolar ?>));
-                                    const tipoCambio_pesosBs = parseFloat(<?php echo $bolivarPesoTrans ?>);
+                                    const tipoCambio_pesosBs = parseFloat(<?php echo $peso_bolivar ?>);
 
                                     // Actualiza resultados en dólares
                                     document.calculadora.resultado.value = `$ ${precioDolarCompra}`;

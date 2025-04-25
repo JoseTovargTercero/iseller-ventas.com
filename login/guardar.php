@@ -1,26 +1,88 @@
 ﻿<?php
+require_once('../configurar/configuracion.php');
+//header json
+header('Content-Type: application/json');
+
+// Validación básica
+if (!isset($_POST['login'], $_POST['password'])) {
+    echo json_encode(['status' => false, 'msg' => 'Faltan datos']);
+    exit();
+}
+
+$doc = trim($_POST['login']);
+$contrasena = $_POST['password'];
+
+// Evitar ataques con espacios extra o datos vacíos
+if (empty($doc) || empty($contrasena)) {
+    echo json_encode(['status' => false, 'msg' => 'Faltan datos']);
+    exit();
+}
+
+// Consulta segura
+$stmt = mysqli_prepare($conexion, "SELECT id, nombre, nivel, contrasena FROM usuarios WHERE usuario = ?");
+$stmt->bind_param("s", $doc);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 1) {
+    $usuario = $result->fetch_assoc();
+
+    if (password_verify($contrasena, $usuario['contrasena'])) {
+        // Regenerar ID de sesión por seguridad
+        session_regenerate_id(true);
+
+        $_SESSION['id'] = $usuario['id'];
+        $_SESSION['nombre'] = $usuario['nombre'];
+        $_SESSION['nivel'] = $usuario['nivel'];
+        //  $_SESSION['bss_id'] = $usuario['negocio_id'];
+        $_SESSION['bss_id'] = 1;
+        $_SESSION["validate"] = "ok";
+
+        // Puedes registrar el login exitoso en logs si deseas
+        registrarIntentoLogin($conexion, $doc, 1, $usuario['nivel'], 'Login exitoso');
+        // Redireccionar según nivel
+        echo json_encode(['status' => true, 'msg' => 'ok']);
+        exit();
+    } else {
+        // Contraseña incorrecta
+        registrarIntentoLogin($conexion, $doc, 0, null, 'Contraseña incorrecta');
+        echo json_encode(['status' => false, 'msg' => 'Contraseña o usuario incorrecto']);
+        exit();
+    }
+} else {
+    // Usuario no encontrado
+    echo json_encode(['status' => false, 'msg' => 'Contraseña o usuario incorrecto']);
+    exit();
+}
 
 
+function registrarIntentoLogin($conexion, $usuario, $exito, $nivel = null, $mensaje = '')
+{
+    $ip = $_SERVER['REMOTE_ADDR'];
+    $user_agent = $_SERVER['HTTP_USER_AGENT'];
+
+    $stmt = $conexion->prepare("
+        INSERT INTO user_log (usuario, exito, nivel, ip_usuario, user_agent, mensaje)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->bind_param("sissss", $usuario, $exito, $nivel, $ip, $user_agent, $mensaje);
+    $stmt->execute();
+}
+
+
+
+
+
+
+
+
+/*
 require_once('../configurar/configuracion.php');
 //recuperamos usuario y contraseña y lo filtramos
 
-$doc = mysqli_real_escape_string($conexion,  $_POST['login']);
-$contrasena = mysqli_real_escape_string($conexion,  $_POST['password']);
+$doc = mysqli_real_escape_string($conexion, $_POST['login']);
+$contrasena = mysqli_real_escape_string($conexion, $_POST['password']);
 
-
-$numberCode = rand(15000, 15000000);
-$letras = array('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
-
-function ramdomAlphaCode()
-{
-    global $letras;
-    $alphaCode = '';
-
-    for ($i = 0; $i < 10; $i++) {
-        $alphaCode .= $letras[rand(1, 26)];
-    }
-    return $alphaCode;
-}
 
 
 $stmt = mysqli_prepare($conexion, "SELECT * FROM usuarios WHERE usuario=?");
@@ -28,37 +90,55 @@ $stmt->bind_param("s", $doc);
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        if (password_verify($contrasena, $row['contrasena'])) {
+while ($row = $result->fetch_assoc()) {
+if (password_verify($contrasena, $row['contrasena'])) {
+
+$_SESSION['nombre'] = $row['nombre'];
+$_SESSION['nivel'] = $row['nivel'];
+$_SESSION['id'] = $row['id'];
+$_SESSION["validate"] = "ok";
+
+$id = $_SESSION['id'];
+$nombre = $_SESSION['nombre'];
+$fecha = date('d/m/Y');
+$hora = date('h:i A');
+$nivel = $_SESSION['nivel'];
 
 
-
-            $_SESSION['nombre'] = $row['nombre'];
-            $_SESSION['nivel'] = $row['nivel'];
-            $_SESSION['id'] = $row['id'];
-            $_SESSION["validate"] = "ok";
-
-            $id = $_SESSION['id'];
-            $nombre = $_SESSION['nombre'];
-            $fecha = date('d/m/Y');
-            $hora =  date('h:i A');
-            $nivel = $_SESSION['nivel'];
-
-            $_SESSION['qrcode'] = $id . '-' . $numberCode . ramdomAlphaCode();
-
-            if ($_SESSION['nivel'] == '1') {
-                define('PAGINA_INICIO', '../publico/production/ventas.php');
-                header('Location: ' . PAGINA_INICIO);
-            } else {
-                define('PAGINA_INICIO', '../publico/production/ventas.php');
-                header('Location: ' . PAGINA_INICIO);
-            }
-        } else {
-            define('PAGINA_INICIO', '../index.php?error=error');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
+if ($_SESSION['nivel'] == '1') {
+define('PAGINA_INICIO', '../publico/production/ventas.php');
+header('Location: ' . PAGINA_INICIO);
 } else {
-    define('PAGINA_INICIO', '../index.php?error=error');
-    header('Location: ' . PAGINA_INICIO);
+define('PAGINA_INICIO', '../publico/production/ventas.php');
+header('Location: ' . PAGINA_INICIO);
 }
+} else {
+define('PAGINA_INICIO', '../index.php?error=error');
+header('Location: ' . PAGINA_INICIO);
+}
+}
+} else {
+define('PAGINA_INICIO', '../index.php?error=error');
+header('Location: ' . PAGINA_INICIO);
+}
+
+
+*/
+/*
+
+$numberCode = rand(15000, 15000000);
+$letras = array('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+
+function ramdomAlphaCode()
+{
+global $letras;
+$alphaCode = '';
+
+for ($i = 0; $i < 10; $i++) {
+    $alphaCode .=$letras[rand(1, 26)];
+    }
+    return $alphaCode;
+    }
+    $_SESSION['qrcode']=$id . '-' . $numberCode . ramdomAlphaCode();
+
+    */

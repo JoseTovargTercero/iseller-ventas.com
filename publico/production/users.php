@@ -3,8 +3,6 @@ require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
 
-
-
 if ($_SESSION['nivel'] == 1) {
     if ($_SESSION['nivel'] == '1') {
         $menu = MenuAdministrador();
@@ -17,30 +15,9 @@ if ($_SESSION['nivel'] == 1) {
     }
     $topnav = topnav();
 
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
 
-    $query = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-            $PesoDolar = $filaAlumnos['pesoDolar'];
-            $DolarBolivar = $filaAlumnos['DolarBolivar'];
-            $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
-        }
-    }
-
-    $query2 = 'SELECT * FROM empresa';
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $stockCritico = $filaAlumnos2['stockCritico'];
-            $notificacionStockCritico = $filaAlumnos2['notificacionStockCritico'];
-        }
-    }
-
+    $accion = $_GET['accion'] ?? null;
+    $usuarioBorrar = $_GET['borrar'] ?? null;
 
 ?>
     <!DOCTYPE html>
@@ -53,114 +30,73 @@ if ($_SESSION['nivel'] == 1) {
         <script src='peticion.js'></script>
         <script src='peticion_codigo_producto.js'></script>
 
-       
-        <?php
-        @$accion = $_GET['accion'];
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const accion = "<?= $accion ?>";
+                const usuarioBorrar = "<?= $usuarioBorrar ?>";
 
-        switch ($accion) {
+                switch (accion) {
+                    case 'borrado':
+                        Swal.fire('Éxito', 'Borrado correctamente.', 'success');
+                        break;
+                    case 'exito':
+                        Swal.fire('Éxito', 'Agregado correctamente.', 'success');
+                        break;
+                    case 'contra':
+                        Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
+                        break;
+                    case 'NOSEPUEDE':
+                        Swal.fire('Error', 'No puede eliminar este usuario.', 'error');
+                        break;
+                    case 'vacio':
+                        Swal.fire('Advertencia', 'Los campos no fueron rellenados correctamente.', 'warning');
+                        break;
+                }
 
-            case ('borrado'):
-                echo '<script>
-            function mensaje(){	
-			alertify.success("Borrado Correctamente."); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
+                if (usuarioBorrar) {
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: "Esta acción eliminará al usuario.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Eliminando...',
+                                html: 'Por favor espera...',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                    // Opcional: preload visual propio
+                                    const preload = document.getElementById("preload");
+                                    if (preload) {
+                                        preload.style.display = "block";
+                                        preload.style.animation = "fadeout 1s ease";
+                                    }
 
-                break;
-
-            case ('exito'):
-                echo '<script>
-            function mensaje(){	
-			alertify.success("Agregado Correctamente."); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-
-            case ('contra'):
-                echo '<script>
-            function mensaje(){	
-			alertify.error("Las Contraseñas no coinciden.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-            case ('NOSEPUEDE'):
-                echo '<script>
-            function mensaje(){	
-			alertify.error("No puede eliminar este usuario.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-
-            case ('vacio'):
-                echo '<script>
-            function mensaje(){	
-			alertify.error("Los campos no fuero rellenados correctamente.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-        }
-
-        @$usuarioBorrar = $_GET['borrar'];
-
-        $url = '../../configurar/borrarUsuario.php?id=' . $usuarioBorrar;
-
-
-        if ($usuarioBorrar) {
-            echo '<body onload="confirmar()"></body>';
-        }
-        ?>
-
-        <script type="text/javascript">
-            function confirmar() {
-                var confirm = alertify.confirm('Eliminar Usuario', 'Se borrara un usuario del sistema, desea continuar?', null, null).set('labels', {
-                    ok: 'Confirmar',
-                    cancel: 'Cancelar'
-                });
-
-                //callbak al pulsar botón positivo
-                confirm.set('onok', function() {
-                    alertify.success('Eliminando');
-                    (function() {
-
-
-                        var preload = document.getElementById("preload");
-                        var loading = 0;
-                        var id = setInterval(frame, 20);
-
-                        function frame() {
-                            if (loading == 100) {
-                                clearInterval(id);
-                                window.open("<?php echo $url; ?>", "_self");
-                            } else {
-                                loading = loading + 1;
-                                if (loading == 90) {
-                                    preload.style.animation = "fadeout 1s ease";
+                                    setTimeout(() => {
+                                        window.location.href = `../../configurar/borrarUsuario.php?id=${usuarioBorrar}`;
+                                    }, 1000); // Tiempo de "carga"
                                 }
-                            }
+                            });
+                        } else {
+                            Swal.fire('Cancelado', 'Acción cancelada.', 'info');
                         }
-                    })();
-                });
-                //callbak al pulsar botón negativo
-                confirm.set('oncancel', function() {
-                    alertify.error('Accion Cancelada');
-                })
+                    });
+                }
 
-            }
+            });
         </script>
 
 
 
 
-
-
-
-
     </head>
+    <div id="preload" style="display: none;">Cargando...</div>
 
     <body class='nav-md'>
         <div class='container body'>
@@ -251,97 +187,62 @@ if ($_SESSION['nivel'] == 1) {
                                 </div>
                             </div>
 
-                            <div class='col-md-6 col-sm-6  '>
+                            <div class='col-md-12 col-sm-12'>
                                 <div class='x_panel'>
-                                    <div class='x_title'>
-                                        <h2>Usuarios </h2>
-
-                                        <div class='clearfix'></div>
+                                    <div class='x_title d-flex justify-content-between'>
+                                        <h2>Usuarios</h2>
+                                        <button class="btn btn-success">Nuevo</button>
                                     </div>
                                     <div class='x_content altoScroll'>
-                                        <ul class='list-unstyled timeline'>
 
-                                            <?php
+                                        <?php
+                                        $queryUsuarios = "SELECT * FROM usuarios WHERE status = 0";
+                                        $resultado = $conexion->query($queryUsuarios);
 
+                                        if ($resultado && $resultado->num_rows > 0): ?>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover align-middle">
+                                                    <thead class="table-dark">
+                                                        <tr>
+                                                            <th>ID</th>
+                                                            <th>Nombre</th>
+                                                            <th>Usuario</th>
+                                                            <th>Nivel</th>
+                                                            <th>Descripción</th>
+                                                            <th>Acción</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php while ($fila = $resultado->fetch_assoc()):
+                                                            $nivel = ($fila['nivel'] == '1') ? 'Administrador' : 'Estándar';
+                                                            $descnivel = ($fila['nivel'] == '1')
+                                                                ? 'Usuario con acceso total al sistema, puede modificar tasas de cambio, nombre de la empresa, reportes, estadísticas y eliminar usuarios.'
+                                                                : 'Usuario con permisos definidos por el administrador.';
 
-
-
-
-
-
-
-
-                                            $query222 = 'SELECT * FROM usuarios WHERE status=0';
-                                            $buscarAlumnos222 = $conexion->query($query222);
-                                            while ($filaAlumnos222 = $buscarAlumnos222->fetch_assoc()) {
-                                                if ($filaAlumnos222['nivel'] == '1') {
-                                                    $nivel = 'Administrador';
-                                                    $descnivel = 'Usuario con acceso total al sistema, posee permisos para modificar tasas de cambio, nombre de la empresa, acceso a reportes y estadisticas de venta, tambien puede eliminar a otros usuarios.';
-                                                } else {
-                                                    $nivel = 'Estandar';
-                                                    $descnivel = 'Usuario con permisos definidos por el administrador.';
-                                                }
-
-                                                if ($filaAlumnos222['id'] == "1") {
-                                                    $accionelimi = "?accion=NOSEPUEDE";
-                                                } else {
-                                                    $accionelimi = "?borrar=" . $filaAlumnos222['id'] . "";
-                                                }
-
-                                                echo '
-        
-                                         <li>
-                                            <div class="block">
-                                                <div class="tags">
-                                                    <a href="" class="tag">
-                                                        <span>' . $nivel . '</span>
-                                                    </a>
-                                                    
-                                                    
-                                                    <a href="' . $accionelimi . '" class="tag2">
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                        <span style="font-size: 35px;"><i class="fa fa-trash"></i></span>
-                                                    </a>
-                                                    
-                                                </div>
-                                                <div class="block_content">
-                                                    <h2 class="title">
-                                                        <a>' . $filaAlumnos222['id'] . ' - ' . $filaAlumnos222['nombre'] . '</a>
-                                                    </h2>
-                                                    <div class="byline">
-                                                        <span>' . $filaAlumnos222['usuario'] . '
-                                                    </div>
-                                                    <p class="excerpt">' . $descnivel . '
-                                                    </p>
-                                                </div>
+                                                            $accionelimi = ($fila['id'] == '1')
+                                                                ? "?accion=NOSEPUEDE"
+                                                                : "?borrar=" . $fila['id'];
+                                                        ?>
+                                                            <tr>
+                                                                <td><?= $fila['id'] ?></td>
+                                                                <td><?= htmlspecialchars($fila['nombre']) ?></td>
+                                                                <td><?= htmlspecialchars($fila['usuario']) ?></td>
+                                                                <td><span class="badge bg-primary"><?= $nivel ?></span></td>
+                                                                <td><?= $descnivel ?></td>
+                                                                <td>
+                                                                    <a href="<?= $accionelimi ?>" class="btn btn-sm btn-danger" title="Eliminar Usuario">
+                                                                        <i class="fa fa-trash"></i>
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endwhile; ?>
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        </li>
-       
-                 ';
-                                            }
+                                        <?php else: ?>
+                                            <div class="alert alert-warning">No hay usuarios disponibles.</div>
+                                        <?php endif; ?>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                            ?>
-
-                                        </ul>
 
                                     </div>
                                 </div>

@@ -33,7 +33,7 @@ if ($_SESSION['nivel'] == 1) {
 
             $PesoDolar = $filaAlumnos['pesoDolar'];
             $DolarBolivar = $filaAlumnos['DolarBolivar'];
-            $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
+            $peso_bolivar = $filaAlumnos['peso_bolivar'];
         }
     }
 

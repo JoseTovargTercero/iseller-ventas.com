@@ -30,8 +30,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($buscarAlumnos->num_rows > 0) {
         while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
             $PesoDolar = $filaAlumnos['pesoDolar'];
-            $Pesobolivar = $filaAlumnos['peso_bolivar'];
-            $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
+            $Pesobolivar = $filaAlumnos['bolivar_peso'];
+            $peso_bolivar = $filaAlumnos['peso_bolivar'];
             $dolarBolivar = $filaAlumnos['DolarBolivar'];
         }
     }
@@ -52,7 +52,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
 
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
 ?>
@@ -364,7 +364,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     $precioBsVenta = $precioDolarVenta * $dolarBolivar;
                                                     $precioBsVenta = round($precioBsVenta, 2, PHP_ROUND_HALF_DOWN);
                                                     $precioBsVenta2 = number_format($precioBsVenta, '0', ',', '.');
-                                                    $precioBsTransfVenta = $precioPesoVenta / $bolivarPesoTrans;
+                                                    $precioBsTransfVenta = $precioPesoVenta / $peso_bolivar;
                                                     if ($row6['stock'] == '0') {
                                                         $alerta = "Agotado";
                                                         $color = 'color:red';

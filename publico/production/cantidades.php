@@ -1,7 +1,7 @@
 <?php
 require_once("../../configurar/configuracion.php");
 
-require_once 'La-carta.php';
+require_once 'la-carta.php';
 
 // ACTUALIZAR CANTIDAD ANTES DE regresar el carrito
 

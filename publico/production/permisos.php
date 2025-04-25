@@ -26,7 +26,7 @@ if ($_SESSION['nivel'] == 1) {
 
             $PesoDolar = $filaAlumnos['pesoDolar'];
             $DolarBolivar = $filaAlumnos['DolarBolivar'];
-            $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
+            $peso_bolivar = $filaAlumnos['peso_bolivar'];
         }
     }
 
@@ -258,16 +258,16 @@ if ($_SESSION['nivel'] == 1) {
     <html lang='es'>
 
     <head>
-       
+
 
         <title>Usuarios </title>
 
         <?php require_once('includes/headers.php'); ?>
 
-       
+
         <script src='peticion.js'></script>
         <script src='peticion_codigo_producto.js'></script>
-       
+
 
         <?php
         @$accion = $_GET['accion'];

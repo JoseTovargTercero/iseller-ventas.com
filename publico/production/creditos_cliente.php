@@ -34,14 +34,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     while ($row7 = $query7->fetch_assoc()) {
       $pesoDolar = $row7['pesoDolar'];
       $DolarBolivar = $row7['DolarBolivar'];
-      $bolivarPesoTrans = $row7['bolivarPesoTrans'];
+      $peso_bolivar = $row7['peso_bolivar'];
     }
   }
 
 
 
   // initializ shopping cart class
-  include 'La-carta.php';
+  include 'la-carta.php';
   $cart = new Cart;
 ?>
 
@@ -50,7 +50,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   <html lang="es">
 
   <head>
-   
+
     <title>Control de Creditos</title>
     <?php require_once('includes/headers.php'); ?>
 
@@ -208,7 +208,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                               function datosProductos($producto)
                               {
-                                global $conexion, $pesoDolar, $bolivarPesoTrans, $DolarBolivar;
+                                global $conexion, $pesoDolar, $peso_bolivar, $DolarBolivar;
 
 
                                 $query = $conexion->query("SELECT * FROM productos  WHERE id = '$producto' AND activo= 0");
@@ -229,7 +229,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                                     if ($origen == 'c') {
-                                      $precioBsVenta = ($precioPesoVenta / $bolivarPesoTrans) / 1000;
+                                      $precioBsVenta = ($precioPesoVenta / $peso_bolivar) / 1000;
                                     } else {
                                       $precioBsVenta = $precioDolarVenta * $DolarBolivar;
                                     }

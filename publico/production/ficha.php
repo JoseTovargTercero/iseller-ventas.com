@@ -41,7 +41,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
 
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
 
@@ -344,48 +344,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link rel='icon' href='images/favicon.ico' type='image/ico' />
 
         <title>Producto</title>
+        <?php require_once('includes/headers.php'); ?>
 
-
-        <!-- Bootstrap -->
-        <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
-        <!-- Font Awesome -->
-        <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
-        <!-- NProgress -->
-        <link href='../vendors/nprogress/nprogress.css' rel='stylesheet'>
-        <!-- iCheck -->
-
-
-        <!-- iCheck -->
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-        <link href='../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css' rel='stylesheet'>
-        <link href='../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css' rel='stylesheet'>
-        <!-- JQVMap -->
-        <link href='../vendors/jqvmap/dist/jqvmap.min.css' rel='stylesheet' />
-        <!-- bootstrap-daterangepicker -->
-        <link href='../vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
-        <link href="js/jquerysctipttop.css" rel="stylesheet" type="text/css">
-        <!-- Custom Theme Style -->
-        <link href='../build/css/custom.min.css' rel='stylesheet'>
-
-
-
-
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-
-        <link href="assets/chart/css/jquerysctipttop.css" rel="stylesheet" type="text/css">
-        <link href="assets/chart/plugins/morris/morris.css" rel="stylesheet" />
         <style>
             .gray {
                 color: rgba(52, 73, 94, 0.94);

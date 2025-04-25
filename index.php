@@ -8,45 +8,17 @@
     <link rel='icon' href='publico/production/images/favicon.ico' type='image/ico' />
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
 
-    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300,600,400italic,700' rel='stylesheet' type='text/css'>
-
-
-
     <link href='publico/vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
     <!-- Font Awesome -->
     <link href='publico/vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
     <!-- NProgress -->
-    <link href='publico/vendors/nprogress/nprogress.css' rel='stylesheet'>
-    <!-- iCheck -->
-    <link href='publico/vendors/google-code-prettify/bin/prettify.min.css' rel='stylesheet'>
-    <!-- Select2 -->
-    <link href='publico/vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
-    <!-- Switchery -->
-    <link href='publico/vendors/switchery/dist/switchery.min.css' rel='stylesheet'>
-    <!-- starrr -->
-    <link href='publico/vendors/starrr/dist/starrr.css' rel='stylesheet'>
-    <!-- bootstrap-daterangepicker -->
-    <link href='publico/vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
-
-    <!-- Custom Theme Style -->
     <link href='publico/build/css/custom.min.css' rel='stylesheet'>
 
-
-
-
-    <link rel="stylesheet" href="iseller.es/css/animate.css">
     <!-- Icomoon Icon Fonts-->
     <link rel="stylesheet" href="iseller.es/css/icomoon.css">
     <!-- Simple Line Icons -->
     <link rel="stylesheet" href="iseller.es/css/simple-line-icons.css">
-
-
-
-
-
-    <link rel="stylesheet" href="publico/assets/AlertifyJS/css/alertify.min.css" />
-    <link rel="stylesheet" href="publico/assets/AlertifyJS/css/themes/semantic.min.css" />
-    <script src="publico/assets/AlertifyJS/alertify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Login</title>
 </head>
 
@@ -116,7 +88,7 @@
                     </div>
                     <div class="form-group" style="width: 80%; margin: auto">
 
-                        <form role="form" action="login/guardar.php" method="post" id="f_inicio" name="f_inicio">
+                        <form name="data_form">
 
                             <label for="user">Usuario</label>
                             <input required style="color: #9c9c9c; padding-left: 30px" type='text' name='login' class="form-control" id='login'>
@@ -127,7 +99,7 @@
                             <span><i class="line icon-lock iconLeft"></i></span>
 
                             <div style="display: grid; place-items: center; margin-top: 45px">
-                                <Button class="btn btn-success">Validar</Button>
+                                <Button type="submit" class="btn btn-success">Validar</Button>
                         </form>
                         <br>
                         <br>
@@ -145,6 +117,68 @@
 
 
 
+    <script>
+        // captura del submit de data_form
+
+        document.querySelector("form[name='data_form']").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const login = document.getElementById('login').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!login || !password) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos incompletos',
+                    text: 'Por favor, completa todos los campos.'
+                });
+                return;
+            }
+
+            const formData = new FormData(this);
+
+            fetch('login/guardar.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(resp => resp.text()) // Obtener la respuesta como texto primero
+                .then(text => {
+                    console.log('Respuesta cruda del backend:', text); // Para debug
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de formato',
+                            text: 'La respuesta del servidor no es un JSON válido.'
+                        });
+                        console.error('Error al parsear JSON:', error);
+                        return;
+                    }
+
+                    if (data.status === true) {
+                        window.location.href = 'publico/production/ventas.php';
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de autenticación',
+                            text: data.msg || 'Credenciales incorrectas.'
+                        });
+                    }
+                })
+                .catch(err => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor.'
+                    });
+                    console.error('Error en la petición fetch:', err);
+                });
+        });
+    </script>
+
+    </script>
 
 
 

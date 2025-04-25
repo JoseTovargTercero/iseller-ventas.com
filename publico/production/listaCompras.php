@@ -26,8 +26,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             $PesoDolar = $filaAlumnos['pesoDolar'];
             $dolarBolivar = $filaAlumnos['DolarBolivar'];
-            $Pesobolivar = $filaAlumnos['peso_bolivar'];
-            $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
+            $Pesobolivar = $filaAlumnos['bolivar_peso'];
+            $peso_bolivar = $filaAlumnos['peso_bolivar'];
         }
     }
     $query2 = "SELECT * FROM empresa";

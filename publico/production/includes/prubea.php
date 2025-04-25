@@ -1,5 +1,38 @@
 <?php
 
+// Inicializar cURL
+$ch = curl_init("https://ve.dolarapi.com/v1/dolares/oficial");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Importante para obtener la respuesta
+
+// Ejecutar la solicitud y obtener la respuesta como string
+$response = curl_exec($ch);
+
+// Cerrar cURL
+curl_close($ch);
+
+// Verificar si hubo error
+if ($response === false) {
+    die("Error al obtener datos");
+}
+
+
+
+// Convertir el JSON a array asociativo
+$data = json_decode($response, true);
+
+// Mostrar el array (para depuración)
+print_r($data);
+
+// Acceder a datos específicos
+if (isset($data['promedio'])) {
+    echo "El precio del dólar oficial es: " . $data['promedio'];
+} else {
+    echo "No se pudo obtener el precio.";
+}
+
+exit;
+
+
 // URL del sitio web
 $url = "https://www.bcv.org.ve/";
 
@@ -20,6 +53,7 @@ if (curl_errno($ch)) {
 
 // Cerrar cURL
 curl_close($ch);
+print_r($response);
 
 // Guardar el contenido HTML en un archivo para inspección
 file_put_contents("response.html", $response);
@@ -40,7 +74,6 @@ $xpath = new DOMXPath($dom);
 
 // Ajustar el XPath según el contenido del HTML real
 $nodes = $xpath->query("//div[contains(@class, 'field-content')]/text()[contains(., 'USD')]");
-
 // Extraer el valor del USD
 if ($nodes->length > 0) {
     $usdValue = $nodes[0]->nodeValue;

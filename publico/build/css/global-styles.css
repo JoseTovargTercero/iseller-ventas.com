@@ -1,0 +1,57 @@
+.ac-c {
+    align-content: center;
+}
+
+.text-bold {
+    font-weight: bold;
+}
+
+
+/* TABLA CON HEADER Y FOOT FIJOS */
+.table-container {
+    height: 60vh;
+    overflow: hidden;
+    position: relative;
+}
+
+.table-fixed thead th,
+.table-fixed tfoot td {
+    position: sticky;
+    z-index: 2;
+}
+
+.table-fixed thead th {
+    top: 0;
+}
+
+.table-fixed tfoot td {
+    bottom: 0;
+}
+
+.table-fixed tbody {
+    display: block;
+    max-height: 50vh;
+    /* Ajusta según lo necesario para que quepa el thead y tfoot */
+    overflow-y: auto;
+}
+
+.table-fixed thead,
+.table-fixed tfoot,
+.table-fixed tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.table-fixed tbody tr td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pt-2 {
+    padding-top: 2rem !important;
+    ;
+}
+
+/* TABLA CON HEADER Y FOOT FIJOS */

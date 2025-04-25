@@ -31,60 +31,36 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-
-
-
-
     /* CALCULAR VALOR DEL STOCK */
 
-
-    // Inicializamos las variables para almacenar el valor del stock
+    // Inicializamos los acumuladores
     $valor_stock_con_ganancia = 0;
     $valor_stock_sin_ganancia = 0;
 
-    // Realizamos la consulta para obtener los productos inactivos
-
-    //addfiltrosu
-    $stmt = mysqli_prepare($conexion, "SELECT * FROM productos WHERE activo='0'");
-    //$stmt->bind_param('s', $var); 
+    // Consulta de productos inactivos
+    $stmt = mysqli_prepare($conexion, "SELECT precio_compra, cantidad_unidades, porcentaje, stock FROM productos WHERE activo='0'");
     $stmt->execute();
-    $buscar = $stmt->get_result();
+    $resultado = $stmt->get_result();
 
-    // Verificamos si se encontraron productos
-    if ($buscar->num_rows > 0) {
-        // Iteramos sobre cada producto encontrado
-        while ($row = $buscar->fetch_assoc()) {
-            // Calculamos el valor de compra unitario
-            $valor_compra_unitario = (float) $row['precio_compra'] / (float) $row['cantidad_unidades'];
+    while ($producto = $resultado->fetch_assoc()) {
+        $precio_compra = (float) $producto['precio_compra'];
+        $unidades = (float) $producto['cantidad_unidades'];
+        $stock = (float) $producto['stock'];
+        $porcentaje = (float) $producto['porcentaje'];
 
-            // Obtenemos el porcentaje de ganancia
-            $porcentaje_ganancia = $row['porcentaje'];
+        // Evitar división por cero
+        if ($unidades <= 0) continue;
 
-            // Calculamos el valor de venta basado en el precio de compra y el porcentaje de ganancia
-            $valor_venta = $valor_compra_unitario * (1 + $porcentaje_ganancia / 100);
+        $valor_unitario_compra = $precio_compra / $unidades;
+        $valor_unitario_venta = $valor_unitario_compra * (1 + $porcentaje / 100);
 
-
-            // Acumulamos el valor del stock con y sin ganancia
-            $valor_stock_con_ganancia += $valor_venta * (float) $row['stock'];
-
-
-            /*
-            if ($valor_venta * (float) $row['stock'] > 80) {
-                echo $row['nombre'] . '-' . $valor_venta * (float) $row['stock'] . '<br>';
-            }*/
-
-            $valor_stock_sin_ganancia += $valor_compra_unitario * (float) $row['stock'];
-        }
-    } else {
-        // Si no hay productos, aseguramos que los valores sean cero
-        $valor_stock_con_ganancia = 0;
-        $valor_stock_sin_ganancia = 0;
+        $valor_stock_con_ganancia += $valor_unitario_venta * $stock;
+        $valor_stock_sin_ganancia += $valor_unitario_compra * $stock;
     }
 
-    // Calculamos las ganancias esperadas
+    // Calculamos la ganancia esperada
     $gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
 
-    /* CALCULAR VALOR DEL STOCK */
 
     $query2 = 'SELECT * FROM empresa';
     $buscarAlumnos2 = $conexion->query($query2);
@@ -95,325 +71,152 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
 
+
+
     $dia = date('Y-m-d');
     $semana = date('Y-W');
     $mes = date('Y-m');
     $ano = date('Y');
 
-    $querysas = "SELECT * FROM gastos WHERE mes='$mes'";
-    $buscarAlumnossas = $conexion->query($querysas);
-    if ($buscarAlumnossas->num_rows > 0) {
-        while ($filaAlumnosasd = $buscarAlumnossas->fetch_assoc()) {
-            $gastosMes += $filaAlumnosasd['importe'];
+
+
+    function obtenerImportes($conexion, $tabla, $columna, $valor)
+    {
+        $total = 0;
+        $sql = "SELECT importe FROM $tabla WHERE $columna='$valor'";
+        $res = $conexion->query($sql);
+        while ($row = $res->fetch_assoc()) {
+            $total += $row['importe'];
         }
-    } else {
-        $gastosMes = '0';
+        return $total;
     }
 
+    $gastosMes = obtenerImportes($conexion, 'gastos', 'mes', $mes);
+    $gastosSemana = obtenerImportes($conexion, 'gastos', 'semana', $semana);
 
 
-    $query = "SELECT * FROM gastos WHERE semana='$semana'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-            $gastosSemana += $filaAlumnos['importe'];
+
+    // Función para obtener total_price de órdenes
+    function obtenerVentas($conexion, $columna, $valor, $extraCond = "")
+    {
+        $total = 0;
+        $sql = "SELECT total_price FROM orden WHERE ($columna='$valor' AND (status='1' OR status='4')) $extraCond";
+        $res = $conexion->query($sql);
+        while ($row = $res->fetch_assoc()) {
+            $total += $row['total_price'];
         }
-    } else {
-        $gastosSemana = '0';
+        return $total;
     }
 
+    $totalVentasDiarias = obtenerVentas($conexion, 'modified', $dia);
+    $totalVentasSemana = obtenerVentas($conexion, 'semana', $semana);
+    $totalVentasMes = obtenerVentas($conexion, 'fecha', $mes);
 
 
 
-
-
-    $query22 = "SELECT * FROM orden WHERE modified='$dia' AND status='1' OR modified='$dia' AND status='4'";
-    $buscarAlumnos22 = $conexion->query($query22);
-    if ($buscarAlumnos22->num_rows > 0) {
-        while ($filaAlumnos22 = $buscarAlumnos22->fetch_assoc()) {
-            $VentasDiarias = $filaAlumnos22['total_price'];
-            $totalVentasDiarias += $VentasDiarias;
-        }
-    } else {
-        $totalVentasDiarias = 0;
-    }
-
-    $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
-    $buscarAlumnos222 = $conexion->query($query222);
-    if ($buscarAlumnos222->num_rows > 0) {
-        while ($filaAlumnos222 = $buscarAlumnos222->fetch_assoc()) {
-            $VentasSemana = $filaAlumnos222['total_price'];
-            $totalVentasSemana += $VentasSemana;
-        }
-    } else {
-        $totalVentasSemana = 0;
-    }
-
-    $query2222 = "SELECT * FROM orden WHERE fecha='$mes' AND status='1' OR fecha='$mes' AND status='4'";
-    $buscarAlumnos2222 = $conexion->query($query2222);
-    if ($buscarAlumnos2222->num_rows > 0) {
-        while ($filaAlumnos2222 = $buscarAlumnos2222->fetch_assoc()) {
-            $VentasMes = $filaAlumnos2222['total_price'];
-            $totalVentasMes += $VentasMes;
-        }
-    } else {
-        $totalVentasMes = 0;
-    }
-
-
-    ///////////////////GANANCIAS DE LA SEMANA/////////////////////
-
-    $query22222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
-    $buscarAlumnos22222 = $conexion->query($query22222);
-    if ($buscarAlumnos22222->num_rows > 0) {
-        while ($filaAlumnos22222 = $buscarAlumnos22222->fetch_assoc()) {
-            $Venta = $filaAlumnos22222['id'];
-            $VentasSe += $filaAlumnos22222['total_price'];
-
-            $query222222 = "SELECT * FROM orden_articulos WHERE order_id='$Venta'";
-            $buscarAlumnos222222 = $conexion->query($query222222);
-            if ($buscarAlumnos222222->num_rows > 0) {
-                while ($filaAlumnos222222 = $buscarAlumnos222222->fetch_assoc()) {
-                    $VentaPrducto = $filaAlumnos222222['product_id'];
-                    $quantity14 = $filaAlumnos222222['quantity'];
-
-                    $precioPrducto = number_format($filaAlumnos222222['precio'], '2', '.', '.');
-                    $precioNeto = $precioPrducto * $quantity14;
-
-                    $precioTotal += $precioNeto;
-                }
+    // Función para calcular ganancias
+    function calcularGanancias($conexion, $columna, $valor)
+    {
+        $ventas = 0;
+        $costos = 0;
+        $sql = "SELECT id, total_price FROM orden WHERE ($columna='$valor' AND (status='1' OR status='4'))";
+        $res = $conexion->query($sql);
+        while ($row = $res->fetch_assoc()) {
+            $ventas += $row['total_price'];
+            $orden_id = $row['id'];
+            $articulos = $conexion->query("SELECT precio, quantity FROM orden_articulos WHERE order_id='$orden_id'");
+            while ($articulo = $articulos->fetch_assoc()) {
+                $costos += $articulo['precio'] * $articulo['quantity'];
             }
-            $gananciasSe = $VentasSe - $precioTotal;
         }
-    }
-
-    ///////////////////GANANCIAS DEL DIA//////////////////////////
-    $query222223 = "SELECT * FROM orden WHERE modified='$dia' AND status='1' OR modified='$dia' AND status='4'";
-    $buscarAlumnos222223 = $conexion->query($query222223);
-    if ($buscarAlumnos222223->num_rows > 0) {
-        while ($filaAlumnos222223 = $buscarAlumnos222223->fetch_assoc()) {
-            $Venta2 = $filaAlumnos222223['id'];
-            $VentasSe2 += $filaAlumnos222223['total_price'];
-
-            $query22222233 = "SELECT * FROM orden_articulos WHERE order_id='$Venta2'";
-            $buscarAlumnos22222233 = $conexion->query($query22222233);
-            if ($buscarAlumnos22222233->num_rows > 0) {
-                while ($filaAlumnos22222233 = $buscarAlumnos22222233->fetch_assoc()) {
-                    $VentaPrducto2 = $filaAlumnos22222233['product_id'];
-                    $quantity = $filaAlumnos22222233['quantity'];
-                    $precioPrducto2 = number_format($filaAlumnos22222233['precio'], '2', '.', '.');
-
-
-
-                    $precioNeto2 = $precioPrducto2 * $quantity;
-
-                    $precioTotal2 += $precioNeto2;
-                }
-            }
-            $gananciasDi = $VentasSe2 - $precioTotal2;
-        }
+        return $ventas - $costos;
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////GANANCIAS DEL mes//////////////////////////
-    $query2222234 = "SELECT * FROM orden WHERE fecha='$mes' AND status='1' OR fecha='$mes' AND status='4'";
-    $buscarAlumnos2222234 = $conexion->query($query2222234);
-    if ($buscarAlumnos2222234->num_rows > 0) {
-        while ($filaAlumnos2222234 = $buscarAlumnos2222234->fetch_assoc()) {
-            $Venta24 = $filaAlumnos2222234['id'];
-            $VentasSe24 += $filaAlumnos2222234['total_price'];
-
-            $query2222223344 = "SELECT * FROM orden_articulos WHERE order_id='$Venta24'";
-            $buscarAlumnos2222223344 = $conexion->query($query2222223344);
-            if ($buscarAlumnos2222223344->num_rows > 0) {
-                while ($filaAlumnos2222223344 = $buscarAlumnos2222223344->fetch_assoc()) {
-                    $VentaPrducto24 = $filaAlumnos2222223344['product_id'];
-
-                    $quantity154 = $filaAlumnos2222223344['quantity'];
-
-                    $precioPrducto24 = number_format($filaAlumnos2222223344['precio'], '2', '.', '.');
-
-                    $precioNeto24 = $precioPrducto24 * $quantity154;
-                    $precioTotal24 += $precioNeto24;
-                }
-            }
-            $gananciasMes = $VentasSe24 - $precioTotal24;
-        }
-    }
+    $gananciasDi = calcularGanancias($conexion, 'modified', $dia);
+    $gananciasSe = calcularGanancias($conexion, 'semana', $semana);
+    $gananciasMes = calcularGanancias($conexion, 'fecha', $mes);
 
 
-    $ventas = contar("SELECT COUNT(*) FROM orden WHERE modified='$dia' AND status='1' OR modified='$dia' AND status='4'");
+    // Contadores
+    $ventas = contar("SELECT COUNT(*) FROM orden WHERE (modified='$dia' AND (status='1' OR status='4'))");
     $credit = contar("SELECT COUNT(*) FROM orden WHERE modified='$dia' AND status='2'");
-
     $cantidadCritica = contar("SELECT COUNT(*) FROM productos WHERE stock<='$stockCritico' AND activo='0'");
 
 
-    $query00000000 = "SELECT * FROM orden WHERE modified='$dia' AND status!='5' AND status!='5.2'";
-    $buscarAlumnos00000000 = $conexion->query($query00000000);
-    if ($buscarAlumnos00000000->num_rows > 0) {
-        while ($filaAlumnos00000000 = $buscarAlumnos00000000->fetch_assoc()) {
-            $ordenId = $filaAlumnos00000000['id'];
 
-            $query000000000 = "SELECT * FROM orden_articulos WHERE order_id='$ordenId'";
-            $buscarAlumnos000000000 = $conexion->query($query000000000);
-            if ($buscarAlumnos000000000->num_rows > 0) {
-                while ($filaAlumnos000000000 = $buscarAlumnos000000000->fetch_assoc()) {
-                    $despachados += $filaAlumnos000000000['quantity'];
-                }
-            }
+    // Productos despachados hoy
+    $despachados = 0;
+    $res = $conexion->query("SELECT id FROM orden WHERE modified='$dia' AND status NOT IN ('5', '5.2')");
+    while ($row = $res->fetch_assoc()) {
+        $articulos = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id='{$row['id']}'");
+        while ($articulo = $articulos->fetch_assoc()) {
+            $despachados += $articulo['quantity'];
         }
     }
+    $despachados = $despachados ?: 0;
 
-    if (@$despachados == "") {
-        $despachados = 0;
-    }
-    $query00000000000 = "SELECT * FROM orden WHERE fecha='$mes' AND status='3'";
-    $buscarAlumnos00000000000 = $conexion->query($query00000000000);
-    if ($buscarAlumnos00000000000->num_rows > 0) {
-        while ($filaAlumnos00000000000 = $buscarAlumnos00000000000->fetch_assoc()) {
-            $ordenId22 = $filaAlumnos00000000000['id'];
 
-            $query000000000000 = "SELECT * FROM orden_articulos WHERE order_id='$ordenId22'";
-            $buscarAlumnos000000000000 = $conexion->query($query000000000000);
-            if ($buscarAlumnos000000000000->num_rows > 0) {
-                while ($filaAlumnos000000000000 = $buscarAlumnos000000000000->fetch_assoc()) {
-                    $despachados226 = $filaAlumnos000000000000['quantity'];
-                    $despachados22 += $despachados226;
-                }
-            }
+    // Productos despachados en el mes (status 3)
+    $despachados22 = 0;
+    $res = $conexion->query("SELECT id FROM orden WHERE fecha='$mes' AND status='3'");
+    while ($row = $res->fetch_assoc()) {
+        $articulos = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id='{$row['id']}'");
+        while ($articulo = $articulos->fetch_assoc()) {
+            $despachados22 += $articulo['quantity'];
         }
     }
+    $despachados22 = $despachados22 ?: 0;
 
-    if ($despachados22 == "") {
-        $despachados22 = 0;
+
+    // Ventas confirmadas con status 3 del mes
+    $totalVentasMesDejado = 0;
+    $res = $conexion->query("SELECT total_price FROM orden WHERE fecha='$mes' AND status='3'");
+    while ($row = $res->fetch_assoc()) {
+        $totalVentasMesDejado += $row['total_price'];
     }
 
 
-
-
-
-    $query2222222222222 = "SELECT * FROM orden WHERE fecha='$mes' AND status='3'";
-    $buscarAlumnos2222222222222 = $conexion->query($query2222222222222);
-    if ($buscarAlumnos2222222222222->num_rows > 0) {
-        while ($filaAlumnos2222222222222 = $buscarAlumnos2222222222222->fetch_assoc()) {
-            $dejado = $filaAlumnos2222222222222['total_price'];
-            $totalVentasMesDejado += $dejado;
-        }
-    } else {
-        $totalVentasMesDejado = 0;
+    // Stock actual en almacén
+    $almacen = 0;
+    $res = $conexion->query("SELECT stock FROM productos WHERE activo='0'");
+    while ($row = $res->fetch_assoc()) {
+        $almacen += $row['stock'];
     }
+    $almacen = $almacen ?: 0;
 
 
 
-
-
-    $query2222222222222222 = "SELECT * FROM productos WHERE activo='0'";
-    $buscarAlumnos2222222222222222 = $conexion->query($query2222222222222222);
-    if ($buscarAlumnos2222222222222222->num_rows > 0) {
-        while ($filaAlumnos2222222222222222 = $buscarAlumnos2222222222222222->fetch_assoc()) {
-            $almacen += $filaAlumnos2222222222222222['stock'];
-        }
-    } else {
-        $almacen = 0;
-    }
-
-
+    // Funciones adicionales para estadísticas semanales
     function ventasSemana($semana)
     {
         global $conexion;
-        $totalVentasMes0 = 0;
-
-        $query0000 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
-        $buscarAlumnos0000 = $conexion->query($query0000);
-        if ($buscarAlumnos0000->num_rows > 0) {
-            while ($filaAlumnos0000 = $buscarAlumnos0000->fetch_assoc()) {
-                $VentasMes0 = $filaAlumnos0000['total_price'];
-                $totalVentasMes0 += $VentasMes0;
-            }
-        }
-        if ($totalVentasMes0 == "") {
-            $totalVentasMes0 = "0";
-        }
-        return round($totalVentasMes0, 1, PHP_ROUND_HALF_DOWN);
+        return round(obtenerVentas($conexion, 'semana', $semana), 1, PHP_ROUND_HALF_DOWN);
     }
 
     function gananciasSemana($semana)
     {
         global $conexion;
-        $VentasSeA = 0;
-        $precioTotalA = 0;
-
-        $queryAAAAA3 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
-        $buscarAlumnosAAAAA3 = $conexion->query($queryAAAAA3);
-        if ($buscarAlumnosAAAAA3->num_rows > 0) {
-            while ($filaAlumnosAAAAA3 = $buscarAlumnosAAAAA3->fetch_assoc()) {
-                $VentaA = $filaAlumnosAAAAA3['id'];
-                $VentasSeA += $filaAlumnosAAAAA3['total_price'];
-                $queryAAAAAA33 = "SELECT * FROM orden_articulos WHERE order_id='$VentaA'";
-                $buscarAlumnosAAAAAA33 = $conexion->query($queryAAAAAA33);
-                if ($buscarAlumnosAAAAAA33->num_rows > 0) {
-                    while ($filaAlumnosAAAAAA33 = $buscarAlumnosAAAAAA33->fetch_assoc()) {
-                        $VentaPrductoA = $filaAlumnosAAAAAA33['product_id'];
-                        $quantityA = $filaAlumnosAAAAAA33['quantity'];
-
-                        $precioPrductoA = number_format($filaAlumnosAAAAAA33['precio'], '2', '.', '.');
-                        $precioNetoA = $precioPrductoA * $quantityA;
-                        $precioTotalA += $precioNetoA;
-                    }
-                }
-                $gananciasANO = $VentasSeA - $precioTotalA;
-            }
-        }
-        if ($gananciasANO == "") {
-            $gananciasANO = "0";
-        }
-        return round($gananciasANO, 2, PHP_ROUND_HALF_DOWN);
+        $ganancia = calcularGanancias($conexion, 'semana', $semana);
+        return round($ganancia ?: 0, 2, PHP_ROUND_HALF_DOWN);
     }
-
-
-
-    $arraSemanas = array();
 
     function gastosSemana($semana)
     {
         global $conexion;
-        $gastosSemana = 0;
-
-        $query = "SELECT * FROM gastos WHERE semana='$semana'";
-        $buscarAlumnos = $conexion->query($query);
-        if ($buscarAlumnos->num_rows > 0) {
-            while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-                $gastosSemana += $filaAlumnos['importe'];
-            }
-        }
-
-        return $gastosSemana;
+        return obtenerImportes($conexion, 'gastos', 'semana', $semana);
     }
 
-
-
-
-    $querysas = "SELECT * FROM orden ORDER BY semana ASC";
-    $buscarAlumnossas = $conexion->query($querysas);
-    if ($buscarAlumnossas->num_rows > 0) {
-        while ($filaAlumnosasd = $buscarAlumnossas->fetch_assoc()) {
-            $semanaC = $filaAlumnosasd['semana'];
-            if (!$arraSemanas[$semanaC]) {
-                $arraSemanas[$semanaC] = array(0, 0, 0);
-            }
-        }
+    // Análisis por semanas
+    $arraSemanas = [];
+    $res = $conexion->query("SELECT DISTINCT semana FROM orden ORDER BY semana ASC");
+    while ($row = $res->fetch_assoc()) {
+        $semanaC = $row['semana'];
+        $ventas = ventasSemana($semanaC);
+        $gastos = gastosSemana($semanaC);
+        $gananciaNeta = gananciasSemana($semanaC) - $gastos;
+        $arraSemanas[$semanaC] = [$ventas, $gananciaNeta, $gastos];
     }
-
-
-
-
-    foreach ($arraSemanas as $key => $value) {
-        $gananciaNeta = gananciasSemana($key) - gastosSemana($key);
-        $arraSemanas[$key] = array(ventasSemana($key), $gananciaNeta, gastosSemana($key));
-    }
-
-
 
 
 
@@ -594,17 +397,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <tbody>
                                                 <?php
 
-                                                $query77 = "SELECT * FROM cambios_tasas ORDER BY id DESC LIMIT 10";
-                                                $buscarAlumnos77 = $conexion->query($query77);
-                                                if ($buscarAlumnos77->num_rows > 0) {
-                                                    while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
+                                                $query = "SELECT * FROM cambios_tasas ORDER BY id DESC LIMIT 10";
+                                                $buscar = $conexion->query($query);
+                                                if ($buscar->num_rows > 0) {
+                                                    while ($row = $buscar->fetch_assoc()) {
                                                         echo '
-                             <tr class="even pointer">
-                            <td>' . $filaAlumnos77['user'] . '</td>
-                            <td>' . $filaAlumnos77['fecha'] . '</td>
-                            <td>' . $filaAlumnos77['hora'] . '</td>
-     
-                          </tr>';
+                                                            <tr class="even pointer">
+                                                            <td>' . $row['user'] . '</td>
+                                                            <td>' . $row['fecha'] . '</td>
+                                                            <td>' . $row['hora'] . '</td>
+                                                        </tr>';
                                                     }
                                                 }
 
@@ -743,23 +545,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </a>
 
                             </div>
-
-
-
                         </div>
-
-
-
-
-
-
-
-
-
-
-
                     </div>
-
                 </div>
                 <!-- /page content -->
                 <!-- footer content -->
@@ -852,18 +639,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             ?>
 
-            /*
-            var xAxis = chart.xAxes.push(
-              am5xy.CategoryAxis.new(root, {
-                maxDeviation: 0.2,
-                renderer: am5xy.AxisRendererX.new(root, {})
-              }),
-              categoryField: "category"
-            );
-
-
-
-            */
 
 
             // Create axes
@@ -956,13 +731,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
         <!-- FastClick -->
         <script src="../vendors/fastclick/lib/fastclick.js"></script>
-
         <script src="../vendors/nprogress/nprogress.js"></script>
-
-
         <script src="../build/js/custom.min.js"></script>
-
-
 
     <?php
 } else {

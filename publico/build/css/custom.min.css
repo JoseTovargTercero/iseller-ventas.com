@@ -6433,9 +6433,7 @@
      transition: all 0.3s ease-in-out;
  }
 
- input[type="radio"] {
-     display: none;
- }
+
 
  #option1:checked:checked~.option1,
  #option2:checked:checked~.option2,
@@ -6585,6 +6583,7 @@
 
 
 
+
  .details-modal-content {
      display: flex;
      flex-direction: column;
@@ -6615,17 +6614,7 @@
      z-index: 1;
  }
 
- .modal-footer {
-     border-top: 1px solid #dee2e6;
-     padding: 10px;
-     display: flex !important;
-     justify-content: space-between !important;
- }
-
-
- /* MODAL */
- .vista_precio {
-     text-align: center;
-     font-size: 15px;
-     font-weight: bold;
+ .section-scanner {
+     padding: 8px;
+     background-color: #f3f3f3;
  }

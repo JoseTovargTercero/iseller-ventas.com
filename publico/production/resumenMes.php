@@ -54,7 +54,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     // initializ shopping cart class
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
     $today = date('Y-m-d');

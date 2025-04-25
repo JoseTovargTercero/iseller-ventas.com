@@ -1,5 +1,5 @@
 <?php
-include 'La-carta.php';
+include 'la-carta.php';
 $cart = new Cart;
 
 require_once('../../configurar/configuracion.php');

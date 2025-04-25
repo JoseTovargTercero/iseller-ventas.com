@@ -1,7 +1,7 @@
 <?php
 require_once("../../configurar/configuracion.php");
 
-require_once 'La-carta.php';
+require_once 'la-carta.php';
 $cart = new Cart;
 
 
@@ -13,6 +13,8 @@ $data = array(
   'carrito' => [],
   'total' => []
 );
+$todoPeso = 0;
+$todoBolivar = 0;
 
 foreach ($cartItems as $item) {
 

@@ -43,7 +43,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($buscarAlumnos225->num_rows > 0) {
         while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
             $pesoDolar = $filaAlumnos225['pesoDolar'];
-            $bolivarPesoTrans = $filaAlumnos225['bolivarPesoTrans'];
+            $peso_bolivar = $filaAlumnos225['peso_bolivar'];
+            $bolivar_peso = $filaAlumnos225['bolivar_peso'];
             $bsDolar = $filaAlumnos225['DolarBolivar'];
         }
     }
@@ -55,46 +56,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
-        <!-- Meta, title, CSS, favicons, etc. -->
-        <meta charset='utf-8'>
-        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-        <meta name='viewport' content='width=device-width, initial-scale=1'>
-        <link rel='icon' href='images/favicon.ico' type='image/ico' />
 
         <title>Agregar Producto</title>
+        <?php require_once('includes/headers.php'); ?>
 
-        <link href='../vendors/bootstrap/dist/css/bootstrap.min.css' rel='stylesheet'>
-        <!-- Font Awesome -->
-        <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
-        <!-- NProgress -->
-        <link href='../vendors/nprogress/nprogress.css' rel='stylesheet'>
-        <!-- iCheck -->
-        <link rel="stylesheet" href="../../iseller.es/css/animate.css">
-        <!-- Icomoon Icon Fonts-->
-        <link rel="stylesheet" href="../../iseller.es/css/icomoon.css">
-        <!-- Simple Line Icons -->
-        <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
-        <!-- bootstrap-wysiwyg -->
-        <link href='../vendors/google-code-prettify/bin/prettify.min.css' rel='stylesheet'>
-        <!-- Select2 -->
-        <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
-        <!-- Switchery -->
-        <link href='../vendors/switchery/dist/switchery.min.css' rel='stylesheet'>
-        <!-- starrr -->
-        <link href='../vendors/starrr/dist/starrr.css' rel='stylesheet'>
-        <!-- bootstrap-daterangepicker -->
-        <link href='../vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
-
-        <!-- Custom Theme Style -->
-        <link href='../build/css/custom.min.css' rel='stylesheet'>
-
-        <script src='js/jquery.min.js'></script>
-        <script src='peticion.js'></script>
-        <script src='peticion_codigo.js'></script>
-        <link rel='stylesheet' href='..//assets/AlertifyJS/css/alertify.min.css' />
-        <link rel='stylesheet' href='..//assets/AlertifyJS/css/themes/semantic.min.css' />
-        <script src='..//assets/AlertifyJS/alertify.min.js'></script>
 
         <?php
         @$registrado = $_GET['agregado'];
@@ -146,7 +111,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <div class='clearfix'></div>
 
 
-
                         <div class='row'>
                             <div class='col-lg-6 '>
                                 <div class='x_panel'>
@@ -156,15 +120,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <div class='clearfix'></div>
                                     </div>
                                     <div class='x_content'>
-
-
-
-
-
-
-
-
-
 
                                         <?php
                                         $query = "SELECT * FROM cambio WHERE id='1'";
@@ -230,6 +185,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         ?>
                                         <form action="../../configurar/tasas.php" method="post">
+                                            <h5 class="text-center">Dolar <i style="vertical-align: text-bottom;" class="bx bx-right-arrow-alt"></i> Bolívares</h5>
+
+                                            <p class="text-center">
+                                                <em>Se utiliza para calcular el valor de la tasa de cambio de Dólares a Bolívares</em>
+                                            </p>
                                             <div class="mb-3">
                                                 <label class="form-label">Tipo de tasa (BS)</label>
                                                 <select name="tipoTasa" class="form-control" onchange="tipoCambio(this.value)">
@@ -253,15 +213,46 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <?php echo $options_2 ?>
                                                 </select>
                                             </div>
-                                            <hr class="mt-3 mb-3">
+                                            <h5 class="text-center">
+                                                Dolar
+                                                <i style="vertical-align: text-bottom;" class="bx bx-right-arrow-alt"></i>
+                                                Pesos
+                                            </h5>
+                                            <p class="text-center">
+                                                <em>Se utiliza para calcular el valor de la tasa de cambio de Dólares a pesos</em>
+                                            </p>
+
                                             <div class="mb-3">
                                                 <label class="form-label">Pesos/Dolar</label>
                                                 <input value="<?php echo $pesoDolar ?>" name="peso" class="form-control">
                                             </div>
-                                            <hr class="mt-3 mb-3">
+
+                                            <h5 class="text-center">
+                                                Pesos
+                                                <i style="vertical-align: text-bottom;" class="bx bx-right-arrow-alt"></i>
+                                                Bolívares
+                                            </h5>
+                                            <p class="text-center">
+                                                <em>Se aplica a los productos de origen colombiano y se emplea para determinar el valor de cambio de pesos a bolívares (Los productos de origen venezolanos seguirán siendo calculados a la tasa definida para Dolar/Bs)</em>
+                                            </p>
                                             <div class="mb-3">
                                                 <label class="form-label">Pesos/Bolívar</label>
-                                                <input value="<?php echo $bolivarPesoTrans ?>" name="bolivarPesoTrans" class="form-control">
+                                                <input value="<?php echo $peso_bolivar ?>" name="peso_bolivar" class="form-control">
+                                            </div>
+
+                                            <h5 class="text-center">
+                                                Bolívares
+                                                <i style="vertical-align: text-bottom;" class="bx bx-right-arrow-alt"></i>
+                                                Pesos
+                                            </h5>
+
+                                            <p class="text-center">
+                                                <em>Se aplica a los productos de origen venezolano y se emplea para determinar el valor de cambio de bolívares a pesos (Los productos de origen colombiano seguirán siendo calculados a la tasa definida para Dolar/Pesos)</em>
+                                            </p>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Bolívar/Pesos</label>
+                                                <input value="<?php echo $bolivar_peso ?>" name="bolivarPeso" class="form-control">
                                             </div>
 
 
@@ -272,6 +263,150 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                 </div>
                             </div>
+                            <div class='col-lg-6 '>
+                                <div class='x_panel'>
+                                    <div class='x_title'>
+                                        <h2> Tasa mostradas en el carrito</h2>
+
+                                        <div class='clearfix'></div>
+                                    </div>
+                                    <div class='x_content'>
+
+                                        <form id="form-tasas" class="p-4 border rounded shadow-sm ">
+                                            <div id="contenedor-tasas"></div>
+
+                                            <button type="submit" class="btn btn-primary mt-3" id="btn-actualizar">Actualizar</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <script>
+                                const tasasDisponibles = {
+                                    "precio_dolar_visible": [
+                                        "Precio Dólar",
+                                        "Dolares",
+                                        "Muestra el precio del producto en dólares estadounidenses."
+                                    ],
+                                    "precio_peso_visible": [
+                                        "Precio Peso",
+                                        "Pesos",
+                                        "Muestra el precio en pesos colombianos, calculado a partir del valor en dólares (Dólar/Peso)."
+                                    ],
+                                    "precio_bs_visible": [
+                                        "Precio Bs",
+                                        "Bolívares",
+                                        "Muestra el precio en bolívares, considerando el país de origen del producto y la tasa correspondiente para bolívares (Dólar/Bs o Peso/Bs)."
+                                    ],
+                                    "precio_bolivar_peso": [
+                                        "Bolívar a Peso",
+                                        "Pesos",
+                                        "Muestra el precio en pesos para productos venezolanos, calculado con la tasa Bs/Peso. Los productos colombianos mantienen su precio original."
+                                    ],
+                                    "precio_bolivar_dolar": [
+                                        "Bolívar a Dólar",
+                                        "Dolares",
+                                        "Muestra el precio en dólares basado en la tasa oficial BCV, utilizando como referencia el valor final del producto en bolívares."
+                                    ]
+                                };
+
+                                function cargarTasas() {
+                                    fetch('../../configurar/tasas_mostradas.php?accion=obtener')
+                                        .then(res => res.json())
+                                        .then(res => {
+                                            const contenedor = document.getElementById('contenedor-tasas');
+                                            contenedor.innerHTML = "";
+
+                                            if (res.status === 'success') {
+                                                const tasas = res.data;
+
+                                                const grupos = {
+                                                    Dolares: [],
+                                                    Pesos: [],
+                                                    Bolívares: []
+                                                };
+
+                                                Object.entries(tasasDisponibles).forEach(([key, label]) => {
+                                                    grupos[label[1]].push({
+                                                        key,
+                                                        label
+                                                    });
+                                                });
+
+                                                Object.entries(grupos).forEach(([moneda, items]) => {
+                                                    const groupName = `tasas_grupo_${moneda}`;
+                                                    contenedor.innerHTML += `<div class="mt-3 mb-3"><b>${moneda.toUpperCase()}</b><br/>`;
+
+                                                    items.forEach(({
+                                                        key,
+                                                        label
+                                                    }) => {
+                                                        const checked = tasas[key] && tasas[key][0] ? 'checked' : '';
+                                                        const isBS = label[1] === 'Bolívares';
+                                                        const disabled = isBS ? 'disabled' : '';
+                                                        const finalChecked = isBS ? 'checked' : checked;
+                                                        contenedor.innerHTML += `
+                                                        <div class="form-check mb-1">
+                                                        <input style="display: flex; align-items: flex-start; gap: 8px;" class="form-check-input" type="radio" id="${key}" 
+                                                            name="${groupName}" 
+                                                            value="${key}" ${finalChecked} ${disabled} data-moneda="${moneda}">
+                                                            <label class="form-check-label" for="${key}">
+                                                                <b>${label[0]}</b><br>
+                                                                <small>${label[2]}</small>
+                                                            </label>
+                                                        </div>
+                                                    `;
+                                                    });
+
+                                                    contenedor.innerHTML += `</div>`;
+                                                });
+                                            } else {
+                                                Swal.fire("Error", res.message, "error");
+                                            }
+                                        })
+                                        .catch(() => Swal.fire("Error", "Error al obtener las tasas.", "error"));
+                                }
+
+                                // Inicial
+                                cargarTasas();
+
+                                // Envío del formulario
+                                document.getElementById('form-tasas').addEventListener('submit', function(e) {
+                                    e.preventDefault();
+
+                                    const formData = new FormData();
+                                    const monedas = ['Dolares', 'Pesos', 'Bolívares'];
+                                    // Solo agregar los radios marcados que tienen atributo name
+                                    monedas.forEach(moneda => {
+                                        const seleccionado = document.querySelector(`input[name="tasas_grupo_${moneda}"]:checked`);
+                                        if (seleccionado) {
+                                            formData.append(`tasas[${seleccionado.value}]`, "1");
+                                        }
+                                    });
+
+
+                                    formData.append('accion', 'actualizar');
+
+                                    fetch('../../configurar/tasas_mostradas.php', {
+                                            method: 'POST',
+                                            body: formData
+                                        })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (data.status === 'success') {
+                                                Swal.fire("Actualizado", data.message, "success").then(() => {
+                                                    cargarTasas();
+                                                });
+                                            } else {
+                                                Swal.fire("Error", data.message, "error");
+                                            }
+                                        })
+                                        .catch(() => {
+                                            Swal.fire("Error", "No se pudo actualizar.", "error");
+                                        });
+                                });
+                            </script>
 
 
 

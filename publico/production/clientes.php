@@ -31,8 +31,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
 
       $PesoDolar = $filaAlumnos['pesoDolar'];
-      $Pesobolivar = $filaAlumnos['peso_bolivar'];
-      $bolivarPesoTrans = $filaAlumnos['bolivarPesoTrans'];
+      $Pesobolivar = $filaAlumnos['bolivar_peso'];
+      $peso_bolivar = $filaAlumnos['peso_bolivar'];
       $dolarBolivar = $filaAlumnos['DolarBolivar'];
     }
   }
@@ -45,7 +45,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
   }
   // initializ shopping cart class
-  include 'La-carta.php';
+  include 'la-carta.php';
   $cart = new Cart;
 
 ?>

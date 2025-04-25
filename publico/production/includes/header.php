@@ -75,8 +75,16 @@ function topnav()
         }
     }
 
+/*
 
 
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{ "consulta": "Obtener tipos de cambio actuales" }' \
+  "https://magicloops.dev/api/loop/4b921d65-98a4-4a6e-827a-76552b0c53af/run";
+
+  
+*/
 
     if ($notificacionStockCritico == "1") {
 

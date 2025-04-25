@@ -1,5 +1,6 @@
 html {
-    background-color: #343434 !important;
+    background-color: #424242 !important;
+    background: #424242 !important;
 }
 
 *::-webkit-scrollbar {
@@ -6416,9 +6417,7 @@ ul.notifications {
     transition: all 0.3s ease-in-out;
 }
 
-input[type="radio"] {
-    display: none;
-}
+
 
 #option1:checked:checked~.option1,
 #option2:checked:checked~.option2,
@@ -6614,4 +6613,23 @@ input[type="number"] {
     text-align: center;
     font-size: 15px;
     font-weight: bold;
+}
+
+
+.modal5 {
+    background-color: #2c2c2c;
+}
+
+.ac-c {
+    align-content: center;
+}
+
+.text-bold {
+    font-weight: bold;
+}
+
+
+.section-scanner {
+    padding: 8px;
+    background-color: #484848;
 }

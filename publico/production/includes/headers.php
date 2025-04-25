@@ -27,6 +27,7 @@
 <script src='js/jquery.min.js'></script>
 
 <?php require_once('includes/darkModeAct.php'); ?>
+<link rel="stylesheet" href="../build/css/global-styles.css">
 
 <link rel="stylesheet" href="../../iseller.es/css/animate.css">
 <!-- Simple Line Icons -->
@@ -36,3 +37,6 @@
 <script src="../assets/sweetalert2.all.min.js"></script>
 
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+<script src="../assets/sweetalert2.all.min.js"></script>
+<script src="js/tasa_bcv.js"></script>

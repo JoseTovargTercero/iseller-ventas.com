@@ -49,7 +49,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
     // initializ shopping cart class
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
     $today = date('Y-m-d');
@@ -101,9 +101,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-       
+
         <title>Consultas</title>
-       
+
         <?php require_once('includes/headers.php'); ?>
 
         <link href='../vendors/cropper/dist/cropper.min.css' rel='stylesheet'>
@@ -112,7 +112,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-      
+
         <script src='peticion.js'></script>
         <script src='peticion_producto.js'></script>
 

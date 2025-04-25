@@ -6,7 +6,8 @@ $margen = $_POST['margen'];
 $redondeo = $_POST['redondeo'];
 $bolivar = $_POST['bolivar'];
 $peso = $_POST['peso'];
-$bolivarPesoTrans = $_POST['bolivarPesoTrans'];
+$bolivarPeso = $_POST['bolivarPeso'];
+$peso_bolivar = $_POST['peso_bolivar'];
 $bcv = 0;
 
 if ($tipoTasa == 3 || $tipoTasa == 2) {
@@ -56,12 +57,13 @@ $update = "
     UPDATE cambio 
     SET 
         pesoDolar='$peso', 
+        bolivar_peso='$bolivarPeso', 
         DolarBolivar='$bolivar', 
         tipo_tasa_bs='$tipoTasa', 
         margen_neto='$margen', 
         redondeo='$redondeo', 
         bcv='$bcv', 
-        bolivarPesoTrans='$bolivarPesoTrans' 
+        peso_bolivar='$peso_bolivar'
     WHERE id='1'
 ";
 

@@ -39,7 +39,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     // initializ shopping cart class
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
 
@@ -49,7 +49,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
             $pesoDolar = $filaAlumnos225['pesoDolar'];
             $bsDolar = $filaAlumnos225['DolarBolivar'];
-            $bolivarPesoTrans = $filaAlumnos225['bolivarPesoTrans'];
+            $peso_bolivar = $filaAlumnos225['peso_bolivar'];
         }
     }
 
@@ -61,10 +61,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang="en">
 
     <head>
-       
+
         <title>Productos</title>
         <?php require_once('includes/headers.php'); ?>
-  
+
 
         <link href="../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css" rel="stylesheet">
@@ -72,7 +72,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
 
-   
+
         <script src='peticion.js'></script>
         <script src='peticion_producto.js'></script>
 
@@ -379,7 +379,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                     var bolivarSalida = preciodolarVenta * cambioDolar;
                                     let tipoConversion = document.getElementById('origenProducto').value
-                                    var tipoCambio_pesosBs = parseFloat(<?php echo $bolivarPesoTrans ?>);
+                                    var tipoCambio_pesosBs = parseFloat(<?php echo $peso_bolivar ?>);
 
 
                                     if (tipoConversion == 'c') {

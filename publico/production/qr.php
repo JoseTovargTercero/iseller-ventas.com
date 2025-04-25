@@ -58,7 +58,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
     /*
 if(isset($_GET['id'])){

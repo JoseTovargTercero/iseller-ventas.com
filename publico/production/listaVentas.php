@@ -50,7 +50,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
     // initializ shopping cart class
-    include 'La-carta.php';
+    include 'la-carta.php';
     $cart = new Cart;
 
     $today = date('Y-m-d');
@@ -621,7 +621,7 @@ modified='$today' AND status='4' AND tipoPago='6'";
     <html lang='es'>
 
     <head>
-     
+
         <title>Lista de Ventas</title>
         <?php require_once('includes/headers.php'); ?>
 

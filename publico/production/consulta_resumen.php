@@ -4,7 +4,7 @@ require_once("../../configurar/configuracion.php");
 
 
 // initializ shopping cart class
-include 'La-carta.php';
+include 'la-carta.php';
 $cart = new Cart;
 
 // redirect to home if cart is empty

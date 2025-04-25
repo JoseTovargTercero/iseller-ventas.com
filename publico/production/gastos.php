@@ -165,7 +165,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-      
+
 
         <title>Gastos </title>
 
@@ -290,7 +290,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
 
         .modal5 {
-            background-color: #fff;
             width: 600px;
             max-width: 100%;
             padding: 30px 50px;
