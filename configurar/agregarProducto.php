@@ -14,7 +14,6 @@ $precioMonedaOrigen = $_POST['precioMonedaOrigen'] ?? 0;
 $c_barras = $_POST['c_barras'] ?? '';
 $origenProducto = $_POST['origenProducto'] ?? '';
 $proveedor = $_POST['proveedor'] ?? '';
-$stock = $_POST['stock'] ?? 0;
 $foto = "NO";
 
 // Validación básica
@@ -28,15 +27,15 @@ $conexion->begin_transaction();
 try {
   // Insertar en productos
   $query = "INSERT INTO productos (
-      nombre, precio_compra, cantidad_unidades, porcentaje, codigo, stock, codigo_barras, origen, proveedor
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      nombre, precio_compra, cantidad_unidades, porcentaje, codigo, codigo_barras, origen, proveedor
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
   $stmt = $conexion->prepare($query);
   if (!$stmt) {
     throw new Exception('Error al preparar la consulta de productos.');
   }
 
-  $stmt->bind_param("sdddsdsss", $nombre, $precio, $cantidad, $porcentaje, $codigo, $stock, $c_barras, $origenProducto, $proveedor);
+  $stmt->bind_param("sdddssss", $nombre, $precio, $cantidad, $porcentaje, $codigo, $c_barras, $origenProducto, $proveedor);
   if (!$stmt->execute()) {
     throw new Exception('No se pudo registrar el producto.');
   }
@@ -44,22 +43,24 @@ try {
   $id_registro = $conexion->insert_id;
   $stmt->close();
 
-  // Insertar en stock
-  $sucursales_marcadas = json_decode($_POST['sucursales_marcadas'], true);
-  if (!is_array($sucursales_marcadas)) {
+  // Decodificar el arreglo enviado desde JS
+  $sucursales_stock = json_decode($_POST['sucursales_stock'], true);
+  if (!is_array($sucursales_stock)) {
     throw new Exception('Debe haber alguna sucursal seleccionada.');
   }
 
-  $stock_cero = 0;
   $stmt_o = $conexion->prepare("INSERT INTO stock (id_producto, porcentaje, stock, id_sucursal) VALUES (?, ?, ?, ?)");
   if (!$stmt_o) {
     throw new Exception('Error al preparar la consulta de stock.');
   }
 
-  foreach ($sucursales_marcadas as $idSucursal) {
-    $stmt_o->bind_param("ddii", $id_registro, $porcentaje, $stock_cero, $idSucursal);
+  foreach ($sucursales_stock as $item) {
+    $idSucursal = $item[0];
+    $stock = $item[1];
+
+    $stmt_o->bind_param("ddii", $id_registro, $porcentaje, $stock, $idSucursal);
     if (!$stmt_o->execute()) {
-      throw new Exception('Error al registrar el stock en una sucursal.');
+      throw new Exception('Error al registrar el stock en la sucursal con ID: ' . $idSucursal);
     }
   }
   $stmt_o->close();

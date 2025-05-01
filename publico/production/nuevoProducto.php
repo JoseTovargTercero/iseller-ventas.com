@@ -53,7 +53,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src='peticion_codigo.js'></script>
     </head>
 
+    <style>
+        .tabs section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
 
+        .tabs section.active {
+            display: block;
+            opacity: 1;
+        }
+    </style>
 
     <body class='nav-md'>
         <div class='container body'>
@@ -178,116 +189,118 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         </div>
                                         <div class='x_content'>
+                                            <div class="tabs">
+                                                <section>
 
-                                            <div class="mb-2">
-                                                <label class='col-form-label' for='first-name'>Nombre del producto</label>
-                                                <div class="row">
+                                                    <div class="mb-2">
+                                                        <label class='col-form-label' for='first-name'>Nombre del producto</label>
+                                                        <div class="row">
 
-                                                    <div class='col-md-7  col-sm-7'>
-                                                        <input type='text' id='nombre' placeholder="Nombre del producto" name='nombre' required='required' class='form-control '>
+                                                            <div class='col-md-7  col-sm-7'>
+                                                                <input type='text' id='nombre' required placeholder="Nombre del producto" name='nombre' class='form-control '>
+                                                            </div>
+
+                                                            <div class='col-md-5 col-sm-5'>
+                                                                <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal">Calcular precio</button>
+                                                            </div>
+
+                                                        </div>
                                                     </div>
 
-                                                    <div class='col-md-5 col-sm-5'>
-                                                        <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal">Calcular precio</button>
+                                                    <input type='text' id='precio' name='precio' hidden class='form-control '>
+
+                                                    <div class="row mb-2">
+                                                        <div class='col-lg-6 form-group'>
+                                                            <label class='col-form-label' for='first-name'>Precio de Compra
+                                                            </label>
+                                                            <input type='text' required placeholder="Precio del bulto" id='precioMonedaOrigen' name='precioMonedaOrigen' class='form-control '>
+                                                        </div>
+                                                        <div class='col-lg-6 form-group'>
+
+                                                            <label class='col-form-label' for='first-name'>Origen del producto</label>
+                                                            <select class="form-control" required name="origenProducto" id="origenProducto">
+                                                                <option value="">Seleccione</option>
+                                                                <option value="v">Venezolano</option>
+                                                                <option value="c">Colombiano</option>
+                                                            </select>
+                                                        </div>
                                                     </div>
 
-                                                </div>
-                                            </div>
 
-                                            <input type='text' id='precio' name='precio' hidden required='required' class='form-control '>
+                                                    <div class="row  mb-2">
 
-                                            <div class="row mb-2">
-                                                <div class='col-lg-6 form-group'>
-                                                    <label class='col-form-label' for='first-name'>Precio de Compra
-                                                    </label>
-                                                    <input type='text' placeholder="Precio del bulto" id='precioMonedaOrigen' name='precioMonedaOrigen' required='required' class='form-control '>
-                                                </div>
-                                                <div class='col-lg-6 form-group'>
+                                                        <div class='col-lg-6 form-group'>
+                                                            <label class='col-form-label' for='first-name'>Unidades por bulto
+                                                            </label>
+                                                            <input type='text' required id='cantidad' placeholder="Unidades que contiene el bulto" name='cantidad' class='form-control '>
+                                                        </div>
 
-                                                    <label class='col-form-label' for='first-name'>Origen del producto</label>
-                                                    <select class="form-control" required='required' name="origenProducto" id="origenProducto">
-                                                        <option value="">Seleccione</option>
-                                                        <option value="v">Venezolano</option>
-                                                        <option value="c">Colombiano</option>
-                                                    </select>
-                                                </div>
-                                            </div>
+                                                        <select style="display: none;" class="form-control" name="categoria">
+                                                            <option> -- Categoria -- </option>
+                                                        </select>
+                                                        <div class='col-lg-6 form-group'>
+                                                            <label class='col-form-label' for='first-name'>Porcentaje
+                                                            </label>
+                                                            <input required type='text' id='porcentaje' name='porcentaje' placeholder="Porcentaje incrementado" class='form-control '>
 
+                                                        </div>
 
-                                            <div class="row  mb-2">
-
-                                                <div class='col-lg-6 form-group'>
-                                                    <label class='col-form-label' for='first-name'>Unidades por bulto
-                                                    </label>
-                                                    <input type='text' id='cantidad' placeholder="Unidades que contiene el bulto" name='cantidad' required='required' class='form-control '>
-                                                </div>
-
-                                                <div class='col-lg-6 form-group'>
-                                                    <label class='col-form-label' for='first-name'>Cantidad en Stock
-                                                    </label>
-                                                    <input type='text' id='stock' name='stock' placeholder="Cantidad total en stock" required='required' class='form-control '>
-
-                                                    <select style="display: none;" class="form-control" name="categoria">
-                                                        <option> -- Categoria -- </option>
-                                                    </select>
-                                                </div>
-
-                                            </div>
-
-                                            <div class=' mb-2 form-group'>
-                                                <label class='col-form-label' for='first-name'>Porcentaje
-                                                </label>
-                                                <input type='text' id='porcentaje' name='porcentaje' placeholder="Porcentaje incrementado" required='required' class='form-control '>
-                                            </div>
-
-                                            <section id='tabla_resultado_codigo'>
-                                            </section>
-
-                                            <div class="row  mb-2">
-                                                <div class='col-lg-6 form-group'>
-                                                    <label class='col-form-label' for='first-name'>Proveedor
-                                                    </label>
-                                                    <input type='text' id='proveedor' name='proveedor' placeholder="Nombre del proveedor" required='required' class='form-control '>
-                                                </div>
-                                                <div class='col-lg-6 form-group'>
-                                                    <label class='col-form-label' for='first-name'>Código de barras
-                                                    </label>
-                                                    <input type='text' id='c_barras' name='c_barras' placeholder="Código de barras del producto" required='required' class='form-control '>
-                                                </div>
-                                            </div>
-                                            <div class='ln_solid'></div>
+                                                    </div>
 
 
-                                            <div class="mb-3">
-                                                <h6 class="mb-3">Sucursales donde se va a vender el producto</h6>
-                                                <?php
-                                                $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
-                                                $stmt->bind_param('i', $bss_id);
-                                                $stmt->execute();
-                                                $result = $stmt->get_result();
-                                                if ($result->num_rows > 0) {
-                                                    while ($row = $result->fetch_assoc()) {
-                                                        $checked = $row['principal'] == 1 ? 'checked' : '';
+                                                    <div id='tabla_resultado_codigo'>
+                                                    </div>
 
-                                                        echo <<<HTML
+                                                    <div class="row  mb-2">
+                                                        <div class='col-lg-6 form-group'>
+                                                            <label class='col-form-label' for='first-name'>Proveedor
+                                                            </label>
+                                                            <input required type='text' id='proveedor' name='proveedor' placeholder="Nombre del proveedor" class='form-control '>
+                                                        </div>
+                                                        <div class='col-lg-6 form-group'>
+                                                            <label class='col-form-label' for='first-name'>Código de barras
+                                                            </label>
+                                                            <input required type='text' id='c_barras' name='c_barras' placeholder="Código de barras del producto" class='form-control '>
+                                                        </div>
+                                                    </div>
+                                                    <div class='ln_solid'></div>
+
+
+                                                    <div class="mb-3">
+                                                        <h6 class="mb-3">Sucursales donde se va a vender el producto</h6>
+                                                        <?php
+                                                        $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
+                                                        $stmt->bind_param('i', $bss_id);
+                                                        $stmt->execute();
+                                                        $result = $stmt->get_result();
+                                                        if ($result->num_rows > 0) {
+                                                            while ($row = $result->fetch_assoc()) {
+                                                                $checked = $row['principal'] == 1 ? 'checked' : '';
+
+                                                                echo <<<HTML
                                                         <div class="form-check">
-                                                            <input class="form-check-input" {$checked} name="sucursales[]" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
+                                                            <input class="form-check-input" {$checked} name="sucursales[]" data-nombre="{$row['nombre']}" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
                                                             <label class="form-check-label" for="suc-{$row['id']}">
                                                                 {$row['nombre']}
                                                             </label>
                                                         </div>
                                                         HTML;
-                                                    }
-                                                }
-                                                $stmt->close();
+                                                            }
+                                                        }
+                                                        $stmt->close();
 
-                                                ?>
+                                                        ?>
+                                                    </div>
+                                                </section>
+                                                <section>
+                                                    <div id="listado_stock"></div>
+                                                </section>
                                             </div>
 
-
                                             <div class='ln_solid'></div>
-                                            <div class="w-100 text-end">
-                                                <button type='submit' class="btn btn-success actualizar">Agregar</button>
+                                            <div class="w-100 d-flex justify-content-between">
+                                                <button type="button" onclick="sectionsNav('anterior')" class="btn btn-info actualizar">Anterior</button>
+                                                <button type="button" onclick="sectionsNav('siguiente')" class="btn btn-success actualizar">Siguiente</button>
                                             </div>
                                         </div>
                                     </div>
@@ -345,6 +358,151 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 'bs': "<?php echo $bcv ?>"
             }
 
+            let currentSectionIndex = 0;
+            let sections = [];
+
+            document.addEventListener('DOMContentLoaded', () => {
+                // Recolectar todas las secciones automáticamente
+                sections = Array.from(document.querySelectorAll('.tabs section'));
+
+                if (sections.length === 0) return;
+
+                // Mostrar la primera sección
+                sections[currentSectionIndex].classList.add('active');
+            });
+
+            // Gestor de ventas Wizard
+            function sectionsNav(direction) {
+                if (sections.length === 0) return;
+
+                const validado = validar_form()
+                console.log(validado)
+                if (!validado) {
+                    Alerta.mostrar('error', 'Faltan datos')
+                    return
+                };
+
+
+
+
+
+                const btnSiguiente = document.querySelector("button.btn-success.actualizar");
+
+                if (direction === 'siguiente' && currentSectionIndex === sections.length - 1) {
+                    // Si ya estamos en la última sección, enviar el formulario manualmente
+                    const form = btnSiguiente.closest('form');
+                    if (form) {
+                        form.requestSubmit(); // Usa validación nativa y dispara el evento submit
+                    }
+                    return;
+
+                } else {
+                    // seccion personalizada
+                    obtenerSucursalesSeleccionadas()
+                }
+
+                // Ocultar sección actual
+                sections[currentSectionIndex].classList.remove('active');
+
+                // Cambiar índice
+                if (direction === 'siguiente' && currentSectionIndex < sections.length - 1) {
+                    currentSectionIndex++;
+                } else if (direction === 'anterior' && currentSectionIndex > 0) {
+                    currentSectionIndex--;
+                }
+
+                // Mostrar nueva sección
+                setTimeout(() => {
+                    sections[currentSectionIndex].classList.add('active');
+                }, 50);
+
+                // Cambiar texto del botón, pero mantener type="button"
+                if (currentSectionIndex === sections.length - 1) {
+                    btnSiguiente.textContent = 'Guardar';
+                } else {
+                    btnSiguiente.textContent = 'Siguiente';
+                }
+            }
+
+            // Validar que todos los campos esten seleccionados
+            function validar_form() {
+                const section = document.querySelector('.tabs section'); // solo la primera sección dentro de .tabs
+                const requiredInputs = section.querySelectorAll('input[required], select[required]');
+                let valido = true;
+
+                // Validar inputs/selects requeridos
+                requiredInputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        input.classList.add('is-invalid');
+                        valido = false;
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                // Validar que al menos un checkbox de sucursales esté marcado
+                const checks = section.querySelectorAll('input[name="sucursales[]"]');
+                const algunoMarcado = Array.from(checks).some(chk => chk.checked);
+
+                if (!algunoMarcado) {
+                    // Puedes marcar visualmente los checkboxes si quieres
+                    checks.forEach(chk => chk.classList.add('is-invalid'));
+                    valido = false;
+                    alert("Debes seleccionar al menos una sucursal.");
+                } else {
+                    checks.forEach(chk => chk.classList.remove('is-invalid'));
+                }
+
+                return valido;
+            }
+
+
+            // Generar los inputs con el stock
+            function obtenerSucursalesSeleccionadas() {
+                const checks = document.querySelectorAll('input[name="sucursales[]"]:checked');
+                const seleccionadas = [];
+                const listado_stock = document.getElementById('listado_stock')
+                let html = '';
+
+                checks.forEach(check => {
+                    const id = check.getAttribute('data-id');
+                    const label = document.querySelector(`label[for="${check.id}"]`);
+                    const nombre = label ? label.textContent.trim() : 'Desconocido';
+
+                    html += `  <div class=' mb-2 form-group'>
+                                <label class='col-form-label' for='stock_${id}'>STOCK DE <b>${nombre}</b></label>
+                                <input type='number' id='stock_${id}' name='stock_${id}' placeholder="Ingrese el stock disponible en ${nombre}" class='form-control '>
+                            </div>`
+
+                    seleccionadas.push({
+                        id,
+                        nombre
+                    });
+                });
+
+                listado_stock.innerHTML = html;
+
+                return seleccionadas;
+            }
+
+            // Obtiene los valores del stock
+            function obtenerStockPorSucursal() {
+                const checks = document.querySelectorAll('input[name="sucursales[]"]:checked');
+                const resultado = [];
+
+                checks.forEach(check => {
+                    const id = check.getAttribute('data-id');
+                    const label = document.querySelector(`label[for="${check.id}"]`);
+                    const nombre = label ? label.textContent.trim() : 'Desconocido';
+
+                    const inputStock = document.getElementById(`stock_${id}`).value;
+                    const stock = inputStock ? parseInt(inputStock) : 0;
+
+                    resultado.push([id, stock]);
+                });
+
+                return resultado;
+            }
 
             // este codigo me regresa: Uncaught TypeError: form.querySelectorAll is not a function
 
@@ -352,24 +510,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             document.getElementById('form-data').addEventListener('submit', function(e) {
                 e.preventDefault();
 
-
                 const formElement = this; // <- El formulario real
                 const formData = new FormData(formElement); // <- El objeto FormData
 
-                // Aquí usamos formElement para buscar los checkboxes marcados
-                const checks = formElement.querySelectorAll('input[name="sucursales[]"]:checked');
-                const sucursales = [];
 
-                checks.forEach(check => {
-                    const id = check.getAttribute('data-id');
-                    sucursales.push(id);
-                });
+                // Usar tu función para obtener sucursales seleccionadas con su stock
+                const stockPorSucursal = obtenerStockPorSucursal();
 
-                // Agregar sucursales al objeto FormData
-                formData.append('sucursales_marcadas', JSON.stringify(sucursales));
+                // Guardar en FormData como JSON
+                formData.append('sucursales_stock', JSON.stringify(stockPorSucursal));
 
                 // DEBUG
-                const debug = true;
+                const debug = false;
                 if (debug) {
                     console.log("Formulario enviado con los siguientes datos:");
                     for (let [key, value] of formData.entries()) {
@@ -403,6 +555,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         if (json.tipo === 'success') {
                             // Opcional: limpiar el formulario
+                            sectionsNav('anterior')
                             this.reset();
                         }
                         Alerta.toast(json.tipo, json.mensaje);
