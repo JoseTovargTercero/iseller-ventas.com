@@ -875,13 +875,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 // Abrir el modal
                 openModalButton.addEventListener("click", () => {
-
                     modo = 1
                 });
 
                 // Cerrar el modal al hacer clic en el botón de cerrar o en el overlay
                 closeModalButton.addEventListener("click", () => {
-
                     modo = 2
                 });
 

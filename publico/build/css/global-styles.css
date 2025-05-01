@@ -55,3 +55,39 @@
 }
 
 /* TABLA CON HEADER Y FOOT FIJOS */
+
+.pr-0 {
+    padding-right: 0 !important;
+}
+
+.input-con-simbolo {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.simbolo-final {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-80%);
+    color: #6c757d;
+    /* gris claro */
+    pointer-events: none;
+    /* evita que se pueda hacer clic */
+    font-size: 1rem;
+}
+
+.h-60 {
+    height: 60vh;
+}
+
+.form-control-feedback.right2 {
+    border-left: 1px solid #ccc;
+    right: 25px !important;
+    padding-left: inherit;
+}
+
+.text-end {
+    text-align: end;
+}

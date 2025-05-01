@@ -40,3 +40,5 @@
 
 <script src="../assets/sweetalert2.all.min.js"></script>
 <script src="js/tasa_bcv.js"></script>
+
+<script src="js/alerta.js"></script>

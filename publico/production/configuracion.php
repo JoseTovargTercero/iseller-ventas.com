@@ -179,7 +179,7 @@ if ($_SESSION['nivel'] == 1) {
 
 
         <script src='peticion.js'></script>
-        <script src='peticion_codigo_producto.js'></script>
+        <script src=' .js'></script>
 
         <link rel='stylesheet' href='..//assets/AlertifyJS/css/alertify.min.css' />
         <link rel='stylesheet' href='..//assets/AlertifyJS/css/themes/semantic.min.css' />

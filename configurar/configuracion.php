@@ -21,6 +21,9 @@ session_start();
 //error_reporting(0);
 
 
+if (@$_SESSION["bss_id"]) {
+	$bss_id = $_SESSION["bss_id"];
+}
 
 function contar($condicion)
 {

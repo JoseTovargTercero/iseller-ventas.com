@@ -118,7 +118,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <script src='js/jquery.min.js'></script>
         <script src='peticion.js'></script>
-        <script src='peticion_codigo_producto.js'></script>
 
 
         <link rel='stylesheet' href='../assets/AlertifyJS/css/alertify.min.css' />
@@ -846,12 +845,7 @@ function mensaje(){
                 <!-- /page content -->
 
                 <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
+
                 <!-- /footer content -->
             </div>
         </div>

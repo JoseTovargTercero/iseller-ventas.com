@@ -2,6 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
+require("../../configurar/_tasas_cambio.php");
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -18,78 +19,37 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query2255 = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos225 = $conexion->query($query2255);
-    if ($buscarAlumnos225->num_rows > 0) {
-        while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
-            $pesoDolar = $filaAlumnos225['pesoDolar'];
-            $bsDolar = $filaAlumnos225['DolarBolivar'];
-        }
-    }
-    $query2 = "SELECT * FROM empresa";
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $deshacerCompra = $filaAlumnos2['deshacerCompra'];
-        }
-    }
+
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
+
+
+
+
+
+    // Informacion de la tipo de cambio estandar
+    $cambio = new TasasCambio($conexion);
+    $bss_id = $_SESSION["bss_id"];
+
+    $respuesta = $cambio->obtenerCambio($bss_id);
+    $tasas = json_decode($respuesta, true);
+
+    $pesoDolar = $tasas['data']['pesoDolar'];
+    $bcv = $tasas['data']['bcv'];
+    // Informacion de la tipo de cambio estandar
+
+
 
 ?>
     <!DOCTYPE html>
     <html lang='es'>
 
     <head>
-     
+
         <title>Compras</title>
         <?php require_once('includes/headers.php'); ?>
-
-        <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
-        <!-- Switchery -->
-        <link href='../vendors/switchery/dist/switchery.min.css' rel='stylesheet'>
-        <!-- starrr -->
-        <link href='../vendors/starrr/dist/starrr.css' rel='stylesheet'>
-        <!-- bootstrap-daterangepicker -->
-        <link href='../vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
-        <link href="../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css" rel="stylesheet">
-        <link href="../vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css" rel="stylesheet">
-        <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
-        <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
-        <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-
-     
-        <script src='peticion.js'></script>
-        <script src='peticion_codigo_producto.js'></script>
-
-
-
-
-        <?php
-        @$registrado = $_GET['agregado'];
-        $cantidadNueva = $_GET['m1'];
-        $mensajePrecio = $_GET['m2'];
-        $mensajePorcentaje = $_GET['m3'];
-
-        switch ($registrado) {
-            case ('correcto'):
-                echo '<script>
-function mensaje(){	
-			alertify.success("Se han agregado productos al stock");    
-		}
-                </script>
-                <body onload="mensaje()">
-                </body>';
-                break;
-        }
-
-
-
-
-        ?>
     </head>
 
     <body class='nav-md'>
@@ -124,31 +84,7 @@ function mensaje(){
 
                     </div>
                     <div class='clearfix'></div>
-                    <script>
-                        $(obtener_registros_precio());
 
-                        function obtener_registros_precio(rep_precio) {
-                            $.ajax({
-                                    url: 'precio_producto.php',
-                                    type: 'POST',
-                                    dataType: 'html',
-                                    data: {
-                                        rep_precio: rep_precio
-                                    },
-                                })
-                                .done(function(resultadoPrecio) {
-                                    $("#precio_producto").html(resultadoPrecio);
-                                })
-                        }
-                        $(document).on('change', '#producto', function() {
-                            var valorprecio = $(this).val();
-                            if (valorprecio != "") {
-                                obtener_registros_precio(valorprecio);
-                            } else {
-                                obtener_registros_precio();
-                            }
-                        });
-                    </script>
                     <?php
 
                     @$accionE = $_GET['accion'];
@@ -173,11 +109,7 @@ function mensaje(){
 
 
 
-
-
-
-
-                    <div class="col-lg-6">
+                    <div class="col-lg-8">
                         <form name='calculadora' action='../../configurar/nuevaCompra.php' method='post' id='demo-form2' data-parsley-validate class='form-horizontal form-label-left' enctype="multipart/form-data">
                             <div class="x_panel">
                                 <div class="x_title">
@@ -194,17 +126,64 @@ function mensaje(){
                                         <div class='item form-group'>
                                             <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Producto <span class='required'>*</span>
                                             </label>
-                                            <div class='col-md-9 col-sm-9 '>
-                                                <input type='text' required="required" class='form-control col-md-3' name='codigo' placeholder="Nombre" id='codigo'>
-                                                <span class='form-control  col-md-1 minus'><i class="fa fa-minus"></i></span>
-                                                <section id='tabla_resultado_codigo_producto'>
-                                                </section>
+                                            <div class='col-md-9 col-sm-9 d-flex' style="gap: 3px;">
+                                                <input type='text' required="required" class='form-control col-lg-3' name='codigo' placeholder="Nombre" id='codigo'>
+                                                <select id="producto" name="producto" class="form-control col-lg-9" required>
+                                                    <option value="">-- Sin resultados --</option>
+                                                </select>
                                             </div>
                                         </div>
-                                        <section id='precio_producto'>
-                                        </section>
-                                        <div class='ln_solid'></div>
-                                        <div class='item form-group'>
+
+                                        <input type="text" name="nombrepor" value="" hidden>
+                                        <div class="item form-group">
+                                            <label class="col-form-label col-md-3" for="first-name">Unidades compradas<span class="required">*</span>
+                                            </label>
+                                            <div class="col-md-9 col-sm-9 ">
+                                                <input type="text" id="comprado" name="comprado" required="required" class="form-control ">
+                                            </div>
+                                        </div>
+
+                                        <div class="ln_solid"></div>
+
+                                        <div class="item form-group">
+                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Precio de Compra <span class="required">*</span>
+                                            </label>
+                                            <div class="input-con-simbolo col-md-5">
+                                                <input type="text" class="form-control form-control-simbolo" id="precio" name="precio" required="required" placeholder="Introduzca el precio">
+                                                <span class="simbolo-final">$</span>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal-button">Calcular precio</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="item form-group">
+                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Cantidad <span class="required">*</span>
+                                            </label>
+                                            <div class="col-md-9 col-sm-9 ">
+                                                <input type="number" id="cantidad" name="cantidad" value="" required="required" class="form-control">
+                                            </div>
+                                        </div>
+                                        <div class="item form-group">
+                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Porcentaje <span class="required">*</span>
+                                            </label>
+                                            <div class="col-md-9 col-sm-9 ">
+                                                <input type="number" id="porcentaje" name="porcentaje" value="" required="required" class="form-control">
+                                            </div>
+                                        </div>
+
+
+                                        <div class="item form-group">
+                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Proveedor <span class="required">*</span>
+                                            </label>
+                                            <div class="col-md-9 col-sm-9 ">
+                                                <input type="text" id="proveedor" name="proveedor" value="" required="required" class="form-control">
+                                            </div>
+                                        </div>
+
+
+                                        <div class='item form-group mt-3'>
                                             <div class='col-md-12 col-sm-12 '>
                                                 <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Agregar">
                                             </div>
@@ -214,7 +193,7 @@ function mensaje(){
                             </div>
                         </form>
                     </div>
-                    <div class="col-lg-6">
+                    <div class="col-lg-12">
                         <div class="x_panel">
                             <div class="x_title">
                                 <h2>Compras</h2>
@@ -227,11 +206,9 @@ function mensaje(){
                             <div class="x_content">
                                 <div class="row">
                                     <div class="col-lg-12">
-                                        <div class="card-box table-responsive">
-                                            <p class="text-muted font-13 m-b-30">
-                                                Lista general de los productos agregados al inventario.
-                                            </p>
-                                            <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
+                                        <p class="font-13 m-b-30">Lista general de los productos agregados al inventario.</p>
+                                        <div class="card-box table-responsive" style="max-height: 65vh;">
+                                            <table id="datatable" class="table table-striped table-bordered" style="width:100%">
                                                 <thead>
                                                     <tr class="headings">
                                                         <th class="column-title">#</th>
@@ -242,45 +219,6 @@ function mensaje(){
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php
-
-                                                    $query6 = $conexion->query("SELECT * FROM compras  ORDER BY id DESC LIMIT 150");
-                                                    if ($query6->num_rows > 0) {
-                                                        $tabla6 = '';
-                                                        $contador = 1;
-                                                        while ($row6 = $query6->fetch_assoc()) {
-
-
-
-                                                            if ($contador <= $deshacerCompra) {
-                                                                $deshacer = '<a  class="btn2 btn-secondary" href="../../configurar/vaciarFactura.php?idDeshacer=' . $row6["id"] . '&origen=simple">Deshacer</a>';
-                                                            } else {
-                                                                $deshacer = '';
-                                                            }
-
-
-                                                            $tabla6 .= '
-                                                                          <tr class="even pointer">
-                                                                                            <td class=" ">' . $contador++ . '</td>
-                                                                                            <td class=" ">' . $row6["fecha"] . '</td>
-                                                                                            <td class=" ">' . $row6["producto"] . '</td>
-                                                                                            <td class=" ">' . $row6["cantidad"] . '</td>
-
-                                                                                            <td class="a-right a-right ">' . $deshacer . '</td>
-
-                                                                                          </tr>
-
-
-
-
-
-
-
-                                                                       ';
-                                                        }
-                                                        echo $tabla6;
-                                                    }
-                                                    ?>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -291,107 +229,351 @@ function mensaje(){
                     </div>
 
                 </div>
-                <style>
-                    .icono {
-                        font-size: 25px;
-                    }
 
-                    .btn2 {
-
-                        font-weight: 400;
-                        color: #797979;
-                        background-color: lightgray;
-                        text-align: center;
-                        vertical-align: middle;
-                        -webkit-user-select: none;
-                        -moz-user-select: none;
-                        -ms-user-select: none;
-                        user-select: none;
-                        background-color: transparent;
-                        border: 1px solid transparent;
-                        padding: .375rem .75rem;
-                        font-size: 1rem;
-                        line-height: 1.5;
-                        border-radius: .25rem;
-                        transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-                    }
-
-
-                    .gray {
-                        color: rgba(52, 73, 94, 0.94);
-                        font-size: 26px;
-
-
-                    }
-
-                    .minus {
-                        color: lightgray !important;
-                        border: none !important;
-                        margin-top: 3px;
-                    }
-
-                    .fotoProducto {
-                        width: 99.4%;
-                        height: 298px;
-                        margin-left: 0.3%;
-                        margin-top: 1px;
-
-                    }
-
-                    .bordeFoto {
-                        border: 2px solid #909090;
-                        margin-left: 10%;
-                        height: 304px;
-                        background-color: lightgray;
-
-
-                    }
-                </style>
 
             </div>
-            <!-- /page content -->
 
-            <!-- footer content -->
-            <footer>
-                <div class='pull-right'>
-                    i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
-                </div>
-                <div class='clearfix'></div>
-            </footer>
-            <!-- /footer content -->
         </div>
         </div>
 
-        <!-- jQuery -->
-        <script src="../vendors/jquery/dist/jquery.min.js"></script>
+        <?php require('../assets/templates/modal.html'); ?>
+
         <!-- Bootstrap -->
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- FastClick -->
-        <script src="../vendors/fastclick/lib/fastclick.js"></script>
-        <!-- NProgress -->
-        <script src="../vendors/nprogress/nprogress.js"></script>
-        <!-- iCheck -->
-        <script src="../vendors/iCheck/icheck.min.js"></script>
-        <!-- Datatables -->
-        <script src="../vendors/datatables.net/js/jquery.dataTables.min.js"></script>
-        <script src="../vendors/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
-        <script src="../vendors/datatables.net-buttons/js/dataTables.buttons.min.js"></script>
-        <script src="../vendors/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
-        <script src="../vendors/datatables.net-buttons/js/buttons.flash.min.js"></script>
-        <script src="../vendors/datatables.net-buttons/js/buttons.html5.min.js"></script>
-        <script src="../vendors/datatables.net-buttons/js/buttons.print.min.js"></script>
-        <script src="../vendors/datatables.net-fixedheader/js/dataTables.fixedHeader.min.js"></script>
-        <script src="../vendors/datatables.net-keytable/js/dataTables.keyTable.min.js"></script>
-        <script src="../vendors/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
-        <script src="../vendors/datatables.net-responsive-bs/js/responsive.bootstrap.js"></script>
-        <script src="../vendors/datatables.net-scroller/js/dataTables.scroller.min.js"></script>
-        <script src="../vendors/jszip/dist/jszip.min.js"></script>
-        <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
-        <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
-
-        <!-- Custom Theme Scripts -->
         <script src="../build/js/custom.min.js"></script>
 
+        <script src="../build/js/modal.js"></script>
+
+        <script>
+            // tasas de cambio
+            const tasas = {
+                'cop': "<?php echo $pesoDolar ?>",
+                'bs': "<?php echo $bcv ?>"
+            }
+
+            // Consultar productos
+            function obtener_registros(producto) {
+                console.log(producto);
+
+                $.ajax({
+                    url: "../../configurar/consulta_codigo_producto.php",
+                    type: "POST",
+                    dataType: "json", // <-- importante: estamos esperando JSON ahora
+                    data: {
+                        producto: producto
+                    },
+                }).done(function(resultado2) {
+                    const $select = $("#producto");
+                    $select.empty(); // Limpia opciones anteriores
+
+                    if (resultado2.length > 0) {
+                        // Agrega las opciones recibidas
+                        $select.append(`<option value="">-- Seleccione --</option>`);
+                        resultado2.forEach(function(item) {
+                            $select.append(`<option value="${item.id}">${item.nombre}</option>`);
+                        });
+                    } else {
+                        // Sin resultados
+                        $select.append('<option value="">-- Sin resultados --</option>');
+                    }
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error("Error en la petición AJAX:", textStatus, errorThrown);
+                    $("#producto").html('<option value="">-- Error al cargar --</option>');
+                });
+            }
+
+            // Evento al escribir en #codigo
+            $(document).on("keyup", "#codigo", function() {
+                if ($(this).val().trim() !== "") {
+                    obtener_registros($(this).val());
+                } else {
+                    $("#producto").html('<option value="">-- Ingrese código --</option>');
+                }
+            });
+
+
+            $(document).on('change', '#producto', function() {
+                var producto = $(this).val();
+                if (producto != "") {
+                    buscarProducto(producto);
+                }
+            });
+
+            let precio_consultado
+            let producto_consultado
+
+            //Consultar informacion del producto
+            function buscarProducto(codigo) {
+                fetch('precio_producto.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            rep_precio: codigo
+                        })
+                    })
+                    .then(res => res.text())
+                    .then(text => {
+                        console.log("Respuesta como texto:", text); // Debug: mostrar respuesta cruda
+                        let res;
+                        try {
+                            res = JSON.parse(text);
+                        } catch (e) {
+                            console.error("Error al parsear JSON:", e);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Respuesta no válida',
+                                text: 'El servidor no devolvió un JSON válido.'
+                            });
+                            return;
+                        }
+
+                        if (res.success) {
+                            precio_consultado = res.data.precio_compra;
+                            producto_consultado = res.data.nombre
+
+                            document.getElementById('comprado').value = '';
+                            document.getElementById('precio').value = res.data.precio_compra;
+                            document.getElementById('cantidad').value = res.data.cantidad_unidades;
+                            document.getElementById('porcentaje').value = res.data.porcentaje;
+                            document.getElementById('proveedor').value = res.data.proveedor;
+                            document.querySelector('[name=nombrepor]').value = res.data.nombre;
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Producto no encontrado',
+                                text: 'Verifica el código ingresado'
+                            });
+                        }
+
+                        console.log("Tasas de cambio:", res.pesoDolar, res.bsDolar);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de conexión',
+                            text: 'No se pudo obtener los datos del producto'
+                        });
+                    });
+            }
+
+
+            // ENVIAR LA NUEVA COMPRA AL BACK
+            document.getElementById('demo-form2').addEventListener('submit', function(e) {
+                e.preventDefault(); // Evitar envío tradicional
+
+                const form = e.target;
+                const formData = new FormData(form);
+
+                console.log("Enviando datos del formulario:");
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value}`);
+                }
+
+                fetch('../../configurar/nuevaCompra.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.text())
+                    .then(text => {
+                        console.log("Respuesta cruda del servidor:", text);
+                        let json;
+                        try {
+                            json = JSON.parse(text);
+                        } catch (e) {
+                            console.error("Error al parsear JSON:", e);
+
+                            Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
+                            return;
+                        }
+
+                        if (json.success) {
+                            Alerta.mostrar('success', json.message);
+                            form.reset(); // Opcional: limpia el formulario
+                            cargarTabla()
+                        } else {
+                            Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error en la solicitud:", err);
+                        Alerta.mostrar('error', 'No se pudo contactar con el servidor');
+                    });
+            });
+
+
+            // CARGAR LA TABLA CON LAS COMPRAS
+            function cargarTabla() {
+                const tabla = document.getElementById('datatable')
+
+                fetch('../../configurar/listado_compras.php')
+                    .then(res => res.text())
+                    .then(text => {
+                        tabla.innerHTML = text;
+                    })
+                    .catch(err => {
+                        console.error("Error en la solicitud:", err);
+                        Alerta.mostrar('error', 'No se pudo contactar con el servidor');
+                    });
+            }
+            cargarTabla()
+
+
+
+            // MODIFICAR EL MODAL
+            $(document).ready(function() {
+                const modal_body = document.getElementById('modal-body')
+                modal_body.style = 'overflow: auto;'
+                modal_body.innerHTML = `<h2 class="mb-0 mt-0" id="titulo_modal">Calcular precio </h2>
+                <hr>
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3 col-sm-3 " for="moneda">Moneda <span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <select id="moneda" class="form-control">
+                                <option value="">Seleccione</option>
+                                <option value="bs">Bolívares</option>
+                                <option value="cop">Pesos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3" for="tasa_proveedor">Tasa del proveedor<span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <input type="text" id="tasa_proveedor" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3" for="precio_proveedor">Precio<span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <input type="text" id="precio_proveedor" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3 col-sm-3 " for="impuesto">Impuesto <span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <select id="impuesto" class="form-control">
+                                <option value="">Seleccione</option>
+                                <option value="exento">Exento</option>
+                                <option value="iva">Iva (16%)</option>
+                            </select>
+                        </div>
+                    </div>`
+
+                document.getElementById('modal').style = 'height: 100% !important;'
+                const modal_footer = document.getElementById('modal-footer')
+                modal_footer.classList.remove('hide')
+                modal_footer.innerHTML = `
+                           <div class="d-flex" style='gap: 15px;'>
+                         <div class="me-2 vista_precio" id="texto_vista_previo"> </div>
+                        <div class="me-2 vista_precio" id="vista_previa_precio"></div>
+                        </div>
+
+                        <div class="d-flex" style='gap: 8px;'>
+                            <button class="btn btn-sm btn-danger" onclick=' modalContainer.classList.remove("active");'>Cerrar</button>
+                            <button class="btn btn-sm btn-success" id="btn-actualizar">Actualizar</button>
+                        </div>
+                        `
+                const modal = document.getElementById('w-modal')
+                modal.classList.add('w-50', 'h-60')
+                modal.style = "padding: 0px;"
+
+
+
+                // mostrar modal
+                document.getElementById('open-modal-button').addEventListener('click', function() {
+                    const precio = document.getElementById('precio').value
+                    if (precio.trim() != '') {
+
+                        let texto_superior = (producto_consultado != undefined ? producto_consultado + ' <span title="Precio anterior">PA: </span>$' + precio_consultado : '')
+                        document.getElementById('titulo_modal').innerHTML = `Calcular precio <small>${texto_superior}</small>`
+
+                        modalContainer.classList.add("active");
+                    } else {
+                        Alerta.toast('error', 'Seleccione un producto')
+                    }
+                })
+
+
+
+                var n_precio = 0;
+
+                // Cambiar la tasa
+                document.getElementById('moneda').addEventListener('change', function() {
+                    document.getElementById('tasa_proveedor').value = tasas[this.value];
+                })
+                // Calcular precio
+                document.getElementById('precio_proveedor').addEventListener('change', function() {
+                    if (this.value != '') {
+                        calcularPrecio()
+                    }
+                })
+                document.getElementById('impuesto').addEventListener('change', function() {
+                    calcularPrecio()
+                })
+
+                function calcularPrecio() {
+                    const texto_vista_previo = document.getElementById('vista_previa_precio');
+                    const divPrecio = document.getElementById('vista_previa_precio');
+                    const tasaValor = parseFloat(document.getElementById('tasa_proveedor').value);
+                    const precioValor = parseFloat(document.getElementById('precio_proveedor').value);
+                    const impuesto = document.getElementById('impuesto').value;
+                    let precioViejo = parseFloat(precio_consultado);
+
+                    // Validación de entradas numéricas
+                    if (isNaN(tasaValor) || isNaN(precioValor) || tasaValor <= 0 || precioValor < 0) {
+                        divPrecio.innerHTML = '';
+                        divPrecio.className = ''; // Limpiar clases anteriores
+                        return;
+                    }
+
+
+                    // Cálculo del nuevo precio
+                    let precioFinal = precioValor / tasaValor;
+                    if (impuesto === 'iva') {
+                        precioFinal += precioFinal * 0.16;
+                    }
+
+                    const precioFinalRecortado = recortarADosDecimales(precioFinal);
+                    n_precio = precioFinalRecortado
+                    const diferencia = precioFinalRecortado - precioViejo;
+
+                    // Establecer clases visuales según la variación
+                    divPrecio.classList.remove('text-success', 'text-danger', 'text-muted');
+
+                    if (diferencia > 0) {
+                        divPrecio.classList.add('text-danger');
+                        divPrecio.innerHTML = `Incrementó <strong>$${formatNumber(recortarADosDecimales(diferencia))}</strong> &nbsp; → Nuevo precio: $${formatNumber(precioFinalRecortado)}`;
+                    } else if (diferencia < 0) {
+                        divPrecio.classList.add('text-success');
+                        divPrecio.innerHTML = `Disminuyó <strong>$${formatNumber(recortarADosDecimales(Math.abs(diferencia)))}</strong> &nbsp; → Nuevo precio: $${formatNumber(precioFinalRecortado)}`;
+                    } else {
+                        divPrecio.classList.add('text-muted');
+                        divPrecio.innerHTML = `Sin variación &nbsp; → $${formatNumber(precioFinalRecortado)}`;
+                    }
+                }
+
+                document.getElementById('btn-actualizar').addEventListener('click', function() {
+                    if (n_precio != 0) {
+                        document.getElementById('precio').value = n_precio
+                        document.getElementById('precio_proveedor').value = ''
+                        const divPrecio = document.getElementById('vista_previa_precio');
+                        divPrecio.innerHTML = '';
+                        divPrecio.className = ''; // Limpiar clases anteriores
+                        modalContainer.classList.remove("active");
+                    }
+                })
+
+            })
+        </script>
     </body>
 
     </html>

@@ -2,7 +2,7 @@
 require_once('../../configurar/configuracion.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
-
+require("../../configurar/_tasas_cambio.php");
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -16,36 +16,28 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
 
-
     $topnav = topnav();
-    $nivelUsuario = $_SESSION['nivel'];
 
-
-
-
-
-
-    $query2 = "SELECT * FROM empresa";
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-        }
-    }
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
 
-    $query2255 = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos225 = $conexion->query($query2255);
-    if ($buscarAlumnos225->num_rows > 0) {
-        while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
-            $pesoDolar = $filaAlumnos225['pesoDolar'];
-            $peso_bolivar = $filaAlumnos225['peso_bolivar'];
-            $bsDolar = $filaAlumnos225['DolarBolivar'];
-        }
-    }
+    // Informacion de la tipo de cambio estandar
+    $cambio = new TasasCambio($conexion);
+    $bss_id = $_SESSION["bss_id"];
+
+    $respuesta = $cambio->obtenerCambio($bss_id);
+    $tasas = json_decode($respuesta, true);
+
+    $pesoDolar = $tasas['data']['pesoDolar'];
+    $peso_bolivar = $tasas['data']['peso_bolivar'];
+    $bsDolar = $tasas['data']['DolarBolivar'];
+    $bcv = $tasas['data']['bcv'];
+    // Informacion de la tipo de cambio estandar
+
+
+
 
 
 
@@ -54,58 +46,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang='es'>
 
     <head>
-
         <title>Agregar Producto</title>
-
-
         <?php require_once('includes/headers.php'); ?>
-
-
-
         <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
-
         <script src='peticion.js'></script>
         <script src='peticion_codigo.js'></script>
-
-
-        <?php
-        @$registrado = $_GET['agregado'];
-        @$foto = $_GET['foto'];
-        @$codigo = $_GET['codigo'];
-        switch ($registrado) {
-            case ('correcto'):
-                echo '<script>
-            function mensaje(){	
-			}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-        }
-
-        switch ($_GET['accion']) {
-            case ('borrado'):
-             /*   echo '<script>
-            function mensaje(){	
-			alertify.success("Producto eliminado.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';*/
-                break;
-
-            case ('editado'):
-            /*    echo '<script>
-            function mensaje(){	
-			alertify.success("Se modifico un producto.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';*/
-                break;
-        }
-
-        ?>
-
-
     </head>
 
 
@@ -142,592 +87,459 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                         <script>
+                            // Ejecutar actualización cada segundo
                             setInterval(() => {
                                 actualizarTasaCambio();
                                 realizarCalculos();
                             }, 1000);
 
-                            // Actualiza el tipo de cambio del dólar
+                            // Variables globales
+                            let cambioDolar = parseFloat(<?php echo $bsDolar ?>);
+                            const cambioPesoRecepcion = 1000000; // Ajustar si este valor es dinámico
+                            const pesoDolar = parseFloat(<?php echo $pesoDolar ?>);
+                            const pesoBolivar = parseFloat(<?php echo $peso_bolivar ?>);
+
+                            // Actualiza el tipo de cambio del dólar (por si cambia externamente)
                             function actualizarTasaCambio() {
                                 cambioDolar = parseFloat(<?php echo $bsDolar ?>);
                             }
 
-                            // Realiza los cálculos principales
+                            // Realiza la conversión principal según la moneda seleccionada
                             function realizarCalculos() {
-                                const precioMonedaOrigen = parseFloat(document.getElementById("precioMonedaOrigen").value) || 0;
-                                const monedaSeleccionada = document.getElementById("moneda").value;
+                                const precioInput = parseFloat(document.getElementById("precioMonedaOrigen").value) || 0;
+                                const moneda = document.getElementById("moneda").value;
 
-                                let resultadoConversion = 0;
+                                let resultado = 0;
 
-                                if (monedaSeleccionada === "pesos") {
-                                    const conversionPesos = (precioMonedaOrigen / cambioPesoRecepcion) / 1000000;
-                                    resultadoConversion = conversionPesos / cambioDolar;
-                                } else if (monedaSeleccionada === "bolivares") {
-                                    resultadoConversion = precioMonedaOrigen / cambioDolar;
-                                } else {
-                                    resultadoConversion = precioMonedaOrigen; // En dólares no se transforma
+                                switch (moneda) {
+                                    case "pesos":
+                                        resultado = ((precioInput / cambioPesoRecepcion) / cambioDolar);
+                                        break;
+                                    case "bolivares":
+                                        resultado = precioInput / cambioDolar;
+                                        break;
+                                    default: // dólares
+                                        resultado = precioInput;
                                 }
 
-                                // Actualiza el input con el valor formateado
-                                document.getElementById('precio').value = resultadoConversion;
+                                // Mostrar resultado convertido en input 'precio'
+                                document.getElementById("precio").value = resultado;
 
-                                // Calcula otros valores relacionados
-                                calcularValoresExtras(precioMonedaOrigen);
+                                // Calcular precios adicionales
+                                calcularValoresExtras(precioInput);
                             }
 
-
-
-                            // Cálculo de división y valores adicionales
+                            // Cálculos adicionales como precio unitario, venta y conversiones
                             function calcularValoresExtras(precioCompra) {
-                                const cantidadUnidades = parseInt(document.calculadora.cantidad.value) || 1; // Evita división por 0
-                                const porcentaje = parseFloat(document.calculadora.porcentaje.value) || 0;
+                                const cantidad = parseInt(document.getElementById("cantidad").value) || 1;
+                                const porcentaje = parseFloat(document.getElementById("porcentaje").value) || 0;
+                                const origenProducto = document.getElementById("origenProducto").value;
 
                                 try {
-                                    // Divide precio entre unidades
-                                    const precioUnitario = (precioCompra / cantidadUnidades).toFixed(2);
-
-                                    // Calcula el precio en dólares (compra y venta)
+                                    // Calcular precio unitario
+                                    const precioUnitario = (precioCompra / cantidad).toFixed(2);
                                     const precioDolarCompra = parseFloat(precioUnitario);
+
+                                    // Precio de venta con porcentaje
                                     const precioDolarVenta = ((precioDolarCompra * porcentaje / 100) + precioDolarCompra).toFixed(2);
-                                    const pesoSalida = Math.round(precioDolarVenta * parseFloat(<?php echo $pesoDolar ?>));
-                                    const tipoCambio_pesosBs = parseFloat(<?php echo $peso_bolivar ?>);
 
-                                    // Actualiza resultados en dólares
-                                    document.calculadora.resultado.value = `$ ${precioDolarCompra}`;
-                                    document.calculadora.resultado2.value = `$ ${precioDolarVenta}`;
+                                    // Convertir a pesos
+                                    const pesoSalida = Math.round(precioDolarVenta * pesoDolar);
 
-                                    // Conversión a bolívares
+                                    // Convertir a bolívares dependiendo del tipo de origen
                                     let bolivarSalida;
-                                    const tipoConversion = document.getElementById('origenProducto').value
-
-
-                                    if (tipoConversion == 'c') {
-                                        bolivarSalida = ((pesoSalida / tipoCambio_pesosBs) / 1000).toFixed(2);
+                                    if (origenProducto === 'c') {
+                                        bolivarSalida = ((pesoSalida / pesoBolivar) / 1000).toFixed(2);
                                     } else {
                                         bolivarSalida = (precioDolarVenta * cambioDolar).toFixed(2);
                                     }
-
-                                    document.getElementById('resultado4').value = `${bolivarSalida} BS`;
-                                    document.getElementById('resultado3').value = `${formatNumber(pesoSalida)} COP`;
-
+                                    // Actualizar campos con resultados
+                                    document.getElementById("resultado").value = `$ ${precioDolarCompra}`;
+                                    document.getElementById("resultado2").value = `$ ${precioDolarVenta}`;
+                                    document.getElementById("resultado3").value = `${formatNumber(pesoSalida)} COP`;
+                                    document.getElementById("resultado4").value = `${formatNumber(bolivarSalida)} BS`;
                                 } catch (error) {
                                     console.error("Error en los cálculos:", error);
                                 }
                             }
 
-                            // Agrega separadores de miles
+                            // Formatear número con separadores de miles
                             function formatNumber(valor) {
                                 return valor.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                             }
                         </script>
-                        <form name='calculadora' action='../../configurar/agregarProducto.php' method='post' id='demo-form2' data-parsley-validate class='form-horizontal form-label-left   fadeInUp animated'>
+                        <form id='form-data' action='../../configurar/agregarProducto.php' method='post' class='form-horizontal form-label-left   fadeInUp animated'>
                             <div class='row'>
                                 <div class='col-lg-6 '>
                                     <div class='x_panel'>
                                         <div class='x_title'>
-                                            <h2>Datos del Producto <small>* obligatorio</small></h2>
-
+                                            <h2>Datos del Producto</h2>
                                             <div class='clearfix'></div>
+
                                         </div>
                                         <div class='x_content'>
-                                            <br />
 
+                                            <div class="mb-2">
+                                                <label class='col-form-label' for='first-name'>Nombre del producto</label>
+                                                <div class="row">
 
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Nombre <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
-                                                    <input type='text' id='nombre' name='nombre' required='required' class='form-control '>
+                                                    <div class='col-md-7  col-sm-7'>
+                                                        <input type='text' id='nombre' placeholder="Nombre del producto" name='nombre' required='required' class='form-control '>
+                                                    </div>
+
+                                                    <div class='col-md-5 col-sm-5'>
+                                                        <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal">Calcular precio</button>
+                                                    </div>
+
                                                 </div>
                                             </div>
 
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Precio de Compra <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-5 col-sm-5 '>
-                                                    <input type='text' id='precioMonedaOrigen' name='precioMonedaOrigen' required='required' class='form-control '>
-                                                </div>
-                                                <div class='col-md-4 col-sm-4'>
-                                                    <select class="form-control" required='required' name="moneda" id="moneda">
-                                                        <option value="dolares">Dolares</option>
-                                                        <option value="bolivares">Bolivares</option>
-                                                        <option value="pesos">Pesos</option>
-                                                    </select>
-                                                </div>
-                                            </div>
                                             <input type='text' id='precio' name='precio' hidden required='required' class='form-control '>
 
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Unidades <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
-                                                    <input type='text' id='cantidad' name='cantidad' required='required' class='form-control '>
+                                            <div class="row mb-2">
+                                                <div class='col-lg-6 form-group'>
+                                                    <label class='col-form-label' for='first-name'>Precio de Compra
+                                                    </label>
+                                                    <input type='text' placeholder="Precio del bulto" id='precioMonedaOrigen' name='precioMonedaOrigen' required='required' class='form-control '>
                                                 </div>
-                                            </div>
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Porcentaje <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
-                                                    <input type='text' id='porcentaje' name='porcentaje' required='required' class='form-control '>
-                                                </div>
-                                            </div>
+                                                <div class='col-lg-6 form-group'>
 
-                                            <section id='tabla_resultado_codigo'>
-                                            </section>
-
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Cantidad en Stock <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
-                                                    <input type='text' id='stock' name='stock' required='required' class='form-control '>
-                                                </div>
-
-                                                <div class='col-md-4 col-sm-4 ' style="display: none;">
-                                                    <select class="form-control" name="categoria">
-                                                        <option> -- Categoria -- </option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Origen <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
+                                                    <label class='col-form-label' for='first-name'>Origen del producto</label>
                                                     <select class="form-control" required='required' name="origenProducto" id="origenProducto">
                                                         <option value="">Seleccione</option>
                                                         <option value="v">Venezolano</option>
                                                         <option value="c">Colombiano</option>
                                                     </select>
                                                 </div>
-
-                                            </div>
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Proveedor <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
-                                                    <input type='text' id='proveedor' name='proveedor' required='required' class='form-control '>
-                                                </div>
                                             </div>
 
 
+                                            <div class="row  mb-2">
 
-                                            <div class='item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Código de barras <span class='required'>*</span>
-                                                </label>
-                                                <div class='col-md-9 col-sm-9 '>
-                                                    <input type='text' id='c_barras' name='c_barras' required='required' class='form-control '>
+                                                <div class='col-lg-6 form-group'>
+                                                    <label class='col-form-label' for='first-name'>Unidades por bulto
+                                                    </label>
+                                                    <input type='text' id='cantidad' placeholder="Unidades que contiene el bulto" name='cantidad' required='required' class='form-control '>
                                                 </div>
+
+                                                <div class='col-lg-6 form-group'>
+                                                    <label class='col-form-label' for='first-name'>Cantidad en Stock
+                                                    </label>
+                                                    <input type='text' id='stock' name='stock' placeholder="Cantidad total en stock" required='required' class='form-control '>
+
+                                                    <select style="display: none;" class="form-control" name="categoria">
+                                                        <option> -- Categoria -- </option>
+                                                    </select>
+                                                </div>
+
+                                            </div>
+
+                                            <div class=' mb-2 form-group'>
+                                                <label class='col-form-label' for='first-name'>Porcentaje
+                                                </label>
+                                                <input type='text' id='porcentaje' name='porcentaje' placeholder="Porcentaje incrementado" required='required' class='form-control '>
+                                            </div>
+
+                                            <section id='tabla_resultado_codigo'>
+                                            </section>
+
+                                            <div class="row  mb-2">
+                                                <div class='col-lg-6 form-group'>
+                                                    <label class='col-form-label' for='first-name'>Proveedor
+                                                    </label>
+                                                    <input type='text' id='proveedor' name='proveedor' placeholder="Nombre del proveedor" required='required' class='form-control '>
+                                                </div>
+                                                <div class='col-lg-6 form-group'>
+                                                    <label class='col-form-label' for='first-name'>Código de barras
+                                                    </label>
+                                                    <input type='text' id='c_barras' name='c_barras' placeholder="Código de barras del producto" required='required' class='form-control '>
+                                                </div>
+                                            </div>
+                                            <div class='ln_solid'></div>
+
+
+                                            <div class="mb-3">
+                                                <h6 class="mb-3">Sucursales donde se va a vender el producto</h6>
+                                                <?php
+                                                $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
+                                                $stmt->bind_param('i', $bss_id);
+                                                $stmt->execute();
+                                                $result = $stmt->get_result();
+                                                if ($result->num_rows > 0) {
+                                                    while ($row = $result->fetch_assoc()) {
+                                                        $checked = $row['principal'] == 1 ? 'checked' : '';
+
+                                                        echo <<<HTML
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" {$checked} name="sucursales[]" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
+                                                            <label class="form-check-label" for="suc-{$row['id']}">
+                                                                {$row['nombre']}
+                                                            </label>
+                                                        </div>
+                                                        HTML;
+                                                    }
+                                                }
+                                                $stmt->close();
+
+                                                ?>
                                             </div>
 
 
                                             <div class='ln_solid'></div>
-                                            <div class='item form-group'>
-                                                <div class='col-md-12 col-sm-12 '>
-                                                    <!-- <label for="favorito" class="favorite">Agregar a favoritos &nbsp;&nbsp;<input id="favorito" type="checkbox" class="flat"></label>-->
-
-                                                    <button type='submit' class="btn btn-success actualizar">Agregar</button>
-
-                                                </div>
+                                            <div class="w-100 text-end">
+                                                <button type='submit' class="btn btn-success actualizar">Agregar</button>
                                             </div>
-
-
-
                                         </div>
                                     </div>
                                 </div>
-
-
 
                                 <div class='col-lg-6 '>
                                     <div class='x_panel'>
                                         <div class='x_title'>
-                                            <h2>Precios de venta <small>vista previa</small></h2>
+                                            <h2>Precios de venta (Unidad)</h2>
 
                                             <div class='clearfix'></div>
                                         </div>
                                         <div class='x_content'>
-                                            <br />
-                                            <form class='form-label-left input_mask'>
+                                            <div class='form-group mb-3'>
+                                                <label>Precio de Compra ($USD)</label>
+                                                <input type='text' class='form-control' disabled='disabled' name='resultado' id='resultado'>
+                                            </div>
 
-                                                <div class='form-group row'>
-                                                    <label class='col-form-label col-md-3 col-sm-3 '>Precio/Compra</label>
-                                                    <div class='col-md-9 col-sm-9 '>
-                                                        <input type='text' class='form-control' disabled='disabled' name='resultado' id='resultado'>
-                                                        <span class='form-control-feedback right2' aria-hidden='true'><i class='fa fa-dollar'></i></span>
-                                                    </div>
-                                                </div>
+                                            <div class="form-group mb-3">
+                                                <label class='ml-2'>Precio de Venta ($USD) </label>
+                                                <input type='text' class='form-control' disabled='disabled' name='resultado2' id='resultado2'>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label class='ml-2'>Precio de Venta (COP)</label>
+                                                <input type='text' class='form-control' readonly='readonly' name='resultado3' id='resultado3'>
+                                            </div>
+                                        </div>
 
-                                                <div class='form-group row'>
-                                                    <label class='col-form-label col-md-3 col-sm-3 '>Precio/Venta </label>
-                                                    <div class='col-md-9 col-sm-9 '>
-                                                        <input type='text' class='form-control' disabled='disabled' name='resultado2' id='resultado2'>
-                                                        <span class='form-control-feedback right2' aria-hidden='true'><i class='fa fa-dollar'></i></span>
-                                                    </div>
-                                                </div>
-
-                                                <div class='form-group row'>
-                                                    <label class='col-form-label col-md-3 col-sm-3 '>Precio/Venta</label>
-                                                    <div class='col-md-9 col-sm-9 '>
-                                                        <input type='text' class='form-control' readonly='readonly' name='resultado3' id='resultado3'>
-                                                        <span class='form-control-feedback right2' aria-hidden='true'><strong>COP</strong></span>
-                                                    </div>
-                                                </div>
-
-                                                <div class='form-group row'>
-                                                    <label class='col-form-label col-md-3 col-sm-3 '>Precio/Venta
-                                                    </label>
-                                                    <div class='col-md-9 col-sm-9 '>
-                                                        <input class='date-picker form-control' type='text' readonly='readonly' name='resultado4' id='resultado4'>
-                                                        <span class='form-control-feedback right2' aria-hidden='true'><strong>BS</strong></span>
-                                                    </div>
-                                                </div>
-
-
-                                                <small><br></small>
-                                                <small><br></small>
-                                                <small><br></small>
-
-
-                                                <style>
-                                                    .code {
-                                                        width: 100%;
-                                                        border: 2px solid #ced4da;
-                                                        color: #b0b0b0;
-                                                        border-style: dashed;
-                                                        border-radius: 10px;
-                                                    }
-                                                </style>
-
-
-
-
-                                            </form>
+                                        <div class="form-group mb-3">
+                                            <label class='ml-2'>Precio de Venta (BS)</label>
+                                            <input class='date-picker form-control' type='text' readonly='readonly' name='resultado4' id='resultado4'>
                                         </div>
                                     </div>
-
                                 </div>
                             </div>
-                        </form>
-                        <?php
-
-                        if (!$_GET['codigo']) {
-                            $oculto = "contain: strict";
-                        } else {
-                            $oculto = "";
-                        }
-
-                        ?>
-                        <div class='row' style="<?php echo $oculto ?>">
-                            <div class='col-lg-12 '>
-                                <div class='x_panel'>
-                                    <div class='x_title'>
-                                        <h2>Producto Agregado</h2>
-                                        <ul class='nav navbar-right panel_toolbox'>
-                                            <li><a class='collapse-link'><i class='fa fa-chevron-up'></i></a>
-                                            </li>
-
-                                        </ul>
-                                        <div class='clearfix'></div>
-                                    </div>
-                                    <div class='x_content'>
-                                        <br />
-                                        <p>
-                                            <br />
-                                        <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
-                                            <thead>
-                                                <tr class="headings">
-                                                    <th>#</th>
-                                                    <th>Nombre </th>
-                                                    <th>Precio <small>(Compra)</small></th>
-                                                    <th>Cant.</th>
-                                                    <th>%</th>
-                                                    <th>Stock</th>
-                                                    <th>Precio <small>($)</small></th>
-                                                    <th>Precio <small>(COP)</small></th>
-                                                    <th>Precio <small>(BS)</small></th>
-                                                    <th><span class="nobr">Eli.</span>
-                                                    </th>
-                                                </tr>
-                                            </thead>
-
-                                            <tbody>
-                                                <?php
-                                                $query6 = $conexion->query("SELECT * FROM productos WHERE codigo='$codigo' AND activo='0'");
-
-                                                if ($query6->num_rows > 0) {
-                                                    $tabla6 = '';
-                                                    $contador = 1;
-                                                    while ($row6 = $query6->fetch_assoc()) {
-                                                        $cantidadUnidad = $row6["cantidad_unidades"];
-                                                        $precioDolarCompra = $row6["precio_compra"] / $cantidadUnidad;
-                                                        $porcentaje = $row6["porcentaje"];
-                                                        $foto = $row6["foto"];
-                                                        $codeProducto = $row6["codigo"];
-
-
-
-
-
-                                                        $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
-                                                        $precioDolarVenta = number_format($precioDolarVenta, '2', '.', '.');
-                                                        ///////////////
-                                                        ///////////////
-                                                        ///////////////
-                                                        ///////////////
-                                                        ///////////////     
-                                                        $precioBsVenta = $precioDolarVenta * $bsDolar;
-                                                        $precioPesoVenta = $precioDolarVenta *  $pesoDolar;
-                                                        ///////////////
-                                                        ///////////////
-                                                        ///////////////
-                                                        ///////////////
-                                                        ///////////////
-                                                        $precioPesoVenta =   number_format($precioPesoVenta, '0', ',', '.');
-                                                        $precioBsVenta =   number_format($precioBsVenta, '2', ',', '.');
-
-
-                                                        if ($row6['favorito'] == 1) {
-                                                            $favProducto =  '<a href="../../configurar/listaProductos.php?id=' . $codeProducto . '&favorito=NO"><i class="fa fav fa-star"></i></a>';
-                                                        } else {
-                                                            $favProducto =  '<a href="../../configurar/listaProductos.php?id=' . $codeProducto . '&favorito=SI"><i class="fa nofav fa-star-o"></i></a>';
-                                                        }
-
-                                                        /*
-                                                        $campoCategoria = $row6["categoria"];
-                                                        $query2222222222222 = "SELECT * FROM categorias WHERE id='$campoCategoria'";
-                                                        $buscarAlumnos2222222222222 = $conexion->query($query2222222222222);
-                                                        if ($buscarAlumnos2222222222222->num_rows > 0) {
-                                                            while ($filaAlumnos2222222222222 = $buscarAlumnos2222222222222->fetch_assoc()) {
-                                                                $categoria = $filaAlumnos2222222222222['nombre_categoria'];
-                                                            }
-                                                        } else {
-                                                            $categoria = "Ninguna";
-                                                        }
-*/
-
-
-                                                        if ($foto == "SI") {
-                                                            $imgProducto = '<img  class="avatar" alt="Avatar" src="images/stock/' . $codeProducto . '.jpg" alt="">';
-                                                        } else {
-                                                            $imgProducto = "";
-                                                        }
-
-                                                        $monto = number_format($row6["precio_compra"], '2', ',', '.');
-
-                                                        switch ($row6["monedaOrigen"]) {
-                                                            case ("bolivares"):
-                                                                $mon = "BS";
-                                                                break;
-                                                            case ("pesos"):
-                                                                $mon = "COP";
-                                                                break;
-                                                            case ("dolares"):
-                                                                $mon = "$";
-                                                                break;
-                                                        }
-
-
-
-
-                                                        $tabla6 .= '
-          <tr class="even pointer">
-                            <td class=" ">' . $contador++ . '</td>
-                            <td class=" "><a href="ficha.php?id=' . $row6["id"] . '">' . $row6["nombre"] . '</a></td>
-                            <td class=" ">' . $monto . '</td>
-                            <td class=" ">' . $row6["cantidad_unidades"] . '</td>
-                            <td class=" ">' . $row6["porcentaje"] . '%</td>
-                            <td class=" ">' . $row6["stock"] . '</td>
-                            <td class=" ">' . $precioDolarVenta . ' $</td>
-                            <td class=" ">' . $precioPesoVenta . ' <small>COP</small></td>
-                            <td class="a-right a-right ">' . $precioBsVenta . ' <small>BS</small></td>
-                            
-                            
-                            
-                            <td class=" last"><a href="../../configurar/listaProductos.php?id=' . $codeProducto . '&borrar=borrar&origen=nuevo"><i class="gray line icon-trash"></i></a>
-
-                          </tr>
-       ';
-                                                    }
-                                                    echo $tabla6;
-                                                }
-                                                ?>
-                                            </tbody>
-                                        </table>
-
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-
                     </div>
-
-                    <style>
-                        .form-control-feedback.right2 {
-                            border-left: 1px solid #ccc;
-                            right: 25px !important;
-                            padding-left: inherit;
-                        }
-
-                        .favorite {
-                            float: left
-                        }
-
-                        .actualizar {
-                            float: right;
-                        }
-
-                        .texto {
-                            position: absolute;
-                            margin: auto;
-                            transform: translate(-50%, 0px) scale(1);
-                        }
-
-
-                        input[type=file] {
-                            display: block;
-                        }
-
-
-
-                        .fileinput-button input {
-                            cursor: pointer;
-                            direction: ltr;
-                            font-size: 16px;
-                            margin: 0;
-                            opacity: 0;
-                            right: 0;
-                            top: 50px;
-                        }
-
-                        .fileinput-button {
-                            min-width: 100% !important;
-                        }
-
-                        input[type=file] {
-                            display: block;
-                            min-width: 100% !important;
-                        }
-
-
-                        #photo {
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            bottom: 0;
-                            width: 10%;
-                            height: 10%;
-                            display: inline-flex;
-                            opacity: 0;
-                            cursor: pointer;
-
-                        }
-
-                        #estilo_foto {
-
-
-                            border-radius: 25px;
-                            position: absolute;
-                            margin-left: 24%;
-                            margin-right: 24%;
-                            max-width: 100%;
-
-                        }
-
-                        #estilo_foto_car {
-
-
-                            border-radius: 25px !important;
-                            position: absolute !important;
-                            margin-left: 30.5% !important;
-                            margin-right: 30.5% !important;
-                            max-width: 100% !important;
-
-                        }
-
-                        .gray {
-                            color: #b8b8b8f0;
-                            font-size: 24px;
-
-
-                        }
-                    </style>
-
-
                 </div>
-                <!-- /page content -->
-
-                <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
-                <!-- /footer content -->
+                </form>
             </div>
         </div>
+        </div>
+        </div>
+        <?php require('../assets/templates/modal.html'); ?>
 
         <!-- jQuery -->
-        <script src='../vendors/jquery/dist/jquery.min.js'>
-        </script>
-        <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'>
-        </script>
-        <!-- FastClick -->
-        <script src='../vendors/fastclick/lib/fastclick.js'></script>
-        <!-- NProgress -->
-        <script src='../vendors/nprogress/nprogress.js'></script>
-        <!-- bootstrap-progressbar -->
-        <script src='../vendors/bootstrap-progressbar/bootstrap-progressbar.min.js'></script>
-        <!-- Dropzone.js -->
-        <script src='../vendors/dropzone/dist/min/dropzone.min.js'></script>
-
-        <!-- iCheck -->
-        <script src='../vendors/iCheck/icheck.min.js'></script>
-        <!-- bootstrap-daterangepicker -->
-        <script src='../vendors/moment/min/moment.min.js'></script>
-        <script src='../vendors/bootstrap-daterangepicker/daterangepicker.js'></script>
-        <!-- bootstrap-wysiwyg -->
-        <script src='../vendors/bootstrap-wysiwyg/js/bootstrap-wysiwyg.min.js'></script>
-        <script src='../vendors/jquery.hotkeys/jquery.hotkeys.js'></script>
-        <script src='../vendors/google-code-prettify/src/prettify.js'></script>
-        <!-- jQuery Tags Input -->
-        <script src='../vendors/jquery.tagsinput/src/jquery.tagsinput.js'></script>
-        <!-- Switchery -->
-        <script src='../vendors/switchery/dist/switchery.min.js'></script>
-        <!-- Select2 -->
-        <script src='../vendors/select2/dist/js/select2.full.min.js'></script>
-        <!-- Parsley -->
-        <script src='../vendors/parsleyjs/dist/parsley.min.js'></script>
-        <!-- Autosize -->
-        <script src='../vendors/autosize/dist/autosize.min.js'></script>
-        <!-- jQuery autocomplete -->
-        <script src='../vendors/devbridge-autocomplete/dist/jquery.autocomplete.min.js'></script>
-        <!-- starrr -->
-        <script src='../vendors/starrr/dist/starrr.js'></script>
-        <!-- Custom Theme Scripts -->
+        <script src='../vendors/jquery/dist/jquery.min.js'></script>
+        <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
         <script src='../build/js/custom.min.js'></script>
+        <script src="../build/js/modal.js"></script>
 
         <script>
-            // detectar el submit de demo-form2
-            $('#demo-form2').submit(function(event) {
-                event.preventDefault();
-                var form = $(this);
-                var formData = new FormData(this);
-                $.ajax({
-                    type: 'POST',
-                    url: form.attr('action'),
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(data) {
-                       // alertify.success("El producto se agrego correctamente.");
-                        form[0].reset();
-                    }
+            // tasas de cambio
+            const tasas = {
+                'cop': "<?php echo $pesoDolar ?>",
+                'bs': "<?php echo $bcv ?>"
+            }
+
+
+            // este codigo me regresa: Uncaught TypeError: form.querySelectorAll is not a function
+
+            // Enviar el producto al back
+            document.getElementById('form-data').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+
+                const formElement = this; // <- El formulario real
+                const formData = new FormData(formElement); // <- El objeto FormData
+
+                // Aquí usamos formElement para buscar los checkboxes marcados
+                const checks = formElement.querySelectorAll('input[name="sucursales[]"]:checked');
+                const sucursales = [];
+
+                checks.forEach(check => {
+                    const id = check.getAttribute('data-id');
+                    sucursales.push(id);
                 });
+
+                // Agregar sucursales al objeto FormData
+                formData.append('sucursales_marcadas', JSON.stringify(sucursales));
+
+                // DEBUG
+                const debug = true;
+                if (debug) {
+                    console.log("Formulario enviado con los siguientes datos:");
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`${key}: ${value}`);
+                    }
+
+                    if (!confirm("¿Deseas enviar el formulario con estos datos?")) {
+                        Alerta.toast('info', 'Envío cancelado por el usuario (modo debug activo).');
+                        return;
+                    }
+                }
+
+
+                // Envío por fetch
+                fetch('../../configurar/agregarProducto.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.text())
+                    .then(text => {
+                        console.log("Respuesta cruda del servidor:", text);
+                        let json;
+                        try {
+                            json = JSON.parse(text);
+                        } catch (e) {
+                            console.error("Error al parsear JSON:", e);
+
+                            Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
+                            return;
+                        }
+
+                        if (json.tipo === 'success') {
+                            // Opcional: limpiar el formulario
+                            this.reset();
+                        }
+                        Alerta.toast(json.tipo, json.mensaje);
+
+                    })
+
             });
+
+            // asi se generan los inputs:check
+
+
+
+            // MODIFICAR EL MODAL
+            $(document).ready(function() {
+                const modal_body = document.getElementById('modal-body')
+                modal_body.style = 'overflow: auto;'
+                modal_body.innerHTML = `<h2 class="mb-0 mt-0" id="titulo_modal">Calcular precio </h2>
+                <hr>
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3 col-sm-3 " for="moneda">Moneda <span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <select id="moneda" class="form-control">
+                                <option value="">Seleccione</option>
+                                <option value="bs">Bolívares</option>
+                                <option value="cop">Pesos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3" for="tasa_proveedor">Tasa del proveedor<span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <input type="text" id="tasa_proveedor" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3" for="precio_proveedor">Precio<span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <input type="text" id="precio_proveedor" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="item form-group">
+                        <label class="col-form-label col-md-3 col-sm-3 " for="impuesto">Impuesto <span class="required">*</span>
+                        </label>
+                        <div class="col-md-9 col-sm-9 ">
+                            <select id="impuesto" class="form-control">
+                                <option value="">Seleccione</option>
+                                <option value="exento">Exento</option>
+                                <option value="iva">Iva (16%)</option>
+                            </select>
+                        </div>
+                    </div>`
+
+                document.getElementById('modal').style = 'height: 100% !important;'
+                const modal_footer = document.getElementById('modal-footer')
+                modal_footer.classList.remove('hide')
+                modal_footer.innerHTML = `
+                           <div class="d-flex" style='gap: 15px;'>
+                         <div class="me-2 vista_precio" id="texto_vista_previo"> </div>
+                        <div class="me-2 vista_precio" id="vista_previa_precio"></div>
+                        </div>
+
+                        <div class="d-flex" style='gap: 8px;'>
+                            <button class="btn btn-sm btn-danger" onclick=' modalContainer.classList.remove("active");'>Cerrar</button>
+                            <button class="btn btn-sm btn-success" id="btn-actualizar">Actualizar</button>
+                        </div>
+                        `
+                const modal = document.getElementById('w-modal')
+                modal.classList.add('w-50', 'h-60')
+                modal.style = "padding: 0px;"
+
+
+
+                var n_precio = 0;
+
+                // Cambiar la tasa
+                document.getElementById('moneda').addEventListener('change', function() {
+                    document.getElementById('tasa_proveedor').value = tasas[this.value];
+                })
+                // Calcular precio
+                document.getElementById('precio_proveedor').addEventListener('change', function() {
+                    if (this.value != '') {
+                        calcularPrecio()
+                    }
+                })
+                document.getElementById('impuesto').addEventListener('change', function() {
+                    calcularPrecio()
+                })
+
+                function calcularPrecio() {
+                    const texto_vista_previo = document.getElementById('vista_previa_precio');
+                    const divPrecio = document.getElementById('vista_previa_precio');
+                    const tasaValor = parseFloat(document.getElementById('tasa_proveedor').value);
+                    const precioValor = parseFloat(document.getElementById('precio_proveedor').value);
+                    const impuesto = document.getElementById('impuesto').value;
+
+                    // Validación de entradas numéricas
+                    if (isNaN(tasaValor) || isNaN(precioValor) || tasaValor <= 0 || precioValor < 0) {
+                        divPrecio.innerHTML = '';
+                        divPrecio.className = ''; // Limpiar clases anteriores
+                        return;
+                    }
+
+
+                    // Cálculo del nuevo precio
+                    let precioFinal = precioValor / tasaValor;
+                    if (impuesto === 'iva') {
+                        precioFinal += precioFinal * 0.16;
+                    }
+
+                    const precioFinalRecortado = recortarADosDecimales(precioFinal);
+                    n_precio = precioFinalRecortado
+
+                    // Establecer clases visuales según la variación
+                    divPrecio.classList.remove('text-success', 'text-danger', 'text-muted');
+
+                    divPrecio.classList.add('text-success');
+                    divPrecio.innerHTML = `Precio de compra → $${formatNumber(precioFinalRecortado)}`;
+                }
+
+                document.getElementById('btn-actualizar').addEventListener('click', function() {
+                    if (n_precio != 0) {
+                        document.getElementById('precioMonedaOrigen').value = n_precio
+                        document.getElementById('precio_proveedor').value = ''
+                        const divPrecio = document.getElementById('vista_previa_precio');
+                        divPrecio.innerHTML = '';
+                        divPrecio.className = ''; // Limpiar clases anteriores
+                        modalContainer.classList.remove("active");
+                    }
+                })
+
+            })
         </script>
     </body>
 

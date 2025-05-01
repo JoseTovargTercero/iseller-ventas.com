@@ -550,12 +550,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 </div>
                 <!-- /page content -->
                 <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
+
 
                 <!-- /footer content -->
             </div>

@@ -1,62 +1,71 @@
 <?php
 require_once('configuracion.php');
+require_once('_validador_campos.php');
 
-if (isset($_POST['producto'])) {
-    $codigo  = strip_tags(addslashes($_POST['producto']));
-    $precio = strip_tags(addslashes($_POST['precio']));
-    $Porcentaje = strip_tags(addslashes($_POST['porcentaje']));
-    $cantidadNueva = strip_tags(addslashes($_POST['comprado']));
+header('Content-Type: application/json');
 
-    $cantidadporprecio = strip_tags(addslashes($_POST['cantidad']));
-    $proveedor = strip_tags(addslashes($_POST['proveedor']));
-
-    $query = "SELECT * FROM productos WHERE codigo='$codigo'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-            $cantidadActual = $filaAlumnos['stock'];
-            $nombreP = $filaAlumnos['nombre'];
-        }
-    }
-    $cantidad = $cantidadNueva + $cantidadActual;
+$response = ['success' => false, 'message' => ''];
 
 
-    $stmt_o = $conexion->prepare("UPDATE productos SET precio_compra='$precio', cantidad_unidades='$cantidadporprecio', porcentaje='$Porcentaje', stock='$cantidad', proveedor='$proveedor' WHERE codigo='$codigo'");
-    $stmt_o->execute();
-    $stmt_o->close();
 
-    $query22 = "SELECT * FROM empresa";
-    $buscarAlumnos22 = $conexion->query($query22);
-    if ($buscarAlumnos22->num_rows > 0) {
-        while ($filaAlumnos22 = $buscarAlumnos22->fetch_assoc()) {
-            $deshacerCompra = $filaAlumnos22['deshacerCompra'];
-        }
-    }
-    $deshacerCompra += 1;
-    if ($deshacerCompra >= 3) {
-        $deshacerCompra = 3;
-    }
+$campos_requeridos = ['producto', 'precio', 'porcentaje', 'comprado', 'cantidad', 'proveedor'];
+$validador = new ValidadorCampos($campos_requeridos, 'POST');
+$validador->validar();
 
 
-    $stmt_o = $conexion->prepare("UPDATE empresa SET deshacerCompra='$deshacerCompra' WHERE id='1'");
-    $stmt_o->execute();
-    $stmt_o->close();
+$id            = trim($_POST['producto']);
+$precio        = floatval($_POST['precio']);
+$porcentaje    = floatval($_POST['porcentaje']);
+$cantidadNueva = intval($_POST['comprado']);
+$cantidadPP    = intval($_POST['cantidad']);
+$proveedor     = trim($_POST['proveedor']);
 
-    $fdeCompra = date('d-m-Y h:i a');
-    $SdeCompra = date('Y-W');
-    $mdeCompra = date('Y-m');
-    $ddeCompra = date('Y-m-d');
-    $fdeUser = $_SESSION['nombre'];
+// Obtener producto actual
+$stmt = $conexion->prepare("SELECT stock, nombre FROM productos WHERE id = ?");
+$stmt->bind_param("s", $id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-    $insertar = "INSERT INTO compras (status, cod, producto, precio, cantidad, CporPrecio, Porcentaje, fecha, user, semana, dia, mes) VALUES ('2', '$codigo','$nombreP','$precio','$cantidadNueva','$cantidadporprecio', '$Porcentaje', '$fdeCompra','$fdeUser','$SdeCompra','$ddeCompra','$mdeCompra')";
-
-    $resultado2 = mysqli_query($conexion, $insertar);
-    if (!$resultado2) {
-
-        echo 'oops!';
-    } else {
-        define('PAGINA_RETORNO', '../publico/production/nuevaCompra.php?agregado=correcto');
-        header('Location: ' . PAGINA_RETORNO);
-    }
+if ($result->num_rows === 0) {
+    $response['message'] = 'Producto no encontrado.';
+    echo json_encode($response);
+    exit;
 }
+
+$producto = $result->fetch_assoc();
+$cantidadActual = (int)$producto['stock'];
+$nombreP = $producto['nombre'];
+$cantidadTotal = $cantidadActual + $cantidadNueva;
+$stmt->close();
+
+// Actualizar producto
+$stmt = $conexion->prepare("UPDATE productos SET precio_compra=?, cantidad_unidades=?, porcentaje=?, stock=?, proveedor=? WHERE id=?");
+$stmt->bind_param("diidss", $precio, $cantidadPP, $porcentaje, $cantidadTotal, $proveedor, $id);
+$stmt->execute();
+$stmt->close();
+
+// Obtener y actualizar límite de deshacer
+$deshacerCompra = 0;
+$res = $conexion->query("SELECT deshacerCompra FROM empresa WHERE id = 1");
+if ($res && $res->num_rows > 0) {
+    $fila = $res->fetch_assoc();
+    $deshacerCompra = min((int)$fila['deshacerCompra'] + 1, 3);
+}
+$conexion->query("UPDATE empresa SET deshacerCompra = $deshacerCompra WHERE id = 1");
+
+// Registrar en historial de compras
+$fechaActual = date('d-m-Y h:i a');
+$semana = date('Y-W');
+$mes = date('Y-m');
+$dia = date('Y-m-d');
+$usuario = $_SESSION['nombre'] ?? 'desconocido';
+
+$stmt = $conexion->prepare("INSERT INTO compras (status, cod, producto, precio, cantidad, CporPrecio, Porcentaje, fecha, user, semana, dia, mes) 
+    VALUES (2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->bind_param("sssssssssss", $id, $nombreP, $precio, $cantidadNueva, $cantidadPP, $porcentaje, $fechaActual, $usuario, $semana, $dia, $mes);
+$stmt->execute();
+$stmt->close();
+
+$response['success'] = true;
+$response['message'] = 'Producto actualizado y registrado exitosamente.';
+echo json_encode($response);
