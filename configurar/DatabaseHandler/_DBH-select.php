@@ -9,8 +9,8 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 
 $tabla = $data['table'];
-$bss_id = $_SESSION["bss_id"];
 $configFunction = $data['config'] ?? '_default';
+$bss_id = $_SESSION["bss_id"];
 
 // Verificar que la función de configuración existe y es callable
 if (!function_exists($configFunction)) {
@@ -54,7 +54,20 @@ function _default($tabla)
 
 
 
+function _usuarios_list($tabla)
+{
+    global $bss_id;
 
+    return [
+        'columnas' => ["$tabla.id, $tabla.nombre, $tabla.usuario, $tabla.nivel, $tabla.bss_id AS ubss_id", "sucursales.nombre AS s_nombre"],
+        'tabla' => $tabla,
+        'where' => "$tabla.bss_id='$bss_id' AND $tabla.status= '0'",
+        'order_by' => [$tabla . '.id_sucursal'],
+        'join' => [
+            'sucursales' => "$tabla.id_sucursal = sucursales.id",
+        ]
+    ];
+} // carga los registros de _usuarios filtrando por el bss-id
 
 
 /*

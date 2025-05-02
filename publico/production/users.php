@@ -16,9 +16,6 @@ if ($_SESSION['nivel'] == 1) {
     $topnav = topnav();
 
 
-    $accion = $_GET['accion'] ?? null;
-    $usuarioBorrar = $_GET['borrar'] ?? null;
-
 ?>
     <!DOCTYPE html>
     <html lang='es'>
@@ -26,75 +23,6 @@ if ($_SESSION['nivel'] == 1) {
     <head>
         <title>Usuarios </title>
         <?php require_once('includes/headers.php'); ?>
-
-        <script src='peticion.js'></script>
-        <script src='peticion_codigo_producto.js'></script>
-
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const accion = "<?= $accion ?>";
-                const usuarioBorrar = "<?= $usuarioBorrar ?>";
-
-                switch (accion) {
-                    case 'borrado':
-                        Swal.fire('Éxito', 'Borrado correctamente.', 'success');
-                        break;
-                    case 'exito':
-                        Swal.fire('Éxito', 'Agregado correctamente.', 'success');
-                        break;
-                    case 'contra':
-                        Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
-                        break;
-                    case 'NOSEPUEDE':
-                        Swal.fire('Error', 'No puede eliminar este usuario.', 'error');
-                        break;
-                    case 'vacio':
-                        Swal.fire('Advertencia', 'Los campos no fueron rellenados correctamente.', 'warning');
-                        break;
-                }
-
-                if (usuarioBorrar) {
-                    Swal.fire({
-                        title: '¿Estás seguro?',
-                        text: "Esta acción eliminará al usuario.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'Sí, eliminar',
-                        cancelButtonText: 'Cancelar'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            Swal.fire({
-                                title: 'Eliminando...',
-                                html: 'Por favor espera...',
-                                allowOutsideClick: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                    // Opcional: preload visual propio
-                                    const preload = document.getElementById("preload");
-                                    if (preload) {
-                                        preload.style.display = "block";
-                                        preload.style.animation = "fadeout 1s ease";
-                                    }
-
-                                    setTimeout(() => {
-                                        window.location.href = `../../configurar/borrarUsuario.php?id=${usuarioBorrar}`;
-                                    }, 1000); // Tiempo de "carga"
-                                }
-                            });
-                        } else {
-                            Swal.fire('Cancelado', 'Acción cancelada.', 'info');
-                        }
-                    });
-                }
-
-            });
-        </script>
-
-
-
-
     </head>
     <div id="preload" style="display: none;">Cargando...</div>
 
@@ -131,57 +59,80 @@ if ($_SESSION['nivel'] == 1) {
 
                         <div class='row   fadeInUp animated'>
 
-                            <div class='col-md-6 col-sm-6'>
+                            <div class='col-md-9 col-sm-9'>
                                 <div class='x_panel'>
                                     <div class='x_title'>
                                         <h2>Nuevo Usuario <small>* Obligatorio</small></h2>
 
                                         <div class='clearfix'></div>
                                     </div>
-                                    <div class='x_content altoScroll'>
-                                        <form class='' action='../../configurar/agguser.php' method='post' novalidate>
+                                    <div class='x_content '>
+                                        <form id="form-data" method='post' novalidate>
+
+                                            <label class='col-form-label '>Nombre</label>
                                             <div class='field item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3  label-align'>Nombre<span class='required'>*</span></label>
-                                                <div class='col-md-9 col-sm-9'>
-                                                    <input class='form-control' data-validate-length-range='6' data-validate-words='2' name='name' placeholder='' required='required' />
-                                                </div>
+                                                <input class='form-control' data-validate-length-range='6' data-validate-words='2' name='name' placeholder='' required='required' />
                                             </div>
 
 
+                                            <label class='col-form-label   label-align'>Nombre de Usuario</label>
                                             <div class='field item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3  label-align'>Nombre de Usuario<span class='required'>*</span></label>
-                                                <div class='col-md-9 col-sm-9'>
-                                                    <input class='form-control' name='user' placeholder='' required='required' />
-                                                </div>
+                                                <input class='form-control' name='user' placeholder='' required='required' />
                                             </div>
 
 
 
+                                            <label class='col-form-label  label-align'>Nivel</label>
                                             <div class='field item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3  label-align'>Nivel<span class='required'>*</span></label>
-                                                <div class='col-md-9 col-sm-9'>
-                                                    <select name="nivel" required='required' class='form-control' id="nivel">
-                                                        <option value="2">Estandar</option>
-                                                        <option value="1">Administrador</option>
-                                                    </select>
+                                                <select name="nivel" required='required' class='form-control' id="nivel">
+                                                    <option value="2">Estandar</option>
+                                                    <option value="1">Administrador</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-lg-6">
+                                                    <label class='col-form-label   label-align'>Contraseña</label>
+                                                    <div class='field item form-group'>
+                                                        <input class='form-control' type='password' name='password' data-validate-length='6,7,8,9,10,11,12' required='required' />
+                                                    </div>
+                                                </div>
+                                                <div class="col-lg-6">
+                                                    <label placeholder="De 6 a 12 caracteres" class='col-form-label  label-align'>Repetir Contraseña</label>
+                                                    <div class='field item form-group'>
+                                                        <input class='form-control' type='password' name='password2' data-validate-linked='password' required='required' />
+                                                    </div>
                                                 </div>
                                             </div>
 
-
+                                            <label class='col-form-label  label-align'>Sucursal</label>
                                             <div class='field item form-group'>
-                                                <label class='col-form-label col-md-3 col-sm-3  label-align'>Contraseña<span class='required'>*</span></label>
-                                                <div class='col-md-9 col-sm-9'>
-                                                    <input class='form-control' type='password' name='password' data-validate-length='6,7,8,9,10,11,12' required='required' />
-                                                </div>
+                                                <select name="sucursal_asociada" required='required' class='form-control' id="sucursal_asociada">
+                                                    <option value="">Seleccione</option>
+
+                                                    <?php
+
+                                                    $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ?");
+                                                    $stmt->bind_param('s', $bss_id);
+                                                    $stmt->execute();
+                                                    $result = $stmt->get_result();
+                                                    if ($result->num_rows > 0) {
+                                                        while ($row = $result->fetch_assoc()) {
+                                                            echo <<<HTML
+                                                            <option value="{$row['id']}">{$row['nombre']}</option>
+                                                            HTML;
+                                                        }
+                                                    }
+                                                    $stmt->close();
+
+                                                    ?>
+
+                                                </select>
                                             </div>
-                                            <div class='field item form-group'>
-                                                <label placeholder="De 6 a 12 caracteres" class='col-form-label col-md-3 col-sm-3  label-align'>Repetir Contraseña<span class='required'>*</span></label>
-                                                <div class='col-md-9 col-sm-9'>
-                                                    <input class='form-control' type='password' name='password2' data-validate-linked='password' required='required' />
-                                                </div>
-                                            </div> <br>
 
-                                            <button class='btn btn-success right'>Registrar</button>
+
+
+                                            <button type="submit" class='btn btn-success right'>Registrar</button>
                                         </form>
                                     </div>
                                 </div>
@@ -195,54 +146,24 @@ if ($_SESSION['nivel'] == 1) {
                                     </div>
                                     <div class='x_content altoScroll'>
 
-                                        <?php
-                                        $queryUsuarios = "SELECT * FROM usuarios WHERE status = 0";
-                                        $resultado = $conexion->query($queryUsuarios);
 
-                                        if ($resultado && $resultado->num_rows > 0): ?>
-                                            <div class="table-responsive">
-                                                <table class="table table-striped table-hover align-middle">
-                                                    <thead class="table-dark">
-                                                        <tr>
-                                                            <th>ID</th>
-                                                            <th>Nombre</th>
-                                                            <th>Usuario</th>
-                                                            <th>Nivel</th>
-                                                            <th>Descripción</th>
-                                                            <th>Acción</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <?php while ($fila = $resultado->fetch_assoc()):
-                                                            $nivel = ($fila['nivel'] == '1') ? 'Administrador' : 'Estándar';
-                                                            $descnivel = ($fila['nivel'] == '1')
-                                                                ? 'Usuario con acceso total al sistema, puede modificar tasas de cambio, nombre de la empresa, reportes, estadísticas y eliminar usuarios.'
-                                                                : 'Usuario con permisos definidos por el administrador.';
+                                        <div class="table-responsive">
+                                            <table id="tabla-usuarios" class="table table-striped table-hover align-middle">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Nombre</th>
+                                                        <th>Usuario</th>
+                                                        <th>Nivel</th>
+                                                        <th>Sucursal</th>
+                                                        <th>Acción</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
 
-                                                            $accionelimi = ($fila['id'] == '1')
-                                                                ? "?accion=NOSEPUEDE"
-                                                                : "?borrar=" . $fila['id'];
-                                                        ?>
-                                                            <tr>
-                                                                <td><?= $fila['id'] ?></td>
-                                                                <td><?= htmlspecialchars($fila['nombre']) ?></td>
-                                                                <td><?= htmlspecialchars($fila['usuario']) ?></td>
-                                                                <td><span class="badge bg-primary"><?= $nivel ?></span></td>
-                                                                <td><?= $descnivel ?></td>
-                                                                <td>
-                                                                    <a href="<?= $accionelimi ?>" class="btn btn-sm btn-danger" title="Eliminar Usuario">
-                                                                        <i class="fa fa-trash"></i>
-                                                                    </a>
-                                                                </td>
-                                                            </tr>
-                                                        <?php endwhile; ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        <?php else: ?>
-                                            <div class="alert alert-warning">No hay usuarios disponibles.</div>
-                                        <?php endif; ?>
-
+                                                </tbody>
+                                            </table>
+                                        </div>
 
                                     </div>
                                 </div>
@@ -262,92 +183,188 @@ if ($_SESSION['nivel'] == 1) {
                 <!-- /footer content -->
             </div>
         </div>
-        <style>
-            .tag2 {
-                margin-left: 40%;
-                color: lightblue;
-            }
-
-            .tag2:hover {
-                color: #1ABB9C;
-            }
-
-            .altoScroll {
-                height: 375px !important;
-                overflow-y: auto;
-            }
-
-            .altoScroll::-webkit-scrollbar {
-                width: 7px;
-                height: 7px;
-                background: rgba(88, 115, 254, 0.04)
-            }
-
-            .altoScroll::-webkit-scrollbar-thumb {
-                background: #03A9F5;
-                height: 10px;
-                border-radius: 5px;
-            }
-
-            .right {
-                float: right;
-            }
-
-            .green {
-                color: #1ABB9C;
-                font-size: 28px;
-                margin-left: 10px;
-            }
-
-            .gray {
-                color: indianred;
-                font-size: 26px;
-                margin-left: 10px;
-            }
-        </style>
-
-        <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
-        <script src='../vendors/validator/multifield.js'></script>
-        <script src='../vendors/validator/validator.js'></script>
-
-        <script>
-            // initialize a validator instance from the 'FormValidator' constructor.
-            // A '<form>' element is optionally passed as an argument, but is not a must
-            var validator = new FormValidator({
-                'events': ['blur', 'input', 'change']
-            }, document.forms[0]);
-            // on form 'submit' event
-            document.forms[0].onsubmit = function(e) {
-                var submit = true,
-                    validatorResult = validator.checkAll(this);
-                console.log(validatorResult);
-                return !!validatorResult.valid;
-            };
-            // on form 'reset' event
-            document.forms[0].onreset = function(e) {
-                validator.reset();
-            };
-            // stuff related ONLY for this demo page:
-            $('.toggleValidationTooltips').change(function() {
-                validator.settings.alerts = !this.checked;
-                if (this.checked)
-                    $('form .alert').remove();
-            }).prop('checked', false);
-        </script>
-
         <!-- jQuery -->
         <script src='../vendors/jquery/dist/jquery.min.js'></script>
         <!-- Bootstrap -->
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
-        <!-- FastClick -->
-        <script src='../vendors/fastclick/lib/fastclick.js'></script>
-        <!-- NProgress -->
-        <script src='../vendors/nprogress/nprogress.js'></script>
-        <!-- validator -->
-        <!-- <script src = '../vendors/validator/validator.js'></script> -->
-
         <!-- Custom Theme Scripts -->
         <script src='../build/js/custom.min.js'></script>
+        <script src='js/tablas.js'></script>
+        <script>
+            document.getElementById('form-data').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formElement = this; // <- El formulario real
+                const formData = new FormData(formElement); // <- El objeto FormData
+
+
+                // Usar tu función para obtener sucursales seleccionadas con su stock
+
+                // DEBUG
+                const debug = false;
+                if (debug) {
+                    console.log("Formulario enviado con los siguientes datos:");
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`${key}: ${value}`);
+                    }
+
+                    if (!confirm("¿Deseas enviar el formulario con estos datos?")) {
+                        Alerta.toast('info', 'Envío cancelado por el usuario (modo debug activo).');
+                        return;
+                    }
+                }
+
+
+                // Envío por fetch
+                fetch('../../configurar/agguser.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.text())
+                    .then(text => {
+                        console.log("Respuesta cruda del servidor:", text);
+                        let json;
+                        try {
+                            json = JSON.parse(text);
+                        } catch (e) {
+                            console.error("Error al parsear JSON:", e);
+
+                            Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
+                            return;
+                        }
+
+                        if (json.tipo === 'success') {
+                            // Opcional: limpiar el formulario
+                            cargar_tabla()
+                            this.reset();
+                        }
+                        Alerta.toast(json.tipo, json.mensaje);
+
+                    })
+
+            });
+
+
+            function cargar_tabla() {
+                const loader = new TablaLoader('../../configurar/DatabaseHandler/_DBH-select.php');
+
+                loader.cargar('usuarios', '_usuarios_list').then(data => {
+
+                    console.log(data)
+
+                    if (data) {
+                        const tbody = document.querySelector('#tabla-usuarios tbody');
+                        tbody.innerHTML = ''; // Limpiar la tabla antes de insertar
+                        let c = 1
+                        console.log('data')
+                        data.forEach(usuario => {
+                            const fila = document.createElement('tr');
+                            const btn = (usuario.ubss_id === usuario.id ? '' : `<button data-id='${usuario.id}' class="btn btn-sm btn-danger btn-delete" title="Eliminar Usuario"><i class="fa fa-trash"></i></button>`)
+                            fila.innerHTML = `
+                                <td>${c++}</td>
+                                <td>${usuario.nombre}</td>
+                                <td>${usuario.usuario}</td>
+                                <td>${usuario.nivel}</td>
+                                <td>${usuario.s_nombre}</td>
+                                <td>${btn}</td>
+                            `;
+                            tbody.appendChild(fila);
+                        });
+                    }
+                });
+            }
+            cargar_tabla()
+
+            document.addEventListener('click', function(event) {
+                if (event.target.closest('.btn-delete')) {
+                    const id = event.target.closest('.btn-delete').getAttribute('data-id')
+                    borrar(id)
+                }
+            })
+
+            function borrar(id) {
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: "Esta acción eliminará al usuario.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Eliminando...',
+                            html: 'Por favor espera...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+
+                                const preload = document.getElementById("preload");
+                                if (preload) {
+                                    preload.style.display = "block";
+                                    preload.style.animation = "fadeout 1s ease";
+                                }
+
+                                fetch('../../configurar/borrarUsuario.php', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            id: id
+                                        })
+                                    })
+                                    .then(res => res.text()) // <- Primero como texto
+                                    .then(text => {
+                                        console.log("Respuesta cruda del servidor:", text);
+
+                                        let res;
+                                        try {
+                                            res = JSON.parse(text);
+                                        } catch (e) {
+                                            console.error("Error al parsear JSON:", e);
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Respuesta no válida',
+                                                text: 'El servidor devolvió una respuesta no válida.'
+                                            });
+                                            return;
+                                        }
+
+                                        if (res.tipo === 'success') {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Eliminado',
+                                                text: res.mensaje
+                                            }).then(() => {
+                                                cargar_tabla()
+                                            });
+                                        } else {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Error',
+                                                text: res.mensaje
+                                            });
+                                        }
+                                    })
+                                    .catch(err => {
+                                        console.error('Error al eliminar:', err);
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error de conexión',
+                                            text: 'No se pudo conectar con el servidor.'
+                                        });
+                                    });
+                            }
+                        });
+                    }
+                });
+            }
+        </script>
+
+
 
     </body>
 
