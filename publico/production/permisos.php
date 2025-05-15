@@ -1,8 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
+require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1) {
     if ($_SESSION['nivel'] == '1') {
@@ -19,210 +16,68 @@ if ($_SESSION['nivel'] == 1) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
 
-            $PesoDolar = $filaAlumnos['pesoDolar'];
-            $DolarBolivar = $filaAlumnos['DolarBolivar'];
-            $peso_bolivar = $filaAlumnos['peso_bolivar'];
+    $acciones = [
+        'activar' => '1',
+        'desactivar' => '0',
+        'activarG' => [
+            'Inicio' => ['Inicio', 'Clientes'],
+            'Ventas' => ['Ventas', 'VentasSemana', 'VentasMes'],
+            'Nuevo_Producto' => ['Nueva_Compra', 'Nuevo_Producto'],
+            'Control_Stock' => ['Creditos', 'Dejado_Ganar', 'Listado_Productos']
+        ],
+        'desactivarG' => [
+            'Inicio' => ['Inicio', 'Clientes'],
+            'Ventas' => ['Ventas', 'VentasSemana', 'VentasMes'],
+            'Nuevo_Producto' => ['Nueva_Compra', 'Nuevo_Producto'],
+            'Control_Stock' => ['Creditos', 'Dejado_Ganar', 'Listado_Productos']
+        ]
+    ];
+
+    // Campos individuales
+    $campos_individuales = [
+        'Inicio',
+        'Ventas',
+        'VentasSemana',
+        'VentasMes',
+        'Clientes',
+        'Nueva_Compra',
+        'Nuevo_Producto',
+        'Creditos',
+        'Dejado_Ganar',
+        'Listado_Productos',
+        'DolarToday',
+        'Vender',
+        'Consultas'
+    ];
+
+    // Procesar activar/desactivar
+    foreach (['activar', 'desactivar'] as $accion) {
+        if (!empty($_GET[$accion]) && in_array($_GET[$accion], $campos_individuales)) {
+            $campo = $_GET[$accion];
+            $valor = $acciones[$accion];
+            $stmt = $conexion->prepare("UPDATE acces SET $campo=? WHERE id='1'");
+            $stmt->bind_param('s', $valor);
+            $stmt->execute();
+            $stmt->close();
         }
     }
 
-    $query2 = 'SELECT * FROM empresa';
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $stockCritico = $filaAlumnos2['stockCritico'];
-            $notificacionStockCritico = $filaAlumnos2['notificacionStockCritico'];
+    // Procesar activarG/desactivarG (múltiples campos)
+    foreach (['activarG', 'desactivarG'] as $accion) {
+        if (!empty($_GET[$accion]) && isset($acciones[$accion][$_GET[$accion]])) {
+            $campos = $acciones[$accion][$_GET[$accion]];
+            $valor = ($accion === 'activarG') ? '1' : '0';
+
+            $sets = implode('=?, ', $campos) . '=?';
+            $stmt = $conexion->prepare("UPDATE acces SET $sets WHERE id='1'");
+
+            $params = array_fill(0, count($campos), $valor);
+            $stmt->bind_param(str_repeat('s', count($params)), ...$params);
+
+            $stmt->execute();
+            $stmt->close();
         }
-    }
-
-
-
-    switch ($_GET['activar']) {
-        case ("Inicio"):
-            $stmt = $conexion->prepare("UPDATE acces SET Inicio='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Ventas"):
-            $stmt = $conexion->prepare("UPDATE acces SET Ventas='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("VentasSemana"):
-            $stmt = $conexion->prepare("UPDATE acces SET ventasSemana='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("VentasMes"):
-            $stmt = $conexion->prepare("UPDATE acces SET ventasMes='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Clientes"):
-            $stmt = $conexion->prepare("UPDATE acces SET Clientes='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Nueva_Compra"):
-            $stmt = $conexion->prepare("UPDATE acces SET Nueva_Compra='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Nuevo_Producto"):
-            $stmt = $conexion->prepare("UPDATE acces SET Nuevo_Producto='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Creditos"):
-            $stmt = $conexion->prepare("UPDATE acces SET Creditos='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Dejado_Ganar"):
-            $stmt = $conexion->prepare("UPDATE acces SET Dejado_Ganar='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Listado_Productos"):
-            $stmt = $conexion->prepare("UPDATE acces SET Listado_Productos='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("DolarToday"):
-            $stmt = $conexion->prepare("UPDATE acces SET DolarToday='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Vender"):
-            $stmt = $conexion->prepare("UPDATE acces SET Vender='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Consultas"):
-            $stmt = $conexion->prepare("UPDATE acces SET Consultas='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-    }
-    switch ($_GET['desactivar']) {
-        case ("Inicio"):
-            $stmt = $conexion->prepare("UPDATE acces SET Inicio='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Ventas"):
-            $stmt = $conexion->prepare("UPDATE acces SET Ventas='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("VentasSemana"):
-            $stmt = $conexion->prepare("UPDATE acces SET ventasSemana='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-
-        case ("VentasMes"):
-            $stmt = $conexion->prepare("UPDATE acces SET ventasMes='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Clientes"):
-            $stmt = $conexion->prepare("UPDATE acces SET Clientes='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Nueva_Compra"):
-            $stmt = $conexion->prepare("UPDATE acces SET Nueva_Compra='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Nuevo_Producto"):
-            $stmt = $conexion->prepare("UPDATE acces SET Nuevo_Producto='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Creditos"):
-            $stmt = $conexion->prepare("UPDATE acces SET Creditos='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Dejado_Ganar"):
-            $stmt = $conexion->prepare("UPDATE acces SET Dejado_Ganar='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Listado_Productos"):
-            $stmt = $conexion->prepare("UPDATE acces SET Listado_Productos='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("DolarToday"):
-            $stmt = $conexion->prepare("UPDATE acces SET DolarToday='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Vender"):
-            $stmt = $conexion->prepare("UPDATE acces SET Vender='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Consultas"):
-            $stmt = $conexion->prepare("UPDATE acces SET Consultas='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-    }
-
-    switch ($_GET['desactivarG']) {
-        case ("Inicio"):
-            $stmt = $conexion->prepare("UPDATE acces SET Inicio='0', Clientes='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Nuevo_Producto"):
-            $stmt = $conexion->prepare("UPDATE acces SET Nueva_Compra='0', Nuevo_Producto='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Ventas"):
-            $stmt = $conexion->prepare("UPDATE acces SET Ventas='0', VentasSemana='0', VentasMes='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Control_Stock"):
-            $stmt = $conexion->prepare("UPDATE acces SET Creditos='0', Dejado_Ganar='0', Listado_Productos='0' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-    }
-
-    switch ($_GET['activarG']) {
-        case ("Inicio"):
-            $stmt = $conexion->prepare("UPDATE acces SET Inicio='1', Clientes='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Ventas"):
-            $stmt = $conexion->prepare("UPDATE acces SET Ventas='1', VentasSemana='1', VentasMes='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-
-        case ("Nuevo_Producto"):
-            $stmt = $conexion->prepare("UPDATE acces SET Nueva_Compra='1', Nuevo_Producto='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
-        case ("Control_Stock"):
-            $stmt = $conexion->prepare("UPDATE acces SET Creditos='1', Dejado_Ganar='1', Listado_Productos='1' WHERE id='1'");
-            $stmt->execute();
-            $stmt->close();
-            break;
     }
 
 
@@ -263,10 +118,6 @@ if ($_SESSION['nivel'] == 1) {
         <title>Usuarios </title>
 
         <?php require_once('includes/headers.php'); ?>
-
-
-        <script src='peticion.js'></script>
-        <script src='peticion_codigo_producto.js'></script>
 
 
         <?php
@@ -340,7 +191,7 @@ if ($_SESSION['nivel'] == 1) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>

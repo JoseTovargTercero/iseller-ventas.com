@@ -48,6 +48,7 @@ if ($stmt) {
 /* */
 /* */
 /* */
+
 $stmt_o = $conexion->prepare("INSERT INTO go_tareas (id_operacion, id_plan, tarea, descripcion, fecha, trimestre, ano, ubicacion, cords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 $stmt_o->bind_param("sssssssss", $i, $id_plan, $res_car_nombre, $res_car_descripcion, $fecha, $trimestre, $anio, $ubicacion, $map);
 $stmt_o->execute();

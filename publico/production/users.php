@@ -1,7 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
+require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1) {
     if ($_SESSION['nivel'] == '1') {
@@ -33,7 +31,7 @@ if ($_SESSION['nivel'] == 1) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -59,7 +57,7 @@ if ($_SESSION['nivel'] == 1) {
 
                         <div class='row   fadeInUp animated'>
 
-                            <div class='col-md-9 col-sm-9'>
+                            <div class='col-md-10 col-sm-10 m-auto hide' id="registro_section">
                                 <div class='x_panel'>
                                     <div class='x_title'>
                                         <h2>Nuevo Usuario <small>* Obligatorio</small></h2>
@@ -67,7 +65,7 @@ if ($_SESSION['nivel'] == 1) {
                                         <div class='clearfix'></div>
                                     </div>
                                     <div class='x_content '>
-                                        <form id="form-data" method='post' novalidate>
+                                        <form id="form-data" method='post' autocomplete="off">
 
                                             <label class='col-form-label '>Nombre</label>
                                             <div class='field item form-group'>
@@ -131,8 +129,12 @@ if ($_SESSION['nivel'] == 1) {
                                             </div>
 
 
+                                            <div class="d-flex justify-content-between mt-3">
+                                                <button type="button" class='btn btn-danger' id="btn-cancelar">Cancelar</button>
+                                                <button type="submit" class='btn btn-success'>Registrar</button>
+                                            </div>
 
-                                            <button type="submit" class='btn btn-success right'>Registrar</button>
+
                                         </form>
                                     </div>
                                 </div>
@@ -142,13 +144,13 @@ if ($_SESSION['nivel'] == 1) {
                                 <div class='x_panel'>
                                     <div class='x_title d-flex justify-content-between'>
                                         <h2>Usuarios</h2>
-                                        <button class="btn btn-success">Nuevo</button>
+                                        <button class="btn btn-success" id="btn-nuevo">Nuevo</button>
                                     </div>
                                     <div class='x_content altoScroll'>
 
 
                                         <div class="table-responsive">
-                                            <table id="tabla-usuarios" class="table table-striped table-hover align-middle">
+                                            <table id="tabla-usuarios" class="table table-striped align-middle">
                                                 <thead class="table-dark">
                                                     <tr>
                                                         <th>#</th>
@@ -191,6 +193,13 @@ if ($_SESSION['nivel'] == 1) {
         <script src='../build/js/custom.min.js'></script>
         <script src='js/tablas.js'></script>
         <script>
+            ['btn-nuevo', 'btn-cancelar'].forEach(id => {
+                document.getElementById(id).addEventListener('click', () => {
+                    toggleView('registro_section');
+                });
+            });
+
+
             document.getElementById('form-data').addEventListener('submit', function(e) {
                 e.preventDefault();
 
@@ -236,6 +245,7 @@ if ($_SESSION['nivel'] == 1) {
                         if (json.tipo === 'success') {
                             // Opcional: limpiar el formulario
                             cargar_tabla()
+                            toggleView('registro_section')
                             this.reset();
                         }
                         Alerta.toast(json.tipo, json.mensaje);

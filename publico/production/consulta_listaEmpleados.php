@@ -1,33 +1,35 @@
 <?php
 /////// CONEXIÓN A LA BASE DE DATOS /////////
 require_once("../../configurar/configuracion.php");
+require_once('../../configurar/session.php');
 
 
 
-    $query="SELECT * FROM gastosEmpleados ORDER BY nombre ASC";
-    $buscarAlumnos=$conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0){
-    	while($filaAlumnos= $buscarAlumnos->fetch_assoc()){     
+
+$query = "SELECT * FROM gastosEmpleados ORDER BY nombre ASC";
+$buscarAlumnos = $conexion->query($query);
+if ($buscarAlumnos->num_rows > 0) {
+    while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
         $id = $filaAlumnos['id'];
         $nombre = $filaAlumnos['nombre'];
         $cantidad = $filaAlumnos['cantidad'];
         $pago = $filaAlumnos['importe'];
-        
+
         if ($filaAlumnos['activo'] == '0') {
             $activo = 'checked';
-           }else {
+        } else {
             $activo = '';
-           }
+        }
 
 
         $tabla .=  ' <li style="display: grid;grid-auto-flow: column;grid-template-columns: min-content;">
             <div style="font-size: 22px;width: 30px;">
-            '.$cantidad.'
+            ' . $cantidad . '
             </div>
             <div>
-                <p>'.$filaAlumnos['nombre'] . ' - <small>'.$filaAlumnos['importe'] . '$ (C/U)</small><br>
+                <p>' . $filaAlumnos['nombre'] . ' - <small>' . $filaAlumnos['importe'] . '$ (C/U)</small><br>
 
-                <a  style="cursor: pointer; color: #32d7c0" onclick="modificarEmpleado(\''.$id.'\', \''.$nombre.'\', \''.$cantidad.'\', \''.$pago.'\')">
+                <a  style="cursor: pointer; color: #32d7c0" onclick="modificarEmpleado(\'' . $id . '\', \'' . $nombre . '\', \'' . $cantidad . '\', \'' . $pago . '\')">
                 Modificar
                 </a>
 
@@ -41,7 +43,7 @@ require_once("../../configurar/configuracion.php");
 
             <span>
             <label class="switch">
-                <input onclick="setEmpleados(\''.$id.'\')" type="checkbox" '.$activo.'>
+                <input onclick="setEmpleados(\'' . $id . '\')" type="checkbox" ' . $activo . '>
                 <span class="slider round"></span>
             </label>
                 </span>
@@ -51,15 +53,9 @@ require_once("../../configurar/configuracion.php");
             </div>
 
                     </li>';
-    	}
-    }else{
-		$tabla='No hay nada para mostrar';
-	}
+    }
+} else {
+    $tabla = 'No hay nada para mostrar';
+}
 
 echo $tabla;
-?>
-
-
-                                                          
-                                                          
-                                                      

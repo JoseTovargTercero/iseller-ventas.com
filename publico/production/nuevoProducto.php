@@ -1,8 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-require("../../configurar/_tasas_cambio.php");
+require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -23,23 +20,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         header('Location: ' . PAGINA_INICIO);
     }
 
-    // Informacion de la tipo de cambio estandar
-    $cambio = new TasasCambio($conexion);
-    $bss_id = $_SESSION["bss_id"];
-
-    $respuesta = $cambio->obtenerCambio($bss_id);
-    $tasas = json_decode($respuesta, true);
-
-    $pesoDolar = $tasas['data']['pesoDolar'];
-    $peso_bolivar = $tasas['data']['peso_bolivar'];
-    $bsDolar = $tasas['data']['DolarBolivar'];
-    $bcv = $tasas['data']['bcv'];
-    // Informacion de la tipo de cambio estandar
-
-
-
-
-
 
 ?>
     <!DOCTYPE html>
@@ -49,8 +29,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <title>Agregar Producto</title>
         <?php require_once('includes/headers.php'); ?>
         <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
-        <script src='peticion.js'></script>
-        <script src='peticion_codigo.js'></script>
     </head>
 
     <style>
@@ -73,7 +51,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -99,10 +77,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         <script>
                             // Ejecutar actualización cada segundo
-                            setInterval(() => {
-                                actualizarTasaCambio();
-                                realizarCalculos();
-                            }, 1000);
+
+
+                            $(document).ready(function() {
+                                ['precioMonedaOrigen', 'cantidad', 'porcentaje'].forEach(element => {
+                                    document.getElementById(element).addEventListener('keyup', () => realizarCalculos())
+                                });
+
+                                document.getElementById('origenProducto').addEventListener('change', () => realizarCalculos())
+                            })
+
+
+
+
 
                             // Variables globales
                             let cambioDolar = parseFloat(<?php echo $bsDolar ?>);
@@ -110,10 +97,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             const pesoDolar = parseFloat(<?php echo $pesoDolar ?>);
                             const pesoBolivar = parseFloat(<?php echo $peso_bolivar ?>);
 
-                            // Actualiza el tipo de cambio del dólar (por si cambia externamente)
-                            function actualizarTasaCambio() {
-                                cambioDolar = parseFloat(<?php echo $bsDolar ?>);
-                            }
+
 
                             // Realiza la conversión principal según la moneda seleccionada
                             function realizarCalculos() {
@@ -316,12 +300,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <div class='x_content'>
                                             <div class='form-group mb-3'>
                                                 <label>Precio de Compra ($USD)</label>
-                                                <input type='text' class='form-control' disabled='disabled' name='resultado' id='resultado'>
+                                                <input type='text' class='form-control' readonly='readonly' name='resultado' id='resultado'>
                                             </div>
 
                                             <div class="form-group mb-3">
                                                 <label class='ml-2'>Precio de Venta ($USD) </label>
-                                                <input type='text' class='form-control' disabled='disabled' name='resultado2' id='resultado2'>
+                                                <input type='text' class='form-control' readonly='readonly' name='resultado2' id='resultado2'>
                                             </div>
                                             <div class="form-group mb-3">
                                                 <label class='ml-2'>Precio de Venta (COP)</label>
@@ -636,6 +620,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 var n_precio = 0;
 
+
+                // Seccion del modal para calcular el precio
                 // Cambiar la tasa
                 document.getElementById('moneda').addEventListener('change', function() {
                     document.getElementById('tasa_proveedor').value = tasas[this.value];

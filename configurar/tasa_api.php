@@ -1,4 +1,5 @@
 <?php
+require_once('session.php');
 
 function registrarHistorial($descripcion, $precioactual, $u_nombre, $conexion)
 {
@@ -98,4 +99,3 @@ function verificarUltimaActualizacionTasa($conexion)
         return true; // No hay registros en la tabla, se asume que la fecha es diferente a la actual
     }
 }
-?>

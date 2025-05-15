@@ -19,7 +19,7 @@ if (empty($doc) || empty($contrasena)) {
 }
 
 // Consulta segura
-$stmt = mysqli_prepare($conexion, "SELECT id, nombre, nivel, contrasena FROM usuarios WHERE usuario = ?");
+$stmt = mysqli_prepare($conexion, "SELECT id, nombre, nivel, contrasena, id_sucursal FROM usuarios WHERE usuario = ? AND status = 0");
 $stmt->bind_param("s", $doc);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -29,11 +29,13 @@ if ($result->num_rows === 1) {
 
     if (password_verify($contrasena, $usuario['contrasena'])) {
         // Regenerar ID de sesión por seguridad
+        session_start();
         session_regenerate_id(true);
 
         $_SESSION['id'] = $usuario['id'];
         $_SESSION['nombre'] = $usuario['nombre'];
         $_SESSION['nivel'] = $usuario['nivel'];
+        $_SESSION['id_sucursal'] = $usuario['id_sucursal'];
         //  $_SESSION['bss_id'] = $usuario['negocio_id'];
         $_SESSION['bss_id'] = 1;
         $_SESSION["validate"] = "ok";

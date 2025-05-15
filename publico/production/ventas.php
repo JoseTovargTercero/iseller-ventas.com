@@ -1,10 +1,10 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
+require_once('includes/requires.php');
+require("../../configurar/_calculadrora_precios.php");
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
+    $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+
 
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
@@ -26,27 +26,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
 
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
 
 
-    $query7 = $conexion->query("SELECT * FROM cambio WHERE id='1'");
-    if ($query7->num_rows > 0) {
-        while ($row7 = $query7->fetch_assoc()) {
-            $pesoDolar = $row7['pesoDolar'];
-            $DolarBolivar = $row7['DolarBolivar'];
-            $peso_bolivar = $row7['peso_bolivar'];
-        }
-    }
-    $query3 = "SELECT * FROM empresa";
-    $buscarAlumnos2 = $conexion->query($query3);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-        }
-    }
-
-    include 'la-carta.php';
+    include '../../configurar/la-carta.php';
     $cart = new Cart;
 
 
@@ -56,64 +38,68 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $cart->destroy();
     }
 
+    $nivelUsuario = $_SESSION['nivel'];
+    $nombreUsuario = $_SESSION['nombre'];
+    $bss_id = $_SESSION['bss_id'];
+    $sucursal = $_SESSION['id_sucursal'];
 
+    $sql = "
+    SELECT 
+        p.cantidad_unidades,
+        p.origen,
+        p.precio_compra,
+        p.porcentaje,
+        p.nombre,
+        p.id,
+        s.stock,
+        p.codigo_barras
+    FROM productos p
+    INNER JOIN stock s ON p.id = s.id_producto
+    WHERE p.activo = 0
+      AND p.codigo_barras != ''
+      AND s.id_sucursal = ?
+      AND s.bss_id = ?
+";
 
+    $stmt = $conexion->prepare($sql);
+    $stmt->bind_param("ii", $sucursal, $bss_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-
-
-
-    /* CARGAR PRODUCTOS PARA EL LECTOR */
-
-    $query = $conexion->query("SELECT cantidad_unidades, origen, precio_compra, porcentaje, nombre, id, stock, codigo_barras FROM productos  WHERE activo= 0  AND codigo_barras!=''");
     $data = [];
     $codigos = [];
 
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $codigo = trim($row['codigo_barras']);
 
-    if ($query->num_rows > 0) {
-        while ($row = $query->fetch_assoc()) {
-
-            if (strlen(trim($row['codigo_barras'])) > 5) {
-
-                $cantidadUnidad = $row["cantidad_unidades"];
-                $origen = $row["origen"];
-
-                $precioDolarCompra = (float) $row["precio_compra"] / (float) $cantidadUnidad;
-                $porcentaje = $row["porcentaje"];
-                $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
-
-                $precioDolarVenta = number_format($precioDolarVenta, '2', '.', ',');
-
-                $precioPesoVenta = $precioDolarVenta * $pesoDolar;
-                if ($origen == 'c') {
-                    $precioBsVenta = ($precioPesoVenta / $peso_bolivar) / 1000;
-                } else {
-                    $precioBsVenta = $precioDolarVenta * $DolarBolivar;
-                }
-
-
-                //        $precioPesoVenta  = number_format(, '0', ',', '.');
-                //        $precioBsVenta = number_format(, '2', ',', '.');
+            if (strlen($codigo) > 5) {
+                $precios = $calculadora->calcularPrecios($row);
 
                 $nombre = strtoupper($row["nombre"]);
-                // quitar caracteres especiales del nombre
                 $nombre = preg_replace('/[^A-Za-z0-9\s]/', '', $nombre);
 
-                $codigo = $row['codigo_barras'];
                 $data[trim($codigo)] = [
                     'id' => $row['id'],
                     'stock' => $row['stock'],
-                    'nombre' =>  "$nombre",
-                    'precio_dolar_visible' => $precioDolarVenta,
-                    'precio_peso_visible' => $precioPesoVenta,
-                    'precio_bs_visible' => $precioBsVenta,
+                    'nombre' => $nombre,
+                    'precio_dolar_visible' => $precios['precio_venta_dolar'],
+                    'precio_peso_visible' => $precios['precio_venta_peso'],
+                    'precio_bs_visible' => $precios['precio_venta_bs'],
                 ];
 
-                array_push($codigos, $codigo);
+                $codigos[] = $codigo;
             }
         }
     }
 
+    $stmt->close();
     /* CARGAR PRODUCTOS PARA EL LECTOR */
+    /*
+    echo '<pre>';
+    print_r($data);
+    echo '</pre>';*/
+
 
 ?>
 
@@ -352,7 +338,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -406,7 +392,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <div id="result-escaner"> </div>
                                             </section>
 
-                                            <div style="position: absolute; bottom: 0;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
+                                            <div style=" bottom: 0;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
                                                 <a onclick="confirmarDescuento()" class="btn btn-dark" style="color:white; cursor: pointer">Descontar</a>
                                                 <a onclick="destroy_cart()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
                                                 <button class="btn btn-light" id="calcularVuelto">Calcular cambio</button>
@@ -423,7 +409,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <div class="row">
 
 
-                            <div class="col-lg-12 mt-3 hide">
+                            <div class="col-lg-12 mt-3 ">
                                 <div class="x_panel" style="padding-bottom: 30px;">
                                     <div class="x_title">
                                         <h2 style="font-size: 15px; font-weight: bold">Ultimas ventas realizadas</h2>
@@ -431,127 +417,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                     <div class="x_content ">
                                         <div class="">
-                                            <table id='datatable-responsive' class='table table-striped table-bordered' style='width:100%'>
+                                            <table class='table table-striped table-bordered' style='width:100%'>
                                                 <thead>
-                                                    <tr class='headings'>
-                                                        <th style="padding: 10px !important" class='column-title'>#</th>
-                                                        <th style="padding: 10px !important" class='column-title'>Tipo</th>
-                                                        <th style="padding: 10px !important" class='column-title'>Pago por</th>
-                                                        <th style="padding: 10px !important" class='column-title'>Usuario</th>
-                                                        <th style="padding: 10px !important" class='column-title'>Fecha</th>
-                                                        <th style="padding: 10px !important" class='column-title'>Monto</th>
-                                                        <th style="padding: 10px !important" class='column-title'>Detalles</th>
+                                                    <tr>
+                                                        <th class='column-title'>#</th>
+                                                        <th class='column-title'>Tipo</th>
+                                                        <th class='column-title'>Pago por</th>
+                                                        <th class='column-title'>Fecha</th>
+                                                        <th class='column-title'>Monto</th>
+                                                        <th class='column-title'>Detalles</th>
                                                         <th style="padding: 10px !important; text-align: center" class='column-title'>Ticket</th>
                                                         <th style="width: 7%; padding: 10px !important" class='column-title'>Eliminar</th>
                                                     </tr>
                                                 </thead>
-
-                                                <tbody>
-                                                    <?php
-                                                    $porductos = '';
-                                                    $query77 = "SELECT * FROM orden ORDER BY id DESC LIMIT 3";
-                                                    $buscarAlumnos77 = $conexion->query($query77);
-                                                    if ($buscarAlumnos77->num_rows > 0) {
-                                                        $contador = 1;
-                                                        while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
-                                                            $users = $filaAlumnos77['customer_id'];
-                                                            $orderid = $filaAlumnos77['id'];
-
-                                                            $query999999999 = "SELECT * FROM usuarios WHERE id='$users'";
-                                                            $buscarAlumnos999999999 = $conexion->query($query999999999);
-                                                            if ($buscarAlumnos999999999->num_rows > 0) {
-                                                                while ($filaAlumnos999999999 = $buscarAlumnos999999999->fetch_assoc()) {
-                                                                    $usuario1 = $filaAlumnos999999999['nombre'];
-                                                                }
-                                                            }
-
-                                                            $query7E = $conexion->query("SELECT * FROM orden_articulos WHERE order_id='$orderid' ");
-                                                            if ($query7E->num_rows > 0) {
-
-                                                                while ($row7E = $query7E->fetch_assoc()) {
-                                                                    $producto  = $row7E['product_id'];
-                                                                    $productoquanty  = $row7E['quantity'];
-
-                                                                    $query9999999999 = "SELECT * FROM productos WHERE id='$producto'";
-                                                                    $buscarAlumnos9999999999 = $conexion->query($query9999999999);
-                                                                    if ($buscarAlumnos9999999999->num_rows > 0) {
-                                                                        while ($filaAlumnos9999999999 = $buscarAlumnos9999999999->fetch_assoc()) {
-                                                                            $porductos .= $productoquanty . ' ' . $filaAlumnos9999999999['nombre'] . ', ';
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                            $porductos = substr($porductos, 0, -2);
-                                                            $valorPeso = $filaAlumnos77['total_price_cop'];
-                                                            $valorbolivar = $filaAlumnos77['total_price_bs'];
-
-                                                            switch ($filaAlumnos77['tipoPago']) {
-
-                                                                case ('1'):
-                                                                    $pagoPor = 'Punto';
-                                                                    break;
-
-                                                                case ('2'):
-                                                                    $pagoPor = 'Pago Movil';
-                                                                    break;
-
-                                                                case ('3'):
-                                                                    $pagoPor = 'Transferencia';
-                                                                    break;
-
-                                                                case ('4'):
-                                                                    $pagoPor = 'BS Efectivo';
-                                                                    break;
-
-                                                                case ('5'):
-                                                                    $pagoPor = 'Dolares';
-                                                                    break;
-
-                                                                case ('6'):
-                                                                    $pagoPor = 'Pesos';
-                                                                    break;
-                                                                case ('7'):
-                                                                    $pagoPor = 'Biopago';
-                                                                    break;
-                                                                case ('8'):
-                                                                    $pagoPor = 'Fraccionado';
-                                                                    break;
-                                                                default:
-                                                                    $pagoPor = 'Pendiente';
-                                                            }
-
-                                                            if ($filaAlumnos77['status'] == '4') {
-                                                                $tVenta = 'Al mayor';
-                                                            } elseif ($filaAlumnos77['status'] == '1') {
-                                                                $tVenta = 'Al detal';
-                                                            } elseif ($filaAlumnos77['status'] == '3') {
-                                                                $tVenta = 'Descuento';
-                                                            } else {
-                                                                $tVenta = 'Crédito';
-                                                            }
-
-                                                            echo '
-                                                            <tr class="even pointer">
-                                        
-                                                            <td class=" ">' . $contador++ . '</td>
-                                                                                        <td>' . $tVenta . '</td>
-                                                            <td>' . $pagoPor . '</td>
-                                                            
-                                                            <td>' . $usuario1 . '</td>
-                                                            <td>' . $filaAlumnos77['created'] . '</td>
-                                                            <td>$' . number_format($filaAlumnos77['total_price'], '2', ',', '.') . '</td>
-                                                            <td><a href="detallesVenta.php?id=' . $filaAlumnos77['id'] . '">Detalles</a></td>
-                                                            
-                                                            <td style="text-align: center"><a style="font-size: 22px" href="ticket.php?id=' . $filaAlumnos77['id'] . '"><i class="line icon-print"></i></a></td>
-                                                            
-                                                            <td><a class="btn btn-info btn-sm" style="cursor: pointer; color: white" onclick="confirm(' . $filaAlumnos77["id"] . ')">Deshacer</a></td>
-                                                        </tr>';
-
-                                                            $porductos = '';
-                                                        }
-                                                    }
-
-                                                    ?>
+                                                <tbody id='tabla_ventas'>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -578,7 +457,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <!-- /footer content -->
                 </div>
             </div>
-            <script src='peticion.js'></script>
             <!-- jQuery -->
             <script src="../vendors/jquery/dist/jquery.min.js"></script>
             <!-- Bootstrap -->
@@ -590,6 +468,41 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="../build/js/modal.js"></script>
             <!-- FastClick -->
             <script>
+                // lista de ventas
+                function cargarUltimasOrdenes() {
+                    fetch('../../configurar/ultimas_ventas.php')
+                        .then(response => response.json())
+                        .then(data => {
+                            const tabla = document.getElementById('tabla_ventas');
+                            tabla.innerHTML = ''; // Limpiar antes de insertar
+
+                            let contador = 1;
+
+                            data.forEach(orden => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${contador++}</td>
+                                    <td>${orden.tipoVenta}</td>
+                                    <td>${orden.pagoPor}</td>
+                                    <td>${orden.fecha}</td>
+                                    <td>$${orden.total}</td>
+                                    <td><a href="detallesVenta.php?id=${orden.id}">Detalles</a></td>
+                                    <td style="text-align: center"><a style="font-size: 22px" href="ticket.php?id=${orden.id}"><i class="line icon-printer"></i></a></td>
+                                    <td><a class="btn btn-info btn-sm" style="cursor: pointer; color: white" onclick="confirm(${orden.id})">Deshacer</a></td>
+                                `;
+                                tabla.appendChild(row);
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error al cargar órdenes:', error);
+                        });
+                }
+
+                // Llamar cuando cargue la página
+                document.addEventListener('DOMContentLoaded', cargarUltimasOrdenes);
+
+
+
                 // Destruir carrito
                 function destroy_cart() {
                     Swal.fire({
@@ -601,7 +514,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            fetch("cart-destroy.php")
+                            fetch("../../configurar/cart-destroy.php")
                                 .then(response => {
                                     actualizar_carrito()
                                 })
@@ -639,32 +552,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 cargarTasasMostrar();
                 // Obtener listado de tasas a mostrar
 
-                function obtenerTiposDeCambio() {
-                    fetch("https://magicloops.dev/api/loop/4b921d65-98a4-4a6e-827a-76552b0c53af/run", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                consulta: "Obtener tipos de cambio actuales"
-                            })
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error("Error en la respuesta: " + response.status);
-                            }
-                            console.log("resp" + response.json())
-                        })
-                        .then(data => {
-                            console.log("Respuesta del servidor:", data);
-                        })
-                        .catch(error => {
-                            console.error("Error en la solicitud:", error);
-                        });
-                }
-
-
-                obtenerTiposDeCambio()
 
                 var total_pesos = 0;
                 var total_dolares = 0;
@@ -747,7 +634,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 function actualizar_carrito(id = null, accion = null) {
                     $.ajax({
-                            url: id && accion ? 'cantidades.php' : 'carrito.php',
+                            url: id && accion ? '../../configurar/cantidades.php' : '../../configurar/carrito.php',
                             type: 'POST',
                             data: id && accion ? {
                                 id,
@@ -923,7 +810,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (result.isConfirmed) {
 
                             $.ajax({
-                                url: 'AccionCarta.php',
+                                url: '../../configurar/AccionCarta.php',
                                 type: 'GET',
                                 data: {
                                     id: id,
@@ -963,16 +850,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             $('.section-scanner').removeClass('hide');
 
                             // Construir solo las tasas visibles según tasasMostrar
-                            let tasasHTML = '';
-                            if (tasasMostrar.precio_dolar_visible) {
-                                tasasHTML += `<div class="ac-c text-bold text-success">$${formatNumber(datos.precio_dolar_visible)}</div>`;
-                            }
-                            if (tasasMostrar.precio_peso_visible) {
-                                tasasHTML += `<div class="ac-c text-bold text-info">${formatNumber(formatPeso(datos.precio_peso_visible))} P</div>`;
-                            }
-                            if (tasasMostrar.precio_bs_visible) {
-                                tasasHTML += `<div class="ac-c text-bold text-danger">${formatNumber(recortarADosDecimales(datos.precio_bs_visible))} Bs</div>`;
-                            }
 
                             $("#result-escaner").html(`
                                     <div class="row">
@@ -981,7 +858,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </div>
                                         <div class="col-lg-8 d-flex" style="gap: 8px; justify-content: flex-end;">
                                             <div class="d-flex" style="gap: 8px; font-size: 1rem">
-                                                ${tasasHTML}
+                                               <div class="ac-c text-bold text-success">$${formatNumber(datos.precio_dolar_visible)}</div>
+                                                <div class="ac-c text-bold text-info">${formatNumber(formatPeso(datos.precio_peso_visible))} P</div>
+                                                <div class="ac-c text-bold text-danger">${formatNumber(recortarADosDecimales(datos.precio_bs_visible))} Bs</div>
                                             </div>
 
                                             <input type="number" id="cantidad-scan" style="max-width: 30%;" class="cantidad-input cantidad-scan text-center form-control" data-cantidad-id="${datos.id}" value="1">
@@ -1019,19 +898,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 },
                             })
                             .done(function(result) {
-                                console.log(result);
                                 const resultado = JSON.parse(result);
 
                                 if (modo == 1) {
                                     $("#tabla_resultado_codigo_producto").html('');
 
-                                    // recorre resultado
                                     if (resultado.status == 'ok') {
                                         resultado.data.forEach(item => {
-                                            // Solo mostramos las tasas activas
 
-
-                                            // Añadir fila con tasas activas
                                             $("#tabla_resultado_codigo_producto").append(`
                                                 <tr>
                                                     <td><span>${item.stock}</span></td>
@@ -1143,7 +1017,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const peso = formatPeso(pesoventa_p)
 
                     $.ajax({
-                            url: 'AccionCarta.php',
+                            url: '../../configurar/AccionCarta.php',
                             type: 'POST',
                             dataType: 'html',
                             data: {
@@ -1243,51 +1117,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         showCancelButton: true,
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.location.href = '../../configurar/deleteVentaAjax.php?id=' + id;
+                            eliminarVenta(id)
                         }
                     })
                 }
 
 
-                function elimi(params) {
+                function eliminarVenta(id) {
                     $.ajax({
                             url: '../../configurar/deleteVentaAjax.php',
                             type: 'POST',
                             dataType: 'html',
                             data: {
-                                id: params
+                                id: id
                             },
                         })
-
                         .done(function(resultado1) {
-                            $("#row" + params).hide(300);
-                        })
-
-
-                }
-                $(obtener_registros_codigo());
-
-                function obtener_registros_codigo() {
-                    $.ajax({
-                            url: 'cargaPorCodigo.php',
-                            type: 'POST',
-                            dataType: 'html',
-                            data: {
-                                data: 'data'
-                            },
-                        })
-                        .done(function(resultado_codigo) {
-                            if (resultado_codigo.trim() == 'NADA') {} else {
-                                var url = 'AccionCarta.php?' + resultado_codigo.trim();
-                                window.open(url, '_self')
-                            }
+                            cargarUltimasOrdenes()
                         })
                 }
-
-                /*     setInterval(function() {
-                     obtener_registros_codigo()
-                       }, 2000);
-                   */
 
 
 
@@ -1302,10 +1150,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         showCancelButton: true,
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.open("AccionCarta.php?action=placeOrder&statusV=3&valorFinalBs=0&valorFinalCop=0", "_self");
+                            window.open("../../configurar/AccionCarta.php?action=placeOrder&statusV=3&valorFinalBs=0&valorFinalCop=0", "_self");
                         }
                     })
-
                 }
 
 

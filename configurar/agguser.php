@@ -1,5 +1,6 @@
 <?php
 require_once('configuracion.php');
+require_once('session.php');
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['nivel']) || $_SESSION['nivel'] != 1) {

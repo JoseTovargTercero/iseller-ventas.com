@@ -1,6 +1,6 @@
-<?php 
+<?php
 require_once("configuracion.php");
-
+require_once('session.php');
 
 
 $id = $_SESSION['id'];
@@ -8,23 +8,21 @@ $id = $_SESSION['id'];
 
 $queryDarkModes = "SELECT * FROM usuarios WHERE id='$id'";
 $searchDarkMode = $conexion->query($queryDarkModes);
-    if ($searchDarkMode->num_rows > 0) {
-        while ($rowDark = $searchDarkMode->fetch_assoc()) {
-            $darkMode = $rowDark['darkMode'];
+if ($searchDarkMode->num_rows > 0) {
+    while ($rowDark = $searchDarkMode->fetch_assoc()) {
+        $darkMode = $rowDark['darkMode'];
     }
 }
 
 
-if($darkMode == 0){
+if ($darkMode == 0) {
     $_SESSION["darkMode"] = "SI";
 
     $update = "UPDATE usuarios SET darkMode='1'  WHERE id='$id'";
-    $result = mysqli_query($conexion , $update );
-    
-   
-}else{
+    $result = mysqli_query($conexion, $update);
+} else {
     $update = "UPDATE usuarios SET darkMode='0'  WHERE id='$id'";
-    $result = mysqli_query($conexion , $update );
+    $result = mysqli_query($conexion, $update);
 
     $_SESSION["darkMode"] = "NO";
 }

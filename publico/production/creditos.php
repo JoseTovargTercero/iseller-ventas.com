@@ -1,9 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
-
+require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -28,21 +24,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $nombreUsuario = $_SESSION['nombre'];
 
 
-
-
-  $query2 = "SELECT * FROM empresa";
-  $buscarAlumnos2 = $conexion->query($query2);
-  if ($buscarAlumnos2->num_rows > 0) {
-    while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-      $nombreEmpresa = $filaAlumnos2['emp'];
-      $stockCritico = $filaAlumnos2['stockCritico'];
-    }
-  }
-
-
-  // initializ shopping cart class
-  include 'la-carta.php';
-  $cart = new Cart;
 ?>
 
 
@@ -63,12 +44,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-
-
-    <script src='peticion.js'></script>
-
-    <script src='peticion_producto.js'></script>
-
 
 
     <script>
@@ -139,7 +114,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           <div class='left_col scroll-view'>
             <div class='navbar nav_title' style='border: 0;'>
               <a href='index.php' class='site_title'>
-                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                   <img style='max-width:140px'><span> </a>
             </div>
             <div class='clearfix'></div>
@@ -205,7 +180,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             function totalDeuda($var)
                             {
                               global $conexion;
-                              global $PesoDolar;
+                              global $pesoDolar;
                               global $dolarBolivar;
                               $totalDeudor = 0;
                               $query2 = "SELECT * FROM creditos WHERE cedula='$var'";
@@ -216,7 +191,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                   $totalDeudor += $filaAlumnos2['total_price'];
                                 }
                               }
-                              $DeudaPesos = $totalDeudor * $PesoDolar;
+                              $DeudaPesos = $totalDeudor * $pesoDolar;
                               $DeudaBs = $totalDeudor * $dolarBolivar;
 
                               $tabla = '<br><h2 style="color: #1ABB9C; text-align: center"> ' . $nombreDeudor . ' Posee una deuda por un total de: <strong>' . $totalDeudor . ' USD</strong> / <strong>' . number_format($DeudaPesos, '0', ',', '.') . ' COP</strong> / <strong>' . number_format($DeudaBs, '2', ',', '.') . ' BS</strong> </h2>';
@@ -243,6 +218,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                               <?php
 
                               $count = 1;
+                              $tabla6 = '';
 
                               $query6 = $conexion->query("SELECT DISTINCT(negocio), COUNT(*) AS total FROM `creditos` WHERE estado = 2 GROUP BY negocio");
                               if ($query6->num_rows > 0) {

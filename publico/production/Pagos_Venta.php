@@ -1,8 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
+require_once('includes/requires.php');
 
 if (!isset($_GET["metodo"])) {
     header("Location: ventas.php");
@@ -27,33 +24,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query2 = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query2);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-            $PesoDolar = $filaAlumnos['pesoDolar'];
-            $Pesobolivar = $filaAlumnos['bolivar_peso'];
-            $peso_bolivar = $filaAlumnos['peso_bolivar'];
-            $dolarBolivar = $filaAlumnos['DolarBolivar'];
-        }
-    }
     $topnav = topnav();
-    $query4 = 'SELECT * FROM empresa';
-    $buscarAlumnos2 = $conexion->query($query4);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-        }
-    }
-
-    $query5 = 'SELECT * FROM empresa';
-    $buscarAlumnos2 = $conexion->query($query5);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-        }
-    }
 
     ////////////////////////////
     ////////////////////////////
@@ -144,24 +115,24 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
             if ($tipoDespacho == "2") {
-                header("Location: AccionCarta.php?action=placeOrderCredito&fechaVenta=" . $fechaVenta . "&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&cedula=" . $cedula . "&nombreC=" . $nombre . "&telefono=" . $telefono . "&nombreNego=" . $nombreNegocio . "&direccion=" . $direccionNegocio . "");
+                header("Location: ../../configurar/AccionCarta.php?action=placeOrderCredito&fechaVenta=" . $fechaVenta . "&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&cedula=" . $cedula . "&nombreC=" . $nombre . "&telefono=" . $telefono . "&nombreNego=" . $nombreNegocio . "&direccion=" . $direccionNegocio . "");
             } elseif ($tipoDespacho == "1" && $_POST['cedula'] != "") {
-                header("Location: AccionCarta.php?action=placeOrder&fechaVenta=" . $fechaVenta . "&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&cedula=" . $cedula . "&nombreC=" . $nombre . "&telefono=" . $telefono . "&nombreNego=" . $nombreNegocio . "&direccion=" . $direccionNegocio . "");
+                header("Location: ../../configurar/AccionCarta.php?action=placeOrder&fechaVenta=" . $fechaVenta . "&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&cedula=" . $cedula . "&nombreC=" . $nombre . "&telefono=" . $telefono . "&nombreNego=" . $nombreNegocio . "&direccion=" . $direccionNegocio . "");
             } elseif ($tipoDespacho == "1" && $_POST['cedula'] != "") {
-                header("Location: AccionCarta.php?action=placeOrder&fechaVenta=" . $fechaVenta . "&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&cedula=" . $cedula . "&nombreC=" . $nombre . "&telefono=" . $telefono . "&nombreNego=" . $nombreNegocio . "&direccion=" . $direccionNegocio . "&punto=" . $punto . "&pagoMovil=" . $pagoMovil . "&transferencia=" . $transferencia . "&bioPago=" . $bioPago . "&efectivo=" . $efectivo . "&pesos=" . $pesos . "&dolares=" . $dolares . "");
+                header("Location: ../../configurar/AccionCarta.php?action=placeOrder&fechaVenta=" . $fechaVenta . "&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&cedula=" . $cedula . "&nombreC=" . $nombre . "&telefono=" . $telefono . "&nombreNego=" . $nombreNegocio . "&direccion=" . $direccionNegocio . "&punto=" . $punto . "&pagoMovil=" . $pagoMovil . "&transferencia=" . $transferencia . "&bioPago=" . $bioPago . "&efectivo=" . $efectivo . "&pesos=" . $pesos . "&dolares=" . $dolares . "");
             }
         } else {
-            header("Location: AccionCarta.php?action=placeOrder&fechaVenta=" . $fechaVenta . "&cedula=Sc&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&punto=" . $punto . "&pagoMovil=" . $pagoMovil . "&transferencia=" . $transferencia . "&bioPago=" . $bioPago . "&efectivo=" . $efectivo . "&pesos=" . $pesos . "&dolares=" . $dolares . "");
+            header("Location: ../../configurar/AccionCarta.php?action=placeOrder&fechaVenta=" . $fechaVenta . "&cedula=Sc&valorFinalVenta=" . $valorFinalVenta . "&valorFinalBs=" . $valorBolivarFinal1 . "&valorFinalCop=" . $valorPesoFinal1 . "&compraTipo=" . $compraTipo . "&pagoTipo=" . $pagoTipo . "&punto=" . $punto . "&pagoMovil=" . $pagoMovil . "&transferencia=" . $transferencia . "&bioPago=" . $bioPago . "&efectivo=" . $efectivo . "&pesos=" . $pesos . "&dolares=" . $dolares . "");
         }
     } // FINALIZA EL ISSET "CEDULA"
 
     // initializ shopping cart class
-    include 'la-carta.php';
+    include '../../configurar/la-carta.php';
     $cart = new Cart;
 
     // redirect to home if cart is empty
     if ($cart->total_items() <= 0) {
-        header('Location: index.php');
+        header('Location: ventas.php');
     }
 
     // set customer ID in session
@@ -188,7 +159,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <?php require_once('includes/headers.php'); ?>
 
 
-        <script src='peticion.js'></script>
         <script>
             $(obtener_registros_codigo());
 
@@ -247,7 +217,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <div class='left_col scroll-view'>
                             <div class='navbar nav_title' style='border: 0;'>
                                 <a href='index.php' class='site_title'>
-                                    <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                    <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                         <img style='max-width:140px'><span> </a>
                             </div>
                             <div class='clearfix'></div>

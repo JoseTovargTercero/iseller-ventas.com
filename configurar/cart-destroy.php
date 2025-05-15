@@ -1,5 +1,7 @@
 <?php
 include 'la-carta.php';
+require_once('session.php');
+
 if ($_SESSION['nivel']) {
     $cart = new Cart;
 

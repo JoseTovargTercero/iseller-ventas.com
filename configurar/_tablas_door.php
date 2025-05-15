@@ -1,7 +1,10 @@
 <?php
 
 require_once('configuracion.php');
+require_once('session.php');
+
 require '_tablas.php';
+
 $consulta = new Tablas($conexion);
 $bss_id = $_SESSION["bss_id"];
 

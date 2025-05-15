@@ -1,16 +1,8 @@
 <?php
 require_once('../../../configurar/configuracion.php'); // Tu configuración de BD
 require_once('TCPDF-main/tcpdf.php'); // Asegúrate de que la ruta de TCPDF sea correcta
+require_once('../../../configurar/_tasas_cambio.php'); // Tu configuración de BD
 
-// Obtener datos de la empresa
-$query2 = "SELECT * FROM empresa WHERE id=1";
-$buscarAlumnos2 = $conexion->query($query2);
-if ($buscarAlumnos2->num_rows > 0) {
-    while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-        $stockCritico = $filaAlumnos2['stockCritico'];
-        $nameempresa = $filaAlumnos2['emp'];
-    }
-}
 
 // Crear objeto TCPDF
 $pdf = new TCPDF();

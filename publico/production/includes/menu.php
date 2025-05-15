@@ -6,20 +6,6 @@ function MenuAdministrador()
 
   global $conexion;
 
-  $query2 = 'SELECT * FROM empresa WHERE id="1"';
-  $buscarAlumnos2 = $conexion->query($query2);
-  if ($buscarAlumnos2->num_rows > 0) {
-    while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-      $distribuidor = $filaAlumnos2['distribuidor'];
-      $factura = $filaAlumnos2['factura'];
-    }
-  }
-  if ($factura == 1) {
-    $compras = "nuevaCompraFacturas.php";
-  } else {
-    $compras = "nuevaCompra.php";
-  }
-
 
 
 
@@ -54,8 +40,9 @@ function MenuAdministrador()
                     <ul class="nav child_menu">
                       <li><a href="productos.php">Listado de Productos</a></li>
                       <li><a href="nuevoProducto.php">Nuevo Producto</a></li>
-                      <li><a href="' . $compras . '">Nueva Compra</a></li>
+                      <li><a href="nuevaCompra.php">Nueva Compra</a></li>
                       <li><a href="creditos.php">Créditos</a></li>
+                      <li><a href="descontado.php">Descontado</a></li>
                     </ul>
                   </li>
                    <li><a><i class="line icon-people"></i> Usuarios <span class="fa fa-chevron-down"></span></a>
@@ -76,14 +63,6 @@ function MenuAdministrador()
 function MenuStandar()
 {
   global $conexion;
-  $query2 = 'SELECT * FROM empresa WHERE id="1"';
-  $buscarAlumnos2 = $conexion->query($query2);
-  if ($buscarAlumnos2->num_rows > 0) {
-    while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-      $distribuidor = $filaAlumnos2['distribuidor'];
-      $factura = $filaAlumnos2['factura'];
-    }
-  }
 
   $query222 = 'SELECT * FROM acces WHERE id="1"';
   $buscarAlumnos222 = $conexion->query($query222);
@@ -105,11 +84,8 @@ function MenuStandar()
     }
   }
 
-  if ($factura == 1) {
-    $compras = "nuevaCompraFacturas.php";
-  } else {
-    $compras = "nuevaCompra.php";
-  }
+
+  $compras = "nuevaCompra.php";
 
 
   $query222 = 'SELECT * FROM acces WHERE id="1"';

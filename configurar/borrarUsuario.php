@@ -1,6 +1,6 @@
 <?php
 require_once("configuracion.php");
-
+require_once('session.php');
 header('Content-Type: application/json');
 
 // Verifica que el usuario tiene permiso (nivel 1)

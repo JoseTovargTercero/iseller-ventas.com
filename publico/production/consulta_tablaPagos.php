@@ -1,7 +1,7 @@
 <?php
 /////// CONEXIÓN A LA BASE DE DATOS /////////
 require_once("../../configurar/configuracion.php");
-
+require_once('../../configurar/session.php');
 
 
 	$q=$conexion->real_escape_string($_POST['semana']);

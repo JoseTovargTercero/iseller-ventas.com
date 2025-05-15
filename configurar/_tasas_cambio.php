@@ -28,10 +28,34 @@ class TasasCambio
         ];
     }
 
+    public function obtenerBcv()
+    {
+        $queryHist  = "SELECT id, valor, time 
+        FROM cambios_bcv_historico 
+        ORDER BY time DESC 
+        LIMIT 1";
+        $histResult = $this->conexion->query($queryHist);
+
+        if ($histResult && $histResult->num_rows > 0) {
+            $rowHist     = $histResult->fetch_assoc();
+            return (float)$rowHist['valor'];
+        }
+        return 0;
+    }
+
     public function obtenerCambio($id)
     {
-        return json_encode($this->obtenerDatos('cambio', $id));
+
+        $resultado = $this->obtenerDatos('cambio', $id);
+        $bcv = $this->obtenerBcv();
+
+        if ($resultado['status'] === 'success') {
+            $resultado['data']['bcv'] = $bcv;
+        }
+
+        return json_encode($resultado);
     }
+
 
     public function tasasMostradas($id)
     {
@@ -42,6 +66,28 @@ class TasasCambio
         }
 
         return json_encode($resultado);
+    }
+
+
+    public function obtenerStockCritico($id_sucursal)
+    {
+        $stmt = $this->conexion->prepare("SELECT stockCritico FROM sucursales WHERE id = ?");
+        $stmt->bind_param("i", $id_sucursal);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+
+        if ($fila = $resultado->fetch_assoc()) {
+            return [
+                "status" => "success",
+                "data" => $fila['stockCritico']
+            ];
+        }
+
+
+        return json_encode([
+            "status" => "error",
+            "message" => "Información no encontrada."
+        ]);
     }
 
 
@@ -65,3 +111,43 @@ class TasasCambio
         ]);
     }
 }
+
+
+
+
+
+
+// Iniciar
+// Informacion de la tipo de cambio estandar
+require_once('session.php');
+$bss_id = $_SESSION["bss_id"];
+$id_sucursal = $_SESSION["id_sucursal"];
+$cambio = new TasasCambio($conexion);
+
+
+
+$respuesta = $cambio->obtenerCambio($bss_id);
+$tasas = json_decode($respuesta, true); // true = array asociativo
+
+$tasaMostradas = $cambio->tasasMostradas($bss_id);
+$tasaMostradas = json_decode($tasaMostradas, true);
+$data_monedas = $tasaMostradas['data'];
+
+
+$stock = $cambio->obtenerStockCritico($id_sucursal);
+$stockCritico = $stock['data'];
+
+$pesoDolar = $tasas['data']['pesoDolar'];
+$peso_bolivar = $tasas['data']['peso_bolivar'];
+$bolivar_peso = $tasas['data']['bolivar_peso'];
+$dolarBolivar = $tasas['data']['DolarBolivar'];
+$bsDolar = $dolarBolivar;
+$bcv =  $tasas['data']['bcv'];
+$tipo_tasa_bs = $tasas['data']['tipo_tasa_bs'];
+$redondeo = $tasas['data']['redondeo'];
+$margen_neto = $tasas['data']['margen_neto'];
+// Informacion de la tipo de cambio estandar
+
+
+
+//require_once '_tasas_gestion.php';

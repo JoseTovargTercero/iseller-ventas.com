@@ -1,11 +1,6 @@
 <?php
 ob_start();
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
-
-
+require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $topnav = topnav();
@@ -29,20 +24,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $nombreUsuario = $_SESSION['nombre'];
   $cliente = $_GET['cliente'];
 
-  $query7 = $conexion->query("SELECT * FROM cambio WHERE id='1'");
-  if ($query7->num_rows > 0) {
-    while ($row7 = $query7->fetch_assoc()) {
-      $pesoDolar = $row7['pesoDolar'];
-      $DolarBolivar = $row7['DolarBolivar'];
-      $peso_bolivar = $row7['peso_bolivar'];
-    }
-  }
 
 
-
-  // initializ shopping cart class
-  include 'la-carta.php';
-  $cart = new Cart;
 ?>
 
 
@@ -61,9 +44,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
 
-    <script src='peticion.js'></script>
-
-    <script src='peticion_producto.js'></script>
 
 
     <script>
@@ -134,7 +114,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           <div class='left_col scroll-view'>
             <div class='navbar nav_title' style='border: 0;'>
               <a href='index.php' class='site_title'>
-                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                   <img style='max-width:140px'><span> </a>
             </div>
             <div class='clearfix'></div>
@@ -208,7 +188,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                               function datosProductos($producto)
                               {
-                                global $conexion, $pesoDolar, $peso_bolivar, $DolarBolivar;
+                                global $conexion, $pesoDolar, $peso_bolivar, $dolarBolivar;
 
 
                                 $query = $conexion->query("SELECT * FROM productos  WHERE id = '$producto' AND activo= 0");
@@ -231,7 +211,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     if ($origen == 'c') {
                                       $precioBsVenta = ($precioPesoVenta / $peso_bolivar) / 1000;
                                     } else {
-                                      $precioBsVenta = $precioDolarVenta * $DolarBolivar;
+                                      $precioBsVenta = $precioDolarVenta * $dolarBolivar;
                                     }
 
                                     $nombre = strtoupper($row["nombre"]);

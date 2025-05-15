@@ -1,46 +1,65 @@
 <?php
-require_once( 'configuracion.php' );
+require_once('configuracion.php');
+require_once('session.php');
 
-    $order_id = $_GET['id'];
+$orderId = $_POST['id'];
+$id_sucursal = $_SESSION["id_sucursal"];
+try {
+    // Iniciar transacción
+    $conexion->begin_transaction();
 
-    $stmt = $conexion->prepare( "DELETE FROM orden WHERE id='$order_id'" );
-    $stmt->execute();
-$stmt->close();
+    // Eliminar la orden
+    $stmtDeleteOrden = $conexion->prepare("DELETE FROM orden WHERE id = ?");
+    $stmtDeleteOrden->bind_param("i", $orderId);
+    $stmtDeleteOrden->execute();
+    $stmtDeleteOrden->close();
 
+    // Obtener productos de la orden
+    $stmtArticulos = $conexion->prepare("SELECT product_id, quantity FROM orden_articulos WHERE order_id = ?");
+    $stmtArticulos->bind_param("i", $orderId);
+    $stmtArticulos->execute();
+    $resultArticulos = $stmtArticulos->get_result();
 
-    $query2 = "SELECT * FROM orden_articulos WHERE order_id='$order_id'";
-    $buscarAlumnos2 = $conexion->query( $query2 );
-    if ( $buscarAlumnos2->num_rows > 0 ) {
-        while( $filaAlumnos2 = $buscarAlumnos2->fetch_assoc() ){
-            $product_id = $filaAlumnos2['product_id'];
-            $quantity = $filaAlumnos2['quantity'];
+    while ($rowArticulo = $resultArticulos->fetch_assoc()) {
+        $productId = $rowArticulo['product_id'];
+        $cantidad = $rowArticulo['quantity'];
 
+        // Obtener stock actual?
+        $stmtProducto = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ?");
+        $stmtProducto->bind_param("ii", $productId, $id_sucursal);
+        $stmtProducto->execute();
+        $resultProducto = $stmtProducto->get_result();
 
-            $query = "SELECT * FROM productos WHERE id='$product_id'";
-            $buscarAlumnos = $conexion->query( $query );
-            if ( $buscarAlumnos->num_rows > 0 ) {
-                while( $filaAlumnos = $buscarAlumnos->fetch_assoc() ){
-                    $restoreProducto = $filaAlumnos['stock'] + $quantity;
+        if ($producto = $resultProducto->fetch_assoc()) {
+            $nuevoStock = $producto['stock'] + $cantidad;
 
-                    $stmt = $conexion->prepare( "UPDATE productos SET stock='$restoreProducto' WHERE id='$product_id'" );
-                    $stmt->execute();
-$stmt->close();
-
-                }
-            } 
-            
+            // Actualizar stock
+            $stmtUpdateStock = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ?");
+            $stmtUpdateStock->bind_param("iii", $nuevoStock, $productId, $id_sucursal);
+            $stmtUpdateStock->execute();
+            $stmtUpdateStock->close();
         }
-    } 
-    
-    $stmt = $conexion->prepare( "DELETE FROM orden_articulos WHERE order_id='$order_id'" );
-    $stmt->execute();
-$stmt->close();
 
+        $stmtProducto->close();
+    }
 
+    $stmtArticulos->close();
 
+    // Eliminar artículos de la orden
+    $stmtDeleteArticulos = $conexion->prepare("DELETE FROM orden_articulos WHERE order_id = ?");
+    $stmtDeleteArticulos->bind_param("i", $orderId);
+    $stmtDeleteArticulos->execute();
+    $stmtDeleteArticulos->close();
 
-   define('PAGINA_INICIO','../publico/production/ventas.php');
-   header('Location: '.PAGINA_INICIO);
+    // Confirmar transacción
+    $conexion->commit();
 
-
-?>
+    // Redirigir
+    define('PAGINA_INICIO', '../publico/production/ventas.php');
+    header('Location: ' . PAGINA_INICIO);
+    exit;
+} catch (Exception $e) {
+    // Revertir en caso de error
+    $conexion->rollback();
+    echo "Error al procesar la solicitud: " . $e->getMessage();
+}

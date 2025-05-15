@@ -1,9 +1,8 @@
 ﻿<?php
 $id = $_GET['id'];
-$accion = $_GET['accion'];
 $qty = $_GET['qty'];
 require_once("../../configurar/configuracion.php");
-
+require_once('../../configurar/session.php');
 
 ?>
 <!DOCTYPE html>
@@ -182,69 +181,68 @@ require_once("../../configurar/configuracion.php");
   </div>
 
   <script>
-
     var id = "<?php echo $id ?>";
     var qty = "<?php echo $qty ?>";
 
 
     function consultarCantidad(params) {
-    $.ajax({
-        url: 'articulosTicketQty.php',
-        type: 'POST',
-        dataType: 'html',
-        data: {
-          id: params
-        },
-      })
+      $.ajax({
+          url: 'articulosTicketQty.php',
+          type: 'POST',
+          dataType: 'html',
+          data: {
+            id: params
+          },
+        })
 
-      .done(function(resultado1) {
-
-
-        if (qty != resultado1.trim()) {
-          setTimeout(consultarCantidad(id), 500);
-       //   alert('reconsultando. Esperado '+ qty + '. Result ' + resultado1.trim())
-        }else{
-          consultar(id)
-        }
-
-      })
-  }
-
-  consultarCantidad(id)
+        .done(function(resultado1) {
 
 
-  function consultar(params) {
-    $.ajax({
-        url: 'articulosTicket.php',
-        type: 'POST',
-        dataType: 'html',
-        data: {
-          id: params
-        },
-      })
+          if (qty != resultado1.trim()) {
+            setTimeout(consultarCantidad(id), 500);
+            //   alert('reconsultando. Esperado '+ qty + '. Result ' + resultado1.trim())
+          } else {
+            consultar(id)
+          }
 
-      .done(function(resultado1) {
-        $('#resultTable').html(resultado1)
-       const myTimeout = setTimeout(myStopFunction, 100);
-
-      })
-
-
-  }
-
-
-
-  
-  //http://localhost/iseller/publico/production/ticket.php?id=104&accion=vendido
-  
-  function myStopFunction() {
-    
-    if ($('#resultTable').html() != '' && $('#resultTable').html() != undefined) {
-      imprimir()
-      //alert('Se imprimira el ticket')
-    }else{
-        consultar(id)
+        })
     }
+
+    consultarCantidad(id)
+
+
+    function consultar(params) {
+      $.ajax({
+          url: 'articulosTicket.php',
+          type: 'POST',
+          dataType: 'html',
+          data: {
+            id: params
+          },
+        })
+
+        .done(function(resultado1) {
+          $('#resultTable').html(resultado1)
+          const myTimeout = setTimeout(myStopFunction, 100);
+
+        })
+
+
+    }
+
+
+
+
+    //http://localhost/iseller/publico/production/ticket.php?id=104&accion=vendido
+
+    function myStopFunction() {
+
+      if ($('#resultTable').html() != '' && $('#resultTable').html() != undefined) {
+        imprimir()
+        //alert('Se imprimira el ticket')
+      } else {
+        consultar(id)
+      }
 
     }
 

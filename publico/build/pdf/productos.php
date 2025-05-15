@@ -1,30 +1,7 @@
 <?php
 require_once('lib/pdf/mpdf.php');
 require_once('../../../configurar/configuracion.php');
-
-
-
-$query2 = "SELECT * FROM empresa WHERE id=1";
-$buscarAlumnos2 = $conexion->query($query2);
-if ($buscarAlumnos2->num_rows > 0) {
-  while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-    $stockCritico = $filaAlumnos2['stockCritico'];
-    $nameempresa = $filaAlumnos2['emp'];
-  }
-}
-
-
-$query = "SELECT * FROM cambio WHERE id='1'";
-$buscarAlumnos = $conexion->query($query);
-if ($buscarAlumnos->num_rows > 0) {
-  while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-    $PesoDolar = $filaAlumnos['pesoDolar'];
-    $Pesobolivar = $filaAlumnos['bolivar_peso'];
-    $peso_bolivar = $filaAlumnos['peso_bolivar'];
-    $dolarBolivar = $filaAlumnos['DolarBolivar'];
-  }
-}
+require("../../../configurar/_tasas_cambio.php");
 
 
 $html = '   <head>
@@ -33,7 +10,7 @@ $html = '   <head>
   </head>
 
 </h1><img src="../../production/images/logo1-inv-compact.png" height="14px" width="14px" alt=""> MI TIENDA<h1>
-</h5>' . $nameempresa . ' - LISTA DE PRECIOS<h5>
+</h5>LISTA DE PRECIOS<h5>
      <div class="table-responsive">
                       <table class="table table-striped  jambo_table bulk_action">
                         <thead>
@@ -63,7 +40,7 @@ if ($query6->num_rows > 0) {
 
 
     $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
-    $precioPesoVenta = $precioDolarVenta * $PesoDolar;
+    $precioPesoVenta = $precioDolarVenta * $pesoDolar;
     $precioBsVenta = $precioDolarVenta * $dolarBolivar;
 
 

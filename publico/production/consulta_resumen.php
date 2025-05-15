@@ -1,10 +1,10 @@
 <?php
 /////// CONEXIÓN A LA BASE DE DATOS /////////
 require_once("../../configurar/configuracion.php");
-
+require_once('../../configurar/session.php');
 
 // initializ shopping cart class
-include 'la-carta.php';
+include '../../configurar/la-carta.php';
 $cart = new Cart;
 
 // redirect to home if cart is empty

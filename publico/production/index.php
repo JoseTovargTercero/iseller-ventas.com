@@ -1,9 +1,5 @@
 ﻿<?php
-
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
+require_once('includes/requires.php');
 
 
 
@@ -60,17 +56,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     // Calculamos la ganancia esperada
     $gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
-
-
-    $query2 = 'SELECT * FROM empresa';
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $stockCritico = $filaAlumnos2['stockCritico'];
-        }
-    }
-
 
 
     $dia = date('Y-m-d');
@@ -238,7 +223,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>

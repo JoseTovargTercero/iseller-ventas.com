@@ -1,24 +1,11 @@
 <?php
-require_once("../../configurar/configuracion.php");
+require_once("configuracion.php");
+require_once('session.php');
 
 require_once 'la-carta.php';
-
-// ACTUALIZAR CANTIDAD ANTES DE regresar el carrito
-
-// ACTUALIZAR CANTIDAD ANTES DE regresar el carrito
-
-
 $cart = new Cart;
 
-// Solo actualizar si vienen los datos por POST
-if (isset($_POST['id']) && isset($_POST['accion'])) {
-  $cart->modificar_cantidad($_POST['accion'], $_POST['id']);
-}
 
-
-require_once 'carrito.php';
-
-/*
 //get cart items from session
 $cartItems = $cart->contents();
 
@@ -27,6 +14,8 @@ $data = array(
   'carrito' => [],
   'total' => []
 );
+$todoPeso = 0;
+$todoBolivar = 0;
 
 foreach ($cartItems as $item) {
 
@@ -61,4 +50,3 @@ $data['total'] = [
 $data['cantidad'] = count($data['carrito']);
 
 echo json_encode($data, JSON_PRETTY_PRINT);
-*/

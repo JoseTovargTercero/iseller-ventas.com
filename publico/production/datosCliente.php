@@ -1,6 +1,6 @@
 <?php
 require_once("../../configurar/configuracion.php");
-
+require_once('includes/requires.php');
 
 if(isset($_POST['venta']) && $_POST['venta'] == 2)
 { 

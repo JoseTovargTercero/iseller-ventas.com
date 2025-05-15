@@ -1,5 +1,6 @@
 <?php
 require_once('configuracion.php');
+require_once('session.php');
 header('Content-Type: application/json');
 
 // Sanitizar y preparar los datos
@@ -49,7 +50,7 @@ try {
     throw new Exception('Debe haber alguna sucursal seleccionada.');
   }
 
-  $stmt_o = $conexion->prepare("INSERT INTO stock (id_producto, porcentaje, stock, id_sucursal) VALUES (?, ?, ?, ?)");
+  $stmt_o = $conexion->prepare("INSERT INTO stock (id_producto, porcentaje, stock, id_sucursal, bss_id) VALUES (?, ?, ?, ?, ?)");
   if (!$stmt_o) {
     throw new Exception('Error al preparar la consulta de stock.');
   }
@@ -58,7 +59,7 @@ try {
     $idSucursal = $item[0];
     $stock = $item[1];
 
-    $stmt_o->bind_param("ddii", $id_registro, $porcentaje, $stock, $idSucursal);
+    $stmt_o->bind_param("ddiii", $id_registro, $porcentaje, $stock, $idSucursal, $bss_id);
     if (!$stmt_o->execute()) {
       throw new Exception('Error al registrar el stock en la sucursal con ID: ' . $idSucursal);
     }

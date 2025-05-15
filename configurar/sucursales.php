@@ -1,6 +1,6 @@
 <?php
 require_once("configuracion.php");
-
+require_once('session.php');
 if ($_SESSION["nivel"] != 1) {
     header("Location: ../index.php");
     exit;
@@ -46,16 +46,16 @@ try {
         while ($row = $result->fetch_assoc()) {
             $id_producto = (int)$row['id'];
             $porcentaje = (float)$row['porcentaje'];
-            $valores[] = "($id_producto, $porcentaje, $id_registro)";
+            $valores[] = "($id_producto, $porcentaje, $id_registro, $bss_id)";
         }
 
         $stmt->close();
 
         if (!empty($valores)) {
-            $sql_insert = "INSERT INTO stock (id_producto, porcentaje, id_sucursal) VALUES " . implode(",", $valores);
+            $sql_insert = "INSERT INTO stock (id_producto, porcentaje, id_sucursal, bss_id) VALUES " . implode(",", $valores);
             if (!$conexion->query($sql_insert)) {
                 throw new Exception("Error al insertar en stock: " . $conexion->error);
-        }
+            }
         }
     }
 

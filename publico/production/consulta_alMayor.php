@@ -1,5 +1,7 @@
 <?php
 require_once("../../configurar/configuracion.php");
+require_once('../../configurar/session.php');
+
 
 
 ///////// LO QUE OCURRE AL TECLEAR SOBRE EL INPUT DE CI ////////////

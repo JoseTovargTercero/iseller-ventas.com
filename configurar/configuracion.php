@@ -17,7 +17,6 @@ if ($conexion->connect_error) {
 }
 
 date_default_timezone_set('America/Manaus');
-session_start();
 //error_reporting(0);
 
 
@@ -41,11 +40,12 @@ function contar($condicion)
 
 function formatPeso($amount)
 {
+	$amount = (int) $amount;
 	// Redondear a la centena más cercana
 	$roundedAmount = round($amount / 100) * 100;
 
 	// Convertir el número a un formato con separadores de miles
-	return number_format($roundedAmount);
+	return $roundedAmount;
 }
 
 

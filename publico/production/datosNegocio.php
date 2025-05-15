@@ -1,6 +1,6 @@
 <?php
 require_once("../../configurar/configuracion.php");
-
+require_once('../../configurar/session.php');
 
 if (isset($_POST['negocio'])) {
     $q = $conexion->real_escape_string($_POST['negocio']);

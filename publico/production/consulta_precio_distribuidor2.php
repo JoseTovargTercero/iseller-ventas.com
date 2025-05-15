@@ -1,13 +1,9 @@
  <?php
     /////// CONEXIÓN A LA BASE DE DATOS /////////
     require_once("../../configurar/configuracion.php");
-    $query2 = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query2);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-            $dolarBolivar = $filaAlumnos['DolarBolivar'];
-        }
-    }
+    require_once('../../configurar/session.php');
+    require_once('../../configurar/_tasas_cambio.php');
+
 
     if (isset($_POST['rep2'])) {
         $q = $conexion->real_escape_string($_POST['rep2']);

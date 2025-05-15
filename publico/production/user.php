@@ -1,7 +1,7 @@
 <?php
 
 require_once('../../configurar/configuracion.php');
-
+require_once('../../configurar/session.php');
 ?>
 <!DOCTYPE html>
 <html lang='es'>
@@ -20,12 +20,11 @@ require_once('../../configurar/configuracion.php');
     <!-- Font Awesome -->
     <link href='../vendors/font-awesome/css/font-awesome.min.css' rel='stylesheet'>
     <script src='js/jquery.min.js'></script>
-    <script src='peticion.js'></script>
-    <script src='peticion_codigo_producto.js'></script>
     <link rel='stylesheet' href='..//assets/AlertifyJS/css/alertify.min.css' />
     <link rel='stylesheet' href='..//assets/AlertifyJS/css/themes/semantic.min.css' />
     <script src='..//assets/AlertifyJS/alertify.min.js'></script>
 </head>
+
 <body class='login'>
     <div>
         <a class='hiddenanchor' id='signup'></a>
@@ -46,71 +45,73 @@ require_once('../../configurar/configuracion.php');
                             <div class='row'>
 
 
-                                    <!-- price element -->
-                                    <div class='col-md-12 col-sm-12  '>
-                                        <div class='pricing  ui-ribbon-container'>
+                                <!-- price element -->
+                                <div class='col-md-12 col-sm-12  '>
+                                    <div class='pricing  ui-ribbon-container'>
 
-                                            <div class='title'>
-                                                <h2>PASO 3/3 - REGISTRO DE USUARIO</h2>
-                                                <h1>'I-SELLER '</h1>
-                                                <span>LITE</span>
+                                        <div class='title'>
+                                            <h2>PASO 3/3 - REGISTRO DE USUARIO</h2>
+                                            <h1>'I-SELLER '</h1>
+                                            <span>LITE</span>
 
-                                            </div>
-                                            <div class='x_content'>
-                                                <div class=''>
-                                                    <div class='pricing_features'>
-                                                        <div class='col-md-12 col-sm12'>
-                              
-                                <div class='x_content altoScroll'>
-                                    <form class='' action='../../configurar/agguser2.php' method='post' novalidate>
-                                        <div class='field item form-group'>
-                                            <label class='col-form-label col-md-3 col-sm-3  label-align'>Nombre<span class='required'>*</span></label>
-                                            <div class='col-md-9 col-sm-9'>
-                                                <input  class='form-control' data-validate-length-range='6' data-validate-words='2' name='name' placeholder='Jhon Doe' required='required' />
-                                            </div>
-                                        </div> 
-                                           
-                                           
-                                            <div class='field item form-group'>
-                                            <label class='col-form-label col-md-3 col-sm-3  label-align'>Nombre de Usuario<span class='required'>*</span></label>
-                                            <div class='col-md-9 col-sm-9'>
-                                                <input class='form-control' name='user' placeholder='' required='required' />
-                                            </div>
-                                        </div> 
-                                           
-                                           
-                                           
-                                           <div class='field item form-group'>
-                                            <label class='col-form-label col-md-3 col-sm-3  label-align'>Nivel<span class='required'>*</span></label>
-                                            <div class='col-md-9 col-sm-9'>
-                                               <select name="nivel" required='required'   class='form-control'  id="nivel">
-                                                        <option value="1">Administrador</option>
-                                                    </select>
-                                            </div>
                                         </div>
-                                        
-                                  
-                                        <div class='field item form-group'>
-                                            <label class='col-form-label col-md-3 col-sm-3  label-align'>Contraseña<span class='required'>*</span></label>
-                                            <div class='col-md-9 col-sm-9'>
-                                                <input class='form-control' type='password' name='password' data-validate-length='6,7,8,9,10,11,12' placeholder="De 6 a 12 caracteres" required='required' /></div>
-                                        </div>
-                                        <div class='field item form-group'>
-                                            <label class='col-form-label col-md-3 col-sm-3  label-align'>Repetir Contraseña<span class='required'>*</span></label>
-                                            <div class='col-md-9 col-sm-9'>
-                                                <input class='form-control' type='password' name='password2' data-validate-linked='password' required='required' /></div>
-                                        </div>                                                <br>
+                                        <div class='x_content'>
+                                            <div class=''>
+                                                <div class='pricing_features'>
+                                                    <div class='col-md-12 col-sm12'>
 
-                                        <button class='btn btn-success right'>Registrar</button>
-                                    </form>
-                                </div>
-                        </div>
+                                                        <div class='x_content altoScroll'>
+                                                            <form class='' action='../../configurar/agguser2.php' method='post' novalidate>
+                                                                <div class='field item form-group'>
+                                                                    <label class='col-form-label col-md-3 col-sm-3  label-align'>Nombre<span class='required'>*</span></label>
+                                                                    <div class='col-md-9 col-sm-9'>
+                                                                        <input class='form-control' data-validate-length-range='6' data-validate-words='2' name='name' placeholder='Jhon Doe' required='required' />
+                                                                    </div>
+                                                                </div>
 
+
+                                                                <div class='field item form-group'>
+                                                                    <label class='col-form-label col-md-3 col-sm-3  label-align'>Nombre de Usuario<span class='required'>*</span></label>
+                                                                    <div class='col-md-9 col-sm-9'>
+                                                                        <input class='form-control' name='user' placeholder='' required='required' />
+                                                                    </div>
+                                                                </div>
+
+
+
+                                                                <div class='field item form-group'>
+                                                                    <label class='col-form-label col-md-3 col-sm-3  label-align'>Nivel<span class='required'>*</span></label>
+                                                                    <div class='col-md-9 col-sm-9'>
+                                                                        <select name="nivel" required='required' class='form-control' id="nivel">
+                                                                            <option value="1">Administrador</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+
+
+                                                                <div class='field item form-group'>
+                                                                    <label class='col-form-label col-md-3 col-sm-3  label-align'>Contraseña<span class='required'>*</span></label>
+                                                                    <div class='col-md-9 col-sm-9'>
+                                                                        <input class='form-control' type='password' name='password' data-validate-length='6,7,8,9,10,11,12' placeholder="De 6 a 12 caracteres" required='required' />
+                                                                    </div>
+                                                                </div>
+                                                                <div class='field item form-group'>
+                                                                    <label class='col-form-label col-md-3 col-sm-3  label-align'>Repetir Contraseña<span class='required'>*</span></label>
+                                                                    <div class='col-md-9 col-sm-9'>
+                                                                        <input class='form-control' type='password' name='password2' data-validate-linked='password' required='required' />
+                                                                    </div>
+                                                                </div> <br>
+
+                                                                <button class='btn btn-success right'>Registrar</button>
+                                                            </form>
+                                                        </div>
                                                     </div>
-                                                </div>
 
+                                                </div>
                                             </div>
+
                                         </div>
+                                    </div>
 
                                 </div>
                             </div>
@@ -119,7 +120,7 @@ require_once('../../configurar/configuracion.php');
                 </div>
             </div>
 
-           
+
 
             <div class='center'>
                 <h1>
@@ -162,15 +163,14 @@ require_once('../../configurar/configuracion.php');
             float: left;
             margin-top: 25px;
         }
-
     </style>
 
 
 
 
-    
- 
-    
+
+
+
     <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
     <script src='../vendors/validator/multifield.js'></script>
     <script src='../vendors/validator/validator.js'></script>
@@ -198,7 +198,6 @@ require_once('../../configurar/configuracion.php');
             if (this.checked)
                 $('form .alert').remove();
         }).prop('checked', false);
-
     </script>
 
     <!-- jQuery -->

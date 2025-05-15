@@ -1,10 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-require("../../configurar/_tasas_cambio.php");
-
-
+require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     if ($_SESSION['nivel'] == '1') {
         $menu = MenuAdministrador();
@@ -25,23 +20,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         header('Location: ' . PAGINA_INICIO);
     }
 
+    $tipo_u =  $_SESSION['nivel'];
+    $id_sucursal = $_SESSION['id_sucursal'];
 
 
 
+    $query = "SELECT * FROM `sucursales` WHERE bss_id = ?";
 
-    // Informacion de la tipo de cambio estandar
-    $cambio = new TasasCambio($conexion);
-    $bss_id = $_SESSION["bss_id"];
+    if ($tipo_u == 2) {
+        // Solo para los usuarios tipo 2
+        $query .= " AND id='$id_sucursal'";
+    }
 
-    $respuesta = $cambio->obtenerCambio($bss_id);
-    $tasas = json_decode($respuesta, true);
+    $query .= "  ORDER BY principal DESC";
 
-    $pesoDolar = $tasas['data']['pesoDolar'];
-    $bcv = $tasas['data']['bcv'];
-    // Informacion de la tipo de cambio estandar
+    $stmt = mysqli_prepare($conexion, $query);
+    $stmt->bind_param('i', $bss_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-
-
+    $sucursales = [];
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $sucursales[] = $row;
+        }
+    }
+    $stmt->close();
 ?>
     <!DOCTYPE html>
     <html lang='es'>
@@ -50,6 +54,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <title>Compras</title>
         <?php require_once('includes/headers.php'); ?>
+
+        <style>
+            .table td,
+            .table th {
+                padding: .55rem;
+
+            }
+        </style>
     </head>
 
     <body class='nav-md'>
@@ -59,7 +71,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -84,33 +96,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     </div>
                     <div class='clearfix'></div>
-
-                    <?php
-
-                    @$accionE = $_GET['accion'];
-                    @$codeEditar = $_GET['id'];
-
-                    if ($accionE == "editar") {
-
-                        $query7E = $conexion->query("SELECT * FROM productos WHERE codigo='$codeEditar' LIMIT 1");
-                        if ($query7E->num_rows > 0) {
-                            $tabla7E = '';
-                            while ($row7E = $query7E->fetch_assoc()) {
-                                $nombrePro = $row7E["nombre"];
-                                $PrecioPro = $row7E["precio_compra"];
-                                $CantidadPro = $row7E["cantidad_unidades"];
-                                $porcentajePro = $row7E["porcentaje"];
-                            }
-                        }
-                    } else {
-                        $visible = "contain: strict";
-                    }
-                    ?>
-
-
-
-                    <div class="col-lg-8">
-                        <form name='calculadora' action='../../configurar/nuevaCompra.php' method='post' id='demo-form2' data-parsley-validate class='form-horizontal form-label-left' enctype="multipart/form-data">
+                    <div class="col-lg-6">
+                        <form id='demo-form2'>
                             <div class="x_panel">
                                 <div class="x_title">
                                     <h2>Datos del Producto <small>* obligatorio</small></h2>
@@ -122,78 +109,86 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </div>
                                 <div class="x_content">
                                     <div class='x_content'>
-                                        <br />
-                                        <div class='item form-group'>
-                                            <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Producto <span class='required'>*</span>
-                                            </label>
-                                            <div class='col-md-9 col-sm-9 d-flex' style="gap: 3px;">
-                                                <input type='text' required="required" class='form-control col-lg-3' name='codigo' placeholder="Nombre" id='codigo'>
-                                                <select id="producto" name="producto" class="form-control col-lg-9" required>
-                                                    <option value="">-- Sin resultados --</option>
+                                        <?php if ($tipo_u == 1): ?>
+                                            <div class='form-group mb-3'>
+                                                <label class='form-label' for='first-name'>Sucursal </label>
+                                                <select class="form-control" id="sucursal" name="sucursal">
+                                                    <?php if (count($sucursales) > 1): ?>
+                                                        <option value="">-- Seleccione --</option>
+                                                    <?php endif; ?>
+
+                                                    <?php foreach ($sucursales as $row): ?>
+                                                        <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($row['nombre']) ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
                                                 </select>
+                                            </div>
+                                        <?php endif; ?>
+
+
+                                        <div class='mb-3 form-group'>
+                                            <div class='row'>
+                                                <div class="col-lg-4">
+                                                    <label for='codigo' for='codigo'>Filtro</label>
+                                                    <input type='text' required="required" class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
+                                                </div>
+                                                <div class="col-lg-8">
+                                                    <label for='producto'>Seleccione el producto</label>
+                                                    <select id="producto" name="producto" class="form-control" required>
+                                                        <option>-- Indique un filtro --</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <input type="text" name="nombrepor" value="" hidden>
-                                        <div class="item form-group">
-                                            <label class="col-form-label col-md-3" for="first-name">Unidades compradas<span class="required">*</span>
-                                            </label>
-                                            <div class="col-md-9 col-sm-9 ">
-                                                <input type="text" id="comprado" name="comprado" required="required" class="form-control ">
-                                            </div>
+                                        <div class="mb-3 form-group">
+                                            <label class="form-label" for="comprado">Unidades compradas</label>
+                                            <input type="text" id="comprado" name="comprado" required="required" class="form-control" placeholder="Cantidad de unidades compradas">
                                         </div>
 
                                         <div class="ln_solid"></div>
 
-                                        <div class="item form-group">
-                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Precio de Compra <span class="required">*</span>
-                                            </label>
-                                            <div class="input-con-simbolo col-md-5">
-                                                <input type="text" class="form-control form-control-simbolo" id="precio" name="precio" required="required" placeholder="Introduzca el precio">
-                                                <span class="simbolo-final">$</span>
-                                            </div>
+                                        <div class="form-group">
+                                            <label for="precio">Precio de Compra</label>
+                                            <div class="row">
 
-                                            <div class="col-md-4">
-                                                <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal-button">Calcular precio</button>
-                                            </div>
-                                        </div>
+                                                <div class="input-con-simbolo col-md-7">
+                                                    <input type="text" class="form-control form-control-simbolo" id="precio" name="precio" required="required" placeholder="Introduzca el precio">
+                                                    <span class="simbolo-final">$</span>
+                                                </div>
 
-                                        <div class="item form-group">
-                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Cantidad <span class="required">*</span>
-                                            </label>
-                                            <div class="col-md-9 col-sm-9 ">
-                                                <input type="number" id="cantidad" name="cantidad" value="" required="required" class="form-control">
-                                            </div>
-                                        </div>
-                                        <div class="item form-group">
-                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Porcentaje <span class="required">*</span>
-                                            </label>
-                                            <div class="col-md-9 col-sm-9 ">
-                                                <input type="number" id="porcentaje" name="porcentaje" value="" required="required" class="form-control">
+                                                <div class="col-md-5">
+                                                    <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal-button">Calcular precio</button>
+                                                </div>
                                             </div>
                                         </div>
 
-
-                                        <div class="item form-group">
-                                            <label class="col-form-label col-md-3 col-sm-3 " for="first-name">Proveedor <span class="required">*</span>
-                                            </label>
-                                            <div class="col-md-9 col-sm-9 ">
-                                                <input type="text" id="proveedor" name="proveedor" value="" required="required" class="form-control">
+                                        <div class="row mb-3">
+                                            <div class="col-lg-6">
+                                                <label for="cantidad">Unidades por bulto</label>
+                                                <input type="number" id="cantidad" placeholder="Unidades por bulto/paquete/caja/etc" name="cantidad" required="required" class="form-control">
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <label for="porcentaje">Porcentaje</label>
+                                                <input type="number" id="porcentaje" name="porcentaje" placeholder="Porcentaje de ganancia" required="required" class="form-control">
                                             </div>
                                         </div>
 
+                                        <div class="form-group mb-3">
+                                            <label for="proveedor">Proveedor</label>
+                                            <input type="text" id="proveedor" name="proveedor" placeholder="Nombre del proveedor" required="required" class="form-control">
+                                        </div>
 
-                                        <div class='item form-group mt-3'>
-                                            <div class='col-md-12 col-sm-12 '>
-                                                <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Agregar">
-                                            </div>
+                                        <div class='form-group mt-3 text-end'>
+                                            <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Agregar">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </form>
                     </div>
-                    <div class="col-lg-12">
+                    <div class="col-lg-6">
                         <div class="x_panel">
                             <div class="x_title">
                                 <h2>Compras</h2>
@@ -207,12 +202,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class="row">
                                     <div class="col-lg-12">
                                         <p class="font-13 m-b-30">Lista general de los productos agregados al inventario.</p>
-                                        <div class="card-box table-responsive" style="max-height: 65vh;">
+                                        <div class="card-box table-responsive" style="max-height: 70vh;">
                                             <table id="datatable" class="table table-striped table-bordered" style="width:100%">
                                                 <thead>
                                                     <tr class="headings">
-                                                        <th class="column-title">#</th>
-                                                        <th class="column-title">Fecha </th>
                                                         <th class="column-title">Producto</th>
                                                         <th class="column-title">Cantidad</th>
                                                         <th class="column-title"></th>
@@ -227,23 +220,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                         </div>
                     </div>
-
                 </div>
-
-
             </div>
-
         </div>
         </div>
-
         <?php require('../assets/templates/modal.html'); ?>
-
         <!-- Bootstrap -->
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
         <script src="../build/js/custom.min.js"></script>
-
         <script src="../build/js/modal.js"></script>
-
         <script>
             // tasas de cambio
             const tasas = {
@@ -251,16 +236,30 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 'bs': "<?php echo $bcv ?>"
             }
 
+            let precio_consultado
+            let producto_consultado
+
+
+
             // Consultar productos
             function obtener_registros(producto) {
-                console.log(producto);
+                var $sucursal = $('#sucursal');
+                var sucursal = $sucursal.length ? $sucursal.val() : '';
+
+                if ($('#sucursal').length && $('#sucursal').val() == '') {
+                    $('#codigo').val('')
+                    Alerta.toast('error', 'Debe seleccionar una sucursal antes de buscar el producto')
+                    return
+                }
+
 
                 $.ajax({
                     url: "../../configurar/consulta_codigo_producto.php",
                     type: "POST",
                     dataType: "json", // <-- importante: estamos esperando JSON ahora
                     data: {
-                        producto: producto
+                        producto: producto,
+                        sucursal: sucursal
                     },
                 }).done(function(resultado2) {
                     const $select = $("#producto");
@@ -273,12 +272,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             $select.append(`<option value="${item.id}">${item.nombre}</option>`);
                         });
                     } else {
-                        // Sin resultados
-                        $select.append('<option value="">-- Sin resultados --</option>');
+                        // Indique un filtro
+                        $select.append('<option value="">-- Indique un filtro --</option>');
                     }
                 }).fail(function(jqXHR, textStatus, errorThrown) {
                     console.error("Error en la petición AJAX:", textStatus, errorThrown);
-                    $("#producto").html('<option value="">-- Error al cargar --</option>');
+                    $("#producto").html('<option >-- Error al cargar --</option>');
                 });
             }
 
@@ -287,9 +286,28 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 if ($(this).val().trim() !== "") {
                     obtener_registros($(this).val());
                 } else {
-                    $("#producto").html('<option value="">-- Ingrese código --</option>');
+                    $("#producto").html('<option value="">-- Indique un filtro --</option>');
                 }
             });
+
+
+            // Resetear formulario
+            function form_reset() {
+                const form = document.getElementById('demo-form2');
+                const select = document.getElementById('sucursal'); // Asegúrate de que el select tenga este ID
+
+                const selectedValue = select.value; // Guarda la opción seleccionada
+                form.reset(); // Resetea el formulario
+                select.value = selectedValue; // Restablece la opción seleccionada
+            }
+
+            $(document).on('change', '#sucursal', function() {
+                form_reset()
+            }); // resetear form al cambiar el select
+
+
+
+
 
 
             $(document).on('change', '#producto', function() {
@@ -299,23 +317,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
             });
 
-            let precio_consultado
-            let producto_consultado
+
 
             //Consultar informacion del producto
             function buscarProducto(codigo) {
+
+                var $sucursal = $('#sucursal');
+                var sucursal = $sucursal.length ? $sucursal.val() : '';
+
+                if ($('#sucursal').length && $('#sucursal').val() == '') {
+                    $('#codigo').val('')
+                    Alerta.toast('error', 'Debe seleccionar una sucursal antes de seleccionar el producto')
+                    return
+                }
+
                 fetch('precio_producto.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
                         body: new URLSearchParams({
-                            rep_precio: codigo
+                            producto: codigo,
+                            sucursal: sucursal
                         })
                     })
                     .then(res => res.text())
                     .then(text => {
-                        console.log("Respuesta como texto:", text); // Debug: mostrar respuesta cruda
                         let res;
                         try {
                             res = JSON.parse(text);
@@ -338,7 +365,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             document.getElementById('cantidad').value = res.data.cantidad_unidades;
                             document.getElementById('porcentaje').value = res.data.porcentaje;
                             document.getElementById('proveedor').value = res.data.proveedor;
-                            document.querySelector('[name=nombrepor]').value = res.data.nombre;
+                            //        document.querySelector('[name=nombrepor]').value = res.data.nombre;
                         } else {
                             Swal.fire({
                                 icon: 'warning',
@@ -369,7 +396,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 console.log("Enviando datos del formulario:");
                 for (let [key, value] of formData.entries()) {
-                    console.log(`${key}: ${value}`);
+                    if (value == '') {
+                        console.log('Campo vacío: ' + key)
+                        Alerta.toast('error', 'Error: Campo (a) vacío (s)')
+                        return
+                    }
                 }
 
                 fetch('../../configurar/nuevaCompra.php', {
@@ -429,11 +460,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 modal_body.innerHTML = `<h2 class="mb-0 mt-0" id="titulo_modal">Calcular precio </h2>
                 <hr>
                     <div class="item form-group">
-                        <label class="col-form-label col-md-3 col-sm-3 " for="moneda">Moneda <span class="required">*</span>
+                        <label  for="moneda">Moneda 
                         </label>
                         <div class="col-md-9 col-sm-9 ">
                             <select id="moneda" class="form-control">
-                                <option value="">Seleccione</option>
+                                <option >Seleccione</option>
                                 <option value="bs">Bolívares</option>
                                 <option value="cop">Pesos</option>
                             </select>
@@ -441,7 +472,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>
 
                     <div class="item form-group">
-                        <label class="col-form-label col-md-3" for="tasa_proveedor">Tasa del proveedor<span class="required">*</span>
+                        <label class="form-label" for="tasa_proveedor">Tasa del proveedor
                         </label>
                         <div class="col-md-9 col-sm-9 ">
                             <input type="text" id="tasa_proveedor" class="form-control">
@@ -449,7 +480,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>
 
                     <div class="item form-group">
-                        <label class="col-form-label col-md-3" for="precio_proveedor">Precio<span class="required">*</span>
+                        <label class="form-label" for="precio_proveedor">Precio
                         </label>
                         <div class="col-md-9 col-sm-9 ">
                             <input type="text" id="precio_proveedor" class="form-control">
@@ -457,11 +488,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>
 
                     <div class="item form-group">
-                        <label class="col-form-label col-md-3 col-sm-3 " for="impuesto">Impuesto <span class="required">*</span>
+                        <label  for="impuesto">Impuesto 
                         </label>
                         <div class="col-md-9 col-sm-9 ">
                             <select id="impuesto" class="form-control">
-                                <option value="">Seleccione</option>
+                                <option >Seleccione</option>
                                 <option value="exento">Exento</option>
                                 <option value="iva">Iva (16%)</option>
                             </select>

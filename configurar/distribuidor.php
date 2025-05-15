@@ -1,6 +1,6 @@
 <?php
 require_once("configuracion.php");
-
+require_once('session.php');
 
 if (isset($_GET['accion'])) {
 
@@ -12,7 +12,7 @@ if (isset($_GET['accion'])) {
   $stmt = $conexion->prepare("UPDATE sistem SET tickets='$accion'");
   $stmt->execute();
   $stmt->close();
-  
+
   define('PAGINA_INICIO', '../publico/production/configuracion.php?accion=notificacion' . $accion . '');
   header('Location: ' . PAGINA_INICIO);
 }

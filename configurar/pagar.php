@@ -1,6 +1,6 @@
 <?php
 require_once("configuracion.php");
-
+require_once('session.php');
 $id = $_GET['order_id'];
 $pagoTipo = $_GET['pagoTipo'];
 $tipo = $_GET['tipo'];

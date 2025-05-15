@@ -1,8 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
+require_once('includes/requires.php');
 
 
 
@@ -30,28 +27,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-            $PesoDolar = $filaAlumnos['pesoDolar'];
-            $DolarBolivar = $filaAlumnos['DolarBolivar'];
-            $peso_bolivar = $filaAlumnos['peso_bolivar'];
-        }
-    }
-
-    $query2 = 'SELECT * FROM empresa WHERE id="1"';
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $stockCritico = $filaAlumnos2['stockCritico'];
-            $notificacionStockCritico = $filaAlumnos2['notificacionStockCritico'];
-            $distribuidor = $filaAlumnos2['distribuidor'];
-            $factura = $filaAlumnos2['factura'];
-        }
-    }
 
     $query2222222 = 'SELECT * FROM mail WHERE id="1"';
     $buscarAlumnos2222222 = $conexion->query($query2222222);
@@ -92,7 +67,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href='../build/css/custom.min.css' rel='stylesheet'>
 
         <script src='js/jquery.min.js'></script>
-        <script src='peticion.js'></script>
 
         <link rel='stylesheet' href='..//assets/AlertifyJS/css/alertify.min.css' />
         <link rel='stylesheet' href='..//assets/AlertifyJS/css/themes/semantic.min.css' />
@@ -133,7 +107,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>

@@ -3,15 +3,6 @@ require_once( 'lib/pdf/mpdf.php' );
 require_once('../../../configurar/configuracion.php'); 
 
 
-$query2 = "SELECT * FROM empresa WHERE id=1";
-$buscarAlumnos2 = $conexion->query( $query2 );
-if ( $buscarAlumnos2->num_rows > 0 ) {
-    while( $filaAlumnos2 = $buscarAlumnos2->fetch_assoc() ) {
-        $stockCritico = $filaAlumnos2['stockCritico'];
-        $nameempresa = $filaAlumnos2['emp'];
-    }
-
-}
 $query22222222 = "SELECT * FROM mail WHERE id=1";
 $buscarAlumnos22222222 = $conexion->query( $query22222222 );
 if ( $buscarAlumnos22222222->num_rows > 0 ) {
@@ -21,8 +12,6 @@ if ( $buscarAlumnos22222222->num_rows > 0 ) {
     }
 
 }
-
-
 
 
 $mesConsulta = date( 'Y-m' );
@@ -740,7 +729,7 @@ $html = '   <head>
 <h1>
 
 </h1>
-<p style="text-align:center"><span style="font-size:15px">'.$nameempresa.' - AVANCE DEL A&Ntilde;O '.date('Y').'</span><br>
+<p style="text-align:center"><span style="font-size:15px">AVANCE DEL A&Ntilde;O '.date('Y').'</span><br>
 Fecha del servidor: '.date("d/m/Y - h:i a").'<br>
 
 

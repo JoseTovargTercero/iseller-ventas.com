@@ -1,6 +1,6 @@
 <?php
 require_once("configuracion.php");
-
+require_once('session.php');
 if ($_SESSION["nivel"] != 1) {
     header("Location: ../index.php");
     exit;

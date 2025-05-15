@@ -1,6 +1,6 @@
 <?php
 require_once("../../configurar/configuracion.php");
-
+require_once('../../configurar/session.php');
 
 if(isset($_POST['metodos']) && $_POST['metodos'] == 2)
 { 

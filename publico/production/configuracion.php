@@ -1,10 +1,5 @@
 <?php
-
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
-
+require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1) {
@@ -31,28 +26,6 @@ if ($_SESSION['nivel'] == 1) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-            $PesoDolar = $filaAlumnos['pesoDolar'];
-            $DolarBolivar = $filaAlumnos['DolarBolivar'];
-            $peso_bolivar = $filaAlumnos['peso_bolivar'];
-        }
-    }
-
-    $query2 = 'SELECT * FROM empresa WHERE id="1"';
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $stockCritico = $filaAlumnos2['stockCritico'];
-            $notificacionStockCritico = $filaAlumnos2['notificacionStockCritico'];
-            $distribuidor = $filaAlumnos2['distribuidor'];
-            $factura = $filaAlumnos2['factura'];
-        }
-    }
 
     $query2222222 = 'SELECT * FROM mail WHERE id="1"';
     $buscarAlumnos2222222 = $conexion->query($query2222222);
@@ -178,9 +151,6 @@ if ($_SESSION['nivel'] == 1) {
         <?php require_once('includes/headers.php'); ?>
 
 
-        <script src='peticion.js'></script>
-        <script src=' .js'></script>
-
         <link rel='stylesheet' href='..//assets/AlertifyJS/css/alertify.min.css' />
         <link rel='stylesheet' href='..//assets/AlertifyJS/css/themes/semantic.min.css' />
         <script src='..//assets/AlertifyJS/alertify.min.js'></script>
@@ -206,14 +176,6 @@ if ($_SESSION['nivel'] == 1) {
             <body onload="mensaje()">
             </body>';
 
-                break;
-            case ('accionFactura'):
-                echo '<script>
-            function mensaje(){	
-			alertify.success("Se actualizo el método de registro de compras."); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
 
                 break;
 
@@ -265,7 +227,7 @@ if ($_SESSION['nivel'] == 1) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -318,43 +280,13 @@ if ($_SESSION['nivel'] == 1) {
                                     <div class='x_content'>
 
 
-                                        <div class="col-lg-3" <?php echo $permisos; ?> style="text-align: right; margin-top: 10px">Nombre de su negocio.</div>
-                                        <div class="col-lg-9" <?php echo $permisos; ?>>
 
 
-                                            <form action='../../configurar/empresa.php' method='post'>
-
-
-                                                <input type='text' class='form-control col-lg-4' name='empresa' id='empresa' value="<?php echo $nombreEmpresa; ?>">
-                                                <button class='btn btn-success '>Establecer</button>
-
-                                            </form>
-
-
-
-
-                                            Aparecerá en los reportes y será de utilidad para diferenciar entre sucursales.
-                                            <br> <br> <br>
-
-                                        </div>
-
-
-                                        <div class="col-lg-3" <?php echo $permisos; ?> style="text-align: right; margin-top: 10px">Registro de Compras con facturas.</div>
-                                        <div class="col-lg-9" <?php echo $permisos; ?>> <?php
-                                                                                        if ($factura == 0) {
-                                                                                            echo '<a href="../../configurar/vaciarFactura.php?tipo=configurar&accion=1" class=""><img src="images/activado-no.png" height="" alt=""></a>';
-                                                                                        } else {
-                                                                                            echo '<a href="../../configurar/vaciarFactura.php?tipo=configurar&accion=0" class=""><img src="images/activado.png" height="" alt=""></a>';
-                                                                                        }
-                                                                                        ?>
-                                            <br> <small><br></small> Mientras el registro de compras con factura este desactivado, la nuevas compras se agregaran de la forma clásica.<br> <br> <br>
-
-                                        </div>
 
 
                                         <div class="col-lg-3" <?php echo $permisos; ?> style="text-align: right; margin-top: 10px">Notificaciones de stock crítico. </div>
                                         <div class="col-lg-9" <?php echo $permisos; ?>> <?php
-                                                                                        if ($notificacionStockCritico == 0) {
+                                                                                        if ($notificacionStockCritico = 0) {
                                                                                             echo '<a href="../../configurar/empresa.php?accion=activar" class=""><img src="images/activado-no.png" height="" alt=""></a>';
                                                                                         } else {
                                                                                             echo '<a href="../../configurar/empresa.php?accion=desactivar" class=""><img src="images/activado.png" height="" alt=""></a>';
@@ -383,26 +315,6 @@ if ($_SESSION['nivel'] == 1) {
                                         </div>
 
 
-                                        <div class="col-lg-3" <?php echo $permisos; ?> style="text-align: right; margin-top: 10px"><br>Correo electrónico. </div>
-                                        <div class="col-lg-9" <?php echo $permisos; ?>> <br>
-
-
-
-                                            <?php
-                                            if ($correo == "") {
-                                                echo ' <a href="nuevoCorreo.php" class="btn btn-success ">Agregar Correo</a>    ';
-                                            } else {
-                                                if ($cierre == 0 && $_SESSION['nivel'] == 1) {
-                                                    echo '<a href="../../configurar/notificacionReporte.php?accion2=activar" class=""><img src="images/activado-no.png" height="" alt=""></a>';
-                                                } else {
-                                                    echo '<a href="../../configurar/notificacionReporte.php?accion2=desactivar" class=""><img src="images/activado.png" height="" alt=""></a>';
-                                                }
-                                            }
-                                            ?>
-
-                                            <br> <small><br></small> El correo electrónico será usado para enviarle reportes de ventas solicitados por usuarios de nivel estándar.<br> <br> <br>
-                                        </div>
-
                                         <div class="col-lg-12">
                                             <hr>
                                             <br>
@@ -412,7 +324,7 @@ if ($_SESSION['nivel'] == 1) {
                                         <div class="col-lg-9" <?php echo $permisos; ?>>
 
                                             <?php
-                                            if ($tickets == 0) {
+                                            if ($tickets = 1) {
                                                 echo '<a href="../../configurar/distribuidor.php?accion=activar" class=""><img src="images/activado-no.png" height="" alt=""></a>';
                                             } else {
                                                 echo '<a href="../../configurar/distribuidor.php?accion=desactivar" class=""><img src="images/activado.png" height="" alt=""></a>';

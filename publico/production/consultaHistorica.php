@@ -1,9 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
-
-
+require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -22,80 +18,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
 
-    $query = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-
-            $PesoDolar = $filaAlumnos['pesoDolar'];
-
-            $dolarBolivar = $filaAlumnos['DolarBolivar'];
-        }
-    }
-    $query2 = 'SELECT * FROM empresa';
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-            $stockCritico = $filaAlumnos2['stockCritico'];
-        }
-    }
-
-
     if ($_SESSION['nivel'] == 2) {
         $permisos = "hidden";
     } else {
         $permisos = "";
     }
 
-    // initializ shopping cart class
-    include 'la-carta.php';
-    $cart = new Cart;
-
-    $today = date('Y-m-d');
-
-    $query00 = "SELECT * FROM orden WHERE modified='$today' AND status='1'";
-    $buscarAlumnos00 = $conexion->query($query00);
-    if ($buscarAlumnos00->num_rows > 0) {
-        while ($filaAlumnos00 = $buscarAlumnos00->fetch_assoc()) {
-            $totalVentas += $filaAlumnos00['status'];
-            $total += $filaAlumnos00['total_price'];
-        }
-    }
-    $query000 = "SELECT * FROM orden WHERE modified='$today' AND status='2'";
-    $buscarAlumnos000 = $conexion->query($query000);
-    if ($buscarAlumnos000->num_rows > 0) {
-        while ($filaAlumnos000 = $buscarAlumnos000->fetch_assoc()) {
-            $totalCreditos += $filaAlumnos000['status'];
-            $totalCreditosValor += $filaAlumnos000['total_price'];
-        }
-    }
-
-    $query0000 = "SELECT * FROM orden WHERE modified='$today'";
-    $buscarAlumnos0000 = $conexion->query($query0000);
-    if ($buscarAlumnos0000->num_rows > 0) {
-        while ($filaAlumnos0000 = $buscarAlumnos0000->fetch_assoc()) {
-            $ordenId = $filaAlumnos0000['id'];
-
-            $query00000 = "SELECT * FROM orden_articulos WHERE order_id='$ordenId'";
-            $buscarAlumnos00000 = $conexion->query($query00000);
-            if ($buscarAlumnos00000->num_rows > 0) {
-                while ($filaAlumnos00000 = $buscarAlumnos00000->fetch_assoc()) {
-                    $despachados += $filaAlumnos00000['quantity'];
-                }
-            }
-        }
-    }
-    $cantidadCritica = contar("SELECT COUNT(*) FROM productos WHERE stock<='$stockCritico' AND activo='0'");
-
-
-    $totalCreditos = $totalCreditos / 2;
-    if ($totalCreditosValor == '') {
-        $totalCreditosValor = '0';
-    }
-    if ($total == '') {
-        $total = '0';
-    }
 ?>
     <!DOCTYPE html>
     <html lang='es'>
@@ -112,9 +40,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
         <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-
-        <script src='peticion.js'></script>
-        <script src='peticion_producto.js'></script>
 
         <?php
         @$accion = $_GET['accion'];
@@ -169,7 +94,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -193,7 +118,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <h4>Consultas</h4>
                                 <p style="margin-top: -10px;">Reportes y consultas</p>
                             </div>
-                            <div class='col-lg-6' <?php echo $display0 ?>>
+                            <div class='col-lg-6'>
                                 <div class='x_panel alto'>
                                     <div class='x_title'>
                                         <h2>Reporte de cierre de jornada. <?php echo date('d/m/Y') . ' - ' . date('h:i a');

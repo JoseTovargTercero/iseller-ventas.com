@@ -1,5 +1,6 @@
 <?php
 require_once 'configuracion.php'; // tu conexión a BD
+require_once('session.php');
 require_once '_tasas_cambio.php'; // la clase que creamos
 
 

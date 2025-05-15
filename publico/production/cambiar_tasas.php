@@ -1,7 +1,5 @@
 <?php
-require_once('../../configurar/configuracion.php');
-require_once('includes/header.php');
-require_once('includes/menu.php');
+require_once('includes/requires.php');
 
 
 
@@ -21,32 +19,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
     $nivelUsuario = $_SESSION['nivel'];
 
-
-
-
-
-
-    $query2 = "SELECT * FROM empresa";
-    $buscarAlumnos2 = $conexion->query($query2);
-    if ($buscarAlumnos2->num_rows > 0) {
-        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-            $nombreEmpresa = $filaAlumnos2['emp'];
-        }
-    }
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
-    }
-
-    $query2255 = "SELECT * FROM cambio WHERE id='1'";
-    $buscarAlumnos225 = $conexion->query($query2255);
-    if ($buscarAlumnos225->num_rows > 0) {
-        while ($filaAlumnos225 = $buscarAlumnos225->fetch_assoc()) {
-            $pesoDolar = $filaAlumnos225['pesoDolar'];
-            $peso_bolivar = $filaAlumnos225['peso_bolivar'];
-            $bolivar_peso = $filaAlumnos225['bolivar_peso'];
-            $bsDolar = $filaAlumnos225['DolarBolivar'];
-        }
     }
 
 
@@ -88,7 +63,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class='left_col scroll-view'>
                         <div class='navbar nav_title' style='border: 0;'>
                             <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:147px; opacity: 0.8'> <span>
+                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
                                     <img style='max-width:140px'><span> </a>
                         </div>
                         <div class='clearfix'></div>
@@ -122,17 +97,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <div class='x_content'>
 
                                         <?php
-                                        $query = "SELECT * FROM cambio WHERE id='1'";
-                                        $buscarAlumnos = $conexion->query($query);
-                                        if ($buscarAlumnos->num_rows > 0) {
-                                            while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-                                                $DolarBolivar = $filaAlumnos['DolarBolivar'];
-                                                $pesoDolar = $filaAlumnos['pesoDolar'];
-                                                $tipo_tasa_bs = $filaAlumnos['tipo_tasa_bs'];
-                                                $margen_neto = $filaAlumnos['margen_neto'];
-                                                $redondeo = $filaAlumnos['redondeo'];
-                                            }
-                                        }
 
                                         if ($redondeo == 0) {
                                             $options_2 = '
@@ -199,7 +163,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                             <div class="mb-3" id="section_tasa_bs" style="<?php echo $display_tasa ?>">
                                                 <label class="form-label">Valor del cambio</label>
-                                                <input value="<?php echo $DolarBolivar ?>" name="bolivar" class="form-control">
+                                                <input value="<?php echo $dolarBolivar ?>" name="bolivar" class="form-control">
                                             </div>
 
                                             <div class="mb-3" id="section_margen" style="<?php echo $display_marg ?>">
@@ -290,7 +254,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         "Muestra el precio del producto en dólares estadounidenses."
                                     ],
                                     "precio_peso_visible": [
-                                        "Precio Peso",
+                                        "Dolar a Pesos",
                                         "Pesos",
                                         "Muestra el precio en pesos colombianos, calculado a partir del valor en dólares (Dólar/Peso)."
                                     ],

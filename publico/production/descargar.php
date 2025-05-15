@@ -1,4 +1,6 @@
 <?php
+require_once('../../configurar/session.php');
+
  $remote_file_url = 'https://i-seller.000webhostapp.com/AC-MT.zip';
  $local_file = 'AC-MT.zip';
  $copy = copy($remote_file_url, $local_file);

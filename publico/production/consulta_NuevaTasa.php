@@ -1,13 +1,14 @@
 <?php
 require_once("../../configurar/configuracion.php");
+require_once('../../configurar/session.php');
 
 
 ///////// LO QUE OCURRE AL TECLEAR SOBRE EL INPUT DE CI ////////////
 
-if(isset($_POST['rep_codigo']) && $_POST['rep_codigo'] == "dolares"){ 
+if (isset($_POST['rep_codigo']) && $_POST['rep_codigo'] == "dolares") {
 
 
-        $tabla_codigo= "
+    $tabla_codigo = "
         <div class='item form-group'>
         <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Valor de cambio <span class='required'>*</span>
         </label>
@@ -17,9 +18,8 @@ if(isset($_POST['rep_codigo']) && $_POST['rep_codigo'] == "dolares"){
     </div>
         
         ";
-        
-}else{
-        $tabla_codigo= "
+} else {
+    $tabla_codigo = "
         <div class='item form-group'>
                                                 <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Recepción <span class='required'>*</span>
                                                 </label>
@@ -39,9 +39,6 @@ if(isset($_POST['rep_codigo']) && $_POST['rep_codigo'] == "dolares"){
         
         
         ";
-	}
+}
 
 echo $tabla_codigo;
-?>
-
-
