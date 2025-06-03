@@ -1,31 +1,7 @@
 <?php
 require_once('includes/requires.php');
-
-
-
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-
-
-
     $topnav = topnav();
-
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Ventas == 0) {
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
-    if ($_SESSION['validate'] != 'ok') {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-
-
 
 ?>
     <!DOCTYPE html>
@@ -45,17 +21,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link href='../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css' rel='stylesheet'>
         <!-- Custom Theme Style -->
 
-        <?php
-
-        if ($hayunError == "SI") {
-            echo '<script>
-            function mensaje(){	
-			alertify.error("Error en la fecha consultada.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-        }
-        ?>
 
 
     </head>
@@ -117,22 +82,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <br>
                                                 <p style="margin-left: 20px">
                                                     <?php
-                                                    $id = $_GET['id'];
+                                                    $id = $_GET['id'] ?? null;
 
-                                                    $query77 = "SELECT * FROM orden WHERE id='$id'";
-                                                    $buscarAlumnos77 = $conexion->query($query77);
-                                                    if ($buscarAlumnos77->num_rows > 0) {
-                                                        $contador = 1;
-                                                        while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
-                                                            echo 'Despachado el <strong>' . $filaAlumnos77['created'] . '</strong>';
-                                                            if ($filaAlumnos77['status'] == '4') {
-                                                                echo '<br>Esta venta se realizo bajo la modalidad "al mayor" y se le aplico un descuento del <strong>' . number_format($filaAlumnos77['descontado'], '2', ',', '.') . '%</strong>';
+                                                    if ($id) {
+                                                        $stmt = $conexion->prepare("SELECT * FROM orden WHERE id = ?");
+                                                        $stmt->bind_param("i", $id);
+                                                        $stmt->execute();
+                                                        $result = $stmt->get_result();
+
+                                                        if ($result->num_rows > 0) {
+                                                            while ($row = $result->fetch_assoc()) {
+                                                                echo 'Despachado el <strong>' . htmlspecialchars($row['created']) . '</strong>';
+
+                                                                if ($row['status'] == '4') {
+                                                                    echo '<br>Esta venta se realizó bajo la modalidad "al mayor" y se le aplicó un descuento del <strong>' . number_format($row['descontado'], 2, ',', '.') . '%</strong>';
+                                                                }
+
+                                                                echo '<br>Valor de la venta: <strong>' . number_format($row['total_price'], 2, ',', '.') . '$</strong>';
                                                             }
-
-                                                            echo '<br>Valor de la venta: <strong>' . number_format($filaAlumnos77['total_price'], '2', ',', '.') . '$</strong>';
+                                                        } else {
+                                                            echo 'No se encontró la orden.';
                                                         }
+                                                    } else {
+                                                        echo 'ID no proporcionado.';
                                                     }
                                                     ?>
+
                                                 </p>
 
                                                 <div class='card-box table-responsive' style="margin-top: 20px;">
@@ -151,129 +126,102 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                         <tbody>
                                                             <?php
+                                                            $pagoTipos = [
+                                                                '1' => 'Punto',
+                                                                '2' => 'Pago Movil',
+                                                                '3' => 'Transferencia',
+                                                                '4' => 'BS Efectivo',
+                                                                '5' => 'Dolares',
+                                                                '6' => 'Pesos',
+                                                                '7' => 'Biopago',
+                                                                '8' => 'Fraccionado'
+                                                            ];
 
-                                                            $query77 = "SELECT * FROM orden WHERE id='$id'";
-                                                            $buscarAlumnos77 = $conexion->query($query77);
-                                                            if ($buscarAlumnos77->num_rows > 0) {
+                                                            // Obtener orden
+                                                            $stmtOrden = $conexion->prepare("SELECT * FROM orden WHERE id = ?");
+                                                            $stmtOrden->bind_param("i", $id);
+                                                            $stmtOrden->execute();
+                                                            $resultOrden = $stmtOrden->get_result();
+
+                                                            if ($resultOrden->num_rows > 0) {
                                                                 $contador = 1;
-                                                                while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
-                                                                    $descuentoDel = $filaAlumnos77['descontado'];
-                                                                    $tipoV  = $filaAlumnos77['status'];
-                                                                    $orderid = $filaAlumnos77['id'];
-                                                                    $tipopago = $filaAlumnos77['tipoPago'];
-                                                                    $users = $filaAlumnos77['customer_id'];
+                                                                while ($orden = $resultOrden->fetch_assoc()) {
+                                                                    $descuentoDel = $orden['descontado'];
+                                                                    $tipoV = $orden['status'];
+                                                                    $orderid = $orden['id'];
+                                                                    $tipopago = $orden['tipoPago'];
+                                                                    $userId = $orden['customer_id'];
 
+                                                                    // Obtener nombre del usuario
+                                                                    $stmtUsuario = $conexion->prepare("SELECT nombre FROM usuarios WHERE id = ?");
+                                                                    $stmtUsuario->bind_param("i", $userId);
+                                                                    $stmtUsuario->execute();
+                                                                    $resultUsuario = $stmtUsuario->get_result();
+                                                                    $usuario1 = $resultUsuario->fetch_assoc()['nombre'] ?? 'Desconocido';
 
-                                                                    switch ($filaAlumnos77['tipoPago']) {
+                                                                    echo '<span style="margin-left: 21px;">Usuario: <strong>' . htmlspecialchars($usuario1) . '</strong><br><br></span>';
 
-                                                                        case ('1'):
-                                                                            $pagoPor = 'Punto';
-                                                                            break;
+                                                                    // Obtener productos de la orden
+                                                                    $stmtArticulos = $conexion->prepare("SELECT * FROM orden_articulos WHERE order_id = ?");
+                                                                    $stmtArticulos->bind_param("i", $orderid);
+                                                                    $stmtArticulos->execute();
+                                                                    $resultArticulos = $stmtArticulos->get_result();
 
-                                                                        case ('2'):
-                                                                            $pagoPor = 'Pago Movil';
-                                                                            break;
+                                                                    while ($articulo = $resultArticulos->fetch_assoc()) {
+                                                                        $productoId = $articulo['product_id'];
+                                                                        $cantidad = $articulo['quantity'];
+                                                                        $precioDolar = $articulo['precio_venta_dolar'];
+                                                                        $precioBs = $articulo['precio_venta_bs'];
+                                                                        $precioCop = $articulo['precio_venta_cop'];
 
-                                                                        case ('3'):
-                                                                            $pagoPor = 'Transferencia';
-                                                                            break;
+                                                                        // Obtener nombre del producto
+                                                                        $stmtProducto = $conexion->prepare("SELECT nombre FROM productos WHERE id = ?");
+                                                                        $stmtProducto->bind_param("i", $productoId);
+                                                                        $stmtProducto->execute();
+                                                                        $resultProducto = $stmtProducto->get_result();
+                                                                        $nombreProducto = $resultProducto->fetch_assoc()['nombre'] ?? 'Producto desconocido';
 
-                                                                        case ('4'):
-                                                                            $pagoPor = 'BS Efectivo';
-                                                                            break;
-
-                                                                        case ('5'):
-                                                                            $pagoPor = 'Dolares';
-                                                                            break;
-
-                                                                        case ('6'):
-                                                                            $pagoPor = 'Pesos';
-                                                                            break;
-                                                                        case ('7'):
-                                                                            $pagoPor = 'Biopago';
-                                                                            break;
-                                                                        case ('8'):
-                                                                            $pagoPor = 'Fraccionado';
-                                                                            break;
-                                                                    }
-
-
-                                                                    $query999999999 = "SELECT * FROM usuarios WHERE id='$users'";
-                                                                    $buscarAlumnos999999999 = $conexion->query($query999999999);
-                                                                    if ($buscarAlumnos999999999->num_rows > 0) {
-                                                                        while ($filaAlumnos999999999 = $buscarAlumnos999999999->fetch_assoc()) {
-                                                                            $usuario1 = $filaAlumnos999999999['nombre'];
+                                                                        // Aplicar descuento si aplica
+                                                                        if ($tipoV == 4) {
+                                                                            $precioDescontado = $precioDolar - ($precioDolar * $descuentoDel / 100);
+                                                                            $precioFinal = $precioDescontado * $cantidad;
+                                                                        } else {
+                                                                            $precioFinal = $precioDolar * $cantidad;
                                                                         }
-                                                                    }
 
-                                                                    echo '<span style="margin-left: 21px; ">Usuario: <strong>' . $usuario1 . '</strong><br><br></span>';
-
-
-
-                                                                    $query7E = $conexion->query("SELECT * FROM orden_articulos WHERE order_id='$orderid' ");
-                                                                    if ($query7E->num_rows > 0) {
-
-                                                                        while ($row7E = $query7E->fetch_assoc()) {
-                                                                            $producto  = $row7E['product_id'];
-                                                                            $productoquanty  = $row7E['quantity'];
-                                                                            $precioP = $row7E['precio_venta_dolar'];
-                                                                            $precioFinal = $precioP * $productoquanty;
-                                                                            $precio_venta_dolar = $row7E['precio_venta_dolar'];
-                                                                            $precio_venta_bs = $row7E['precio_venta_bs'];
-                                                                            $precio_venta_cop = $row7E['precio_venta_cop'];
-
-
-                                                                            $query9999999999 = "SELECT * FROM productos WHERE id='$producto'";
-                                                                            $buscarAlumnos9999999999 = $conexion->query($query9999999999);
-                                                                            if ($buscarAlumnos9999999999->num_rows > 0) {
-                                                                                while ($filaAlumnos9999999999 = $buscarAlumnos9999999999->fetch_assoc()) {
-
-
-                                                                                    if ($tipoV = 4) {
-                                                                                        $precioDescontado = $precioP - ($precioP * $descuentoDel / 100);
-                                                                                        $precioDescontado = $precioDescontado;
-                                                                                        $precioFinal = $precioDescontado * $productoquanty;
-                                                                                    } else {
-                                                                                        $precioDescontado = 'No aplica';
-                                                                                    }
-
-
-
-
-                                                                                    if ($tipopago == '1' || $tipopago == '2' || $tipopago == '3' || $tipopago == '4' || $tipopago == '7') {
-                                                                                        // Bolivar...
-                                                                                        $precioFinalMoneda = $precio_venta_bs * $productoquanty;
-                                                                                        $moneda = '<small>BS</small>';
-                                                                                    } elseif ($tipopago == '5') {
-                                                                                        // Dolar...
-                                                                                        $precioFinalMoneda = $precio_venta_dolar * $productoquanty;
-                                                                                        $moneda = '<small>$</small>';
-                                                                                    } else {
-                                                                                        // pesos...
-                                                                                        $precioFinalMoneda = $precio_venta_cop * $productoquanty;
-                                                                                        $moneda = '<small>COP</small>';
-                                                                                    }
-
-
-
-
-                                                                                    echo '
-                                                                                   <tr class="even pointer">
-                                                                                  <td class=" ">' . $contador++ . '</td>
-                                                                                  <td>' . $pagoPor . '</td>
-                                                                                  <td>' . $filaAlumnos9999999999['nombre'] . '</td>
-                                                                                  <td>' . $productoquanty . '</td>
-                                                                                  <td>$' . number_format($precioFinal, '2', ',', '.') . '</td>
-                                                                                  <td>' . number_format($precioFinalMoneda, '2', ',', '.') . ' ' . $moneda . '</td>
-                                                                                  </tr>';
-                                                                                }
-                                                                            }
+                                                                        // Calcular el precio en la moneda correspondiente
+                                                                        switch ($tipopago) {
+                                                                            case '1':
+                                                                            case '2':
+                                                                            case '3':
+                                                                            case '4':
+                                                                            case '7':
+                                                                                $precioFinalMoneda = $precioBs * $cantidad;
+                                                                                $moneda = 'BS';
+                                                                                break;
+                                                                            case '5':
+                                                                                $precioFinalMoneda = $precioDolar * $cantidad;
+                                                                                $moneda = '$';
+                                                                                break;
+                                                                            default:
+                                                                                $precioFinalMoneda = $precioCop * $cantidad;
+                                                                                $moneda = 'COP';
                                                                         }
+
+                                                                        echo '
+                                                                        <tr class="even pointer">
+                                                                            <td>' . $contador++ . '</td>
+                                                                            <td>' . ($pagoTipos[$tipopago] ?? 'PENDIENTE') . '</td>
+                                                                            <td>' . htmlspecialchars($nombreProducto) . '</td>
+                                                                            <td>' . $cantidad . '</td>
+                                                                            <td>$' . number_format($precioFinal, 2, ',', '.') . '</td>
+                                                                            <td>' . number_format($precioFinalMoneda, 2, ',', '.') . ' <small>' . $moneda . '</small></td>
+                                                                        </tr>';
                                                                     }
                                                                 }
                                                             }
-
                                                             ?>
+
                                                         </tbody>
                                                     </table>
                                                 </div>

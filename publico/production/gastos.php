@@ -4,15 +4,7 @@ require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Inicio == 0) {
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
+
     $topnav = topnav();
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];

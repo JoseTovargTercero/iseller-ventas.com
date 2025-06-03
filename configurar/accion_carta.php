@@ -10,14 +10,11 @@ require("_tasas_cambio.php");
 $desscontado = '';
 $tickets = 0;
 
-$id_sucursal = $_SESSION["id_sucursal"];
+$id_sucursal = $_SESSION["sucursal"];
 $bss_id = $_SESSION["bss_id"];
 
 // Obtener configuración del sistema
-$result = $conexion->query("SELECT tickets FROM sistem");
-if ($result && $row = $result->fetch_assoc()) {
-    $tickets = $row['tickets'];
-}
+$tickets = 0;
 
 // Funciones auxiliares
 function diaSemana($fecha)
@@ -56,10 +53,10 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
             break;
 
         default:
-            header('Location: index.php');
+            echo json_encode(['status' => false, 'data' => 'No se ha especificado una acción']);
     }
 } else {
-    header('Location: index.php');
+    echo json_encode(['status' => false, 'data' => 'No se ha especificado una acción']);
 }
 
 // -----------------------------------------------------------
@@ -89,8 +86,8 @@ function agregarAlCarrito($conexion, $cart)
         'id' => $producto['id'],
         'name' => $producto['nombre'],
         'price_C' => $valorUnidad,
-        'price_C_Bs' => $valorUnidad * $pesoDolar,
-        'price_C_Cop' => $valorUnidad * $dolarBolivar,
+        'price_C_Bs' => $valorUnidad * $dolarBolivar,
+        'price_C_Cop' => $valorUnidad * $pesoDolar,
         'price' => $dolarventa,
         'pricePeso' => $pesoventa,
         'priceBolivar' => $bolivarventa,
@@ -113,7 +110,7 @@ function actualizarItemCarrito($cart)
 function eliminarItemCarrito($cart)
 {
     $cart->remove($_REQUEST['id']);
-    header('Location: ventas.php');
+    echo json_encode(['status' => true, 'data' => 'Eliminado correctamente']);
     exit;
 }
 
@@ -121,41 +118,34 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
 {
     global $id_sucursal, $bss_id;
     if ($cart->total_items() <= 0 || empty($_SESSION['id'])) {
-        header('Location: index.php');
+        echo json_encode(['status' => false, 'data' => 'No hay productos en el carrito']);
         return;
     }
 
     // Datos base
-    $fechaVenta = $_GET['fechaVenta'] ?? date('Y-m-d');
+    $fechaVenta = date('Y-m-d');
     $compraTipo = $_GET['compraTipo'] ?? '1';
     $pagoTipo = $_GET['pagoTipo'] ?? '';
-    $precioBs = $_GET['valorFinalBs'];
-    $precioCop = formatPeso($_GET['valorFinalCop']);
-    $valorFinalVenta = $_GET['valorFinalVenta'];
-    $statusV = 1;
-    $desscontado = '';
-
-    if (isset($_GET['statusV'])) {
-        $statusV = 3;
-        $valorFinalVenta = $cart->total();
-    } elseif ($compraTipo == '4') {
-        $statusV = 4;
-        $desscontado = $_SESSION['descontado'] ?? '';
-        unset($_SESSION['descontado']);
+    $precioBs = $_GET['valorFinalBs'] ?? 0;
+    $precioCop = formatPeso($_GET['valorFinalCop'] ?? 0);
+    $valorFinalVenta = $_GET['valorFinalVenta'] ?? 0;
+    $statusV = $_GET['statusV'] ?? 1;
+    if ($tipo == 'credito') {
+        $statusV = 2;
     }
+    $valorFinalVenta = $cart->total();
 
-    $mes = date('Y-m', strtotime($fechaVenta));
-    $ano = date('Y', strtotime($fechaVenta));
-    $semana = date('Y', strtotime($fechaVenta)) . '-' . semanaAno($fechaVenta);
-    $dia = diaSemana($fechaVenta);
+    $mes = date('Y-m');
+    $ano = date('Y');
+    $semana =  date('Y-W');
+    $dia = date('N');
 
     // Registrar orden
     $stmt = $conexion->prepare("
-        INSERT INTO orden (status, customer_id, total_price, created, modified, fecha, semana, ano, 
-        total_price_bs, total_price_cop, tipoPago, dia, descontado, isellerAct, id_sucursal, bss_id)
-        VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        INSERT INTO orden (status, customer_id, total_price, created, modified, fecha, semana, ano, total_price_bs, total_price_cop, tipoPago, dia, id_sucursal, bss_id)
+        VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
-    $stmt->bind_param("iisssssddsisii", $statusV, $_SESSION['id'], $valorFinalVenta, $fechaVenta, $fechaVenta, $mes, $ano, $precioBs, $precioCop, $pagoTipo, $dia, $desscontado, $id_sucursal, $bss_id);
+    $stmt->bind_param("iisssssddsiii", $statusV, $_SESSION['id'], $valorFinalVenta, $fechaVenta,  $mes, $semana, $ano, $precioBs, $precioCop, $pagoTipo, $dia, $id_sucursal, $bss_id);
     $stmt->execute();
     $orderID = $stmt->insert_id;
     $stmt->close();
@@ -163,55 +153,34 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
     // Guardar artículos
     guardarArticulosOrden($conexion, $cart, $orderID);
 
+    $msg = 'Venta realizada con éxito';
+
     // Si es crédito, guardar cliente
     if ($tipo === 'credito') {
         $nombreC = $_GET['nombreC'];
-        $cedula = $_GET['cedula'];
-        $telefono = $_GET['telefono'];
-        $nombreNego = $_GET['nombreNego'];
-        $direccion = $_GET['direccion'];
 
         $stmtC = $conexion->prepare("
-            INSERT INTO creditos (order_id, total_price, cliente, cedula, telefono, negocio, direccion, tipoCompra, estado)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 2)
+            INSERT INTO creditos (order_id, total_price, negocio, tipoCompra, bss_id, sucursal_id)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
-        $stmtC->bind_param("dsssssss", $orderID, $valorFinalVenta, $nombreC, $cedula, $telefono, $nombreNego, $direccion, $compraTipo);
+        $stmtC->bind_param("dsssii", $orderID, $valorFinalVenta, $nombreC, $compraTipo, $bss_id, $id_sucursal);
         $stmtC->execute();
         $stmtC->close();
+
+        $msg = 'Crédito otorgado éxito';
     }
 
-    // Si es pago fraccionado
-    if ($pagoTipo == 8) {
-        $stmtF = $conexion->prepare("
-            INSERT INTO fracciones (id_order, punto, pagoMovil, transferencia, bioPago, efectivo, pesos, dolares, ValorPesos, ValorDolar)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmtF->bind_param(
-            "isssssssss",
-            $orderID,
-            $_GET['punto'],
-            $_GET['pagoMovil'],
-            $_GET['transferencia'],
-            $_GET['bioPago'],
-            $_GET['efectivo'],
-            $_GET['pesos'],
-            $_GET['dolares'],
-            $GLOBALS['pesoDolar'],
-            $GLOBALS['dolarBolivar']
-        );
-        $stmtF->execute();
-        $stmtF->close();
-    }
+
 
     $cart->destroy();
     $accion = ($statusV == 3) ? "descuento" : ($tipo == "credito" ? "credito" : "vendido");
 
     // Redirigir
     if ($tickets == 0) {
-        header("Location: ../publico/production/ventas.php?id=$orderID&accion=$accion");
+        echo json_encode(['status' => true, 'data' => $msg, 'id' => $orderID]);
     } else {
-        $qty = count($cart->contents());
-        header("Location: ../publico/production/ticket.php?id=$orderID&accion=$accion&qty=$qty");
+        // $qty = count($cart->contents());
+        // header("Location: ../publico/production/ticket.php?id=$orderID&accion=$accion&qty=$qty");
     }
     exit;
 }

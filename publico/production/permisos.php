@@ -2,108 +2,14 @@
 require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1) {
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-    }
-    if ($_SESSION["validate"] != "ok") {
+    $topnav = topnav();
+
+
+
+    if ($_SESSION["nivel"] != 1) {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
-    $topnav = topnav();
-
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-
-
-    $acciones = [
-        'activar' => '1',
-        'desactivar' => '0',
-        'activarG' => [
-            'Inicio' => ['Inicio', 'Clientes'],
-            'Ventas' => ['Ventas', 'VentasSemana', 'VentasMes'],
-            'Nuevo_Producto' => ['Nueva_Compra', 'Nuevo_Producto'],
-            'Control_Stock' => ['Creditos', 'Dejado_Ganar', 'Listado_Productos']
-        ],
-        'desactivarG' => [
-            'Inicio' => ['Inicio', 'Clientes'],
-            'Ventas' => ['Ventas', 'VentasSemana', 'VentasMes'],
-            'Nuevo_Producto' => ['Nueva_Compra', 'Nuevo_Producto'],
-            'Control_Stock' => ['Creditos', 'Dejado_Ganar', 'Listado_Productos']
-        ]
-    ];
-
-    // Campos individuales
-    $campos_individuales = [
-        'Inicio',
-        'Ventas',
-        'VentasSemana',
-        'VentasMes',
-        'Clientes',
-        'Nueva_Compra',
-        'Nuevo_Producto',
-        'Creditos',
-        'Dejado_Ganar',
-        'Listado_Productos',
-        'DolarToday',
-        'Vender',
-        'Consultas'
-    ];
-
-    // Procesar activar/desactivar
-    foreach (['activar', 'desactivar'] as $accion) {
-        if (!empty($_GET[$accion]) && in_array($_GET[$accion], $campos_individuales)) {
-            $campo = $_GET[$accion];
-            $valor = $acciones[$accion];
-            $stmt = $conexion->prepare("UPDATE acces SET $campo=? WHERE id='1'");
-            $stmt->bind_param('s', $valor);
-            $stmt->execute();
-            $stmt->close();
-        }
-    }
-
-    // Procesar activarG/desactivarG (múltiples campos)
-    foreach (['activarG', 'desactivarG'] as $accion) {
-        if (!empty($_GET[$accion]) && isset($acciones[$accion][$_GET[$accion]])) {
-            $campos = $acciones[$accion][$_GET[$accion]];
-            $valor = ($accion === 'activarG') ? '1' : '0';
-
-            $sets = implode('=?, ', $campos) . '=?';
-            $stmt = $conexion->prepare("UPDATE acces SET $sets WHERE id='1'");
-
-            $params = array_fill(0, count($campos), $valor);
-            $stmt->bind_param(str_repeat('s', count($params)), ...$params);
-
-            $stmt->execute();
-            $stmt->close();
-        }
-    }
-
-
-
-
-    $query222 = 'SELECT * FROM acces WHERE id="1"';
-    $buscarAlumnos222 = $conexion->query($query222);
-    if ($buscarAlumnos222->num_rows > 0) {
-        while ($filaAlumnos222 = $buscarAlumnos222->fetch_assoc()) {
-            $Inicio = $filaAlumnos222['Inicio'];
-            $Ventas = $filaAlumnos222['Ventas'];
-            $VentasSemana = $filaAlumnos222['ventasSemana'];
-            $VentasMes = $filaAlumnos222['ventasMes'];
-            $Clientes = $filaAlumnos222['Clientes'];
-            $Nueva_Compra = $filaAlumnos222['Nueva_Compra'];
-            $Nuevo_Producto = $filaAlumnos222['Nuevo_Producto'];
-            $Creditos = $filaAlumnos222['Creditos'];
-            $Dejado_Ganar = $filaAlumnos222['Dejado_Ganar'];
-            $Listado_Productos = $filaAlumnos222['Listado_Productos'];
-            $DolarToday = $filaAlumnos222['DolarToday'];
-            $Vender = $filaAlumnos222['Vender'];
-            $Consultas = $filaAlumnos222['Consultas'];
-        }
-    }
-
-
 
 
 
@@ -113,75 +19,43 @@ if ($_SESSION['nivel'] == 1) {
     <html lang='es'>
 
     <head>
-
-
-        <title>Usuarios </title>
-
+        <title>Permisos de usuarios </title>
         <?php require_once('includes/headers.php'); ?>
+        <style>
+            .avtar.avtar-xs {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+                border-radius: 2px;
+            }
 
+            .btn-light-success {
+                background: #e8fdf8;
+                color: #1de9b6;
+                border-color: #e8fdf8;
+            }
 
-        <?php
-        @$accion = $_GET['accion'];
+            .btn-light-danger {
+                background: #feeceb;
+                color: #f44236;
+                border-color: #feeceb;
+            }
 
-        switch ($accion) {
+            .avtar {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+                font-size: 18px;
+                font-weight: 600;
+                width: 48px;
+                height: 48px;
+            }
 
-            case ('borrado'):
-                echo '<script>
-            function mensaje(){	
-			alertify.success("Borrado Correctamente."); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
-
-                break;
-
-            case ('exito'):
-                echo '<script>
-            function mensaje(){	
-			alertify.success("Agregado Correctamente."); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-
-            case ('contra'):
-                echo '<script>
-            function mensaje(){	
-			alertify.error("Las Contraseñas no coinciden.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-            case ('NOSEPUEDE'):
-                echo '<script>
-            function mensaje(){	
-			alertify.error("No puede eliminar este usuario.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-
-            case ('vacio'):
-                echo '<script>
-            function mensaje(){	
-			alertify.error("Los campos no fuero rellenados correctamente.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-                break;
-        }
-
-        @$usuarioBorrar = $_GET['borrar'];
-
-        $url = '../../configurar/borrarUsuario.php?id=' . $usuarioBorrar;
-
-
-        if ($usuarioBorrar) {
-            echo '<body onload="confirmar()"></body>';
-        }
-        ?>
-
-
+            td>a {
+                color: gray !important;
+            }
+        </style>
     </head>
 
     <body class='nav-md'>
@@ -225,161 +99,20 @@ if ($_SESSION['nivel'] == 1) {
                                         <div class='clearfix'></div>
                                     </div>
                                     <div class='x_content altoScroll'>
-
-                                        <table class="table-personalizada">
+                                        <table id="table" class="table table-hover">
                                             <thead>
                                                 <tr>
-                                                    <th class="mio">Modulo</th>
-                                                    <th class="mio">Acceso</th>
+                                                    <th class="w-5"></th>
+                                                    <th class="w-20">Usuario</th>
+                                                    <th class="w-10">Fecha de creación</th>
+                                                    <th class="w-50">Acceso</th>
+                                                    <th class="w-10"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr>
-                                                    <th class="mio3">Incio</th>
-                                                    <th class="mio3"><?php if ($Inicio == 1 || $Clientes == 1) {
-                                                                            echo "<a href='?desactivarG=Inicio'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                        } else {
-                                                                            echo "<a href='?activarG=Inicio'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                        } ?></th>
-                                                </tr>
-                                                <tr>
-                                                    <th class="mio">Inicio</th>
-                                                    <th class="mio"><?php if ($Inicio == 1) {
-                                                                        echo "<a href='?desactivar=Inicio'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Inicio'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
 
-                                                <tr>
-                                                    <th class="mio">Clientes</th>
-                                                    <th class="mio"><?php if ($Clientes == 1) {
-                                                                        echo "<a href='?desactivar=Clientes'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Clientes'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-
-
-
-                                                <tr>
-                                                    <th class="mio3">Ventas</th>
-                                                    <th class="mio3"><?php if ($Ventas == 1 || $VentasSemana == 1 || $VentasMes == 1) {
-                                                                            echo "<a href='?desactivarG=Ventas'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                        } else {
-                                                                            echo "<a href='?activarG=Ventas'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                        } ?></th>
-                                                </tr>
-
-
-
-                                                <tr>
-                                                    <th class="mio">Ventas del dia</th>
-                                                    <th class="mio"><?php if ($Ventas == 1) {
-                                                                        echo "<a href='?desactivar=Ventas'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Ventas'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-                                                <tr>
-                                                    <th class="mio">Ventas de la semana</th>
-                                                    <th class="mio"><?php if ($VentasSemana == 1) {
-                                                                        echo "<a href='?desactivar=VentasSemana'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=VentasSemana'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-
-                                                <tr>
-                                                    <th class="mio">Ventas del mes</th>
-                                                    <th class="mio"><?php if ($VentasMes == 1) {
-                                                                        echo "<a href='?desactivar=VentasMes'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=VentasMes'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-
-
-
-
-                                                <tr>
-                                                    <th class="mio3">Nuevo Producto</th>
-                                                    <th class="mio3"><?php if ($Nueva_Compra == 1 || $Nuevo_Producto == 1) {
-                                                                            echo "<a href='?desactivarG=Nuevo_Producto'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                        } else {
-                                                                            echo "<a href='?activarG=Nuevo_Producto'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                        } ?></th>
-                                                </tr>
-
-                                                <tr>
-                                                    <th class="mio">Nueva Compra</th>
-                                                    <th class="mio"><?php if ($Nueva_Compra == 1) {
-                                                                        echo "<a href='?desactivar=Nueva_Compra'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Nueva_Compra'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-
-                                                <tr>
-                                                    <th class="mio">Nuevo Producto</th>
-                                                    <th class="mio"><?php if ($Nuevo_Producto == 1) {
-                                                                        echo "<a href='?desactivar=Nuevo_Producto'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Nuevo_Producto'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-                                                <tr>
-                                                    <th class="mio3">Control de Stock</th>
-                                                    <th class="mio3"><?php if ($Creditos == 1 || $Dejado_Ganar == 1 || $Listado_Productos == 1) {
-                                                                            echo "<a href='?desactivarG=Control_Stock'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                        } else {
-                                                                            echo "<a href='?activarG=Control_Stock'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                        } ?></th>
-                                                </tr>
-
-
-                                                <tr>
-                                                    <th class="mio">Creditos</th>
-                                                    <th class="mio"><?php if ($Creditos == 1) {
-                                                                        echo "<a href='?desactivar=Creditos'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Creditos'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-                                                <tr>
-                                                    <th class="mio">Dejado de Ganar</th>
-                                                    <th class="mio"><?php if ($Dejado_Ganar == 1) {
-                                                                        echo "<a href='?desactivar=Dejado_Ganar'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Dejado_Ganar'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-                                                <tr>
-                                                    <th class="mio">Listado De Productos</th>
-                                                    <th class="mio"><?php if ($Listado_Productos == 1) {
-                                                                        echo "<a href='?desactivar=Listado_Productos'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                    } else {
-                                                                        echo "<a href='?activar=Listado_Productos'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                    } ?></th>
-                                                </tr>
-
-                                                <tr>
-                                                    <th class="mio3">Vender</th>
-                                                    <th class="mio3"><?php if ($Vender == 1) {
-                                                                            echo "<a href='?desactivar=Vender'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                        } else {
-                                                                            echo "<a href='?activar=Vender'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                        } ?></th>
-                                                </tr>
-                                                <tr>
-                                                    <th class="mio3">Consultas</th>
-                                                    <th class="mio3"><?php if ($Consultas == 1) {
-                                                                            echo "<a href='?desactivar=Consultas'><img src='images/ON.PNG' alt='on' height='20px'</a>";
-                                                                        } else {
-                                                                            echo "<a href='?activar=Consultas'><img src='images/OFF.PNG' alt='off' height='20px'<a/>";
-                                                                        } ?></th>
-                                                </tr>
                                             </tbody>
+
                                         </table>
                                     </div>
                                 </div>
@@ -389,7 +122,6 @@ if ($_SESSION['nivel'] == 1) {
                         </div>
                     </div>
                 </div>
-                <!-- /page content -->
 
                 <!-- footer content -->
                 <footer>
@@ -401,79 +133,8 @@ if ($_SESSION['nivel'] == 1) {
                 <!-- /footer content -->
             </div>
         </div>
-        <style>
-            .table-personalizada {
-                width: 70%;
 
-            }
-
-            .mio {
-                height: 30px;
-                border-bottom: 1px solid lightgray;
-            }
-
-            .mio3 {
-                background-color: #eee;
-                height: 30px;
-                border-bottom: 1px solid lightgray;
-            }
-
-            .tag2 {
-                margin-left: 40%;
-                color: lightblue;
-            }
-
-            .tag2:hover {
-                color: #1ABB9C;
-            }
-
-
-            .right {
-                float: right;
-            }
-
-            .green {
-                color: #1ABB9C;
-                font-size: 28px;
-                margin-left: 10px;
-            }
-
-            .gray {
-                color: indianred;
-                font-size: 26px;
-                margin-left: 10px;
-            }
-        </style>
-
-        <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
-        <script src='../vendors/validator/multifield.js'></script>
-        <script src='../vendors/validator/validator.js'></script>
-
-        <script>
-            // initialize a validator instance from the 'FormValidator' constructor.
-            // A '<form>' element is optionally passed as an argument, but is not a must
-            var validator = new FormValidator({
-                'events': ['blur', 'input', 'change']
-            }, document.forms[0]);
-            // on form 'submit' event
-            document.forms[0].onsubmit = function(e) {
-                var submit = true,
-                    validatorResult = validator.checkAll(this);
-                console.log(validatorResult);
-                return !!validatorResult.valid;
-            };
-            // on form 'reset' event
-            document.forms[0].onreset = function(e) {
-                validator.reset();
-            };
-            // stuff related ONLY for this demo page:
-            $('.toggleValidationTooltips').change(function() {
-                validator.settings.alerts = !this.checked;
-                if (this.checked)
-                    $('form .alert').remove();
-            }).prop('checked', false);
-        </script>
-
+        <?php require('../assets/templates/modal.html'); ?>
         <!-- jQuery -->
         <script src='../vendors/jquery/dist/jquery.min.js'></script>
         <!-- Bootstrap -->
@@ -487,6 +148,239 @@ if ($_SESSION['nivel'] == 1) {
 
         <!-- Custom Theme Scripts -->
         <script src='../build/js/custom.min.js'></script>
+        <script src="../build/js/modal.js"></script>
+
+        <script>
+            // Modificar modal
+            $(document).ready(function() {
+                const modal_body = document.getElementById('modal-body')
+                modal_body.style = 'overflow: auto;'
+                modal_body.innerHTML = `<h2 class="mb-0 mt-0" id="titulo_modal">Permisos </h2>
+                <hr>
+                  <table class="table table-hover datatable-table" id="list_permisos">
+                                <thead>
+                                    <tr>
+                                        <th>Categoría</th>
+                                        <th>Permiso</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>`
+
+                document.getElementById('modal').style = 'height: 100% !important;'
+
+                const modal = document.getElementById('w-modal')
+                modal.classList.add('w-50', 'h-60')
+                modal.style = "padding: 0px;"
+
+            })
+            // Modificar modal
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            const url_back = '../../configurar/glob_users_access_back.php';
+
+            function cargarTabla() {
+
+                $.ajax({
+                    url: url_back,
+                    type: 'POST',
+                    data: {
+                        tabla: true
+                    },
+                    cache: false,
+                    success: function(response) {
+
+                        $('#table tbody').html('');
+                        if (response) {
+
+                            var data = JSON.parse(response);
+
+                            for (var i = 0; i < data.length; i++) {
+                                let u_id = data[i].u_id;
+                                let u_nombre = data[i].u_nombre;
+                                let creado = data[i].creado;
+                                let permisos = data[i].permisos;
+
+                                let html_permisos = ''
+
+                                if (permisos) {
+                                    permisos.forEach(element => {
+                                        html_permisos += `
+                  <span title="${element[2]}" class="badge bg-info">${element[1]}</span>
+                  `
+                                    });
+                                }
+
+                                $('#table tbody').append(`<tr>
+                                <td><i class="bx bx-user"></i></td>
+                                <td>` + u_nombre + `</td>
+                                <td>` + creado + `</td>
+                                <td>` + html_permisos + `</td>
+                                <td><a class="bt nowrap btn-sm btn-info text-white" onclick="modificar(` + u_id + `)"><i class="bx bx-edit-alt me-2"></i> Modificar</a></td>
+                                </tr>`);
+                            }
+                        }
+
+                    }
+
+                });
+            }
+            cargarTabla()
+
+            let mdf
+
+
+
+            function permisosDisponibles(user) { // cargar los permisos que le pueden asignar/quitar al usuario
+                mdf = user
+                $('#cargando').show()
+
+
+                $.ajax({
+                    url: url_back,
+                    type: 'POST',
+                    data: {
+                        permisos: true,
+                        user: user
+                    },
+                    cache: false,
+                    success: function(response) {
+
+
+                        $('#list_permisos tbody').html('');
+                        if (response) {
+
+                            var data = JSON.parse(response);
+
+                            for (var i = 0; i < data.length; i++) {
+                                let id = data[i].id;
+                                let categoria = data[i].categoria;
+                                let nombre = data[i].nombre;
+                                let icono = data[i].icono;
+                                let permisos = data[i].permisos;
+
+                                $('#list_permisos tbody').append(`
+               <tr data-index="0">
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">${(categoria != null ? categoria : '<span title="No definido" class="text-muted">ND</span>')}</h6>
+                    </div>
+                    </div>
+                    </td>
+                    <td>${nombre}</td>
+                    <td>
+                      ${(permisos ? '<a onclick="setPermiso(\''+user+'\', \''+id+'\', '+permisos+')" class="avtar avtar-xs btn-light-success"><i class="bx bx-check f-20"></i>' : '</a><a onclick="setPermiso(\''+user+'\', \''+id+'\', '+permisos+')" class="pointer avtar avtar-xs btn-light-danger"><i class="bx bx-x f-20"></i>')}
+                    </td>
+                    </tr>
+               `)
+                            }
+
+                        }
+                        $('#cargando').hide()
+
+                    }
+
+                });
+            }
+
+            function setPermiso(user, permiso, status) {
+                $('#cargando').show()
+
+
+                $.ajax({
+                    url: url_back,
+                    type: 'POST',
+                    data: {
+                        set_permisos: true,
+                        user: user,
+                        permiso: permiso,
+                        status: status
+                    },
+                    cache: false,
+                    success: function(response) {
+                        let respuesta = JSON.parse(response)
+
+                        if (respuesta.success) {
+                            Alerta.toast('success', respuesta.success)
+                            permisosDisponibles(user)
+                            cargarTabla()
+                        } else {
+                            Alerta.toast('error', respuesta.success)
+                        }
+                        $('#cargando').hide()
+                    }
+                });
+
+            }
+
+
+            function modificar(user) {
+                permisosDisponibles(user)
+                modalContainer.classList.add("active");
+            }
+
+
+
+
+            /**
+             * Deletes a record with the specified ID.
+             * @param {number} id - The ID of the record to be deleted.
+             * @returns {boolean} - Returns true if the record is deleted successfully, false otherwise.
+             */
+            function eliminar(id) {
+                Swal.fire({
+                    title: "¿Estás seguro?",
+                    text: "¡No podrás revertir esto!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#04a9f5",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Sí, eliminarlo!",
+                    cancelButtonText: "Cancelar",
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: url_back,
+                            type: "POST",
+                            data: {
+                                eliminar: true,
+                                id: id,
+                            },
+                            success: function(response) {
+                                if (response.trim() == "ok") {
+                                    cargarTabla();
+
+                                    Alerta.toast("success", "Eliminado con éxito");
+                                } else {
+                                    Alerta.toast("error", response);
+                                }
+                            },
+                        });
+                    }
+                });
+            }
+        </script>
+
 
     </body>
 

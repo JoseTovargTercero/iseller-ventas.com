@@ -1,34 +1,15 @@
 <?php
 require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Nueva_Compra == 0) {
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
+
     $topnav = topnav();
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-
-
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
 
     $tipo_u =  $_SESSION['nivel'];
-    $id_sucursal = $_SESSION['id_sucursal'];
-
-
-
     $query = "SELECT * FROM `sucursales` WHERE bss_id = ?";
 
     if ($tipo_u == 2) {
         // Solo para los usuarios tipo 2
+        $id_sucursal = $_SESSION['sucursal'];
         $query .= " AND id='$id_sucursal'";
     }
 

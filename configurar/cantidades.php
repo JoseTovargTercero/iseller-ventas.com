@@ -13,4 +13,4 @@ if (isset($_POST['id']) && isset($_POST['accion'])) {
 }
 
 
-require_once '../../configurar/carrito.php';
+require_once 'carrito.php';

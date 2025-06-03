@@ -2,18 +2,8 @@
 require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1) {
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Inicio == 0) {
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
+   
     $topnav = topnav();
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
 
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');

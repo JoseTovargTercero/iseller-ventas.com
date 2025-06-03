@@ -5,25 +5,34 @@ require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $topnav = topnav();
 
-  if ($_SESSION["validate"] != "ok") {
-    define('PAGINA_INICIO', '../../index.php');
-    header('Location: ' . PAGINA_INICIO);
-  }
-  if ($_SESSION['nivel'] == '1') {
-    $menu = MenuAdministrador();
-  } else {
-    $menu = MenuStandar();
 
-    if ($Creditos == 0) {
-      define('PAGINA_INICIO', '../../index.php');
-      header('Location: ' . PAGINA_INICIO);
+
+  $tipo_u =  $_SESSION['nivel'];
+
+
+
+  $query = "SELECT * FROM `sucursales` WHERE bss_id = ?";
+
+  if ($tipo_u == 2) {
+    // Solo para los usuarios tipo 2
+    $id_sucursal = $_SESSION['sucursal'];
+    $query .= " AND id='$id_sucursal'";
+  }
+
+  $query .= "  ORDER BY principal DESC";
+
+  $stmt = mysqli_prepare($conexion, $query);
+  $stmt->bind_param('i', $bss_id);
+  $stmt->execute();
+  $result = $stmt->get_result();
+
+  $sucursales = [];
+  if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+      $sucursales[] = $row;
     }
   }
-
-  $nivelUsuario = $_SESSION['nivel'];
-  $nombreUsuario = $_SESSION['nombre'];
-
-
+  $stmt->close();
 ?>
 
 
@@ -69,7 +78,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         //callbak al pulsar botón positivo
         confirm.set('onok', function() {
-          window.open("AccionCarta.php?action=placeOrder", "_self");
+          window.open("accion_carta.php?action=placeOrder", "_self");
         });
         //callbak al pulsar botón negativo
         confirm.set('oncancel', function() {
@@ -78,32 +87,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
       }
     </script>
-
-
-
-
-
-
-
-    <?php
-
-    switch (@$_GET['accion']) {
-      case ('pagado'):
-        echo '<script>
-          function mensajeVenta(){	
-          alertify.success("Credito cancelado correctamente");  }
-                </script>
-                <body onload="mensajeVenta()">
-                </body>';
-        break;
-    }
-
-
-
-
-    ?>
-
-
   </head>
 
   <body class="nav-md">
@@ -145,7 +128,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           <div class="">
 
 
-            <h4>Creditos</h4>
+            <h4>Créditos</h4>
             <p style="margin-top: -10px;">Listado de creditos otorgados</p>
 
 
@@ -158,17 +141,29 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
               <div class="col-lg-12">
                 <div class="x_panel  fadeInUp animated">
-                  <div class="x_title">
-                    <h2>Creditos</h2>
 
-                    <div class="clearfix"></div>
+                  <div class="x_title d-flex justify-content-between">
+                    <h2>Listado de créditos</h2>
+
+                    <?php if ($tipo_u == 1): ?>
+                      <div class='form-group mb-3 d-flex'>
+                        <label class='form-label p-2' for='first-name'>SUCURSAL: </label>
+                        <select class="form-control" id="sucursal-selector" name="sucursal-selector">
+                          <?php if (count($sucursales) > 1): ?>
+                            <option value="">-- Todos --</option>
+                          <?php endif; ?>
+
+                          <?php foreach ($sucursales as $row): ?>
+                            <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                              <?= htmlspecialchars($row['nombre']) ?>
+                            </option>
+                          <?php endforeach; ?>
+                        </select>
+                      </div>
+                    <?php endif; ?>
                   </div>
                   <div class="x_content">
                     <div class="row">
-
-
-
-
 
 
                       <div class="col-lg-12">
@@ -205,43 +200,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                           </p>
 
-                          <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
+                          <table id="datatable-responsive-2" class="table table-striped table-bordered" style="width:100%">
                             <thead>
                               <tr class="headings">
-                                <th class="column-title">#</th>
+                                <th class="column-title"></th>
                                 <th class="column-title">Cliente</th>
                                 <th class="column-title text-center">Créditos</th>
+                                <th class="column-title text-center">Sucursal</th>
                                 <th class="column-title"></th>
                               </tr>
                             </thead>
                             <tbody>
-                              <?php
 
-                              $count = 1;
-                              $tabla6 = '';
-
-                              $query6 = $conexion->query("SELECT DISTINCT(negocio), COUNT(*) AS total FROM `creditos` WHERE estado = 2 GROUP BY negocio");
-                              if ($query6->num_rows > 0) {
-                                while ($row6 = $query6->fetch_assoc()) {
-
-                                  $total = $row6["total"];
-
-                                  $tabla6 .= '
-                                    <tr class="even pointer">
-                                      <td>' . $count++ . '</td>
-                                      <td>' . $row6["negocio"] . '</td>
-                                      <td class="text-center">' . $total . '</td>
-                                      <td class="text-center">
-                                        <a class="btn btn-info btn-sm" href="creditos_cliente.php?cliente=' . $row6["negocio"] . '">
-                                          <i class="line icon-info"></i>
-                                        </a>
-                                      </td>
-
-                                    </tr>';
-                                }
-                                echo $tabla6;
-                              }
-                              ?>
                             </tbody>
                           </table>
                         </div>
@@ -250,77 +220,73 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                   </div>
                 </div>
               </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             </div>
           </div>
         </div>
         <!-- /page content -->
-
-        <!-- footer content -->
-        <footer>
-          <div class="pull-right">
-            i-SELLER - by <a href="#">Jose Ricardo Tovarg III</a>
-          </div>
-          <div class="clearfix"></div>
-        </footer>
-        <!-- /footer content -->
       </div>
     </div>
 
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <!-- Bootstrap -->
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- FastClick -->
-    <script src="../vendors/fastclick/lib/fastclick.js"></script>
-    <!-- NProgress -->
-    <script src="../vendors/nprogress/nprogress.js"></script>
-    <!-- iCheck -->
-    <script src="../vendors/iCheck/icheck.min.js"></script>
-    <!-- Datatables -->
+
     <script src="../vendors/datatables.net/js/jquery.dataTables.min.js"></script>
     <script src="../vendors/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
-    <script src="../vendors/datatables.net-buttons/js/dataTables.buttons.min.js"></script>
-    <script src="../vendors/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
-    <script src="../vendors/datatables.net-buttons/js/buttons.flash.min.js"></script>
-    <script src="../vendors/datatables.net-buttons/js/buttons.html5.min.js"></script>
-    <script src="../vendors/datatables.net-buttons/js/buttons.print.min.js"></script>
-    <script src="../vendors/datatables.net-fixedheader/js/dataTables.fixedHeader.min.js"></script>
-    <script src="../vendors/datatables.net-keytable/js/dataTables.keyTable.min.js"></script>
-    <script src="../vendors/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
-    <script src="../vendors/datatables.net-responsive-bs/js/responsive.bootstrap.js"></script>
-    <script src="../vendors/datatables.net-scroller/js/dataTables.scroller.min.js"></script>
-    <script src="../vendors/jszip/dist/jszip.min.js"></script>
-    <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
-    <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
-
-    <!-- Custom Theme Scripts -->
     <script src="../build/js/custom.min.js"></script>
+
+    <script>
+      const tabla = $('#datatable-responsive-2').DataTable();
+
+
+      function cargarTabla(sucursal = null) {
+
+        $.ajax({
+          url: '../../configurar/creditos_list.php',
+          type: 'POST',
+          dataType: 'html',
+          data: {
+            tabla: true,
+            sucursal: sucursal
+          },
+          cache: false,
+          success: function(response) {
+            if (response) {
+              var data = JSON.parse(response);
+              tabla.clear();
+
+              let count = 1;
+
+              for (var i = 0; i < data.length; i++) {
+                tabla.row.add([
+                  count++,
+                  data[i].cliente,
+                  data[i].cantidad_creditos,
+                  data[i].sucursal,
+                  ` <a class="btn btn-info btn-sm" href="creditos_cliente.php?cliente=${data[i].cliente}">Detalles</a>`
+                ]);
+
+              }
+
+              tabla.draw(); // Redibuja la tabla
+
+            }
+
+          }
+
+        });
+      }
+      cargarTabla()
+
+
+
+      $(document).ready(function() {
+        // Filtro por sucursal (opcional)
+        $('#sucursal-selector').on('change', function() {
+          cargarTabla(this.value);
+        });
+      });
+    </script>
   </body>
 
   </html>

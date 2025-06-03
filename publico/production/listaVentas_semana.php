@@ -3,25 +3,24 @@ require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-
     $topnav = topnav();
 
-    $today = date('Y-m-d');
+    $fecha = date('Y-W');
     $hayunError = "NO";
 
     if (!empty($_GET['fechaSolic'])) {
         $fechaSolic = $_GET['fechaSolic'];
-        $today = $fechaSolic;
+        $fecha = date('Y') . '-' . $fechaSolic;
     }
 
     $total = 0;
     $totalVentas = 0;
 
-    $tipoFiltroColumna = 'modified'; // Por dia
-    $text_vista = 'Ventas del dia';
+    $tipoFiltroColumna = 'semana'; // Por dia
+    $text_vista = 'Ventas de la semana';
 
     // Ventas status = 1
-    $query = "SELECT total_price FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '1'";
+    $query = "SELECT total_price FROM orden WHERE $tipoFiltroColumna = '$fecha' AND status = '1'";
     $result = $conexion->query($query);
 
     if ($result && $result->num_rows > 0) {
@@ -35,7 +34,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $total2 = 0;
     $totalVentas2 = 0;
 
-    $query = "SELECT total_price_bs FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '4'";
+    $query = "SELECT total_price_bs FROM orden WHERE $tipoFiltroColumna = '$fecha' AND status = '4'";
     $result = $conexion->query($query);
 
     if ($result && $result->num_rows > 0) {
@@ -49,11 +48,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     function returnGanancias($tipo)
     {
         global $conexion;
-        global $today;
+        global $fecha;
         global $tipoFiltroColumna;
         $ganancias = 0;
 
-        $sqlGanancias = "SELECT * FROM orden WHERE $tipoFiltroColumna='$today' AND status='$tipo'";
+        $sqlGanancias = "SELECT * FROM orden WHERE $tipoFiltroColumna='$fecha' AND status='$tipo'";
         $search = $conexion->query($sqlGanancias);
         if ($search->num_rows > 0) {
             while ($row = $search->fetch_assoc()) {
@@ -84,7 +83,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     // TOTAL POR TIPO DE PAGO
-    function obtenerTotalPorTipoPago($conexion, $today, $tipoPago, $campoTotal)
+    function obtenerTotalPorTipoPago($conexion, $fecha, $tipoPago, $campoTotal)
     {
         global $tipoFiltroColumna;
         $sql = "
@@ -95,7 +94,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             AND (status = '1' OR status = '4')
         ";
         $stmt = $conexion->prepare($sql);
-        $stmt->bind_param("si", $today, $tipoPago);
+        $stmt->bind_param("si", $fecha, $tipoPago);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -108,23 +107,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
     // Uso de la función para cada tipo de pago
-    $total_Punto = obtenerTotalPorTipoPago($conexion, $today, 1, 'total_price_bs'); // Punto
-    $total_Pmovil = obtenerTotalPorTipoPago($conexion, $today, 2, 'total_price_bs'); // Pago movil
-    $total_Transferencia = obtenerTotalPorTipoPago($conexion, $today, 3, 'total_price_bs'); // Transferencia
-    $total_Efectivo = obtenerTotalPorTipoPago($conexion, $today, 4, 'total_price_bs'); // efectivo
-    $total_Dolares = obtenerTotalPorTipoPago($conexion, $today, 5, 'total_price');    // Dólares
-    $total_pesos = obtenerTotalPorTipoPago($conexion, $today, 6, 'total_price_cop'); // Pesos
-    $total_Biopago = obtenerTotalPorTipoPago($conexion, $today, 7, 'total_price_bs'); // Biopago
+    $total_Punto = obtenerTotalPorTipoPago($conexion, $fecha, 1, 'total_price_bs'); // Punto
+    $total_Pmovil = obtenerTotalPorTipoPago($conexion, $fecha, 2, 'total_price_bs'); // Pago movil
+    $total_Transferencia = obtenerTotalPorTipoPago($conexion, $fecha, 3, 'total_price_bs'); // Transferencia
+    $total_Efectivo = obtenerTotalPorTipoPago($conexion, $fecha, 4, 'total_price_bs'); // efectivo
+    $total_Dolares = obtenerTotalPorTipoPago($conexion, $fecha, 5, 'total_price');    // Dólares
+    $total_pesos = obtenerTotalPorTipoPago($conexion, $fecha, 6, 'total_price_cop'); // Pesos
+    $total_Biopago = obtenerTotalPorTipoPago($conexion, $fecha, 7, 'total_price_bs'); // Biopago
     // TOTAL POR TIPO DE PAGO
 
 
-    function obtenerVentasTotalesPorStatus($conexion, $today, $statuses = ['1', '3'])
+    function obtenerVentasTotalesPorStatus($conexion, $fecha, $statuses = ['1', '3'])
     {
         global $tipoFiltroColumna;
         $statusList = "'" . implode("','", $statuses) . "'";
         $query = "SELECT total_price, total_price_bs, total_price_cop 
             FROM orden 
-            WHERE $tipoFiltroColumna = '$today' 
+            WHERE $tipoFiltroColumna = '$fecha' 
             AND status IN ($statusList)";
 
         $result = $conexion->query($query);
@@ -138,13 +137,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         return $total;
     }
 
-    function calcularGananciaPorTipoPago($conexion, $today, $tipoPago, $campoPrecioArticulo = 'precio', $campoTotalOrden = 'total_price')
+    function calcularGananciaPorTipoPago($conexion, $fecha, $tipoPago, $campoPrecioArticulo = 'precio', $campoTotalOrden = 'total_price')
     {
         global $tipoFiltroColumna;
         $query = "
             SELECT id, $campoTotalOrden AS monto 
             FROM orden 
-            WHERE $tipoFiltroColumna = '$today' 
+            WHERE $tipoFiltroColumna = '$fecha' 
             AND status IN ('1', '4') 
             AND tipoPago = '$tipoPago'
         ";
@@ -172,12 +171,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
     // Total de ventas por tipo de despacho
-    $total_detal = obtenerVentasTotalesPorStatus($conexion, $today);
-    $total_mayor = obtenerVentasTotalesPorStatus($conexion, $today, [4]);
+    $total_detal = obtenerVentasTotalesPorStatus($conexion, $fecha);
+    $total_mayor = obtenerVentasTotalesPorStatus($conexion, $fecha, [4]);
 
 
 
-    function calcularGananciaPorMoneda($conexion, $today, $tipoPagos, $campoMontoOrden, $campoPrecioArticulo)
+    function calcularGananciaPorMoneda($conexion, $fecha, $tipoPagos, $campoMontoOrden, $campoPrecioArticulo)
     {
         $ganancia = 0;
         $totalVentas = 0;
@@ -196,7 +195,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         ";
 
         $stmt = $conexion->prepare($query);
-        $stmt->bind_param("s", $today);
+        $stmt->bind_param("s", $fecha);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -222,7 +221,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     // Calcular ganancias
     $gananciasBolivar = calcularGananciaPorMoneda(
         $conexion,
-        $today,
+        $fecha,
         ['1', '2', '3', '4', '7'],
         'total_price_bs',
         'bolivar'
@@ -230,7 +229,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     $gananciasPeso = calcularGananciaPorMoneda(
         $conexion,
-        $today,
+        $fecha,
         ['6'],
         'total_price_cop',
         'peso'
@@ -238,7 +237,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     $gananciasDolares = calcularGananciaPorMoneda(
         $conexion,
-        $today,
+        $fecha,
         ['5'],
         'total_price',
         'precio'
@@ -319,7 +318,68 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <small class="text-muted">Los créditos otorgados se visualizarán en la lista; <br>sin embargo, no serán considerados en la totalización hasta su cancelación.</small>
                                         </div>
                                         <div class="p-2">
-                                            <input required type="date" class="form-control form-control-sm" name="fechaSolic" id="fechaSolic">
+
+                                            <?php
+
+                                            switch (date('W')) {
+                                                case ('01'):
+                                                    $seProce = "01";
+                                                    break;
+
+                                                case ('02'):
+                                                    $seProce2 = "2";
+                                                    break;
+
+                                                case ('03'):
+                                                    $seProce2 = "3";
+                                                    break;
+
+                                                case ('04'):
+                                                    $seProce2 = "4";
+                                                    break;
+
+                                                case ('05'):
+                                                    $seProce2 = "5";
+                                                    break;
+
+                                                case ('06'):
+                                                    $seProce2 = "6";
+                                                    break;
+
+                                                case ('07'):
+                                                    $seProce2 = "7";
+                                                    break;
+
+                                                case ('08'):
+                                                    $seProce2 = "8";
+                                                    break;
+
+                                                case ('09'):
+                                                    $seProce2 = "9";
+                                                    break;
+                                                default:
+                                                    $seProce2 = date('W');
+                                                    break;
+                                            }
+
+                                            $semanaprimera = date('W') - 9;
+                                            if ($semanaprimera <= 01) {
+                                                $semanaprimera = 01;
+                                            }
+
+                                            ?>
+
+
+                                            <select class="form-control form-control-sm" name="fechaSolic" id="fechaSolic">
+                                                <?php
+                                                for ($semana = $seProce2; $semana >= $semanaprimera; $semana--) {
+                                                    echo "<option value='" . $semana . "'>" . date('Y') . "- Semana " . $semana . "</option>";
+                                                }
+                                                ?>
+
+                                            </select>
+
+
                                         </div>
                                     </div>
                                     <div class='x_content '>
@@ -345,7 +405,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                             SELECT o.*, u.nombre AS usuario
                                                             FROM orden o
                                                             JOIN usuarios u ON o.customer_id = u.id
-                                                            WHERE (o.status = '1'  OR o.status = '2' OR o.status = '4') AND o.$tipoFiltroColumna = '$today'
+                                                            WHERE (o.status = '1'  OR o.status = '2' OR o.status = '4') AND o.$tipoFiltroColumna = '$fecha'
                                                             ORDER BY o.id DESC
                                                             LIMIT 150
                                                         ";

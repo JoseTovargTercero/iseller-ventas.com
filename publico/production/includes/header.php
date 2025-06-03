@@ -14,11 +14,12 @@ function topnav()
 
     <div class='top_nav'>
         <div class='nav_menu'>
-            <div class='nav toggle'>
+            <div class='nav toggle '>
                 <a id='menu_toggle'><i class='icon-options-vertical'></i></a>
             </div>
             <nav class='nav navbar-nav'>
                 <ul class='navbar-right' style='text-align: right;'>
+
                     <li class='nav-item dropdown open' style='padding-left: 15px;'>
                         <a href='javascript:;' class='user-profile dropdown-toggle' aria-haspopup='true' id='navbarDropdown' data-toggle='dropdown' aria-expanded='false'>
                             <img src='images/img.png' style='margin-top: -5px' height='50px'>
@@ -48,6 +49,7 @@ function topnav()
                             <a class='dropdown-item' href='../../login/salir.php'>Cerrar Sesión</a>
                         </div>
                     </li>
+
                 </ul>
             </nav>
         </div>

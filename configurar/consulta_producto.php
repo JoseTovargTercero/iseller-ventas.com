@@ -1,9 +1,9 @@
 
  <?php
-  require_once("../../configurar/configuracion.php");
-  require_once('../../configurar/session.php');
-  require("../../configurar/_tasas_cambio.php");
-  require("../../configurar/_calculadrora_precios.php");
+  require_once("configuracion.php");
+  require_once('session.php');
+  require("_tasas_cambio.php");
+  require("_calculadrora_precios.php");
   $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
 
 
@@ -23,13 +23,12 @@
   $modo = isset($_POST['modo']) ? (int)$_POST['modo'] : 1;
 
   // Determinar sucursal del usuario
-  if ($_SESSION["nivel"] == 1 && empty($_POST["sucursal"])) {
+  if ($_SESSION["nivel"] == 1 && empty($_SESSION["sucursal"])) {
     echo json_encode(['status' => 'error', 'mensaje' => 'Sucursal no especificada.']);
     exit;
   }
 
-  $sucursal = ($_SESSION["nivel"] == 1) ? $_POST["sucursal"] : $_SESSION["id_sucursal"];
-
+  $sucursal = $_SESSION["sucursal"];
 
 
   $data = [];

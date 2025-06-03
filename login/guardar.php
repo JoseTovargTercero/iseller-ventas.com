@@ -1,6 +1,5 @@
 ﻿<?php
 require_once('../configurar/configuracion.php');
-//header json
 header('Content-Type: application/json');
 
 // Validación básica
@@ -35,10 +34,32 @@ if ($result->num_rows === 1) {
         $_SESSION['id'] = $usuario['id'];
         $_SESSION['nombre'] = $usuario['nombre'];
         $_SESSION['nivel'] = $usuario['nivel'];
-        $_SESSION['id_sucursal'] = $usuario['id_sucursal'];
+        if ($usuario['nivel'] == 2) {
+            $_SESSION['sucursal'] = $usuario['sucursal'];
+        }
         //  $_SESSION['bss_id'] = $usuario['negocio_id'];
         $_SESSION['bss_id'] = 1;
         $_SESSION["validate"] = "ok";
+
+        $id = $usuario['id'];
+
+        if ($usuario['nivel'] != 1) {
+            $permisos = [];
+
+            $stmt_2 = mysqli_prepare($conexion, "SELECT sup.id_item_menu, menu.dir FROM `users_permisos` AS sup 
+				LEFT JOIN menu ON menu.id = sup.id_item_menu
+				WHERE id_user = ?");
+            $stmt_2->bind_param('i', $id);
+            $stmt_2->execute();
+            $result = $stmt_2->get_result();
+            if ($result->num_rows > 0) {
+                while ($row_p = $result->fetch_assoc()) {
+                    $permisos[$row_p['id_item_menu']] = $row_p['dir'];
+                }
+            }
+            $stmt_2->close();
+            $_SESSION['permisos'] = $permisos;
+        }
 
         // Puedes registrar el login exitoso en logs si deseas
         registrarIntentoLogin($conexion, $doc, 1, $usuario['nivel'], 'Login exitoso');

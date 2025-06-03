@@ -1,0 +1,5 @@
+status - tipo de despacho
+1 venta normal
+2 credito
+3 descontado
+4 al mayor

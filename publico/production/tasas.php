@@ -4,38 +4,9 @@ require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-    }
-
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
-
-
-    if ($_SESSION['nivel'] == 2) {
-        $permisos = "hidden";
-    } else {
-        $permisos = "";
-    }
+   
 
     $topnav = topnav();
-
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-
-
-    $query2222222 = 'SELECT * FROM mail WHERE id="1"';
-    $buscarAlumnos2222222 = $conexion->query($query2222222);
-    if ($buscarAlumnos2222222->num_rows > 0) {
-        while ($filaAlumnos2222222 = $buscarAlumnos2222222->fetch_assoc()) {
-            $cierre = $filaAlumnos2222222['cierre'];
-            $correo = $filaAlumnos2222222['correo'];
-        }
-    }
 
 ?>
 

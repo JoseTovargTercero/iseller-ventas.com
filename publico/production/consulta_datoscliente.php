@@ -38,11 +38,6 @@ if (isset($_POST['rep_codigo3'])) {
                                                      </div>
                                                      <div class='form-group  col-lg-12'>
                                                          <input class='form-control  col-lg-12' type='text' name='telefono' placeholder='Telefono'>
-                                                     </div>
-
-
-
-                                                     
-  ";
+                                                     </div>";
 }
 echo $tabla_codigo;

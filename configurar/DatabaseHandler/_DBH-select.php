@@ -70,6 +70,24 @@ function _usuarios_list($tabla)
 } // carga los registros de _usuarios filtrando por el bss-id
 
 
+
+
+function _sucursales($tabla)
+{
+    global $bss_id;
+
+    return [
+        'columnas' => null,
+        'tabla' => $tabla,
+        'where' => "$tabla.bss_id='$bss_id' ",
+        'order_by' => null,
+        'join' => null
+    ];
+} // carga las sucursales por el bss-id
+
+
+
+
 /*
 function _sucursales($tabla)
 {

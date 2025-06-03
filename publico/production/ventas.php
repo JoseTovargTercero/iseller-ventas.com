@@ -1,32 +1,40 @@
 <?php
 require_once('includes/requires.php');
-require("../../configurar/_calculadrora_precios.php");
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-    $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
 
-
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
+    if (empty($_SESSION['sucursal'])) {
+        define('PAGINA_INICIO', 'seleccion_sucursal.php');
         header('Location: ' . PAGINA_INICIO);
+        exit;
     }
+    $nivelUsuario = $_SESSION['nivel'];
+    $nombreUsuario = $_SESSION['nombre'];
+    $bss_id = $_SESSION['bss_id'];
+    $sucursal = $_SESSION['sucursal'];
+    $sucursal_nombre = '';
 
-    $topnav = topnav();
+    if ($_SESSION['nivel'] == 1) {
+        $sql = "SELECT UPPER(nombre) AS nombre FROM sucursales WHERE id = ? AND bss_id = ?";
 
+        if ($stmt = $conexion->prepare($sql)) {
+            $stmt->bind_param("ii", $sucursal, $bss_id);
+            $stmt->execute();
+            $stmt->bind_result($sucursal_nombre);
 
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Vender == 0) {
+            if ($stmt->fetch()) {
+            }
 
-
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
+            $stmt->close();
         }
     }
 
 
+
+    require("../../configurar/_calculadrora_precios.php");
+    $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+
+    $topnav = topnav();
 
     include '../../configurar/la-carta.php';
     $cart = new Cart;
@@ -38,28 +46,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $cart->destroy();
     }
 
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-    $bss_id = $_SESSION['bss_id'];
-    $sucursal = $_SESSION['id_sucursal'];
 
-    $sql = "
-    SELECT 
-        p.cantidad_unidades,
-        p.origen,
-        p.precio_compra,
-        p.porcentaje,
-        p.nombre,
-        p.id,
-        s.stock,
-        p.codigo_barras
-    FROM productos p
-    INNER JOIN stock s ON p.id = s.id_producto
-    WHERE p.activo = 0
-      AND p.codigo_barras != ''
-      AND s.id_sucursal = ?
-      AND s.bss_id = ?
-";
+
+    $sql = "SELECT 
+            p.cantidad_unidades,
+            p.origen,
+            p.precio_compra,
+            p.porcentaje,
+            p.nombre,
+            p.id,
+            s.stock,
+            p.codigo_barras
+        FROM productos p
+        INNER JOIN stock s ON p.id = s.id_producto
+        WHERE p.activo = 0
+        AND p.codigo_barras != ''
+        AND s.id_sucursal = ?
+        AND s.bss_id = ?";
 
     $stmt = $conexion->prepare($sql);
     $stmt->bind_param("ii", $sucursal, $bss_id);
@@ -94,12 +97,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
     $stmt->close();
-    /* CARGAR PRODUCTOS PARA EL LECTOR */
-    /*
-    echo '<pre>';
-    print_r($data);
-    echo '</pre>';*/
-
 
 ?>
 
@@ -110,33 +107,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <title>Ventas </title>
         <?php require_once('includes/headers.php'); ?>
-
-        <?php
-        switch (@$_GET['accion']) {
-            case ('vendido'):
-                $mensaje = 'venta';
-                break;
-            case ('credito'):
-                $mensaje = 'none';
-                break;
-            case ('descuento'):
-                $mensaje = 'descuento';
-                break;
-            default:
-                $mensaje = 'none';
-                break;
-        }
-        ?>
     </head>
 
-    <?php
-    /*   foreach ($data as $key => $value) {
-        # code...
-    }
-*/
-
-
-    ?>
     <script>
         var productos = <?php echo json_encode($data); ?>;
         var codigos = []
@@ -148,37 +120,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
 
         ?>
-
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'bottom-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.addEventListener('mouseenter', Swal.stopTimer)
-                toast.addEventListener('mouseleave', Swal.resumeTimer)
-            }
-        })
-
-        function notificacion(params) {
-            if (params != 'none') {
-                let text;
-                let type;
-                if (params == 'venta') {
-                    text = 'Venta concretada con exito';
-                    type = 'success'
-                } else if (params == 'descuento') {
-                    text = 'Se descontaron productos del almacen';
-                    type = 'info'
-                }
-
-                Toast.fire({
-                    icon: type,
-                    title: text
-                })
-            }
-        }
     </script>
 
 
@@ -329,7 +270,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <span class="loader"></span>
     </div>
 
-    <body class='nav-md' onload="notificacion('<?php echo $mensaje ?>')" style="background-color: #ebebeb;">
+    <body class='nav-md' style="background-color: #ebebeb;">
         <div class='container body'>
             <div class='main_container'>
 
@@ -395,9 +336,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div style=" bottom: 0;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
                                                 <a onclick="confirmarDescuento()" class="btn btn-dark" style="color:white; cursor: pointer">Descontar</a>
                                                 <a onclick="destroy_cart()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
+                                                <button onclick="confirmarVenta('credito')" class="btn btn-info" style="color:white;">Crédito</button>
                                                 <button class="btn btn-light" id="calcularVuelto">Calcular cambio</button>
                                                 <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
-
                                                 <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">Vender</button>
                                             </div>
 
@@ -468,9 +409,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="../build/js/modal.js"></script>
             <!-- FastClick -->
             <script>
+                const base_url = '../../configurar/';
                 // lista de ventas
                 function cargarUltimasOrdenes() {
-                    fetch('../../configurar/ultimas_ventas.php')
+                    fetch(base_url + 'ultimas_ventas.php')
                         .then(response => response.json())
                         .then(data => {
                             const tabla = document.getElementById('tabla_ventas');
@@ -514,7 +456,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            fetch("../../configurar/cart-destroy.php")
+                            fetch(base_url + "cart-destroy.php")
                                 .then(response => {
                                     actualizar_carrito()
                                 })
@@ -532,7 +474,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 var tasasMostrar
 
                 function cargarTasasMostrar() {
-                    fetch('../../configurar/tasas_mostradas.php?accion=obtener')
+                    fetch(base_url + 'tasas_mostradas.php?accion=obtener')
                         .then(res => res.json())
                         .then(res => {
 
@@ -559,15 +501,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                function confirmarVenta(param) {
-                    // Opciones de pago habituales
-                    if (total_dolares == 0) {
-                        return
-                    }
-
-                    // quitar el focus de btn-vender
-
-                    $('button').blur();
+                function confirmarVenta(tipo = 'venta') {
+                    // 1. Reglas comunes ───────────────────────────────────────────────
+                    if (total_dolares === 0) return; // nada que vender
+                    $('button').blur(); // quitar focus de botones
 
                     if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
                         Swal.fire({
@@ -576,55 +513,122 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             icon: 'warning',
                             confirmButtonText: 'OK',
                             confirmButtonColor: '#32d7c0',
-                        })
-                        return
+                        });
+                        return;
                     }
 
-                    const opcionesPago = `
-                    <p>
-                        (1) Punto, (2) BioPago, (3) Pesos,<br> (4) Efectivo, (5) Pago Movil, (6) Transferencia, (7) Dolares.
-                    </p>
+                    // 2. Configurar diálogo dependiendo del tipo ───────────────────────
+                    const esCredito = (tipo === 'credito');
 
+                    // 2.1 Contenido HTML
+                    const htmlContent = esCredito ?
+                        `<input id="nombreCliente" class="form-control" placeholder="Nombre del cliente">` :
+                        `(1) Punto, (2) BioPago, (3) Pesos,<br> (4) Efectivo, (5) Pago Movil,
+               (6) Transferencia, (7) Dólares.</>
+               
+           <select id="metodoPago" class="form-control">
+               <option value="">Seleccione</option>
+               <option value="option1">(1) Punto</option>
+               <option value="option7">(2) BioPago</option>
+               <option value="option6">(3) Pesos</option>
+               <option value="option4">(4) Efectivo</option>
+               <option value="option2">(5) Pago Movil</option>
+               <option value="option3">(6) Transferencia</option>
+               <option value="option5">(7) Dólares</option>
+           </select>`;
 
-                    <select id="metodoPago" class="form-control">
-                        <option value="">Seleccione</option>
-                        <option value="option1">(1) Punto</option>
-                        <option value="option7">(2) BioPago</option>
-                        <option value="option6">(3) Pesos</option>
-                        <option value="option4">(4) Efectivo</option>
-                        <option value="option2">(5) Pago Movil</option>
-                        <option value="option3">(6) Transferencia</option>
-                        <option value="option5">(7) Dolares</option>
-                    </select>`;
+                    // 2.2 Título
+                    const titulo = esCredito ?
+                        'Ingresa el nombre del cliente' :
+                        'Selecciona un método de pago';
 
-                    // Mostrar el diálogo
+                    // 2.3 Diálogo SweetAlert2
                     Swal.fire({
-                        title: 'Selecciona un método de pago',
-                        html: opcionesPago,
+                        title: titulo,
+                        html: htmlContent,
                         confirmButtonText: 'Continuar',
                         confirmButtonColor: '#32d7c0',
                         customClass: {
                             popup: 'swal-metodo-pago'
                         },
-                        didOpen: () => {
-                            const btn = Swal.getConfirmButton();
-                            btn.setAttribute('id', 'btnVender');
-                        },
+                        didOpen: () => Swal.getConfirmButton().setAttribute('id', 'btnVender'),
                         preConfirm: () => {
-                            const metodoPago = document.getElementById('metodoPago').value;
-                            if (!metodoPago) {
-                                Swal.showValidationMessage('Por favor, selecciona un método de pago');
+                            if (esCredito) {
+                                const nombre = document.getElementById('nombreCliente').value.trim();
+                                if (!nombre) Swal.showValidationMessage('Por favor, ingresa el nombre del cliente');
+                                return nombre; // se devuelve para result.value
+                            } else {
+                                const metodo = document.getElementById('metodoPago').value;
+                                if (!metodo) Swal.showValidationMessage('Por favor, selecciona un método de pago');
+                                return metodo; // se devuelve para result.value
                             }
-                            return metodoPago;
                         }
                     }).then((result) => {
-                        if (result.isConfirmed) {
-                            const metodoPago = result.value;
-                            window.location.href = `pagos_Venta.php?metodo=${encodeURIComponent(metodoPago)}`;
+                        if (!result.isConfirmed) return;
+
+                        if (esCredito) {
+                            const nombreCliente = result.value; // valor devuelto en preConfirm
+                            procesarPedido('0', 'placeOrderCredito', nombreCliente);
+                        } else {
+                            const metodoPago = result.value; // e.g. "option3"
+                            procesarPedido(metodoPago, 'placeOrder');
                         }
                     });
+                }
+
+
+                function procesarPedido(metodoPago, despacho, nombreC = null) {
+                    const valorFinalVenta = total_dolares;
+                    const valorFinalBs = total_bolivares;
+                    const valorFinalCop = total_pesos;
+                    const pagoTipo = metodoPago.replace('option', '');
+                    const action = despacho;
+                    const compraTipo = 1;
+
+                    // pendiente al nombre del cliente nombreC // placeOrderCredito
+
+                    let tipoDespacho
+                    if (despacho == 'placeOrderCredito') {
+                        tipoDespacho = 2;
+                    } else {
+                        tipoDespacho = 1;
+                    }
+
+                    $.ajax({
+                            url: base_url + 'accion_carta.php',
+                            type: 'GET',
+                            data: {
+                                valorFinalVenta: valorFinalVenta,
+                                valorFinalBs: valorFinalBs,
+                                valorFinalCop: valorFinalCop,
+                                pagoTipo: pagoTipo,
+                                action: action,
+                                compraTipo: compraTipo,
+                                nombreC: nombreC,
+                                tipoV: tipoDespacho
+                            },
+                            dataType: 'html'
+                        })
+                        .done(function(result) {
+                            const response = JSON.parse(result)
+                            if (response.status) {
+                                total_pesos = 0
+                                total_dolares = 0
+                                total_bolivares = 0
+                                Alerta.toast('success', response.data)
+                                actualizar_carrito()
+                                cargarUltimasOrdenes()
+                            } else {
+                                Alerta.toast('error', 'No se pudo realizar la acción')
+                            }
+
+                        });
 
                 }
+
+
+
+
 
 
                 /* 
@@ -634,7 +638,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 function actualizar_carrito(id = null, accion = null) {
                     $.ajax({
-                            url: id && accion ? '../../configurar/cantidades.php' : '../../configurar/carrito.php',
+                            url: id && accion ? base_url + 'cantidades.php' : base_url + 'carrito.php',
                             type: 'POST',
                             data: id && accion ? {
                                 id,
@@ -643,6 +647,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             dataType: 'html'
                         })
                         .done(function(result) {
+                            console.log(result)
                             total_pesos = 0
                             total_dolares = 0
                             total_bolivares = 0
@@ -699,60 +704,75 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-
                 function calcularVuelto() {
-                    if (total_dolares == 0) {
-                        return
-                    }
-
-                    document.getElementById("cantidadRecibida").focus();
+                    if (total_dolares == 0) return;
 
                     total_pesos = String(total_pesos).replace(',', '');
 
+                    let handleEnterKey;
+
                     Swal.fire({
                         title: 'Indique la cantidad recibida',
-                        html: `<input type="number" id="cantidadRecibida" class="swal2-input" placeholder="Cantidad recibida">
-                        `,
+                        html: `<input type="number" id="cantidadRecibida" class="swal2-input" placeholder="Cantidad recibida">`,
                         confirmButtonText: 'Calcular vuelto',
                         confirmButtonColor: '#32d7c0',
+                        didOpen: () => {
+                            const input = document.getElementById('cantidadRecibida');
+                            input.focus();
+
+                            handleEnterKey = (e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    Swal.clickConfirm();
+                                }
+                            };
+
+                            input.addEventListener('keydown', handleEnterKey);
+                        },
+                        willClose: () => {
+                            const input = document.getElementById('cantidadRecibida');
+                            if (input && handleEnterKey) {
+                                input.removeEventListener('keydown', handleEnterKey);
+                            }
+                        },
                         preConfirm: () => {
                             const cantidadRecibida = parseFloat(document.getElementById('cantidadRecibida').value);
-
-
                             if (isNaN(cantidadRecibida) || cantidadRecibida <= 0) {
                                 Swal.showValidationMessage('Por favor, ingresa una cantidad válida');
                             }
-
                             return {
                                 cantidadRecibida
-                            }; // Retornar ambos valores
+                            };
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
+                            // Aquí ya el primer Swal se cerró y el listener fue removido
+
                             const {
                                 cantidadRecibida
                             } = result.value;
 
-                            // Calcular el vuelto según el método de pago
                             let vueltoPesos = cantidadRecibida - parseInt(total_pesos);
                             let vueltoDolares = cantidadRecibida - total_dolares;
                             let vueltoBolivares = cantidadRecibida - total_bolivares;
 
-                            // Mostrar resultados
-                            Swal.fire({
-                                title: 'Vuelto calculado',
-                                html: `
-                    <p><strong class="text-total text-info">Pesos:</strong> <span style="font-size: 18px">${formatNumber(vueltoPesos.toFixed(2))}</span></p>
-                    <p><strong class="text-total text-danger">Dólares:</strong> <span style="font-size: 18px">${formatNumber(vueltoDolares.toFixed(2))}</span></p>
-                    <p><strong class="text-total text-success">Bolívares:</strong> <span style="font-size: 18px">${formatNumber(vueltoBolivares.toFixed(2))}</span></p>
-                            `,
-                                confirmButtonText: 'Aceptar',
-                                confirmButtonColor: '#32d7c0',
-                            });
+                            // Ahora mostramos el segundo Swal sin que el Enter anterior lo cierre
+                            setTimeout(() => {
+                                Swal.fire({
+                                    title: 'Vuelto calculado',
+                                    html: `
+                                            <p><strong class="text-total text-info">Pesos:</strong> <span style="font-size: 18px">${formatNumber(vueltoPesos.toFixed(2))}</span></p>
+                                            <p><strong class="text-total text-danger">Dólares:</strong> <span style="font-size: 18px">${formatNumber(vueltoDolares.toFixed(2))}</span></p>
+                                            <p><strong class="text-total text-success">Bolívares:</strong> <span style="font-size: 18px">${formatNumber(vueltoBolivares.toFixed(2))}</span></p>
+                                        `,
+                                    confirmButtonText: 'Cerrar',
+                                    confirmButtonColor: '#32d7c0',
+                                    allowEscapeKey: true // Habilita cerrar con ESC
+                                });
+                            }, 50);
                         }
                     });
                 }
-
 
 
 
@@ -780,10 +800,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                         $('#search').val('')
-                        Toast.fire({
-                            icon: 'success',
-                            title: 'Agregado correctamte'
-                        })
+                        document.getElementById("search").focus();
+                        Alerta.toast('success', 'Agregado correctamte')
                         modo = 2
                     }
 
@@ -810,7 +828,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (result.isConfirmed) {
 
                             $.ajax({
-                                url: '../../configurar/AccionCarta.php',
+                                url: base_url + 'accion_carta.php',
                                 type: 'GET',
                                 data: {
                                     id: id,
@@ -841,10 +859,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         const codigo = producto.trim();
 
                         if (!productos.hasOwnProperty(codigo)) {
-                            Toast.fire({
-                                icon: 'error',
-                                title: 'El producto no existe, agrégalo de forma manual.'
-                            });
+                            Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
                         } else {
                             const datos = productos[producto.trim()];
                             $('.section-scanner').removeClass('hide');
@@ -889,7 +904,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     } else {
                         $.ajax({
-                                url: 'consulta_producto.php',
+                                url: base_url + 'consulta_producto.php',
                                 type: 'POST',
                                 dataType: 'html',
                                 data: {
@@ -898,7 +913,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 },
                             })
                             .done(function(result) {
+
                                 const resultado = JSON.parse(result);
+
+                                console.log(resultado)
+
+                                if (resultado.status == 'error' && resultado.mensaje == 'Sucursal no especificada.') {
+                                    Alerta.toast('error', 'No se ha especificado ninguna sucursal')
+                                    return
+                                }
 
                                 if (modo == 1) {
                                     $("#tabla_resultado_codigo_producto").html('');
@@ -1017,7 +1040,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const peso = formatPeso(pesoventa_p)
 
                     $.ajax({
-                            url: '../../configurar/AccionCarta.php',
+                            url: base_url + 'accion_carta.php',
                             type: 'POST',
                             dataType: 'html',
                             data: {
@@ -1041,7 +1064,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                 document.addEventListener('click', function(event) {
-                    if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) { // ACCION DE ELIMINAR
+                    if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                         let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
                         let codigo_p = event.target.closest('.btn-add-to-car').getAttribute('data-codigo');
 
@@ -1125,7 +1148,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 function eliminarVenta(id) {
                     $.ajax({
-                            url: '../../configurar/deleteVentaAjax.php',
+                            url: base_url + 'deleteVentaAjax.php',
                             type: 'POST',
                             dataType: 'html',
                             data: {
@@ -1150,7 +1173,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         showCancelButton: true,
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.open("../../configurar/AccionCarta.php?action=placeOrder&statusV=3&valorFinalBs=0&valorFinalCop=0", "_self");
+
+
+                            $.ajax({
+                                url: base_url + 'accion_carta.php',
+                                type: 'GET',
+                                data: {
+                                    statusV: 3,
+                                    action: 'placeOrder'
+                                }, // Pasar el parámetro id en la solicitud
+                                success: function(response) {
+                                    const respuesta = JSON.parse(response)
+                                    if (respuesta.status) {
+                                        Alerta.toast('info', 'Se descontaron productos del inventario')
+                                        actualizar_carrito()
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    // Manejar cualquier error
+                                    console.error('Error al eliminar la venta:', error);
+                                }
+                            });
                         }
                     })
                 }
@@ -1263,6 +1306,33 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     }
                 });
                 // Control de funciones desde el teclado
+
+
+
+                function agregarNombreSucursal(sucursal_n) {
+                    const navbar = document.querySelector('ul.navbar-right');
+                    if (!navbar) {
+                        console.warn("No se encontró el elemento 'ul.navbar-right'");
+                        return;
+                    }
+
+                    const li = document.createElement('li');
+                    li.className = 'nav-item';
+
+                    const a = document.createElement('a');
+                    a.href = 'seleccion_sucursal.php';
+                    a.textContent = sucursal_n;
+
+                    li.appendChild(a);
+                    navbar.appendChild(li);
+                }
+
+                const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
+
+                if (nv == 1) {
+                    const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
+                    agregarNombreSucursal(sucursal_n)
+                }
             </script>
     </body>
 

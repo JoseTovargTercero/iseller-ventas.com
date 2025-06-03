@@ -5,26 +5,6 @@ require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
-
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Listado_Productos == 0) {
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
-
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-
-
-
 
     $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
     $stmt->bind_param('i', $bss_id);
@@ -549,7 +529,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         })
                         .then(response => response.text()) // Primero obtenemos el texto plano
                         .then(text => {
-                            // console.log("Respuesta cruda:", text); // Debug: ver el texto antes del parseo
                             try {
                                 const data = JSON.parse(text);
 

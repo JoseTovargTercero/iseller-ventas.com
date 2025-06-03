@@ -75,15 +75,37 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
             if ($_SESSION["nivel"] == '1') {
                 $sucursal_id = $_POST['sucursal_a_editar'];
             } else {
-                $sucursal_id = $_SESSION['id_sucursal'];
+                $sucursal_id = $_SESSION['sucursal'];
             }
 
-            $stmt = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND id_sucursal = ?");
-            $stmt->bind_param("sii", $porcentaje, $id, $sucursal_id);
-            $stmt->execute();
-            $success = $stmt->affected_rows > 0;
-            $message = $success ? "Porcentaje por sucursal actualizado correctamente" : "No se modificó el porcentaje";
-            $stmt->close();
+            $check = $conexion->prepare("SELECT porcentaje FROM stock WHERE id = ? AND id_sucursal = ?");
+            $check->bind_param("ii", $id, $sucursal_id);
+            $check->execute();
+            $check->store_result();
+
+            if ($check->num_rows === 0) {
+                $message = "❌ El producto no está registrado en esa sucursal";
+            } else {
+                $check->bind_result($porcentaje_actual);
+                $check->fetch();
+                if ($porcentaje_actual === $porcentaje) {
+                    $message = "⚠️ El porcentaje ingresado ya es el mismo";
+                } else {
+                    // Ejecutar el UPDATE
+                    $stmt = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id = ? AND id_sucursal = ?");
+                    $stmt->bind_param("sii", $porcentaje, $id, $sucursal_id);
+                    $stmt->execute();
+
+                    if ($stmt->affected_rows > 0) {
+                        $message = "✅ Porcentaje actualizado correctamente";
+                        $success = true;
+                    } else {
+                        $message = "⚠️ No se pudo actualizar el porcentaje";
+                    }
+                    $stmt->close();
+                }
+            }
+            $check->close();
         } else {
             $message = "Método no válido";
         }

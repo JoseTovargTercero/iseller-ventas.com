@@ -21,7 +21,7 @@ $porcentaje    = floatval($_POST['porcentaje']);
 $cantidadNueva = intval($_POST['comprado']);
 $cantidadPP    = intval($_POST['cantidad']);
 $proveedor     = trim($_POST['proveedor']);
-$sucursal      = $_SESSION["nivel"] == 1 ? trim($_POST['sucursal']) : $_SESSION["id_sucursal"];
+$sucursal      = $_SESSION["nivel"] == 1 ? trim($_POST['sucursal']) : $_SESSION["sucursal"];
 $bss_id        = $_SESSION["bss_id"];
 
 // Obtener producto actual

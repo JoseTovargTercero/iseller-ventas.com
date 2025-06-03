@@ -1,0 +1,33 @@
+function cargar_tabla() {
+  const loader = new TablaLoader(
+    "../../configurar/DatabaseHandler/_DBH-select.php"
+  );
+
+  loader.cargar("usuarios", "_usuarios_list").then((data) => {
+    console.log(data);
+
+    if (data) {
+      const section = document.querySelector("#sucursales");
+      section.innerHTML = ""; // Limpiar la tabla antes de insertar
+      let c = 1;
+      console.log("data");
+      data.forEach((usuario) => {
+        const fila = document.createElement("tr");
+        const btn =
+          usuario.ubss_id === usuario.id
+            ? ""
+            : `<button data-id='${usuario.id}' class="btn btn-sm btn-danger btn-delete" title="Eliminar Usuario"><i class="fa fa-trash"></i></button>`;
+        fila.innerHTML = `
+                                <td>${c++}</td>
+                                <td>${usuario.nombre}</td>
+                                <td>${usuario.usuario}</td>
+                                <td>${usuario.nivel}</td>
+                                <td>${usuario.s_nombre}</td>
+                                <td>${btn}</td>
+                            `;
+        section.appendChild(fila);
+      });
+    }
+  });
+}
+cargar_tabla();

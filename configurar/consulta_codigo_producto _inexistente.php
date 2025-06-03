@@ -12,20 +12,20 @@ if ($_SESSION["nivel"] == 1 && $_POST["sucursal"] == '') {
 
 $sucursal = ($_SESSION["nivel"] == '1') ? $_POST["sucursal"] : $_SESSION["sucursal"];
 
-// buscar el archivo encargado de los datos del producto para obtener el porcentaje perzonalizado
-
 if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
     $q = $conexion->real_escape_string(trim($_POST['producto']));
 
+    // Consulta para obtener productos que NO están en la tabla 'stock' para la sucursal
     $query = "SELECT p.id, p.nombre
-    FROM productos p
-    INNER JOIN stock s ON p.id = s.id_producto
-    WHERE p.nombre LIKE ?
-      AND p.activo = 0
-      AND s.id_sucursal = ?";
+              FROM productos p
+              LEFT JOIN stock s ON p.id = s.id_producto AND s.id_sucursal = ?
+              WHERE s.id_producto IS NULL
+                AND p.nombre LIKE ?
+                AND p.activo = 0";
+
     $stmt = $conexion->prepare($query);
     $like = "%$q%";
-    $stmt->bind_param("si", $like, $sucursal);
+    $stmt->bind_param("is", $sucursal, $like);
     $stmt->execute();
     $result = $stmt->get_result();
 

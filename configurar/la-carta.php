@@ -160,25 +160,7 @@ class Cart
 			}
 
 			$this->cart_contents['cart_total'] += ($val['price_C'] * $val['qty']);
-			$var2 = $this->cart_contents['cart_total'];
-			/*
-            $this->cart_contents['cart_total'] = 0;
-            $var1 = $this->cart_contents['cart_total'] += ($val['price'] * $val['qty']);
-            $this->cart_contents['cart_total'] = 0;
-            
-            $var2 = $this->cart_contents['cart_total'] += ($val['price_C'] * $val['qty']);
-      
-            
-            
-            
-            $_SESSION['pri'] = $var2;
-        
-            $this->cart_contents['cart_total'] = 0;
-           $this->cart_contents['cart_total'] += ($val['price'] * $val['qty']);
-            
-            */
 		}
-		$_SESSION['pri'] = $var2;
 
 
 		$this->cart_contents['cart_total'] = 0;
@@ -205,13 +187,6 @@ class Cart
 			$this->cart_contents[$key]['subtotal'] = ($this->cart_contents[$key]['price'] * $this->cart_contents[$key]['qty']);
 			$var1 = $this->cart_contents['cart_total'];
 		}
-
-
-		$_SESSION['margen'] = $var1 - $var2;
-
-
-
-
 
 
 

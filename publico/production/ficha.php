@@ -5,16 +5,6 @@ require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
 
-
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-    }
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
     $idProducto = $_GET['id'];
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
@@ -79,7 +69,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $totalVentasDiarias = 0;
         $totalGananciasDiarias = 0;
 
-        $query22 = "SELECT * FROM orden WHERE modified='$dia' AND status='$tipo' AND isellerAct='1'";
+        $query22 = "SELECT * FROM orden WHERE modified='$dia' AND status='$tipo'";
         $buscarAlumnos22 = $conexion->query($query22);
         if ($buscarAlumnos22->num_rows > 0) {
             while ($filaAlumnos22 = $buscarAlumnos22->fetch_assoc()) {
@@ -110,7 +100,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $totalVentasDiarias = 0;
         $totalGananciasDiarias = 0;
 
-        $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='$tipo' AND isellerAct='1'";
+        $query222 = "SELECT * FROM orden WHERE semana='$semana' AND status='$tipo'";
         $buscarAlumnos222 = $conexion->query($query222);
         if ($buscarAlumnos222->num_rows > 0) {
             while ($filaAlumnos222 = $buscarAlumnos222->fetch_assoc()) {
@@ -139,7 +129,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $totalVentasDiarias = 0;
         $totalGananciasDiarias = 0;
 
-        $query2222 = "SELECT * FROM orden WHERE fecha='$mes' AND status='$tipo' AND isellerAct='1'";
+        $query2222 = "SELECT * FROM orden WHERE fecha='$mes' AND status='$tipo'";
         $buscarAlumnos2222 = $conexion->query($query2222);
         if ($buscarAlumnos2222->num_rows > 0) {
             while ($filaAlumnos2222 = $buscarAlumnos2222->fetch_assoc()) {

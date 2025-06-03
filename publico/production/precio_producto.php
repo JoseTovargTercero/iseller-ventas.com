@@ -20,7 +20,7 @@ if ($_SESSION["nivel"] == 1 && empty($_POST["sucursal"])) {
     exit;
 }
 
-$sucursal = ($_SESSION["nivel"] == '1') ? $_POST["sucursal"] : $_SESSION["id_sucursal"];
+$sucursal = ($_SESSION["nivel"] == '1') ? $_POST["sucursal"] : $_SESSION["sucursal"];
 
 
 
@@ -34,7 +34,8 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
                 p.precio_compra,
                 p.cantidad_unidades,
                 p.proveedor,
-                s.porcentaje
+                s.porcentaje,
+                s.stock
               FROM productos AS p
               INNER JOIN stock AS s ON p.id = s.id_producto
               WHERE p.id = ? AND s.id_sucursal = ?";
@@ -52,7 +53,8 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
             'precio_compra' => $producto['precio_compra'],
             'cantidad_unidades' => $producto['cantidad_unidades'],
             'porcentaje' => $producto['porcentaje'], // desde stock
-            'proveedor' => $producto['proveedor']
+            'proveedor' => $producto['proveedor'],
+            'stock' => $producto['stock']
         ];
     }
 

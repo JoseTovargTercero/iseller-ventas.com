@@ -121,7 +121,6 @@ class TasasCambio
 // Informacion de la tipo de cambio estandar
 require_once('session.php');
 $bss_id = $_SESSION["bss_id"];
-$id_sucursal = $_SESSION["id_sucursal"];
 $cambio = new TasasCambio($conexion);
 
 
@@ -133,9 +132,11 @@ $tasaMostradas = $cambio->tasasMostradas($bss_id);
 $tasaMostradas = json_decode($tasaMostradas, true);
 $data_monedas = $tasaMostradas['data'];
 
-
-$stock = $cambio->obtenerStockCritico($id_sucursal);
-$stockCritico = $stock['data'];
+if (!empty($_SESSION["sucursal"])) {
+    $id_sucursal = $_SESSION["sucursal"];
+    $stock = $cambio->obtenerStockCritico($id_sucursal);
+    $stockCritico = $stock['data'];
+}
 
 $pesoDolar = $tasas['data']['pesoDolar'];
 $peso_bolivar = $tasas['data']['peso_bolivar'];

@@ -5,23 +5,6 @@ require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $topnav = topnav();
 
-  if ($_SESSION["validate"] != "ok") {
-    define('PAGINA_INICIO', '../../index.php');
-    header('Location: ' . PAGINA_INICIO);
-  }
-  if ($_SESSION['nivel'] == '1') {
-    $menu = MenuAdministrador();
-  } else {
-    $menu = MenuStandar();
-
-    if ($Creditos == 0) {
-      define('PAGINA_INICIO', '../../index.php');
-      header('Location: ' . PAGINA_INICIO);
-    }
-  }
-
-  $nivelUsuario = $_SESSION['nivel'];
-  $nombreUsuario = $_SESSION['nombre'];
   $cliente = $_GET['cliente'];
 
 
@@ -43,45 +26,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
     <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-
-
-
-    <script>
-      function updateCartItem(obj, id) {
-        $.get("cartAction.php", {
-          action: "updateCartItem",
-          id: id,
-          qty: obj.value
-        }, function(data) {
-          if (data == 'ok') {
-            location.reload();
-          } else {
-            alert('Cart update failed, please try again.');
-          }
-        });
-      }
-
-      function confirmar() {
-        var confirm = alertify.confirm('Confirmar venta', 'Esta apunto de realizar una venta, ¿desea continuar?', null, null).set('labels', {
-          ok: 'Confirmar',
-          cancel: 'Cancelar'
-        });
-
-        //callbak al pulsar botón positivo
-        confirm.set('onok', function() {
-          window.open("AccionCarta.php?action=placeOrder", "_self");
-        });
-        //callbak al pulsar botón negativo
-        confirm.set('oncancel', function() {
-          alertify.error('Venta cancelada');
-        })
-
-      }
-    </script>
-
-
-
-
 
 
 
@@ -127,35 +71,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <!-- top navigation -->
         <?php echo $topnav ?>
         <!-- /top navigation -->
-        <style>
-          .gray {
-            color: rgba(52, 73, 94, 0.94);
-            font-size: 26px;
-
-
-          }
-        </style>
-
-
-
-
-
         <!-- page content -->
         <div class="right_col" role="main">
           <div class="">
-
-
             <h4>Creditos</h4>
             <p style="margin-top: -10px;">Listado de creditos otorgados</p>
-
-
             <div class="clearfix"></div>
             <div class="row" style="display: block;">
-
-
-
-
-
               <div class="col-lg-12">
                 <div class="x_panel  fadeInUp animated">
                   <div class="x_title">
@@ -168,7 +90,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                       <div class="col-lg-12">
                         <div class="card-box table-responsive">
 
-                          <table class="table table-bordered" style="width:100%">
+                          <table id="tabla-creditos" class="table table-bordered" style="width:100%">
                             <thead>
                               <tr class="headings">
                                 <th class="column-title">#</th>
@@ -180,178 +102,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                               </tr>
                             </thead>
 
-
-
-
                             <tbody>
-                              <?php
 
-                              function datosProductos($producto)
-                              {
-                                global $conexion, $pesoDolar, $peso_bolivar, $dolarBolivar;
-
-
-                                $query = $conexion->query("SELECT * FROM productos  WHERE id = '$producto' AND activo= 0");
-                                if ($query->num_rows > 0) {
-                                  while ($row = $query->fetch_assoc()) {
-
-                                    $cantidadUnidad = $row["cantidad_unidades"];
-                                    $origen = $row["origen"];
-
-                                    $precioDolarCompra = $row["precio_compra"] / $cantidadUnidad;
-                                    $porcentaje = $row["porcentaje"];
-                                    $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
-                                    $precioDolarVenta = number_format($precioDolarVenta, '2', '.', ',');
-
-
-                                    $precioPesoVenta = $precioDolarVenta * $pesoDolar;
-                                    $precioPesoVenta = formatPesoVista($precioPesoVenta);
-
-
-                                    if ($origen == 'c') {
-                                      $precioBsVenta = ($precioPesoVenta / $peso_bolivar) / 1000;
-                                    } else {
-                                      $precioBsVenta = $precioDolarVenta * $dolarBolivar;
-                                    }
-
-                                    $nombre = strtoupper($row["nombre"]);
-                                    // quitar caracteres especiales del nombre
-                                    $nombre = preg_replace('/[^A-Za-z0-9\s]/', '', $nombre);
-
-                                    $data = [
-                                      'id' => $row['id'],
-                                      'stock' => $row['stock'],
-                                      'nombre' =>  "$nombre",
-                                      'precio_dolar_visible' => $precioDolarVenta,
-                                      'precio_peso_visible' => $precioPesoVenta,
-                                      'precio_bs_visible' => $precioBsVenta,
-                                      'codigo' => $row['codigo'],
-                                      'origen' => $row['origen'],
-                                    ];
-                                  }
-                                  return $data;
-                                }
-                              }
-
-                              function getProductos($id_order)
-                              {
-                                global $conexion;
-                                $productos = [];
-
-                                $stmt = mysqli_prepare($conexion, "SELECT product_id, quantity FROM orden_articulos WHERE order_id=?");
-                                $stmt->bind_param('s', $id_order);
-                                $stmt->execute();
-                                $result = $stmt->get_result();
-
-                                if ($result->num_rows > 0) {
-                                  while ($row = $result->fetch_assoc()) {
-                                    $productos[] = [ // ← Quitamos $productos[$id_order][]
-                                      'id' => $row['product_id'],
-                                      'cantidad' => $row['quantity'],
-                                      'datos' => datosProductos($row['product_id'])
-                                    ];
-                                  }
-                                }
-
-                                $stmt->close();
-                                return $productos;
-                              }
-
-                              $productos_by_order = [];
-
-                              $stmt = mysqli_prepare($conexion, "SELECT creditos.tipoCompra, creditos.id AS id_credito, creditos.order_id, orden.created, orden.total_price FROM creditos LEFT JOIN orden ON orden.id = creditos.order_id WHERE estado='2' AND negocio = ? ORDER BY negocio DESC");
-                              $stmt->bind_param('s', $cliente);
-                              $stmt->execute();
-                              $result = $stmt->get_result();
-                              if ($result->num_rows > 0) {
-                                while ($row = $result->fetch_assoc()) {
-                                  $productos_by_order[] = [
-                                    'id' => $row['order_id'],
-                                    'id_credito' => $row['id_credito'],
-                                    'tipoCompra' => $row['tipoCompra'],
-                                    'fecha' => $row['created'],
-                                    'total' => $row['total_price'],
-                                    'productos' => getProductos($row['order_id'])
-                                  ];
-                                }
-                              } else {
-                                header("Location: creditos.php");
-                                exit;
-                              }
-                              $stmt->close();
-
-
-                              $total_general_usd = 0;
-                              $total_general_cop = 0;
-                              $total_general_bss = 0;
-
-
-                              foreach ($productos_by_order as  $item) {
-                                $total_seccion_usd = 0;
-                                $total_seccion_cop = 0;
-                                $total_seccion_bss = 0;
-
-
-                                foreach ($item['productos'] as $sub_item) {
-
-                                  /* aca adentro ocurre el error al acceder a los datos */
-
-                                  $precio_usd = $sub_item['datos']['precio_dolar_visible'] * $sub_item['cantidad'];
-                                  $precio_cop = $sub_item['datos']['precio_peso_visible'] * $sub_item['cantidad'];
-                                  $precio_bss = $sub_item['datos']['precio_bs_visible'] * $sub_item['cantidad'];
-
-                                  $total_seccion_usd += $precio_usd;
-                                  $total_seccion_cop += $precio_cop;
-                                  $total_seccion_bss += $precio_bss;
-
-                                  $total_general_usd += $precio_usd;
-                                  $total_general_cop += $precio_cop;
-                                  $total_general_bss += $precio_bss;
-
-                                  echo '<tr>';
-                                  echo '
-                                    <td></td>
-                                    <td>' . htmlspecialchars($sub_item['datos']['nombre']) . '</td>
-                                    <td class="text-center">' . $precio_usd . ' <small>$</small></td>
-                                    <td class="text-center">' . number_format($precio_cop, 0, '.', ',') . ' <small>Cop</small></td>
-                                    <td class="text-center">' . number_format($precio_bss, 2, '.', ',') . ' <small>Bs</small></td>
-                                    <td></td>
-                                    
-                                    ';
-                                  echo '</tr>';
-                                }
-
-                                echo '<tr style="background-color: rgba(0, 0, 0, .05);">';
-                                echo '
-                                  <td>COMPRA: <b>' . $item['id'] . '</b></td>
-                                  <td>Fecha: ' . $item['fecha'] . '</td>
-                                  <td class="text-center"><b>TOTAL: ' . $total_seccion_usd . '<small></small></b></td>
-                                  <td class="text-center"><b>TOTAL: ' . number_format($total_seccion_cop, 0, '.', ',') . '<small></small></b></td>
-                                  <td class="text-center"><b>TOTAL: ' . number_format($total_seccion_bss, 2, '.', ',') . '<small></small></b></td>
-                                  <td class="text-center">
-                                  <button data-tipoCompra="' . $item['tipoCompra'] . '" data-precioPesoVenta = "' . $total_seccion_cop . '" data-precioBsVenta="' . $total_seccion_bss . '" data-id_credito="' . $item['id_credito'] . '" data-id="' . $item['id'] . '" class="btn btn-pagar btn-sm btn-info">Pagar</button>
-                                  </td>';
-                                echo '</tr>';
-                              }
-
-
-                              echo '<tr style="background-color: rgba(0, 0, 0, .2);">';
-                              echo '
-                                <td colspan=2 >DEUDA TOTAL:</td>
-                                <td class="text-center"><b>' . $total_general_usd . '<small>$</small></b></td>
-                                <td class="text-center"><b>' . number_format($total_general_cop, 0, '.', ',') . '<small>Cop</small></b></td>
-                                <td class="text-center"><b>' . number_format($total_general_bss, 2, '.', ',') . '<small>Bs</small></b></td>
-                                    <td></td>
-                                ';
-                              echo '</tr>';
-
-
-                              ?>
                             </tbody>
                           </table>
-
-
-                          <br>
 
 
 
@@ -407,6 +161,113 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
     <script>
+      const cliente = <?php echo json_encode($cliente); ?>;
+      // cargar tabla
+      async function cargarCreditos() {
+        const tbody = document.querySelector('#tabla-creditos tbody');
+        if (!tbody) return;
+
+        try {
+          const res = await fetch('../../configurar/creditos_por_cliente.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `cliente=${encodeURIComponent(cliente)}`
+          });
+
+          if (!res.ok) throw new Error('Error al obtener datos');
+          const data = await res.json();
+
+          // Limpia el tbody
+          tbody.innerHTML = '';
+
+          if (data.ordenes.length === 0) {
+            window.location.href = 'creditos.php';
+          }
+
+
+          // Recorre cada orden
+          data.ordenes.forEach(ord => {
+            // 1. Fila por cada producto
+            ord.productos.forEach(sub => {
+              const {
+                nombre,
+                precio_dolar_visible,
+                precio_peso_visible,
+                precio_bs_visible
+              } = sub.datos;
+              const cantidad = sub.cantidad;
+
+              const usd = (precio_dolar_visible * cantidad).toFixed(2);
+              const cop = (precio_peso_visible * cantidad).toLocaleString('es-CO');
+              const bs = (precio_bs_visible * cantidad).toLocaleString('es-VE', {
+                minimumFractionDigits: 2
+              });
+
+              tbody.insertAdjacentHTML('beforeend', `
+              <tr>
+                <td></td>
+                <td>${nombre}</td>
+                <td class="text-center">${usd} <small>$</small></td>
+                <td class="text-center">${cop} <small>Cop</small></td>
+                <td class="text-center">${bs} <small>Bs</small></td>
+                <td></td>
+              </tr>
+            `);
+            });
+
+            // 2. Fila totales por orden
+            const ts = ord.totales;
+            tbody.insertAdjacentHTML('beforeend', `
+        <tr style="background-color: rgba(0,0,0,.05);">
+          <td>COMPRA: <b>${ord.id}</b></td>
+          <td>Fecha: ${ord.fecha}</td>
+          <td class="text-center"><b>TOTAL: ${ts.usd.toFixed(2)}<small></small></b></td>
+          <td class="text-center"><b>TOTAL: ${ts.cop.toLocaleString('es-CO')}<small></small></b></td>
+          <td class="text-center"><b>TOTAL: ${ts.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}<small></small></b></td>
+          <td class="text-center">
+            <button
+              data-tipoCompra="${ord.tipoCompra}"
+              data-precioPesoVenta="${ts.cop}"
+              data-precioBsVenta="${ts.bs}"
+              data-id_credito="${ord.id_credito}"
+              data-id="${ord.id}"
+              class="btn btn-pagar btn-sm btn-info">
+              Pagar
+            </button>
+          </td>
+        </tr>
+      `);
+          });
+
+          // 3. Fila totales globales
+          const tg = data.totales_global;
+          tbody.insertAdjacentHTML('beforeend', `
+      <tr style="background-color: rgba(0,0,0,.2);">
+        <td colspan="2">DEUDA TOTAL:</td>
+        <td class="text-center"><b>${tg.usd.toFixed(2)} <small>$</small></b></td>
+        <td class="text-center"><b>${tg.cop.toLocaleString('es-CO')} <small>Cop</small></b></td>
+        <td class="text-center"><b>${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></b></td>
+        <td></td>
+      </tr>
+    `);
+
+        } catch (error) {
+          console.error(error);
+          tbody.innerHTML = `
+      <tr><td colspan="6" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>
+    `;
+        }
+      }
+
+      /* Ejecuta al cargar la página (o según tu framework) */
+      document.addEventListener('DOMContentLoaded', cargarCreditos);
+
+      // cargar tabla
+
+
+
       const opcionesPago = `
                     <select id="metodoPago" class="form-control">
                         <option value="">Seleccione</option>
@@ -434,9 +295,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
 
       });
-
-
-
 
 
 

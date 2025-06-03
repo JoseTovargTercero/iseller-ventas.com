@@ -26,6 +26,7 @@ if ($contrasena !== $conf_contrasena) {
    echo json_encode(['tipo' => 'error', 'mensaje' => 'Las contraseñas no coinciden.']);
    exit;
 }
+$bss_id = $_SESSION["bss_id"];
 
 
 
@@ -52,7 +53,7 @@ try {
    if ($stmt->execute()) {
       echo json_encode(['tipo' => 'success', 'mensaje' => 'Usuario registrado correctamente.']);
    } else {
-      echo json_encode(['tipo' => 'error', 'mensaje' => 'Error al registrar usuario.']);
+      echo json_encode(['tipo' => 'error', 'mensaje' => 'Error al registrar usuario. ' . $stmt->error]);
    }
 
    $stmt->close();

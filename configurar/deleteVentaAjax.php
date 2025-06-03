@@ -3,7 +3,7 @@ require_once('configuracion.php');
 require_once('session.php');
 
 $orderId = $_POST['id'];
-$id_sucursal = $_SESSION["id_sucursal"];
+$id_sucursal = $_SESSION["sucursal"];
 try {
     // Iniciar transacción
     $conexion->begin_transaction();

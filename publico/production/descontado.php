@@ -4,22 +4,7 @@ require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $topnav = topnav();
 
-  if ($_SESSION["validate"] != "ok") {
-    define('PAGINA_INICIO', '../../index.php');
-    header('Location: ' . PAGINA_INICIO);
-  }
-  if ($_SESSION['nivel'] == '1') {
-    $menu = MenuAdministrador();
-  } else {
-    $menu = MenuStandar();
-    if ($Dejado_Ganar == 0) {
-      define('PAGINA_INICIO', '../../index.php');
-      header('Location: ' . PAGINA_INICIO);
-    }
-  }
 
-  $nivelUsuario = $_SESSION['nivel'];
-  $nombreUsuario = $_SESSION['nombre'];
 
 ?>
 
@@ -64,7 +49,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         //callbak al pulsar botón positivo
         confirm.set('onok', function() {
-          window.open("AccionCarta.php?action=placeOrder", "_self");
+          window.open("accion_carta.php?action=placeOrder", "_self");
         });
         //callbak al pulsar botón negativo
         confirm.set('oncancel', function() {

@@ -133,3 +133,35 @@ textarea:disabled {
 .c-pointer {
     cursor: pointer;
 }
+
+.pointer {
+    cursor: pointer !important;
+}
+
+.nowrap {
+    white-space: nowrap !important;
+}
+
+.tile-stats, .x_panel {
+    border-radius: 5px !important;
+}
+
+.fs-13 {
+    font-size: 13px;
+}
+
+.ml-10 {
+    margin-left: 10px;
+}
+
+.fs-15 {
+    font-size: 15px !important;
+}
+
+.dataTables_filter {
+    float: inline-end !important;
+}
+
+.m-auto {
+    margin: auto !important;
+}

@@ -3,22 +3,10 @@ require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-    if ($_SESSION['nivel'] == '1') {
-        $menu = MenuAdministrador();
-    } else {
-        $menu = MenuStandar();
-        if ($Nuevo_Producto == 0) {
-            define('PAGINA_INICIO', '../../index.php');
-            header('Location: ' . PAGINA_INICIO);
-        }
-    }
+
 
     $topnav = topnav();
 
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
 
 
 ?>
