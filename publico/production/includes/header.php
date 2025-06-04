@@ -33,9 +33,6 @@ function topnav()
                                 <a class='dropdown-item' href='configuracion.php'>
                                     <i class='line icon-settings pull-left'></i> &nbsp; Configuración
                                 </a>
-                                <a class='dropdown-item' href='actualizar.php'>
-                                    <i class='line icon-heart pull-left'></i> &nbsp; Actualizaciones
-                                </a>
                                 <a class='dropdown-item' href='cambiar_tasas.php'>
                                     <i class='line icon-anchor'></i> &nbsp; Tasas de cambio
                                 </a>

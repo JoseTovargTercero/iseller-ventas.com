@@ -60,9 +60,11 @@ $(document).ready(function() {
         if ($BODY.hasClass('nav-md')) {
             $SIDEBAR_MENU.find('li.active ul').hide();
             $SIDEBAR_MENU.find('li.active').addClass('active-sm').removeClass('active');
+                  $("#site_titlex").css("text-align", "");
         } else {
             $SIDEBAR_MENU.find('li.active-sm ul').show();
             $SIDEBAR_MENU.find('li.active-sm').addClass('active').removeClass('active-sm');
+                  $("#site_titlex").css("text-align", "center");
         }
 
         $BODY.toggleClass('nav-md nav-sm');
@@ -245,4 +247,4 @@ if (typeof NProgress != 'undefined') {
     $(window).on('load', function() {
         NProgress.done();
     });
-}
+ });

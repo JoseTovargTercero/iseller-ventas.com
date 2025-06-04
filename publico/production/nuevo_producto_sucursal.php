@@ -154,7 +154,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <!-- jQuery -->
         <script src='../vendors/jquery/dist/jquery.min.js'></script>
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
-        <script src='../build/js/custom.min.js'></script>
+        <script src='../build/js/custom.js'></script>
 
         <script>
             // tasas de cambio

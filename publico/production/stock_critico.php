@@ -27,7 +27,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <head>
 
-        <title>Productos</title>
+        <title>Productos con stock crítico</title>
         <?php require_once('includes/headers.php'); ?>
 
         <?php
@@ -80,7 +80,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- page content -->
                 <div class="right_col">
                     <div class="col-lg-12">
-                        <h4>Productos</h4>
+                        <h4>Stock crítico</h4>
                         <p style="margin-top: -10px;">Listado de productos</p>
 
                     </div>
@@ -176,7 +176,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <label class='form-label' for='first-name'>Sucursal </label>
                                                     <select class="form-control" id="sucursal_a_editar" name="sucursal_a_editar">
                                                         <?php if (count($sucursales) > 1): ?>
-                                                            <option value="">Todas las sucursales</option>
+                                                            <option value="">Seleccione la sucursal</option>
                                                         <?php endif; ?>
 
                                                         <?php foreach ($sucursales as $row): ?>
@@ -311,12 +311,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class="col-lg-12" id="section_lista">
                         <div class="x_panel   fadeInUp animated">
                             <div class="w-100 x_title d-flex justify-content-between">
-                                <h2>Productos</h2>
-                                <select class="form-control" style="max-width: 200px;" id="sucursal-selector" name="sucursal-selector">
-                                    <?php if (count($sucursales) > 1): ?>
-                                        <option value="">Todas las sucursales</option>
-                                    <?php endif; ?>
+                                <div class="d-flex flex-column">
+                                    <h2>Productos</h2>
+                                    <small>Puede descargar por proveedor usando el campo de búsqueda</small>
+                                </div>
 
+                                <select class="form-control" style="max-width: 200px;" id="sucursal-selector" name="sucursal-selector">
                                     <?php foreach ($sucursales as $row): ?>
                                         <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($row['nombre']) ?>
@@ -336,28 +336,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <thead>
                                                     <tr class="headings">
                                                         <th>#</th>
-                                                        <th>Nombre </th>
-                                                        <th>Compra</small></th>
-                                                        <th>Cant.</th>
-                                                        <th>%</th>
-                                                        <th>Stock</th>
-                                                        <th>USD</th>
-                                                        <th>COP</th>
-                                                        <th>BS</th>
-                                                        <th></th>
-                                                        <th></th>
-                                                        <th></th>
+                                                        <th>Producto</th>
+                                                        <th>Precio</th>
+                                                        <th>Origen</th>
+                                                        <th>Stock actual</th>
+                                                        <th>Proveedor</th>
                                                     </tr>
                                                 </thead>
-
                                                 <tbody>
-
                                                 </tbody>
                                             </table>
-
-
-
-
                                         </div>
                                     </div>
                                 </div>
@@ -366,13 +354,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>
                 </div>
             </div>
-
+            <!-- /footer content -->
 
             <!-- jQuery -->
             <script src="../vendors/jquery/dist/jquery.min.js"></script>
             <!-- Bootstrap -->
             <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-            <!-- FastClick -->
+
             <!-- DataTables core -->
             <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
             <!-- Buttons extension -->
@@ -384,125 +372,76 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
             <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+
             <script src="../build/js/custom.js"></script>
             <script src="../build/js/global-loader.js"></script>
-
+            <!--<script src="../build/js/global-loader.js"></script>
+                                    -->
 
 
             <script>
-                const tabla = $('#datatable-responsive').DataTable();
+                const tabla = $('#datatable-responsive').DataTable({
 
-                let productos_editar
-                let metodo_editar
+                    dom: 'Bfrtip',
+                    buttons: [{
+                        extend: 'pdfHtml5',
+                        text: 'Descargar PDF',
+                        title: '', // deja vacío
+                        orientation: 'portrait', // Vertical
+                        pageSize: 'A4',
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        customize: function(doc) {
+                            const n_sucursal = document.querySelector('#sucursal-selector option:checked').textContent;
+                            doc.styles.tableHeader.alignment = 'left';
 
-                // Actualizar el producto
-                document.getElementById('form-data').addEventListener('submit', function(e) {
-                    e.preventDefault(); // Evitar envío tradicional
-
-                    const form = e.target;
-                    const formData = new FormData(form);
-
-                    formData.append('accion', 'editar');
-                    formData.append('metodo', metodo_editar);
-                    formData.append('id', productos_editar);
-
-                    // Obtener valores
-                    const valores = {
-                        nombre: form.nombre.value,
-                        precio: form.precioMonedaOrigen.value,
-                        cantidad: form.cantidad.value,
-                        porcentaje: form.porcentaje.value,
-                        origen: form.origenProducto.value,
-                        proveedor: form.proveedor.value,
-                        codigo_barra: form.codigo_barra.value,
-                        sucursal: document.getElementById('sucursal-selector').value,
-                        sucursal_a_editar: document.getElementById('sucursal_a_editar').value
-                    };
-
-                    // Validación por método
-                    switch (metodo_editar) {
-                        case 'generales':
-                            if (camposVacios([valores.nombre, valores.codigo_barra, valores.proveedor])) {
-                                Alerta.mostrar('warning', 'Completa todos los campos: nombre, proveedor y código de barras.');
-                                return;
-                            }
-                            break;
-
-                        case 'precio':
-                            if (camposVacios([valores.precio, valores.cantidad, valores.porcentaje, valores.origen])) {
-                                Alerta.mostrar('warning', 'Completa todos los campos: precio, cantidad, porcentaje y origen.');
-                                return;
-                            }
-                            break;
-
-                        case 'porcentaje':
-                            if (camposVacios([valores.porcentaje])) {
-                                Alerta.mostrar('warning', 'El campo porcentaje no puede estar vacío.');
-                                return;
-                            }
-                            if (!valores.sucursal && !valores.sucursal_a_editar) {
-                                Alerta.mostrar('warning', 'Selecciona una sucursal.');
-                                return;
-                            }
-                            break;
-                    }
+                            // Centrar el título
+                            doc.content.unshift({
+                                text: [{
+                                        text: 'Listado de productos con stock crítico\n',
+                                        fontSize: 14,
+                                        bold: true
+                                    },
+                                    {
+                                        text: 'Sucursal ' + n_sucursal.trim() + '\n',
+                                        fontSize: 12
+                                    },
+                                    {
+                                        text: 'Fecha: ' + new Date().toLocaleDateString(),
+                                        fontSize: 10
+                                    }
+                                ],
+                                alignment: 'center',
+                                margin: [0, 0, 0, 12]
+                            });
 
 
-                    fetch('../../configurar/productos_gestor.php', {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(res => res.text())
-                        .then(text => {
-                            console.log("Respuesta cruda del servidor:", text);
-                            let json;
-                            try {
-                                json = JSON.parse(text);
-                            } catch (e) {
-                                console.error("Error al parsear JSON:", e);
 
-                                Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
-                                return;
-                            }
+                            doc.styles.title = {
+                                alignment: 'center',
+                                fontSize: 14
+                            };
 
-                            if (json.success == true) {
+                            // Ocupar el ancho total de la página
+                            const columnCount = doc.content[1].table.body[0].length;
+                            const widths = Array(columnCount).fill('*'); // Distribuye el ancho equitativamente
+                            doc.content[1].table.widths = widths;
 
-                                Alerta.mostrar('success', json.message);
-                                cancelarActualizacion()
-                                const sucursal_filtro = document.getElementById('sucursal-selector').value
-                                cargarProductos(sucursal_filtro)
-
-                            } else {
-
-                                Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
-                            }
-                        })
-                        .catch(err => {
-                            modalContainer.classList.remove("active");
-
-                            console.error("Error en la solicitud:", err);
-                            Alerta.mostrar('error', 'No se pudo contactar con el servidor');
-                        });
+                            // Tamaño de fuente en la tabla
+                            doc.styles.tableHeader.fontSize = 10;
+                            doc.defaultStyle.fontSize = 9;
+                        }
+                    }]
                 });
 
-
-
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    let input = document.getElementById("codigo_barra");
-                    let lastScan = 0; // Guarda el tiempo del último escaneo
-                    let timeoutDuration = 6000; // Tiempo en milisegundos para bloquear (ajústalo según tu lector)
-
-                    input.addEventListener("input", function() {});
-                });
-
-
-                let productos = []
 
                 // Cargar etabla de productos
                 function cargarProductos(sucursal = '') {
 
-                    fetch('../../configurar/productos_list.php', {
+
+                    fetch('../../configurar/productos_en_stock_critico.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -523,31 +462,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     let contador = 1;
                                     // Agrega fila por fila
                                     data.data.forEach(row => {
-                                        productos[row.id] = row
-
                                         tabla.row.add([
                                             contador++,
                                             row.nombre,
-                                            row.precio_compra,
-                                            row.cantidad_unidades,
-                                            row.porcentaje,
+                                            row.precio_compra + '$',
+                                            (row.origen == 'c' ? 'Colombiano' : 'Venezolano'),
                                             row.stock,
-                                            formatNumber(row.precio_venta_dolar),
-                                            formatNumber(formatPeso(row.precio_venta_peso)),
-                                            formatNumber(recortarADosDecimales(row.precio_venta_bs)),
-                                            `<a data-id="${row.id}" class="btn-edit"><i class="icon-gray line icon-pencil"></i></a>`,
-                                            `<a href="ficha.php?id=${row.id}"><i style="color: #41c1af" class="icon-gray line icon-chart"></i></a>`,
-                                            `<a class="c-pointer btn-delete" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
+                                            row.proveedor
                                         ]);
                                     });
 
                                     tabla.draw(); // Redibuja la tabla
-
-                                    if (sucursal == '') {
-                                        tabla.column(4).visible(false);
-                                    } else {
-                                        tabla.column(4).visible(true);
-                                    }
 
                                 } else {
                                     console.error("Error:", data.message);
@@ -571,248 +496,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     });
                 });
 
-
-                document.addEventListener('click', async (event) => {
-                    if (event.target.closest('.btn-edit')) {
-                        const id = event.target.closest('.btn-edit').getAttribute('data-id');
-
-
-                        const sucursalSeleccionada = document.querySelector('#sucursal-selector')?.value;
-
-                        if (sucursalSeleccionada !== '') {
-                            // Si hay una sucursal seleccionada, omitir el Swal y continuar con 'porcentaje'
-                            const opcion = 'porcentaje';
-                            cargarDatosForm(productos[id], opcion)
-
-                            return;
-                        }
-
-                        const swalOptions = {
-                            title: '¿Que desea hacer?',
-                            icon: 'question',
-                            showConfirmButton: false,
-                            showCancelButton: true,
-                            cancelButtonText: 'Cancelar',
-                            html: `
-                            <div style="text-align: center;">
-                                <div class="swal-option" data-option="generales" style="margin-bottom: 15px; cursor: pointer;">
-                                    <strong class="text-info">Modificar datos generales del producto</strong><br>
-                                    <em>Establece valores globales del producto. (nombre, código de barras, proveedor, etc.)</em>
-                                </div>
-                                <div class="swal-option" data-option="precio" style="margin-bottom: 15px; cursor: pointer;">
-                                    <strong class="text-info">Modificar precio general del producto</strong><br>
-                                    <em>Define el precio base por defecto.</em>
-                                </div>
-                                <div class="swal-option" data-option="porcentaje" style="cursor: pointer;">
-                                    <strong class="text-info">Modificar porcentaje por sucursal</strong><br>
-                                    <em>Define la ganancia por cada sucursal.</em>
-                                </div>
-                            </div>`,
-                            didOpen: () => {
-                                const opciones = Swal.getHtmlContainer().querySelectorAll('.swal-option');
-                                opciones.forEach(div => {
-                                    div.addEventListener('click', () => {
-                                        const opcion = div.getAttribute('data-option');
-                                        Swal.close(); // Cierra el SweetAlert
-                                        cargarDatosForm(productos[id], opcion)
-
-                                    });
-                                });
-                            }
-                        };
-                        await Swal.fire(swalOptions);
-                    }
-
-                    if (event.target.closest('.btn-delete')) {
-                        const id = event.target.closest('.btn-delete').getAttribute('data-id')
-                        confirmarDelete(id)
-
-                    }
-                });
-
-
-
-                // Eliminar producto
-                function confirmarDelete(id) {
-                    Swal.fire({
-                        title: 'Esta seguro?',
-                        html: 'Se eliminara el producto ¿desea continuar?',
-                        icon: 'question',
-                        confirmButtonText: 'Eliminar',
-                        cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#32d7c0',
-                        showCancelButton: true,
-
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            deleteProduct(id)
-                        }
-                    })
-                }
-
-                function deleteProduct(id) {
-                    $.ajax({
-                        url: '../../configurar/deleteProAjax.php',
-                        type: 'POST',
-                        dataType: 'json',
-                        data: {
-                            id: id
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                Alerta.toast('success', response.message);
-                                cargarProductos($('#sucursal-selector').val());
-                            } else {
-                                alert('Error: ' + response.message);
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('AJAX Error:', status, error);
-                            alert('Ocurrió un error en la comunicación con el servidor.');
-                        }
-                    });
-                }
-
-
-
-
-
-                // Mostrar el formulario con las opciones indicadas
-                function cargarDatosForm(datos, opcion) {
-                    productos_editar = datos.id
-                    metodo_editar = opcion
-                    // Asignación de valores
-                    document.getElementById('nombre').value = datos.nombre;
-                    document.getElementById('precioMonedaOrigen').value = datos.precio_compra;
-                    document.getElementById('cantidad').value = datos.cantidad_unidades;
-
-                    const porcentajeLimpio = typeof datos.porcentaje === 'string' ?
-                        datos.porcentaje.replace('%', '').trim() :
-                        datos.porcentaje;
-                    document.getElementById('porcentaje').value = porcentajeLimpio;
-
-                    document.getElementById('origenProducto').value = datos.origen;
-                    document.getElementById('proveedor').value = datos.proveedor;
-                    document.getElementById('codigo_barra').value = datos.codigo_barras;
-
-                    // Mostrar formulario de edición
-                    document.getElementById('section_edit').classList.remove('hide');
-
-                    // Acciones según opción
-                    const campos = {
-                        nombre: document.getElementById('nombre'),
-                        precio: document.getElementById('precioMonedaOrigen'),
-                        cantidad: document.getElementById('cantidad'),
-                        porcentaje: document.getElementById('porcentaje'),
-                        origen: document.getElementById('origenProducto'),
-                        proveedor: document.getElementById('proveedor'),
-                        codigo_barra: document.getElementById('codigo_barra')
-                    };
-
-                    const sucursalSection = document.getElementById('sucursal_section');
-                    const sucursalSelector = document.getElementById('sucursal-selector');
-                    const sucursalEditar = document.getElementById('sucursal_a_editar');
-
-                    // Habilitar todos los campos primero
-                    for (let key in campos) campos[key].disabled = false;
-
-                    if (opcion === 'precio') {
-                        // Desactivar todos excepto los permitidos
-                        campos.nombre.disabled = true;
-                        campos.proveedor.disabled = true;
-                        campos.codigo_barra.disabled = true;
-
-                    } else if (opcion === 'porcentaje') {
-                        // Desactivar todos excepto porcentaje
-                        campos.nombre.disabled = true;
-                        campos.precio.disabled = true;
-                        campos.cantidad.disabled = true;
-                        campos.origen.disabled = true;
-                        campos.proveedor.disabled = true;
-                        campos.codigo_barra.disabled = true;
-
-                        // Manejo de sucursales
-                        if (sucursalSelector.value === '') {
-                            sucursalSection.classList.remove('hide');
-                        } else {
-                            sucursalSection.classList.add('hide');
-                            sucursalEditar.value = sucursalSelector.value;
-                        }
-                    } else if (opcion === 'generales') {
-                        campos.precio.disabled = true;
-                        campos.cantidad.disabled = true;
-                        campos.origen.disabled = true;
-                        campos.porcentaje.disabled = true;
-                    }
-
-                    document.getElementById('section_lista').classList.add('hide');
-
-                    realizarCalculos();
-                }
-
-                function cancelarActualizacion() {
-                    document.getElementById('section_edit').classList.add('hide');
-                    document.getElementById('section_lista').classList.remove('hide');
-
-                    // Resetear el formulario
-                    document.getElementById('form-data').reset();
-
-                    // Reactivar todos los campos
-                    const fields = document.querySelectorAll('#form-data input, #form-data select, #form-data textarea');
-                    fields.forEach(field => {
-                        field.disabled = false;
-                    });
-
-                    // Ocultar sección de sucursal (si se mostró)
-                    const sucursalSection = document.getElementById('sucursal_section');
-                    if (sucursalSection) {
-                        sucursalSection.classList.add('hide');
-                    }
-                }
-
-                // Restaurar el formulario al hacer clic en cancelar
-                document.getElementById('btn-cancelar').addEventListener('click', cancelarActualizacion);
-
-                // Al seleccionar una sucursal
-                document.getElementById('sucursal_a_editar').addEventListener('change', (event) => {
-                    actualizarSucursal(event.target.value);
-                });
-
-
-                function actualizarSucursal(sucursal) {
-                    const idProducto = productos_editar;
-
-
-
-                    fetch('../../configurar/porcentaje_producto_especifico.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                producto_id: idProducto,
-                                sucursal: sucursal
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            //   Swal.close(); // Cerrar loader
-
-                            if (data.success) {
-                                const porcentajeInput = document.getElementById("porcentaje");
-                                porcentajeInput.value = data.data;
-
-                                realizarCalculos()
-                            } else {
-                                Alerta.mostrar('warning', data.mensaje);
-                            }
-                        })
-                        .catch(error => {
-                            //    Swal.close(); // Cerrar loader en caso de error
-                            console.error('Error en la petición:', error);
-                            Alerta.mostrar('error', 'Error de red o del servidor.');
-                        });
-                }
                 //   
             </script>
     </body>

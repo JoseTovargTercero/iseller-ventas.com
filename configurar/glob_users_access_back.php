@@ -73,7 +73,7 @@ if (@$_POST["tabla"]) { // tabla de usuarios
     $user = $_POST['user'];
 
     $datos = array();
-    $stmt = mysqli_prepare($conexion, "SELECT * FROM `menu`");
+    $stmt = mysqli_prepare($conexion, "SELECT * FROM `menu` WHERE admin = 0");
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows > 0) {

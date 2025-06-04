@@ -58,10 +58,10 @@ if ($_SESSION['nivel'] == 1) {
                         <p>Seleccione una sucursal antes de proceder con la ventas</p>
 
                         <div class="row p-3">
-                            <div class="col-lg-6 m-auto ">
+                            <div class="col-lg-8 m-auto ">
                                 <div class="x_panel" style="padding-bottom: 30px;">
                                     <div class="x_title">
-                                        <h2 style="font-size: 15px; font-weight: bold">Selección de sucursal</h2>
+                                        <h2 style="font-size: 15px; font-weight: bold">Seleccione una sucursal</h2>
                                         <div class="clearfix"></div>
                                     </div>
                                     <div class="x_content h-60">
@@ -83,7 +83,7 @@ if ($_SESSION['nivel'] == 1) {
             <!-- FastClick -->
             <script src="../vendors/fastclick/lib/fastclick.js"></script>
             <script src="../vendors/nprogress/nprogress.js"></script>
-            <script src="../build/js/custom.min.js"></script>
+            <script src="../build/js/custom.js"></script>
             <script src='js/tablas.js'></script>
             <script src="../build/js/global-loader.js"></script>
 

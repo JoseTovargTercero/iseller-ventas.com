@@ -113,7 +113,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     .ring {
                         fill: none;
-                        stroke: #0a989a;
+                        stroke: #61bdaff5;
                         stroke-width: 6;
                         stroke-linecap: round;
                         stroke-dasharray: 339.292;
@@ -166,11 +166,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                         <div class="animated flipInY col-lg-4">
-                            <div class="tile-stats p-3">
+                            <div class="tile-stats p-2">
                                 <div class="d-flex justify-content-between">
                                     <div class="div">
                                         <p class="fs-13">Ventas del día</p>
-                                        <small class="text-muted ml-10">Lorem, ipsum dolor.</small>
+                                        <small class="text-muted ml-10">Ventas</small>
                                         <div class="count" id="venta_dia"></div>
                                         <p>
                                     </div>
@@ -189,21 +189,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                 </div>
                                 <i class="text-success line icon-arrow-up "></i>
-                                &nbsp;&nbsp;<span id="ganancias_dia"></span> Ganancias
-                                &nbsp;&nbsp;
+                                &nbsp;<span id="ganancias_dia"></span> <small>Margen</small>
+                                &nbsp;
                                 <i class="text-danger line icon-arrow-down"></i>
-                                &nbsp;&nbsp; <span id=""></span> Gastos
+                                &nbsp;<span id=""></span> <small>Gastos</small>
                                 </p>
                             </div>
                         </div>
 
 
                         <div class="animated flipInY col-lg-4">
-                            <div class="tile-stats p-3">
+                            <div class="tile-stats p-2">
                                 <div class="d-flex justify-content-between">
                                     <div class="div">
-                                        <p class="fs-13">Ventas de la semana</p>
-                                        <small class="text-muted ml-10">Lorem, ipsum dolor.</small>
+                                        <p class="fs-13">Ventas semana</p>
+                                        <small class="text-muted ml-10">Ventas de la semana</small>
                                         <div class="count " id="venta_semana"></div>
                                     </div>
                                     <div class="div">
@@ -222,20 +222,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </div>
                                 <p>
                                     <i class="text-success line icon-arrow-up "></i>
-                                    &nbsp;&nbsp;<span id="ganancias_semana"></span> Ganancias
-                                    &nbsp;&nbsp;
+                                    &nbsp;<span id="ganancias_semana"></span> <small>Margen</small>
+                                    &nbsp;
                                     <i class="text-danger line icon-arrow-down"></i>
-                                    &nbsp;&nbsp; <span id="gastos_semana"></span> Gastos
+                                    &nbsp;<span id="gastos_semana"></span> <small>Gastos</small>
                                 </p>
                             </div>
                         </div>
 
                         <div class="animated flipInY col-lg-4">
-                            <div class="tile-stats p-3">
+                            <div class="tile-stats p-2">
                                 <div class="d-flex justify-content-between">
                                     <div class="div">
-                                        <p class="fs-13">Ventas del mes</p>
-                                        <small class="text-muted ml-10">Lorem, ipsum dolor.</small>
+                                        <p class="fs-13">Ventas Mes</p>
+                                        <small class="text-muted ml-10">Ventas del mes</small>
                                         <div class="count" id="venta_mes"></div>
                                     </div>
                                     <div class="div">
@@ -254,77 +254,56 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </div>
                                 <p>
                                     <i class="text-success line icon-arrow-up "></i>
-                                    &nbsp;&nbsp;<span id="ganancias_mes"></span> Ganancias
-                                    &nbsp;&nbsp;
+                                    &nbsp;<span id="ganancias_mes"></span> <small>Margen</small>
+                                    &nbsp;
                                     <i class="text-danger line icon-arrow-down"></i>
-                                    &nbsp;&nbsp; <span id="gastos_mes"></span> Gastos
+                                    &nbsp;<span id="gastos_mes"></span> <small>Gastos</small>
                                 </p>
                             </div>
                         </div>
-
-
-                        <script>
-                            function setProgress(containerId, percent) {
-                                const container = document.getElementById(containerId);
-                                const circle = container.querySelector('.ring');
-                                const radius = circle.r.baseVal.value;
-                                const circumference = 2 * Math.PI * radius;
-
-                                const offset = circumference - (percent / 100) * circumference;
-                                circle.style.strokeDashoffset = offset;
-                                circle.style.strokeDasharray = circumference;
-                            }
-
-                            // Ejemplos de uso
-                            setProgress('progress1', 50);
-                            setProgress('progress2', 40);
-                            setProgress('progress3', 70);
-                        </script>
-
-
-
                     </div>
 
-                    <div class='row fh5co-block to-animate fadeInRight animated'>
+                    <div class='row '>
 
 
 
-                        <div class="col-lg-6">
+                        <div class="col-lg-6 col-sm-6 col-lx-6">
                             <div class="x_panel tile">
                                 <div class="x_title">
                                     <div class="align-items-center g-2 row">
                                         <div class="col">
                                             <h6 class="mb-0">Información de la sucursal</h6>
                                         </div>
-                                        <div class="text-right col-auto"><select id="sucursal" class="me-2 form-select form-select-sm">
-                                                <?php if (count($sucursales) > 1): ?>
-                                                    <option value="">-- Seleccione --</option>
-                                                <?php endif; ?>
+                                        <?php if ($_SESSION["nivel"] == 1): ?>
+                                            <div class="text-right col-auto"><select id="sucursal" class="me-2 form-control form-control-sm">
+                                                    <?php if (count($sucursales) > 1): ?>
+                                                        <option value="">-- Seleccione --</option>
+                                                    <?php endif; ?>
 
-                                                <?php foreach ($sucursales as $row): ?>
-                                                    <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                                        <?= htmlspecialchars($row['nombre']) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
+                                                    <?php foreach ($sucursales as $row): ?>
+                                                        <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($row['nombre']) ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
-                                <div class="p-0 card-body" id="informacion_interes">
+                                <div class="p-0 card-body" style="min-height: 400px;" id="informacion_interes">
                                 </div>
 
                             </div>
                         </div>
 
-                        <div class="col-lg-6">
+                        <div class="col-lg-6 col-sm-6 col-lx-6">
                             <div class="x_panel tile">
                                 <div class="x_title">
                                     <div class="align-items-center g-2 row">
                                         <div class="col">
                                             <h6 class="mb-0">Ventas de la semana</h6>
                                         </div>
-
                                     </div>
                                 </div>
 
@@ -336,7 +315,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         </div>
 
                         <div class='col-lg-12'>
-
                             <div class='x_panel tile '>
                                 <div class='x_title' style="border-bottom: none">
                                     <h5 style="font-weight: 400;">Ventas de las ultimas semanas</h5>
@@ -359,7 +337,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/amcharts5/themes/Material.js"></script>
 
         <script>
-            const datosGraficos = [{
+            // Progreso superior
+            function setProgress(containerId, percent) {
+                const container = document.getElementById(containerId);
+                const circle = container.querySelector('.ring');
+                const radius = circle.r.baseVal.value;
+                const circumference = 2 * Math.PI * radius;
+
+                const offset = circumference - (percent / 100) * circumference;
+                circle.style.strokeDashoffset = offset;
+                circle.style.strokeDasharray = circumference;
+            }
+
+            // Indicadores
+            const indicadores = [{
                     id: "creditosHoy",
                     titulo: "Créditos",
                     subtitulo: "Créditos otorgados hoy.",
@@ -367,17 +358,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 },
                 {
                     id: "despachadosHoy",
-                    titulo: "Productos",
+                    titulo: "Despachos",
                     subtitulo: "Productos despachados hoy.",
                     prefijo: ""
-                },
-                {
-                    id: "cantidadCritica",
-                    titulo: "Productos",
-                    subtitulo: "Productos con stock crítico.",
-                    prefijo: ""
-                },
-                {
+                }, {
                     id: "ventasMesDescontado",
                     titulo: "Descontado",
                     subtitulo: "Dinero descontado del mes.",
@@ -448,6 +432,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             apex_chart.render();
 
 
+            function calcularPorcentajeAvance(meta, avance) {
+                if (avance == 0) return 0;
+                if (meta <= 0) return 100;
+
+                let porcentaje = (avance / meta) * 100;
+                porcentaje = Math.min(Math.floor(porcentaje), 100); // Redondea hacia abajo y limita a 100
+
+                return porcentaje;
+            }
+
+
 
 
             function cargar_tabla(sucursal = null) {
@@ -514,6 +509,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         document.getElementById('venta_semana').innerText = `$${json.totalVentasSemana}`;
                         document.getElementById('venta_mes').innerText = `$${json.totalVentasMes}`;
 
+
+
+
+                        let porcentaje_avance_dia = calcularPorcentajeAvance(json.VentasDiarias_anterior, json.totalVentasDiarias)
+                        let porcentaje_avance_semana = calcularPorcentajeAvance(json.VentasSemana_anterior, json.totalVentasSemana)
+                        let porcentaje_avance_mes = calcularPorcentajeAvance(json.VentasMes_anterior, json.totalVentasMes)
+
+
+                        // Ejemplos de uso
+                        setProgress('progress1', porcentaje_avance_dia);
+                        setProgress('progress2', porcentaje_avance_semana);
+                        setProgress('progress3', porcentaje_avance_mes);
+
+
+
                         document.getElementById('ganancias_dia').innerText = `$${json.gananciasDia}`;
                         document.getElementById('ganancias_semana').innerText = `$${json.gananciasSemana}`;
                         document.getElementById('ganancias_mes').innerText = `$${json.gananciasMes}`;
@@ -563,7 +573,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 const contenedor = document.getElementById('informacion_interes');
                 contenedor.innerHTML = ''; // Limpiar contenido anterior
 
-                datosGraficos.forEach(item => {
+                indicadores.forEach(item => {
                     if (json.hasOwnProperty(item.id)) {
                         const valor = json[item.id];
                         const {
@@ -702,10 +712,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             inicializarGrafico();
 
 
+            // document ready function
 
+            $(document).ready(function() {
+                cargar_tabla();
+            });
 
-            // Carga inicial
-            cargar_tabla();
 
             document.getElementById('sucursal').addEventListener('change', function() {
                 cargar_tabla(this.value);
@@ -716,12 +728,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <!-- jQuery -->
         <script src="../vendors/jquery/dist/jquery.min.js"></script>
-        <!-- Bootstrap -->
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- FastClick -->
-        <script src="../vendors/fastclick/lib/fastclick.js"></script>
-        <script src="../vendors/nprogress/nprogress.js"></script>
-        <script src="../build/js/custom.min.js"></script>
+        <script src="../build/js/custom.js"></script>
 
     <?php
 } else {

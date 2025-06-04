@@ -9,6 +9,7 @@ if ($_SESSION["nivel"] != 1) {
 $nombre = $_POST["nombre"];
 $tipo = $_POST["tipo"];
 $productos_accion = $_POST["productos_accion"];
+$stockCritico = $_POST["stock_critico"];
 $bss_id = (int) $_SESSION["bss_id"];
 
 if (empty($nombre) || empty($tipo)) {
@@ -20,8 +21,8 @@ $conexion->begin_transaction();
 
 try {
     // Insertar en sucursales
-    $stmt = $conexion->prepare("INSERT INTO sucursales (bss_id, tipo, nombre) VALUES (?, ?, ?)");
-    $stmt->bind_param("iss", $bss_id, $tipo, $nombre);
+    $stmt = $conexion->prepare("INSERT INTO sucursales (bss_id, tipo, nombre, stockCritico) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("issi", $bss_id, $tipo, $nombre, $stockCritico);
 
     if (!$stmt->execute()) {
         throw new Exception("Error al insertar sucursal: " . $stmt->error);

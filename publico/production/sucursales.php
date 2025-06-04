@@ -2,15 +2,13 @@
 require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1) {
-   
+
     $topnav = topnav();
 
     if ($_SESSION["validate"] != "ok") {
         define('PAGINA_INICIO', '../../index.php');
         header('Location: ' . PAGINA_INICIO);
     }
-
-
 ?>
 
     <!DOCTYPE html>
@@ -51,7 +49,47 @@ if ($_SESSION['nivel'] == 1) {
                 <div class='right_col'>
                     <h4>Sucursales</h4>
                     <p style="margin-top: -10px;">Gestión de sucursales</p>
-                    <div class='row to-animate fadeInRight animated'>
+
+
+
+
+                    <section id="section_edit" class="hide w-100  to-animate fadeInRight animated">
+                        <form id='form-data' class='form-horizontal form-label-left'>
+                            <div class='row'>
+                                <div class='col-md-7 col-sm-7 m-auto'>
+                                    <div class='x_panel'>
+                                        <div class='x_title'>
+                                            <h2>Datos de las sucursal <small>* obligatorio</small></h2>
+                                            <div class='clearfix'></div>
+                                        </div>
+                                        <div class='x_content'>
+                                            <div class='form-group'>
+                                                <label class='form-label ' for='first-name'>Nombre de sucursal </label>
+                                                <input type='text' id='edit_nombre' name='edit_nombre' required='required' class='form-control '>
+                                            </div>
+
+
+                                            <div class='form-group'>
+                                                <label class='form-label ' for='first-name'>Cantidad mínima para stock crítico</label>
+                                                <input type='text' id='edit_stock_critico' name='edit_stock_critico' required='required' class='form-control '>
+                                            </div>
+
+                                            <div class='ln_solid'></div>
+
+                                            <div class='d-flex justify-content-between'>
+                                                <button type='button' id="btn-cancelar" class="btn btn-danger">Cancelar</button>
+                                                <button type='submit' class="btn btn-success actualizar">Actualizar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </section>
+
+
+                    <div class='row to-animate fadeInRight animated' id="section_tabla">
+
                         <div class='col-lg-12'>
                             <div class='x_panel tile'>
                                 <div class='x_title d-flex justify-content-between'>
@@ -67,11 +105,11 @@ if ($_SESSION['nivel'] == 1) {
                                                     <th class='column-title'>Nombre</th>
                                                     <th class='column-title text-center'>Usuarios</th>
                                                     <th class='column-title text-center'>Productos</th>
+                                                    <th class='column-title text-center'>Stock mínimo</th>
                                                     <th class='column-title text-center'></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-
                                             </tbody>
                                         </table>
                                     </div>
@@ -83,102 +121,117 @@ if ($_SESSION['nivel'] == 1) {
                 <!-- /page content -->
                 <?php require('../assets/templates/modal.html'); ?>
 
-                <!-- footer content -->
+                <template id="template-form-sucursal">
 
+                    <h5 class="mb-3">Registro de Sucursales</h5>
+                    <hr>
+                    <form id="sucursal-form" class="needs-validation" novalidate>
 
-                <!-- /footer content -->
+                        <!-- Nombre de sucursal -->
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label fw-semibold">Nombre de sucursal</label>
+                            <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej: Sucursal Centro"
+                                required>
+                        </div>
+
+                        <!-- Tipo de sucursal -->
+                        <div class="mb-3">
+                            <label for="tipo" class="form-label fw-semibold">Tipo de sucursal</label>
+                            <input list="tipos-comercio" id="tipo" name="tipo" class="form-control" placeholder="Ej: Panadería"
+                                required>
+                            <datalist id="tipos-comercio">
+                                <option value="Panadería">
+                                <option value="Carnicería">
+                                <option value="Heladería">
+                                <option value="Frigorífico">
+                                <option value="Supermercado">
+                                <option value="Verdulería">
+                                <option value="Pescadería">
+                                <option value="Tienda de Ropa">
+                                <option value="Joyería">
+                                <option value="Farmacia">
+                                <option value="Ferretería">
+                                <option value="Papelería">
+                                <option value="Librería">
+                                <option value="Tienda de Electrónica">
+                                <option value="Tienda de Mascotas">
+                                <option value="Floristería">
+                                <option value="Barbería">
+                                <option value="Peluquería">
+                                <option value="Restaurante">
+                                <option value="Cafetería">
+                                <option value="Tienda de Deportes">
+                                <option value="Juguetería">
+                                <option value="Boutique">
+                                <option value="Auto Lavado">
+                                <option value="Gimnasio">
+                                <option value="Tienda de Muebles">
+                                <option value="Centro de Estética">
+                                <option value="Tienda de Telefonía">
+                                <option value="Otro">
+                            </datalist>
+                        </div>
+
+                        <!-- Stock crítico -->
+                        <div class="mb-3">
+                            <label for="stock_critico" class="form-label fw-semibold">Cantidad mínima para stock crítico</label>
+                            <input type="number" id="stock_critico" name="stock_critico" class="form-control" min="0"
+                                placeholder="Ej: 10" required>
+                        </div>
+
+                        <!-- Acción sobre productos -->
+                        <div class="mb-3">
+                            <label for="productos_accion" class="form-label fw-semibold">Acción para productos registrados</label>
+                            <select id="productos_accion" name="productos_accion" class="form-control" required>
+                                <option value="">Seleccione una opción</option>
+                                <option value="copiar">Copiar todos los productos</option>
+                                <option value="no_copiar">No copiar ninguno</option>
+                            </select>
+                        </div>
+
+                        <!-- Botón -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+
+                    </form>
+                </template>
             </div>
         </div>
 
-        <!-- jQuery -->
         <script src="../vendors/jquery/dist/jquery.min.js"></script>
-        <!-- Bootstrap -->
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- FastClick -->
         <script src="../vendors/fastclick/lib/fastclick.js"></script>
-
         <script src="../vendors/nprogress/nprogress.js"></script>
-
-        <script src="../build/js/custom.min.js"></script>
+        <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
-
-
+        <script src="js/formHandler.js"></script>
 
         <script>
-            const formSucursal = `
-                <h5 class="mb-0">Registro de sucursales</h5>
-                <hr>
-                <form id="sucursal-form" class="p-0">
-                    <div class="mb-3">
-                    <label for="nombre" class="form-label">Nombre de sucursal:</label>
-                    <input type="text" id="nombre" name="nombre" class="form-control" required>
-                    </div>
-
-                    <div class="mb-3">
-                    <label for="tipo" class="form-label">Tipo de sucursal:</label>
-                    <input list="tipos-comercio" id="tipo" name="tipo" class="form-control" required>
-                    <datalist id="tipos-comercio">
-                        <option value="Panadería"></option>
-                        <option value="Carnicería"></option>
-                        <option value="Heladería"></option>
-                        <option value="Frigorífico"></option>
-                        <option value="Supermercado"></option>
-                        <option value="Verdulería"></option>
-                        <option value="Pescadería"></option>
-                        <option value="Tienda de Ropa"></option>
-                        <option value="Joyería"></option>
-                        <option value="Farmacia"></option>
-                        <option value="Ferretería"></option>
-                        <option value="Papelería"></option>
-                        <option value="Librería"></option>
-                        <option value="Tienda de Electrónica"></option>
-                        <option value="Tienda de Mascotas"></option>
-                        <option value="Floristería"></option>
-                        <option value="Barbería"></option>
-                        <option value="Peluquería"></option>
-                        <option value="Restaurante"></option>
-                        <option value="Cafetería"></option>
-                        <option value="Tienda de Deportes"></option>
-                        <option value="Juguetería"></option>
-                        <option value="Boutique"></option>
-                        <option value="Auto Lavado"></option>
-                        <option value="Gimnasio"></option>
-                        <option value="Tienda de Muebles"></option>
-                        <option value="Centro de Estética"></option>
-                        <option value="Tienda de Telefonía"></option>
-                        <option value="Otro"></option>
-                    </datalist>
-                    </div>
-
-                        <div class="mb-3">
-                    <label for="productos_accion" class="form-label">Acción para los productos registrados:</label>
-                    <select type="text" id="productos_accion" name="productos_accion" class="form-control" required>
-                            <option value="">Seleccione</option>
-                            <option value="copiar">Copiar todos los productos</option>
-                            <option value="no_copiar">No copiar ninguno</option>
-                    </select>
-                    </div>
-
-
-
-                    <button type="submit" class="btn btn-primary w-100">Guardar</button>
-                </form>`;
-
+            const template = document.getElementById('template-form-sucursal');
+            const formSucursal = template.content.cloneNode(true);
+            document.getElementById('modal').innerHTML = '';
+            document.getElementById('modal').appendChild(formSucursal);
 
             $(document).ready(function() {
-                document.getElementById('modal').innerHTML = formSucursal;
                 document.getElementById('w-modal').classList.add('modal-w50');
 
                 document.getElementById('btn-add-sucursal').addEventListener('click', function() {
                     showModal()
                 })
 
-
                 document.getElementById('sucursal-form').addEventListener('submit', function(e) {
                     e.preventDefault(); // Evitar envío tradicional
 
                     const form = e.target;
                     const formData = new FormData(form);
+                    // recorre los campos, todos son obligatorios
+                    for (const [key, value] of formData.entries()) {
+                        if (!value) {
+                            Alerta.toast('error', `Todos los campos son obligatorios.`);
+                            return;
+                        }
+                    }
 
                     fetch('../../configurar/sucursales.php', {
                             method: 'POST',
@@ -216,8 +269,10 @@ if ($_SESSION['nivel'] == 1) {
                         });
                 });
 
-
             })
+
+            let sucursales = []
+            let sucursal_editar
 
             function cargar_tabla() {
                 fetch('../../configurar/sucursales_lista.php', {
@@ -232,24 +287,24 @@ if ($_SESSION['nivel'] == 1) {
                     })
                     .then(response => response.text()) // Primero obtenemos el texto plano
                     .then(text => {
-                        //console.log("Respuesta cruda:", text); // Debug: ver el texto antes del parseo
-
                         try {
                             const data = JSON.parse(text); // Luego lo intentamos convertir a JSON
-                            // recorre data [{"id":1,"tipo":"BODEGA","nombre":"YOLA MARKET S1","productos":0,"usuarios":1},{"id":2,"tipo":"bodega","nombre":"Maisanta barato","productos":0,"usuarios":0}]
-                            // imprime los resultados en datatable-responsive [Tipo	Nombre	Usuarios	Productos]
                             const $tabla = $('#datatable-responsive tbody');
                             $tabla.empty(); // Limpiamos filas anteriores
 
                             if (data.length > 0) {
                                 data.forEach(item => {
+                                    sucursales[item.id] = item
                                     const fila = `
                                     <tr>
                                         <td>${item.tipo}</td>
                                         <td>${item.nombre}</td>
                                         <td class='text-center'>${item.usuarios}</td>
                                         <td class='text-center'>${item.productos}</td>
-                                        <td class='text-center'>${item.id}</td>
+                                        <td class='text-center'>${item.stockCritico}</td>
+                                        <td class='text-center'>
+                                        <a data-id="${item.id}" class="pointer btn btn-sm btn-success btn-edit"><i class="line icon-pencil"></i></a>
+                                        </td>
                                     </tr>
                                 `;
                                     $tabla.append(fila);
@@ -265,17 +320,72 @@ if ($_SESSION['nivel'] == 1) {
                         console.error("Error en la solicitud:", error);
                     });
             }
-
             cargar_tabla()
 
-            /*
-                        document.addEventListener("DOMContentLoaded", function() {
 
-                        });*/
+            // Editar stock critico
+            document.addEventListener('click', async (event) => {
+                if (event.target.closest('.btn-edit')) {
+                    const id = event.target.closest('.btn-edit').getAttribute('data-id');
+                    cargarDatosForm(sucursales[id])
+                }
+            });
+
+
+
+            // Mostrar el formulario con las opciones indicadas
+            function cargarDatosForm(datos) {
+                sucursal_editar = datos.id
+                // Asignación de valores
+                document.getElementById('edit_nombre').value = datos.nombre;
+                document.getElementById('edit_stock_critico').value = datos.stockCritico;
+
+                // Mostrar formulario de edición
+                document.getElementById('section_edit').classList.remove('hide');
+                document.getElementById('section_tabla').classList.add('hide');
+            }
+
+            // Cancelar actualizacion
+            function cancelarActualizacion() {
+                document.getElementById('section_edit').classList.add('hide');
+                document.getElementById('section_tabla').classList.remove('hide');
+
+                // Resetear el formulario
+                document.getElementById('form-data').reset();
+
+                // Reactivar todos los campos
+                const fields = document.querySelectorAll('#form-data input, #form-data select, #form-data textarea');
+                fields.forEach(field => {
+                    field.disabled = false;
+                });
+            }
+
+            // Restaurar el formulario al hacer clic en cancelar
+            document.getElementById('btn-cancelar').addEventListener('click', cancelarActualizacion);
+
+
+
+            // Actualizar datos de la sucursal
+            new FormHandler({
+                formId: 'form-data',
+                url: '../../configurar/editar_sucursal.php',
+                data_extra: [
+                    ['id_editar', () => sucursal_editar]
+                ],
+                onSuccess: (json, form) => {
+                    Alerta.toast('success', json.mensaje);
+                    cargar_tabla()
+                    cancelarActualizacion()
+                },
+                onError: (json, form) => {
+                    Alerta.toast('error', json.mensaje || 'Error desconocido.');
+                    console.warn('Error en respuesta:', json);
+                },
+                onFail: (error, form) => {
+                    console.error('Fallo en conexión o JSON:', error);
+                }
+            })
         </script>
-
-
-
     <?php
 } else {
     define('PAGINA_INICIO', '../../index.php');

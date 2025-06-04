@@ -14,19 +14,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $sucursal = $_SESSION['sucursal'];
     $sucursal_nombre = '';
 
-    if ($_SESSION['nivel'] == 1) {
-        $sql = "SELECT UPPER(nombre) AS nombre FROM sucursales WHERE id = ? AND bss_id = ?";
+    $sql = "SELECT UPPER(nombre) AS nombre FROM sucursales WHERE id = ? AND bss_id = ?";
 
-        if ($stmt = $conexion->prepare($sql)) {
-            $stmt->bind_param("ii", $sucursal, $bss_id);
-            $stmt->execute();
-            $stmt->bind_result($sucursal_nombre);
+    if ($stmt = $conexion->prepare($sql)) {
+        $stmt->bind_param("ii", $sucursal, $bss_id);
+        $stmt->execute();
+        $stmt->bind_result($sucursal_nombre);
 
-            if ($stmt->fetch()) {
-            }
-
-            $stmt->close();
+        if ($stmt->fetch()) {
         }
+
+        $stmt->close();
     }
 
 
@@ -98,7 +96,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     $stmt->close();
 
+
+
 ?>
+
+
+
 
     <!DOCTYPE html>
     <html lang='es'>
@@ -334,9 +337,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </section>
 
                                             <div style=" bottom: 0;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
-                                                <a onclick="confirmarDescuento()" class="btn btn-dark" style="color:white; cursor: pointer">Descontar</a>
+
+
+                                                <?php
+
+                                                // Mostrar botones según permisos
+                                                if (!empty($_SESSION['permisos'][11])) {
+                                                    echo '<button onclick="confirmarVenta(\'credito\')" class="btn btn-info text-white">Crédito</button>';
+                                                }
+
+                                                if (!empty($_SESSION['permisos'][12])) {
+                                                    echo '<a onclick="confirmarDescuento()" class="btn btn-dark text-white" style="cursor: pointer">Descontar</a>';
+                                                }
+
+                                                ?>
+
+
                                                 <a onclick="destroy_cart()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
-                                                <button onclick="confirmarVenta('credito')" class="btn btn-info" style="color:white;">Crédito</button>
                                                 <button class="btn btn-light" id="calcularVuelto">Calcular cambio</button>
                                                 <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
                                                 <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">Vender</button>
@@ -388,14 +405,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     <!-- /page content -->
 
-                    <!-- footer content -->
-                    <footer class="ml-0 rounded">
-                        <div class='pull-right'>
-                            i-SELLER - by <a href=''>Jose Ricardo Tovarg III</a>
-                        </div>
-                        <div class='clearfix'></div>
-                    </footer>
-                    <!-- /footer content -->
                 </div>
             </div>
             <!-- jQuery -->
@@ -405,7 +414,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <!-- FastClick -->
             <script src="../vendors/fastclick/lib/fastclick.js"></script>
             <script src="../vendors/nprogress/nprogress.js"></script>
-            <script src="../build/js/custom.min.js"></script>
+            <script src="../build/js/custom.js"></script>
             <script src="../build/js/modal.js"></script>
             <!-- FastClick -->
             <script>
@@ -880,7 +889,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                             <input type="number" id="cantidad-scan" style="max-width: 30%;" class="cantidad-input cantidad-scan text-center form-control" data-cantidad-id="${datos.id}" value="1">
 
-                                            <button class="m-0 btn btn-success btn-add-to-car no-send" id="btn_${datos.id}"
+                                            <button class="m-0 btn  btn-success btn-add-to-car no-send" id="btn_${datos.id}"
                                                 data-add-id="${datos.id}"
                                                 data-codigo="${datos.codigo}"
                                                 data-P_D="${datos.precio_dolar_visible}"
@@ -937,10 +946,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <td style="place-content: center" class="text-center text-total text-info"><span>${formatNumber(formatPeso(item.precio_peso_visible))} Cop</span></td>
                                                     <td style="place-content: center" class="text-center text-total text-danger"><span>${formatNumber(recortarADosDecimales(item.precio_bs_visible))} Bs</span></td>
                                                     <td class="text-center">
-                                                        <input data-nombre='${item.nombre}' data-precios='${item.precio_peso_visible}/${item.precio_dolar_visible}/${item.precio_bs_visible}' type="number" style="color: black !important; width: 70px; text-align: center;" class="mt-2 form-control cantidad-input" data-cantidad-id="${item.id}" value="1">
+                                                        <input data-nombre='${item.nombre}' data-precios='${item.precio_peso_visible}/${item.precio_dolar_visible}/${item.precio_bs_visible}' type="number" style="color: black !important; width: 70px; text-align: center; border: 1px solid gray;" class="form-control-sm cantidad-input" data-cantidad-id="${item.id}" value="1">
                                                     </td>
                                                     <td style="place-content: center" class="text-center">
-                                                        <button class="btn btn-success btn-add-to-car" 
+                                                        <button class="btn btn-sm btn-success btn-add-to-car" 
                                                             data-add-id="${item.id}"
                                                             data-codigo="${item.codigo}"
                                                             data-P_D="${item.precio_dolar_visible}"
@@ -1318,9 +1327,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     const li = document.createElement('li');
                     li.className = 'nav-item';
+                    const element = (nv == 1 ? 'a' : 'span');
 
-                    const a = document.createElement('a');
-                    a.href = 'seleccion_sucursal.php';
+                    const a = document.createElement(element);
+                    a.href = (nv == 1 ? 'seleccion_sucursal.php' : '');
                     a.textContent = sucursal_n;
 
                     li.appendChild(a);
@@ -1329,10 +1339,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
 
-                if (nv == 1) {
-                    const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
-                    agregarNombreSucursal(sucursal_n)
-                }
+                const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
+                agregarNombreSucursal(sucursal_n)
             </script>
     </body>
 

@@ -167,14 +167,6 @@ if ($_SESSION['nivel'] == 1) {
                 </div>
                 <!-- /page content -->
 
-                <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        I-SELLER - by <a href=''>Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
-                <!-- /footer content -->
             </div>
         </div>
         <!-- jQuery -->
@@ -182,7 +174,7 @@ if ($_SESSION['nivel'] == 1) {
         <!-- Bootstrap -->
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
         <!-- Custom Theme Scripts -->
-        <script src='../build/js/custom.min.js'></script>
+        <script src='../build/js/custom.js'></script>
         <script src='js/tablas.js'></script>
         <script>
             ['btn-nuevo', 'btn-cancelar'].forEach(id => {

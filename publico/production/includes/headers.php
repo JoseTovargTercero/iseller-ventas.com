@@ -14,12 +14,6 @@
 <!-- iCheck -->
 
 
-<!-- iCheck -->
-<link rel="stylesheet" href="../../iseller.es/css/animate.css">
-<!-- Icomoon Icon Fonts-->
-<link href='../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css' rel='stylesheet'>
-<link href='../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css' rel='stylesheet'>
-<link href='../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css' rel='stylesheet'>
 <!-- bootstrap-daterangepicker -->
 <link href='../vendors/bootstrap-daterangepicker/daterangepicker.css' rel='stylesheet'>
 <link href="js/jquerysctipttop.css" rel="stylesheet" type="text/css">
@@ -39,6 +33,5 @@
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 
 <script src="../assets/sweetalert2.all.min.js"></script>
-<script src="js/tasa_bcv.js"></script>
 
 <script src="js/alerta.js"></script>

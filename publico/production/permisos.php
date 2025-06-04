@@ -123,14 +123,7 @@ if ($_SESSION['nivel'] == 1) {
                     </div>
                 </div>
 
-                <!-- footer content -->
-                <footer>
-                    <div class='pull-right'>
-                        I-SELLER - by <a href=''>Jose Ricardo Tovarg III</a>
-                    </div>
-                    <div class='clearfix'></div>
-                </footer>
-                <!-- /footer content -->
+
             </div>
         </div>
 
@@ -147,7 +140,7 @@ if ($_SESSION['nivel'] == 1) {
         <!-- <script src = '../vendors/validator/validator.js'></script> -->
 
         <!-- Custom Theme Scripts -->
-        <script src='../build/js/custom.min.js'></script>
+        <script src='../build/js/custom.js'></script>
         <script src="../build/js/modal.js"></script>
 
         <script>
@@ -177,22 +170,6 @@ if ($_SESSION['nivel'] == 1) {
 
             })
             // Modificar modal
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

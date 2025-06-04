@@ -26,15 +26,16 @@ $_SESSION['LAST_ACTIVITY'] = time();
 
 
 // Verificar acceso de los usuarios nivel 2
+/*
 if ($_SESSION["nivel"] == 2) {
 
 
     $url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
     $url .= "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 
+
     // Obtener la ruta relativa del script actual
     $script_path = $_SERVER['SCRIPT_NAME']; // Ej: /miweb/configurar/index.php
-
     // Verificar si está dentro de "configurar" o sus subdirectorios
     if (preg_match('#/configurar(/|$)#', $script_path)) {
         return;
@@ -67,4 +68,4 @@ if ($_SESSION["nivel"] == 2) {
         // Si no coincide, redirigir al usuario a la página principal
         header("Location: " . '../../index.php');
     }
-}
+}*/

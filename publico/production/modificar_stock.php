@@ -143,7 +143,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <?php require('../assets/templates/modal.html'); ?>
         <!-- Bootstrap -->
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="../build/js/custom.min.js"></script>
+        <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
         <script>
             let precio_consultado
@@ -244,6 +244,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     })
                     .then(res => res.text())
                     .then(text => {
+                        console.log('respuesta crudda ' + text)
                         let res;
                         try {
                             res = JSON.parse(text);

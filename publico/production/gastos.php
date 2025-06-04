@@ -73,8 +73,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-
-
+    $VentasSe = 0;
+    $precioTotal = 0;
     ///////////////////GANANCIAS DE LA SEMANA/////////////////////
 
     $query22222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
@@ -102,7 +102,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
 
 
-
+    $VentasSe24 = 0;
+    $precioTotal24 = 0;
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////GANANCIAS DEL mes//////////////////////////
     $query2222234 = "SELECT * FROM orden WHERE fecha='$mes' AND status='1' OR fecha='$mes' AND status='4'";
@@ -1137,7 +1138,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <!-- FastClick -->
         <script src="../vendors/fastclick/lib/fastclick.js"></script>
         <script src="../vendors/nprogress/nprogress.js"></script>
-        <script src="../build/js/custom.min.js"></script>
+        <script src="../build/js/custom.js"></script>
 
 
     <?php

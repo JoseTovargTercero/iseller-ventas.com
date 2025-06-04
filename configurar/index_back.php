@@ -10,12 +10,23 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents('php://input'), true);
 
 
-
+/*
 $extraCond = '';
 if (@$data["sucursal"] != null) {
   $sucursal = $data["sucursal"];
   $extraCond = ' AND id_sucursal = ' . $sucursal;
 }
+
+if ($_SESSION["nivel"] == 2) {
+  $sucursal = $_SESSION["sucursal"];
+  $extraCond = ' AND id_sucursal = ' . $sucursal;
+}*/
+
+$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
+$extraCond = $sucursal !== null ? ' AND id_sucursal = ' . (int)$sucursal : '';
+
+
+
 $stockCritico = 10;
 
 // Inicializamos los acumuladores
@@ -92,6 +103,20 @@ $totalVentasDiarias = obtenerVentas($conexion, 'modified', $dia);
 $totalVentasSemana = obtenerVentas($conexion, 'semana', $semana);
 $totalVentasMes = obtenerVentas($conexion, 'fecha', $mes);
 
+
+// FECHAS ANTERIORES
+$dia_anterior = date('Y-m-d', strtotime('-1 day'));
+$semana_anterior = date('Y-W', strtotime('-1 week'));
+
+// Para el mes anterior, hay que tener en cuenta el cambio de año
+$mes_anterior = date('Y-m', strtotime('first day of -1 month'));
+
+// Para el año anterior
+$ano_anterior = date('Y', strtotime('-1 year'));
+
+$totalVentasDiarias_anterior = obtenerVentas($conexion, 'modified', $dia_anterior);
+$totalVentasSemana_anterior = obtenerVentas($conexion, 'semana', $semana_anterior);
+$totalVentasMes_anterior = obtenerVentas($conexion, 'fecha', $mes_anterior);
 
 
 // Función para calcular ganancias
@@ -255,22 +280,25 @@ $arraySemana = obtenerVentasPorDia($conexion, 'semana', $semana);
 
 echo json_encode([
   'filtro' => $extraCond,
-  'totalVentasDiarias'     => number_format($totalVentasDiarias, '2', '.', ','), // Listo
-  'totalVentasSemana'      => number_format($totalVentasSemana, '2', '.', ','), // Listo
-  'totalVentasMes'         => number_format($totalVentasMes, '2', '.', ','), // Listo
-  'gananciasDia'           => number_format($gananciasDi, '2', '.', ','),
-  'gananciasSemana'        => number_format($gananciasSe, '2', '.', ','),
-  'gastosSemana'           => number_format($gastosSemana, '2', '.', ','),
-  'gananciasMes'           => number_format($gananciasMes, '2', '.', '.'), // Total de ventas Listo
-  'gastosMes'              => number_format($gastosMes, '2', '.', '.'), // Total de ventas, Listo
-  'ventasHoy'              => number_format($ventas, '2', '.', '.'), // Total de ventas, Listo
+  'totalVentasDiarias'     => number_format($totalVentasDiarias, '1', '.', ','), // Listo
+  'totalVentasSemana'      => number_format($totalVentasSemana, '1', '.', ','), // Listo
+  'totalVentasMes'         => number_format($totalVentasMes, '1', '.', ','), // Listo
+  'VentasDiarias_anterior' => number_format($totalVentasDiarias_anterior, '1', '.', ','), // Listo
+  'VentasSemana_anterior'  => number_format($totalVentasSemana_anterior, '1', '.', ','), // Listo
+  'VentasMes_anterior'     => number_format($totalVentasMes_anterior, '1', '.', ','), // Listo
+  'gananciasDia'           => number_format($gananciasDi, '1', '.', ','),
+  'gananciasSemana'        => number_format($gananciasSe, '1', '.', ','),
+  'gastosSemana'           => number_format($gastosSemana, '1', '.', ','),
+  'gananciasMes'           => number_format($gananciasMes, '1', '.', '.'), // Total de ventas Listo
+  'gastosMes'              => number_format($gastosMes, '1', '.', '.'), // Total de ventas, Listo
+  'ventasHoy'              => number_format($ventas, '1', '.', '.'), // Total de ventas, Listo
   'creditosHoy'            => (int)$credit,
   'despachadosHoy'         => (int)$despachados,
   'cantidadCritica'        => (int)$cantidadCritica,
   'ventasMesDescontado'    => number_format($totalVentasMesDejado, '0', '.', ','),
-  'almacenProductos'       => number_format((int)$almacen, '2', '.', ','),
-  'valorStockSinGanancia'  => number_format($valor_stock_sin_ganancia, '2', '.', ','),
-  'gananciasEsperadas'     => number_format($gananciasEsperadas, '2', '.', ','),
+  'almacenProductos'       => number_format((int)$almacen, '0', '.', ','),
+  'valorStockSinGanancia'  => number_format($valor_stock_sin_ganancia, '1', '.', ','),
+  'gananciasEsperadas'     => number_format($gananciasEsperadas, '1', '.', ','),
   'ventasSemanas'          => $arraSemanas, // Este ya está en formato array asociativo*/
   'ventasSemana'           => $arraySemana
 ]);

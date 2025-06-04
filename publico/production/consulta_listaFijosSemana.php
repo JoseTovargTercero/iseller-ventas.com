@@ -4,7 +4,7 @@ require_once("../../configurar/configuracion.php");
 require_once('../../configurar/session.php');
 
 
-
+$tabla = '';
 $query = "SELECT * FROM gastosfijos ORDER BY nombre ASC";
 $buscarAlumnos = $conexion->query($query);
 if ($buscarAlumnos->num_rows > 0) {

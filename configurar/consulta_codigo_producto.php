@@ -1,16 +1,18 @@
 <?php
 require_once("configuracion.php");
-require_once('session.php');
+require_once("session.php");
 header('Content-Type: application/json');
 
 $response = [];
 
-if ($_SESSION["nivel"] == 1 && $_POST["sucursal"] == '') {
+
+$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
+
+if ($sucursal == null) {
     throw new Exception("No se recibió la sucursal", 1);
     exit;
 }
 
-$sucursal = ($_SESSION["nivel"] == '1') ? $_POST["sucursal"] : $_SESSION["sucursal"];
 
 // buscar el archivo encargado de los datos del producto para obtener el porcentaje perzonalizado
 

@@ -8,7 +8,7 @@ $nombre = $_POST['nombre'] ?? '';
 $precio = $_POST['precio'] ?? 0;
 $cantidad = $_POST['cantidad'] ?? 0;
 $porcentaje = $_POST['porcentaje'] ?? 0;
-$codigo = $_POST['codigo'] ?? '';
+$codigo = $_POST['codigo'] ?? 'ND';
 $categoria = $_POST['categoria'] ?? '';
 $moneda = $_POST['moneda'] ?? '';
 $precioMonedaOrigen = $_POST['precioMonedaOrigen'] ?? 0;
@@ -18,7 +18,7 @@ $proveedor = $_POST['proveedor'] ?? '';
 $foto = "NO";
 
 // Validación básica
-if (empty($nombre) || empty($codigo)) {
+if (empty($nombre)) {
   echo json_encode(['tipo' => 'error', 'mensaje' => 'Faltan datos requeridos.']);
   exit;
 }
@@ -28,7 +28,7 @@ $conexion->begin_transaction();
 try {
   // Insertar en productos
   $query = "INSERT INTO productos (
-      nombre, precio_compra, cantidad_unidades, porcentaje, codigo, codigo_barras, origen, proveedor
+      nombre, precio_compra, cantidad_unidades, porcentaje, codigo_barras, origen, proveedor, bss_id
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
   $stmt = $conexion->prepare($query);
@@ -36,7 +36,7 @@ try {
     throw new Exception('Error al preparar la consulta de productos.');
   }
 
-  $stmt->bind_param("sdddssss", $nombre, $precio, $cantidad, $porcentaje, $codigo, $c_barras, $origenProducto, $proveedor);
+  $stmt->bind_param("sdddsssi", $nombre, $precio, $cantidad, $porcentaje, $c_barras, $origenProducto, $proveedor, $bss_id);
   if (!$stmt->execute()) {
     throw new Exception('No se pudo registrar el producto.');
   }

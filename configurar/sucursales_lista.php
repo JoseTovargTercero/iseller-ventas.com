@@ -26,6 +26,7 @@ if ($result->num_rows > 0) {
             'id' => $row['id'],
             'tipo' => $row['tipo'],
             'nombre' => $row['nombre'],
+            'stockCritico' => $row['stockCritico'],
             'productos' => $productos,
             'usuarios' => $usuarios
         ]);

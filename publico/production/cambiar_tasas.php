@@ -445,7 +445,7 @@ if ($_SESSION["validate"] != "ok") {
     <!-- starrr -->
     <script src='../vendors/starrr/dist/starrr.js'></script>
     <!-- Custom Theme Scripts -->
-    <script src='../build/js/custom.min.js'></script>
+    <script src='../build/js/custom.js'></script>
 
 </body>
 

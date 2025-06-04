@@ -1254,7 +1254,7 @@ html {
 
 .nav-sm .container.body .right_col {
     padding: 10px 20px;
-    margin-left: 110px;
+    margin-left: 125px;
     z-index: 2
 }
 
@@ -6636,4 +6636,8 @@ input[type="number"] {
 
 .text-muted {
     color: #9f9f9f !important;
+}
+
+.checkbox_item.citem_3 .checkbox_wrap .checkbox_mark:before {
+    background: #484848 !important;
 }

@@ -45,16 +45,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <title>Control de Creditos</title>
     <?php require_once('includes/headers.php'); ?>
 
-
-    <!-- iCheck -->
-    <link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-    <link href="../vendors/datatables.net-bs/css/dataTables.bootstrap.min.css" rel="stylesheet">
-    <link href="../vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css" rel="stylesheet">
-    <link href="../vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" rel="stylesheet">
-    <link href="../vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" rel="stylesheet">
-    <link href="../vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" rel="stylesheet">
-
-
     <script>
       function updateCartItem(obj, id) {
         $.get("cartAction.php", {
@@ -203,11 +193,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                           <table id="datatable-responsive-2" class="table table-striped table-bordered" style="width:100%">
                             <thead>
                               <tr class="headings">
-                                <th class="column-title"></th>
+                                <th class="column-title" style="width: 5%;">#</th>
                                 <th class="column-title">Cliente</th>
-                                <th class="column-title text-center">Créditos</th>
+                                <th class="column-title text-center" style="width: 5%;">Créditos</th>
                                 <th class="column-title text-center">Sucursal</th>
-                                <th class="column-title"></th>
+                                <th class="column-title" style="width: 10%;"></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -230,10 +220,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <!-- Bootstrap -->
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script src="../vendors/datatables.net/js/jquery.dataTables.min.js"></script>
-    <script src="../vendors/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
-    <script src="../build/js/custom.min.js"></script>
+    <!-- DataTables core -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <!-- Buttons extension -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <!-- PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="../build/js/custom.js"></script>
 
     <script>
       const tabla = $('#datatable-responsive-2').DataTable();

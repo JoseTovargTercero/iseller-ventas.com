@@ -1,7 +1,6 @@
 <?php
 require_once('../../configurar/configuracion.php');
 require_once('../../configurar/session.php');
-require_once('../../configurar/_tasas_cambio.php');
 $response = [
     'success' => false,
     'data' => [],
@@ -9,19 +8,13 @@ $response = [
     'bsDolar' => null,
 ];
 
-$response['pesoDolar'] = $pesoDolar;
-$response['bsDolar'] = $dolarBolivar;
 
+$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
 
-
-// Validar sucursal
-if ($_SESSION["nivel"] == 1 && empty($_POST["sucursal"])) {
+if ($sucursal == null) {
     throw new Exception("No se recibió la sucursal", 1);
     exit;
 }
-
-$sucursal = ($_SESSION["nivel"] == '1') ? $_POST["sucursal"] : $_SESSION["sucursal"];
-
 
 
 // Buscar producto si se recibe código
