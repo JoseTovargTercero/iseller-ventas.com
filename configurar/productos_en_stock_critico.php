@@ -17,23 +17,43 @@ if ($result->num_rows > 0) {
 }
 $stmt->close();
 
-$sql = "SELECT S.id, P.nombre, P.proveedor, S.stock, P.precio_compra, P.origen FROM `stock` AS S
-LEFT JOIN productos AS P ON P.id = S.id_producto
-WHERE s.id_sucursal=$sucursal AND S.stock<=$stockCritico AND P.activo = 0 ORDER BY P.proveedor DESC ";
-
-$result = $conexion->query($sql);
 $datos = [];
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $datos[] = [
-            "id" => $row["id"],
-            "nombre" => $row["nombre"],
-            "stock" => $row["stock"],
-            "proveedor" =>  $row['proveedor'],
-            "precio_compra" =>  $row['precio_compra'],
-            "origen" =>  $row['origen'],
-        ];
+
+// Verifica que las variables estén definidas y sean numéricas
+if (isset($sucursal, $stockCritico) && is_numeric($sucursal) && is_numeric($stockCritico)) {
+    $sql = "SELECT S.id, P.nombre, P.proveedor, S.stock, P.precio_compra, P.origen
+            FROM `stock` AS S
+            LEFT JOIN productos AS P ON P.id = S.id_producto
+            WHERE S.id_sucursal = ? AND S.stock <= ? AND P.activo = 0
+            ORDER BY P.proveedor DESC";
+
+    if ($stmt = $conexion->prepare($sql)) {
+        $stmt->bind_param("ii", $sucursal, $stockCritico);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $datos[] = [
+                "id" => $row["id"],
+                "nombre" => $row["nombre"],
+                "stock" => $row["stock"],
+                "proveedor" => $row["proveedor"],
+                "precio_compra" => $row["precio_compra"],
+                "origen" => $row["origen"],
+            ];
+        }
+
+        $stmt->close();
+    } else {
+        // Error en la preparación del statement
+        error_log("Error al preparar la consulta: " . $conexion->error);
     }
+} else {
+    // Error por variables inválidas
+    echo json_encode(['status' => 'success', "data" => ''], JSON_PRETTY_PRINT);
 }
+
+
 
 echo json_encode(['status' => 'success', "data" => $datos], JSON_PRETTY_PRINT);
