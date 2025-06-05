@@ -135,7 +135,7 @@ $data_monedas = $tasaMostradas['data'];
 if (!empty($_SESSION["sucursal"])) {
     $id_sucursal = $_SESSION["sucursal"];
     $stock = $cambio->obtenerStockCritico($id_sucursal);
-    $stockCritico = $stock['data'];
+    //  $stockCritico = $stock['data'];
 }
 
 $pesoDolar = $tasas['data']['pesoDolar'];
