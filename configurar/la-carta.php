@@ -1,5 +1,4 @@
 <?php
-require_once('configuracion.php');
 require_once('session.php');
 class Cart
 {
