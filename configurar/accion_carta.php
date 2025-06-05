@@ -113,7 +113,7 @@ function eliminarItemCarrito($cart)
     echo json_encode(['status' => true, 'data' => 'Eliminado correctamente']);
     exit;
 }
-
+/*
 function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
 {
     global $id_sucursal, $bss_id;
@@ -183,7 +183,82 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
         // header("Location: ../publico/production/ticket.php?id=$orderID&accion=$accion&qty=$qty");
     }
     exit;
+}*/
+
+
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
+{
+    global $id_sucursal, $bss_id;
+
+    if ($cart->total_items() <= 0 || empty($_SESSION['id'])) {
+        echo json_encode(['status' => false, 'data' => 'No hay productos en el carrito']);
+        return;
+    }
+
+    $conexion->begin_transaction();
+
+    try {
+        // Datos base
+        $fechaVenta = date('Y-m-d');
+        $compraTipo = $_GET['compraTipo'] ?? '1';
+        $pagoTipo = $_GET['pagoTipo'] ?? '';
+        $precioBs = $_GET['valorFinalBs'] ?? 0;
+        $precioCop = formatPeso($_GET['valorFinalCop'] ?? 0);
+        $valorFinalVenta = $cart->total();
+        $statusV = $_GET['statusV'] ?? 1;
+        if ($tipo == 'credito') {
+            $statusV = 2;
+        }
+
+        $mes = date('Y-m');
+        $ano = date('Y');
+        $semana = date('Y-W');
+        $dia = date('N');
+
+        // Registrar orden
+        $stmt = $conexion->prepare("
+            INSERT INTO orden (
+                status, customer_id, total_price, created, modified, fecha,
+                semana, ano, total_price_bs, total_price_cop, tipoPago,
+                dia, id_sucursal, bss_id
+            ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param("iisssssddsiii", $statusV, $_SESSION['id'], $valorFinalVenta, $fechaVenta, $mes, $semana, $ano, $precioBs, $precioCop, $pagoTipo, $dia, $id_sucursal, $bss_id);
+        $stmt->execute();
+        $orderID = $stmt->insert_id;
+        $stmt->close();
+
+        // Guardar artículos
+        guardarArticulosOrden($conexion, $cart, $orderID);
+
+        // Si es crédito, guardar info
+        if ($tipo === 'credito') {
+            $nombreC = $_GET['nombreC'] ?? '';
+
+            $stmtC = $conexion->prepare("
+                INSERT INTO creditos (order_id, total_price, negocio, tipoCompra, bss_id, sucursal_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmtC->bind_param("dsssii", $orderID, $valorFinalVenta, $nombreC, $compraTipo, $bss_id, $id_sucursal);
+            $stmtC->execute();
+            $stmtC->close();
+        }
+
+        $conexion->commit(); // Éxito
+
+        $cart->destroy();
+        $msg = ($tipo === 'credito') ? 'Crédito otorgado con éxito' : 'Venta realizada con éxito';
+
+        echo json_encode(['status' => true, 'data' => $msg, 'id' => $orderID]);
+    } catch (Exception $e) {
+        $conexion->rollback();
+        echo json_encode(['status' => false, 'data' => 'Error al procesar orden: ' . $e->getMessage()]);
+    }
+
+    exit;
 }
+
+
 
 function guardarArticulosOrden($conexion, $cart, $orderID)
 {

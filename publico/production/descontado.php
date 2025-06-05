@@ -149,61 +149,62 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                             <tbody>
                               <?php
-                              $query77 = "SELECT * FROM orden WHERE status='3' ORDER BY id DESC LIMIT 150";
+                              $query = "
+                            SELECT 
+                              o.id AS orden_id,
+                              o.customer_id,
+                              o.created,
+                              o.total_price,
+                              o.total_price_cop,
+                              o.total_price_bs,
+                              u.nombre AS nombre_usuario,
+                              p.nombre AS nombre_producto,
+                              oa.quantity
+                            FROM orden o
+                            JOIN usuarios u ON u.id = o.customer_id
+                            JOIN orden_articulos oa ON oa.order_id = o.id
+                            JOIN productos p ON p.id = oa.product_id
+                            WHERE o.status = '3'
+                            ORDER BY o.id DESC
+                            LIMIT 150
+                          ";
 
-                              $buscarAlumnos77 = $conexion->query($query77);
-                              if ($buscarAlumnos77->num_rows > 0) {
-                                $contador = 1;
-                                while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
-                                  $users = $filaAlumnos77['customer_id'];
-                                  $orderid = $filaAlumnos77['id'];
+                              $result = $conexion->query($query);
 
-                                  $query999999999 = "SELECT * FROM usuarios WHERE id='$users'";
-                                  $buscarAlumnos999999999 = $conexion->query($query999999999);
-                                  if ($buscarAlumnos999999999->num_rows > 0) {
-                                    while ($filaAlumnos999999999 = $buscarAlumnos999999999->fetch_assoc()) {
-                                      $usuario1 = $filaAlumnos999999999['nombre'];
-                                    }
+                              $ordenes = [];
+                              if ($result->num_rows > 0) {
+                                while ($row = $result->fetch_assoc()) {
+                                  $id = $row['orden_id'];
+                                  if (!isset($ordenes[$id])) {
+                                    $ordenes[$id] = [
+                                      'contador' => count($ordenes) + 1,
+                                      'usuario' => $row['nombre_usuario'],
+                                      'fecha' => $row['created'],
+                                      'total_price' => $row['total_price'],
+                                      'total_price_cop' => $row['total_price_cop'],
+                                      'total_price_bs' => $row['total_price_bs'],
+                                      'productos' => []
+                                    ];
                                   }
 
-                                  $query7E = $conexion->query("SELECT * FROM orden_articulos WHERE order_id='$orderid' ");
-                                  if ($query7E->num_rows > 0) {
+                                  $ordenes[$id]['productos'][] = $row['quantity'] . ' ' . $row['nombre_producto'];
+                                }
 
-                                    while ($row7E = $query7E->fetch_assoc()) {
-                                      $producto  = $row7E['product_id'];
-                                      $productoquanty  = $row7E['quantity'];
-
-                                      $query9999999999 = "SELECT * FROM productos WHERE id='$producto'";
-                                      $buscarAlumnos9999999999 = $conexion->query($query9999999999);
-                                      if ($buscarAlumnos9999999999->num_rows > 0) {
-                                        while ($filaAlumnos9999999999 = $buscarAlumnos9999999999->fetch_assoc()) {
-                                          $porductos .= $productoquanty . ' ' . $filaAlumnos9999999999['nombre'] . ', ';
-                                        }
-                                      }
-                                    }
-                                  }
-                                  $porductos = substr($porductos, 0, -2);
-                                  $valorPeso = $filaAlumnos77['total_price_cop'];
-                                  $valorbolivar = $filaAlumnos77['total_price_bs'];
-
-
-                                  echo '
-                             <tr class="even pointer">
-                            <td class=" ">' . $contador++ . '</td>
-                            <td>' . $usuario1 . '</td>
-                            
-                            <td>' . $filaAlumnos77['created'] . '</td>
-                            <td>$' . $filaAlumnos77['total_price'] . '</td>
-                            <td>' . number_format($valorPeso, '0', ',', '.') . ' COP</td>
-                            <td>' . number_format($valorbolivar, '2', ',', '.') . ' Bs</td>
-                            <td>' . $porductos . '</td>
-                          </tr>';
-
-                                  $porductos = '';
+                                foreach ($ordenes as $orden) {
+                                  $productos = implode(', ', $orden['productos']);
+                                  echo "
+                                      <tr class='even pointer'>
+                                        <td>{$orden['contador']}</td>
+                                        <td>{$orden['usuario']}</td>
+                                        <td>{$orden['fecha']}</td>
+                                        <td>\${$orden['total_price']}</td>
+                                        <td>" . number_format($orden['total_price_cop'], 0, ',', '.') . " COP</td>
+                                        <td>" . number_format($orden['total_price_bs'], 2, ',', '.') . " Bs</td>
+                                        <td>{$productos}</td>
+                                      </tr>
+                                      ";
                                 }
                               }
-
-
 
 
                               ?>
