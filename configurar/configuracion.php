@@ -1,13 +1,15 @@
 <?php
-if ($_SERVER['SERVER_NAME'] == 'localhost') {
+/*if ($_SERVER['SERVER_NAME'] == 'localhost') {
 	$usuario = 'root';
 	$contrasena = '';
 	$baseDeDatos = 'iseller';
 } elseif ($_SERVER['SERVER_NAME'] == 'iseller-tiendas.com' || $_SERVER['SERVER_NAME'] == 'bikerrockamazonas.com') {
-	$usuario = 'userseller';
-	$contrasena = 'B9f(FbTR=sMd';
-	$baseDeDatos = 'iseller';
-}
+
+//}*/
+
+$usuario = 'userseller';
+$contrasena = 'B9f(FbTR=sMd';
+$baseDeDatos = 'iseller';
 
 $conexion = new mysqli('localhost', $usuario, $contrasena, $baseDeDatos);
 $conexion->set_charset('utf8');
