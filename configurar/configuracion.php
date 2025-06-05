@@ -1,15 +1,31 @@
 <?php
-/*if ($_SERVER['SERVER_NAME'] == 'localhost') {
-	$usuario = 'root';
-	$contrasena = '';
-	$baseDeDatos = 'iseller';
-} elseif ($_SERVER['SERVER_NAME'] == 'iseller-tiendas.com' || $_SERVER['SERVER_NAME'] == 'bikerrockamazonas.com') {
+function cargarDotEnv($ruta)
+{
+	if (!file_exists($ruta)) {
+		echo "Archivo .env no encontrado en $ruta";
+		return;
+	}
 
-//}*/
+	$lineas = file($ruta, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+	foreach ($lineas as $linea) {
+		if (strpos(trim($linea), '#') === 0) continue; // Ignorar comentarios
 
-$usuario = 'userseller';
-$contrasena = 'B9f(FbTR=sMd';
-$baseDeDatos = 'iseller';
+		list($nombre, $valor) = explode('=', $linea, 2);
+		$nombre = trim($nombre);
+		$valor = trim($valor);
+
+		// No sobrescribe variables ya definidas
+		if (!isset($_ENV[$nombre])) {
+			$_ENV[$nombre] = $valor;
+		}
+	}
+}
+
+cargarDotEnv(dirname(__DIR__) . '/../../.env');
+$usuario = $_ENV['DB_USER'];
+$contrasena = $_ENV['DB_PASS'];
+$baseDeDatos = $_ENV['DB_NAME'];
+
 
 $conexion = new mysqli('localhost', $usuario, $contrasena, $baseDeDatos);
 $conexion->set_charset('utf8');
