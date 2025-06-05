@@ -23,16 +23,17 @@ WHERE s.id_sucursal=$sucursal AND S.stock<=$stockCritico AND P.activo = 0 ORDER 
 
 $result = $conexion->query($sql);
 $datos = [];
-
-while ($row = $result->fetch_assoc()) {
-    $datos[] = [
-        "id" => $row["id"],
-        "nombre" => $row["nombre"],
-        "stock" => $row["stock"],
-        "proveedor" =>  $row['proveedor'],
-        "precio_compra" =>  $row['precio_compra'],
-        "origen" =>  $row['origen'],
-    ];
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $datos[] = [
+            "id" => $row["id"],
+            "nombre" => $row["nombre"],
+            "stock" => $row["stock"],
+            "proveedor" =>  $row['proveedor'],
+            "precio_compra" =>  $row['precio_compra'],
+            "origen" =>  $row['origen'],
+        ];
+    }
 }
 
 echo json_encode(['status' => 'success', "data" => $datos], JSON_PRETTY_PRINT);
