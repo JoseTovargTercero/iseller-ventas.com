@@ -33,7 +33,7 @@ try {
 
     // Si hay que copiar productos
     if ($productos_accion === 'copiar') {
-        $query = "SELECT id, porcentaje FROM productos WHERE bss_id = ?";
+        $query = "SELECT id, porcentaje FROM productos WHERE bss_id = ? AND activo = 0";
         $stmt = $conexion->prepare($query);
         $stmt->bind_param("i", $bss_id);
 
