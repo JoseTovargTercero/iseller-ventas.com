@@ -200,8 +200,8 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
     try {
         // Datos base
         $fechaVenta = date('Y-m-d');
-        $compraTipo = $_GET['compraTipo'] ?? '1';
-        $pagoTipo = $_GET['pagoTipo'] ?? '';
+        $compraTipo = $_GET['compraTipo'] ?? 1;
+        $pagoTipo = $_GET['pagoTipo'] ?? 0;
         $precioBs = $_GET['valorFinalBs'] ?? 0;
         $precioCop = formatPeso($_GET['valorFinalCop'] ?? 0);
         $valorFinalVenta = $cart->total();
