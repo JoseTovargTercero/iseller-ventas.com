@@ -3,7 +3,7 @@ if ($_SERVER['SERVER_NAME'] == 'localhost') {
 	$usuario = 'root';
 	$contrasena = '';
 	$baseDeDatos = 'iseller';
-} elseif ($_SERVER['SERVER_NAME'] == 'iseller-tiendas.com') {
+} elseif ($_SERVER['SERVER_NAME'] == 'iseller-tiendas.com' || $_SERVER['SERVER_NAME'] == 'bikerrockamazonas.com') {
 	$usuario = 'userseller';
 	$contrasena = 'B9f(FbTR=sMd';
 	$baseDeDatos = 'iseller';
