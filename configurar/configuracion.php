@@ -44,7 +44,15 @@ if ($conexion->connect_error) {
 }
 
 date_default_timezone_set('America/Manaus');
-error_reporting(0);
+//error_reporting(0);
+
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+
 
 
 if (@$_SESSION["bss_id"]) {
