@@ -16,6 +16,7 @@ class Cart
 
 	/**
 	 * Cart Contents: Returns the entire cart array
+
 	 * @param	bool
 	 * @return	array
 	 */

@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 $response = [];
 
 
-$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
+$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$_POST["sucursal"] ?? null);
 
 if ($sucursal == null) {
     throw new Exception("No se recibió la sucursal", 1);
