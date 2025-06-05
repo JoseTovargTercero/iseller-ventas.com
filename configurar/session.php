@@ -1,13 +1,4 @@
 <?php
-session_set_cookie_params([
-    'lifetime' => 0, // Hasta que se cierre el navegador
-    'path' => '/',
-    'domain' => '',
-    'secure' => true,       // Solo con HTTPS
-    'httponly' => true,     // No accesible desde JS
-    'samesite' => 'Strict'  // Previene CSRF
-]);
-
 session_start();
 
 if (empty($_SESSION["bss_id"])) {
@@ -23,7 +14,7 @@ if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 
 }
 $_SESSION['LAST_ACTIVITY'] = time();
 
-
+// Warning: session_set_cookie_params(): Cannot change session cookie parameters when session is active in /home/gitcomco/bikerrockamazonas.com/is_p/configurar/session.php on line 3
 
 // Verificar acceso de los usuarios nivel 2
 /*
