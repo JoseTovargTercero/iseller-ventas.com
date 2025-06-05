@@ -217,16 +217,46 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
 
         // Registrar orden
         $stmt = $conexion->prepare("
-            INSERT INTO orden (
-                status, customer_id, total_price, created, modified, fecha,
-                semana, ano, total_price_bs, total_price_cop, tipoPago,
-                dia, id_sucursal, bss_id
-            ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->bind_param("iisssssddsiii", $statusV, $_SESSION['id'], $valorFinalVenta, $fechaVenta, $mes, $semana, $ano, $precioBs, $precioCop, $pagoTipo, $dia, $id_sucursal, $bss_id);
-        $stmt->execute();
+        INSERT INTO orden (
+            status, customer_id, total_price, created, modified, fecha,
+            semana, ano, total_price_bs, total_price_cop, tipoPago,
+            dia, id_sucursal, bss_id
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+        if (!$stmt) {
+            throw new Exception("Error al preparar la consulta: " . $conexion->error);
+        }
+
+        $stmt->bind_param(
+            "iisssssddsiii",
+            $statusV,
+            $_SESSION['id'],
+            $valorFinalVenta,
+            $fechaVenta,
+            $mes,
+            $semana,
+            $ano,
+            $precioBs,
+            $precioCop,
+            $pagoTipo,
+            $dia,
+            $id_sucursal,
+            $bss_id
+        );
+
+        if (!$stmt->execute()) {
+            $stmt->close();
+            throw new Exception("Error al ejecutar la inserción en orden: " . $stmt->error);
+        }
+
         $orderID = $stmt->insert_id;
         $stmt->close();
+
+        if ($orderID <= 0) {
+            throw new Exception("No se pudo obtener el ID de la orden insertada.");
+        }
+
 
         // Guardar artículos
         guardarArticulosOrden($conexion, $cart, $orderID);
