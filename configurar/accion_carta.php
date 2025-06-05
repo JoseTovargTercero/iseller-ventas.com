@@ -246,8 +246,9 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
         );
 
         if (!$stmt->execute()) {
+            $error = $stmt->error;
             $stmt->close();
-            throw new Exception("Error al ejecutar la inserción en orden: " . $stmt->error);
+            throw new Exception("Error al ejecutar la inserción en orden: " . $error);
         }
 
         $orderID = $stmt->insert_id;
