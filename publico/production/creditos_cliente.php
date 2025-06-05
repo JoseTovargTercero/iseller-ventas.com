@@ -290,7 +290,38 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             const metodoPago = result.value;
             // Redirigir a pagos_Venta.php con el método de pago en la URL
             //console.log(`../creditos.php?pagoTipo=${encodeURIComponent(metodoPago)}&order_id=${compra}&precioPesoVenta=${precioPesoVenta}&precioBsVenta=${precioBsVenta}`)
-            window.location.href = `../../configurar/pagar.php?pagoTipo=${encodeURIComponent(metodoPago)}&order_id=${compra}&precioPesoVenta=${precioPesoVenta}&precioBsVenta=${precioBsVenta}`;
+            // window.location.href = `../../configurar/pagar.php?pagoTipo=${encodeURIComponent(metodoPago)}&order_id=${compra}&precioPesoVenta=${precioPesoVenta}&precioBsVenta=${precioBsVenta}`;
+            // Datos a enviar
+            const datos = {
+              pagoTipo: metodoPago,
+              order_id: compra,
+              precioPesoVenta: precioPesoVenta,
+              precioBsVenta: precioBsVenta,
+            };
+
+            fetch('../../configurar/pagar.php', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(datos)
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  // recarga la pagina
+                  location.reload();
+                } else {
+                  // Error del backend
+                  alert(`Error: ${data.message}`);
+                  if (data.error) console.error(data.error); // Error técnico (si lo hay)
+                }
+              })
+              .catch(error => {
+                console.error('Error en la solicitud:', error);
+                alert('Hubo un problema con la conexión al servidor.');
+              });
+
           }
         });
 

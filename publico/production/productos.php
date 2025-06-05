@@ -385,8 +385,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
             <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
             <script src="../build/js/custom.js"></script>
-            <script src="../build/js/global-loader.js"></script>
+            <!-- 
 
+
+            <script src="../build/js/global-loader.js"></script>
+                                    -->
 
 
             <script>
@@ -454,7 +457,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         })
                         .then(res => res.text())
                         .then(text => {
-                            console.log("Respuesta cruda del servidor:", text);
                             let json;
                             try {
                                 json = JSON.parse(text);
@@ -525,6 +527,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     data.data.forEach(row => {
                                         productos[row.id] = row
 
+                                        if (row.nombre == 'SPEED MAX BEBIDA ENERGETICA 269ml') {
+                                            console.log(row.nombre)
+                                            console.log(row.id)
+                                        }
                                         tabla.row.add([
                                             contador++,
                                             row.nombre,
@@ -537,7 +543,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             formatNumber(recortarADosDecimales(row.precio_venta_bs)),
                                             `<a data-id="${row.id}" class="btn-edit"><i class="icon-gray line icon-pencil"></i></a>`,
                                             `<a href="ficha.php?id=${row.id}"><i style="color: #41c1af" class="icon-gray line icon-chart"></i></a>`,
-                                            `<a class="c-pointer btn-delete" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
+                                            `<a class="c-pointer btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
                                         ]);
                                     });
 
@@ -572,6 +578,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 });
 
 
+                // Escuchar el evento keydown en todo el documento
+                document.addEventListener('keydown', function(event) {
+                    // Si se presiona Enter y el foco no está en un textarea
+                    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+                        event.preventDefault(); // Evita que se dispare el submit
+                        return false;
+                    }
+                });
+
+
+
+                const nv = "<?php echo $_SESSION["nivel"] ?>"
+
+
                 document.addEventListener('click', async (event) => {
                     if (event.target.closest('.btn-edit')) {
                         const id = event.target.closest('.btn-edit').getAttribute('data-id');
@@ -579,7 +599,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         const sucursalSeleccionada = document.querySelector('#sucursal-selector')?.value;
 
-                        if (sucursalSeleccionada !== '') {
+                        if (sucursalSeleccionada !== '' && nv != 1) {
                             // Si hay una sucursal seleccionada, omitir el Swal y continuar con 'porcentaje'
                             const opcion = 'porcentaje';
                             cargarDatosForm(productos[id], opcion)
@@ -625,15 +645,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     if (event.target.closest('.btn-delete')) {
                         const id = event.target.closest('.btn-delete').getAttribute('data-id')
-                        confirmarDelete(id)
-
+                        const stock_id = event.target.closest('.btn-delete').getAttribute('data-stock_id')
+                        confirmarDelete(id, stock_id)
                     }
                 });
 
 
 
                 // Eliminar producto
-                function confirmarDelete(id) {
+                function confirmarDelete(id, stock_id) {
                     Swal.fire({
                         title: 'Esta seguro?',
                         html: 'Se eliminara el producto ¿desea continuar?',
@@ -645,18 +665,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            deleteProduct(id)
+                            deleteProduct(id, stock_id)
                         }
                     })
                 }
 
-                function deleteProduct(id) {
+                function deleteProduct(id, stock_id) {
+                    const sucursal = document.getElementById('sucursal-selector').value
+                    const modo = (sucursal == '' ? 'p' : 's')
+
                     $.ajax({
                         url: '../../configurar/deleteProAjax.php',
                         type: 'POST',
                         dataType: 'json',
                         data: {
-                            id: id
+                            id: id,
+                            modo: modo,
+                            stock_id: stock_id
                         },
                         success: function(response) {
                             if (response.success) {
@@ -729,7 +754,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         campos.cantidad.disabled = true;
                         campos.origen.disabled = true;
                         campos.proveedor.disabled = true;
-                        campos.codigo_barra.disabled = true;
 
                         // Manejo de sucursales
                         if (sucursalSelector.value === '') {

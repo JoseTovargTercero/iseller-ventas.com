@@ -34,20 +34,36 @@ if ($filtro) {
     }
 }
 
-
+/*
 if (!$filtro) {
     # code...
-    $sql = "SELECT DISTINCT(S.id_producto), SUM(S.stock) AS stock, SUM(S.porcentaje) / COUNT(*) AS porcentaje, P.codigo_barras, P.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo FROM `stock` AS S
+    $sql = "SELECT DISTINCT(S.id_producto), SUM(S.stock) AS stock, SUM(S.porcentaje) / COUNT(*) AS porcentaje, P.codigo_barras, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo FROM `stock` AS S
     LEFT JOIN productos AS P ON P.id = S.id_producto
     WHERE s.bss_id=$bss_id";
 } else {
-    $sql = "SELECT DISTINCT(S.id_producto), SUM(S.stock) AS stock, S.porcentaje, S.id, P.nombre, P.proveedor, P.precio_compra, P.codigo_barras, P.cantidad_unidades, P.origen, P.activo FROM `stock` AS S
+    $sql = "SELECT DISTINCT(S.id_producto), SUM(S.stock) AS stock, S.porcentaje,  P.id as producto_id,S.id, P.nombre, P.proveedor, P.precio_compra, P.codigo_barras, P.cantidad_unidades, P.origen, P.activo FROM `stock` AS S
     LEFT JOIN productos AS P ON P.id = S.id_producto
     WHERE s.id_sucursal=$filtro";
 }
 
 $sql .= " AND P.activo = 0 GROUP BY id_producto ORDER BY id ASC";
+*/
 
+
+$select = !$filtro
+    ? "SUM(S.stock) AS stock, SUM(S.porcentaje) / COUNT(*) AS porcentaje"
+    : "SUM(S.stock) AS stock, S.porcentaje";
+
+$where = !$filtro
+    ? "S.bss_id = $bss_id"
+    : "S.id_sucursal = $filtro";
+
+$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo
+FROM stock AS S
+LEFT JOIN productos AS P ON P.id = S.id_producto
+WHERE $where AND P.activo = 0
+GROUP BY id_producto
+ORDER BY id ASC";
 
 
 $result = $conexion->query($sql);
@@ -60,7 +76,8 @@ while ($row = $result->fetch_assoc()) {
 
 
     $datos[] = [
-        "id" => $row["id"],
+        "id" => $row["producto_id"],
+        "stock_id" => $row["id"],
         "nombre" => $row["nombre"],
         "precio_compra" => number_format((float) $row["precio_compra"], 2, ',', '.') . ' $',
         "cantidad_unidades" => $row["cantidad_unidades"],

@@ -342,11 +342,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <?php
 
                                                 // Mostrar botones según permisos
-                                                if (!empty($_SESSION['permisos'][11])) {
+                                                if (!empty($_SESSION['permisos'][11]) || $_SESSION["nivel"] == 1) {
                                                     echo '<button onclick="confirmarVenta(\'credito\')" class="btn btn-info text-white">Crédito</button>';
                                                 }
 
-                                                if (!empty($_SESSION['permisos'][12])) {
+                                                if (!empty($_SESSION['permisos'][12]) || $_SESSION["nivel"] == 1) {
                                                     echo '<a onclick="confirmarDescuento()" class="btn btn-dark text-white" style="cursor: pointer">Descontar</a>';
                                                 }
 
@@ -875,7 +875,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                             // Construir solo las tasas visibles según tasasMostrar
 
-                            $("#result-escaner").html(`
+                            $("#result-escaner").append(`
                                     <div class="row">
                                         <div class="col-lg-4 ac-c">
                                             [${datos.stock}] <b>${datos.nombre}</b>
