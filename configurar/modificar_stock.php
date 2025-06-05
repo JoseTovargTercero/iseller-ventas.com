@@ -7,12 +7,18 @@ header('Content-Type: application/json');
 
 $response = ['success' => false, 'message' => ''];
 
-$campos_requeridos = ['producto', 'cantidad_stock'];
+$campos_requeridos = ['producto'];
 if ($_SESSION["nivel"] == 1) {
     array_push($campos_requeridos, 'sucursal');
 }
 $validador = new ValidadorCampos($campos_requeridos, 'POST');
 $validador->validar();
+
+if ($_POST["cantidad_stock"] == '') {
+    $response['message'] = 'La cantidad de stock no puede estar vacía.';
+    echo json_encode($response);
+    exit;
+}
 
 
 $id            = trim($_POST['producto']);
