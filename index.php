@@ -23,51 +23,6 @@
 </head>
 
 <body style="background: #f4f4f4;">
-
-    <?php
-    @$exito =  $_GET['exito'];
-    if ($exito) {
-        echo '<script>
-            function mensajeExito(){
-            alertify.success("PROCESO COMPLETADO, INICIAR SESION");}
-            </script>
-            <body onload="mensajeExito()"></body>';
-    }
-
-    @$registrado = $_GET['error'];
-
-    switch ($registrado) {
-
-        case ("error"):
-            echo "	<script type='text/javascript'>
-                        window.onload=function mensaje(){	
-                        alertify.alert('ACCESO DENEGADO','Usuario o contraseña incorrecta, por favor revise sus credenciales e intente de nuevo.').set('label', 'Aceptar');  }
-                        </script>";
-
-
-            break;
-        case ("contacte"):
-            echo "	<script type='text/javascript'>
-                    window.onload=function mensaje(){	
-                    alertify.alert('ACCESO DENEGADO','Clave de recuperación incorrecta (contacte con el administrador).').set('label', 'Aceptar');  }
-	                </script>";
-            break;
-
-        case ("contra_actual"):
-            echo "	<script type='text/javascript'>
-                    window.onload=function mensaje(){	
-                    alertify.alert('TAREA REALIZADA EXITOXAMENTE','Usted a actualizado su contraseña correctamente.').set('label', 'Aceptar');  }
-	                </script>";
-            break;
-        case ("tiempo"):
-            echo "	<script type='text/javascript'>
-                    window.onload=function mensaje(){	
-                    alertify.alert('FIN DEL PERIODO DE PRUEBA','Se ha vencido su período  de prueba, por favor contacte con el administrador si desea seguir usando I-Seller.').set('label', 'Aceptar');  }
-	                </script>";
-            break;
-    }
-    ?>
-
     <div class="cuerpo">
 
         <header class="top-head">
@@ -79,7 +34,7 @@
 
         </header>
         <section class="contenidoLogin" style="height: 100%; overflow-y: auto; color: #b1b1b1 !important; ">
-            <div class="to-animate-2 i bounceIn animated" style="<?php echo $var ?>">
+            <div class="to-animate-2 i bounceIn animated">
                 <div class="login" style="width: 360px;">
                     <h1 style="width: 100%; text-align: center; font-size: 22px; color: gray;">Inicio de Sesión</h1>
                     <hr>
@@ -107,15 +62,11 @@
                             &copy; Iseller. Todos los derechos reservados
                         </p>
 
-
-
                     </div>
 
                 </div>
             </div>
     </div>
-
-
 
     <script>
         // captura del submit de data_form
@@ -179,19 +130,8 @@
     </script>
 
     </script>
-
-
-
-
-
-
     </div> <!-- end of col -->
-
-
-
-
     </div>
-
 </body>
 
 </html>

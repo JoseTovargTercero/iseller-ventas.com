@@ -28,17 +28,21 @@ if ($result->num_rows === 1) {
 
     if (password_verify($contrasena, $usuario['contrasena'])) {
         // Regenerar ID de sesión por seguridad
-        session_set_cookie_params([
-            'lifetime' => 0, // Hasta que se cierre el navegador
-            'path' => '/',
-            'domain' => '',
-            'secure' => true,       // Solo con HTTPS
-            'httponly' => true,     // No accesible desde JS
-            'samesite' => 'Strict'  // Previene CSRF
-        ]);
+        if (session_status() === PHP_SESSION_NONE) {
+
+            session_set_cookie_params([
+                'lifetime' => 0, // Hasta que se cierre el navegador
+                'path' => '/',
+                'domain' => '',
+                'secure' => true,       // Solo con HTTPS
+                'httponly' => true,     // No accesible desde JS
+                'samesite' => 'Strict'  // Previene CSRF
+            ]);
 
 
-        session_start();
+            session_start();
+        }
+
         session_regenerate_id(true);
 
         $_SESSION['id'] = $usuario['id'];
