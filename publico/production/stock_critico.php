@@ -169,7 +169,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </div>
                                             <div class='x_content'>
 
-                                         
+
 
                                                 <section id="sucursal_section" class='form-group mb-3'>
                                                     <label class='form-label' for='first-name'>Sucursal </label>

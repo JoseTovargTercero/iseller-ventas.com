@@ -3,264 +3,24 @@ require_once('includes/requires.php');
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
-
+    $text_vista = 'Ventas del dia';
     $topnav = topnav();
 
-    $today = date('Y-m-d');
-    $hayunError = "NO";
 
-    if (!empty($_GET['fechaSolic'])) {
-        $fechaSolic = $_GET['fechaSolic'];
-        $today = $fechaSolic;
-    }
 
-    $total = 0;
-    $totalVentas = 0;
+    $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
+    $stmt->bind_param('i', $bss_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    $tipoFiltroColumna = 'modified'; // Por dia
-    $text_vista = 'Ventas del dia';
-
-    // Ventas status = 1
-    $query = "SELECT total_price FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '1'";
-    $result = $conexion->query($query);
-
-    if ($result && $result->num_rows > 0) {
+    $sucursales = [];
+    if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            $totalVentas++;
-            $total += $row['total_price'];
+            $sucursales[] = $row;
         }
     }
+    $stmt->close();
 
-    // Ventas status = 4
-    $total2 = 0;
-    $totalVentas2 = 0;
-
-    $query = "SELECT total_price_bs FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '4'";
-    $result = $conexion->query($query);
-
-    if ($result && $result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $totalVentas2++;
-            $total2 += $row['total_price_bs'];
-        }
-    }
-
-    // OBTIENE LAS GANANCIAS POR TIPO DE MONEDA
-    function returnGanancias($tipo)
-    {
-        global $conexion;
-        global $today;
-        global $tipoFiltroColumna;
-        $ganancias = 0;
-
-        $sqlGanancias = "SELECT * FROM orden WHERE $tipoFiltroColumna='$today' AND status='$tipo'";
-        $search = $conexion->query($sqlGanancias);
-        if ($search->num_rows > 0) {
-            while ($row = $search->fetch_assoc()) {
-                $idOrder = $row['id'];
-                $descontado = $row['descontado'];
-
-                $query0000003344 = "SELECT * FROM orden_articulos WHERE order_id='$idOrder'";
-                $buscarAlumnos0000003344 = $conexion->query($query0000003344);
-                if ($buscarAlumnos0000003344->num_rows > 0) {
-                    while ($filaAlumnos0000003344 = $buscarAlumnos0000003344->fetch_assoc()) {
-
-                        $precioCompra = $filaAlumnos0000003344['precio'] * $filaAlumnos0000003344['quantity'];
-                        $precioVenta = $filaAlumnos0000003344['precio_venta_dolar'] * $filaAlumnos0000003344['quantity'];
-
-
-                        if ($tipo == '4') {
-                            $precioVenta = $precioVenta - ($precioVenta * $descontado / 100);
-                            $ganancias += $precioVenta - $precioCompra;
-                        } else {
-                            $ganancias += $precioVenta - $precioCompra;
-                        }
-                    }
-                }
-            }
-        }
-        return $ganancias;
-    }
-
-
-    // TOTAL POR TIPO DE PAGO
-    function obtenerTotalPorTipoPago($conexion, $today, $tipoPago, $campoTotal)
-    {
-        global $tipoFiltroColumna;
-        $sql = "
-            SELECT $campoTotal 
-            FROM orden 
-            WHERE $tipoFiltroColumna = ? 
-            AND tipoPago = ? 
-            AND (status = '1' OR status = '4')
-        ";
-        $stmt = $conexion->prepare($sql);
-        $stmt->bind_param("si", $today, $tipoPago);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $total = 0;
-        while ($row = $result->fetch_assoc()) {
-            $total += $row[$campoTotal];
-        }
-
-        return $total;
-    }
-
-    // Uso de la función para cada tipo de pago
-    $total_Punto = obtenerTotalPorTipoPago($conexion, $today, 1, 'total_price_bs'); // Punto
-    $total_Pmovil = obtenerTotalPorTipoPago($conexion, $today, 2, 'total_price_bs'); // Pago movil
-    $total_Transferencia = obtenerTotalPorTipoPago($conexion, $today, 3, 'total_price_bs'); // Transferencia
-    $total_Efectivo = obtenerTotalPorTipoPago($conexion, $today, 4, 'total_price_bs'); // efectivo
-    $total_Dolares = obtenerTotalPorTipoPago($conexion, $today, 5, 'total_price');    // Dólares
-    $total_pesos = obtenerTotalPorTipoPago($conexion, $today, 6, 'total_price_cop'); // Pesos
-    $total_Biopago = obtenerTotalPorTipoPago($conexion, $today, 7, 'total_price_bs'); // Biopago
-    // TOTAL POR TIPO DE PAGO
-
-
-    function obtenerVentasTotalesPorStatus($conexion, $today, $statuses = ['1', '3'])
-    {
-        global $tipoFiltroColumna;
-        $statusList = "'" . implode("','", $statuses) . "'";
-        $query = "SELECT total_price, total_price_bs, total_price_cop 
-            FROM orden 
-            WHERE $tipoFiltroColumna = '$today' 
-            AND status IN ($statusList)";
-
-        $result = $conexion->query($query);
-
-
-        $total = 0;
-        while ($row = $result->fetch_assoc()) {
-            $total += $row['total_price'];
-        }
-
-        return $total;
-    }
-
-    function calcularGananciaPorTipoPago($conexion, $today, $tipoPago, $campoPrecioArticulo = 'precio', $campoTotalOrden = 'total_price')
-    {
-        global $tipoFiltroColumna;
-        $query = "
-            SELECT id, $campoTotalOrden AS monto 
-            FROM orden 
-            WHERE $tipoFiltroColumna = '$today' 
-            AND status IN ('1', '4') 
-            AND tipoPago = '$tipoPago'
-        ";
-
-        $result = $conexion->query($query);
-        $totalVentas = 0;
-        $totalCosto = 0;
-
-        while ($orden = $result->fetch_assoc()) {
-            $totalVentas += $orden['monto'];
-            $ordenId = $orden['id'];
-
-            $queryArt = "
-                SELECT quantity, $campoPrecioArticulo AS precio_unitario 
-                FROM orden_articulos 
-                WHERE order_id = '$ordenId'
-            ";
-            $resultArt = $conexion->query($queryArt);
-            while ($art = $resultArt->fetch_assoc()) {
-                $totalCosto += $art['precio_unitario'] * $art['quantity'];
-            }
-        }
-
-        return $totalVentas - $totalCosto;
-    }
-
-    // Total de ventas por tipo de despacho
-    $total_detal = obtenerVentasTotalesPorStatus($conexion, $today);
-    $total_mayor = obtenerVentasTotalesPorStatus($conexion, $today, [4]);
-
-
-
-    function calcularGananciaPorMoneda($conexion, $today, $tipoPagos, $campoMontoOrden, $campoPrecioArticulo)
-    {
-        $ganancia = 0;
-        $totalVentas = 0;
-        $costoTotal = 0;
-        global $tipoFiltroColumna;
-
-        // Preparar lista de tipoPago para la consulta
-        $tipos = implode("','", $tipoPagos);
-
-        $query = "
-            SELECT id, $campoMontoOrden as monto 
-            FROM orden 
-            WHERE $tipoFiltroColumna = ? 
-            AND status IN ('1', '4') 
-            AND tipoPago IN ('$tipos')
-        ";
-
-        $stmt = $conexion->prepare($query);
-        $stmt->bind_param("s", $today);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        while ($orden = $result->fetch_assoc()) {
-            $ordenId = $orden['id'];
-            $totalVentas += $orden['monto'];
-
-            $queryArticulos = "SELECT quantity, $campoPrecioArticulo as precio_unitario FROM orden_articulos WHERE order_id = ?";
-            $stmtArt = $conexion->prepare($queryArticulos);
-            $stmtArt->bind_param("i", $ordenId);
-            $stmtArt->execute();
-            $resArt = $stmtArt->get_result();
-
-            while ($articulo = $resArt->fetch_assoc()) {
-                $costoTotal += $articulo['precio_unitario'] * $articulo['quantity'];
-            }
-        }
-
-        $ganancia = $totalVentas - $costoTotal;
-        return $ganancia;
-    }
-
-    // Calcular ganancias
-    $gananciasBolivar = calcularGananciaPorMoneda(
-        $conexion,
-        $today,
-        ['1', '2', '3', '4', '7'],
-        'total_price_bs',
-        'bolivar'
-    );
-
-    $gananciasPeso = calcularGananciaPorMoneda(
-        $conexion,
-        $today,
-        ['6'],
-        'total_price_cop',
-        'peso'
-    );
-
-    $gananciasDolares = calcularGananciaPorMoneda(
-        $conexion,
-        $today,
-        ['5'],
-        'total_price',
-        'precio'
-    );
-
-
-
-    /**
-     * Formatea un array de montos a un total con dos decimales, separando miles con puntos y decimales con coma.
-     *
-     * @param array $montos Array de montos a totalizar.
-     * @return string Total formateado.
-     */
-
-    function totalizar_formatear($montos)
-    {
-        $total = 0;
-        foreach ($montos as $monto) {
-            $total += $monto;
-        }
-        return number_format($total, 2, '.', ',');
-    }
 
 
 ?>
@@ -303,9 +63,26 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     <div class=''>
 
-                        <h4>Ventas</h4>
-                        <p style="margin-top: -10px;"><?php echo $text_vista ?></p>
 
+                        <div class="d-flex justify-content-between w-100">
+                            <div>
+                                <h4>Ventas</h4>
+                                <p style="margin-top: -10px;"><?php echo $text_vista ?></p>
+                            </div>
+                            <section id="sucursal_section" class='form-group mb-3' style="width: 250px;">
+                                <select class="form-control" id="sucursal_selector" name="sucursal_a_editar">
+                                    <?php if (count($sucursales) > 1): ?>
+                                        <option value="">Todas las sucursales</option>
+                                    <?php endif; ?>
+
+                                    <?php foreach ($sucursales as $row): ?>
+                                        <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($row['nombre']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </section>
+                        </div>
                         <div class='clearfix'></div>
 
                         <div class='row   fadeInUp animated'>
@@ -324,7 +101,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                     <div class='x_content '>
                                         <div class='card-box'>
-                                            <table id="datatable-responsive" class="table table-bordered" style="width:100%">
+                                            <table id="datatable" class="table table-bordered" style="width:100%">
                                                 <thead>
                                                     <tr class="headings">
                                                         <th>#</th>
@@ -338,66 +115,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <th>Detalles</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody>
-                                                    <?php
-
-                                                    $query = "
-                                                            SELECT o.*, u.nombre AS usuario
-                                                            FROM orden o
-                                                            JOIN usuarios u ON o.customer_id = u.id
-                                                            WHERE (o.status = '1'  OR o.status = '2' OR o.status = '4') AND o.$tipoFiltroColumna = '$today'
-                                                            ORDER BY o.id DESC
-                                                            LIMIT 150
-                                                        ";
-                                                    $result = $conexion->query($query);
-                                                    $contador = 1;
-
-                                                    $tiposPago = [
-                                                        '1' => 'Punto',
-                                                        '2' => 'Pago Móvil',
-                                                        '3' => 'Transferencia',
-                                                        '4' => 'BS Efectivo',
-                                                        '5' => 'Dólares',
-                                                        '6' => 'Pesos',
-                                                        '7' => 'Biopago',
-                                                        '8' => 'Fraccionado'
-                                                    ];
-
-                                                    while ($row = $result->fetch_assoc()) {
-                                                        $orderId = $row['id'];
-                                                        $tipoPago = $tiposPago[$row['tipoPago']] ?? '<span class="badge bg-danger">Pendiente</span>';
-                                                        $tVenta = $row['status'] == '4' ? 'M' : 'V';
-
-                                                        // Obtener productos
-                                                        $productos = [];
-                                                        $queryProd = "SELECT oa.quantity, p.nombre
-                                                                FROM orden_articulos oa
-                                                                JOIN productos p ON oa.product_id = p.id
-                                                                WHERE oa.order_id = '$orderId'";
-                                                        $resProd = $conexion->query($queryProd);
-                                                        while ($prod = $resProd->fetch_assoc()) {
-                                                            $productos[] = $prod['quantity'] . ' ' . $prod['nombre'];
-                                                        }
-
-                                                        $productosTexto = htmlspecialchars(implode(', ', $productos));
-
-                                                        echo "<tr>
-                                                                <td>{$contador}</td>
-                                                                <td>{$tVenta}</td>
-                                                                <td>{$tipoPago}</td>
-                                                                <td>" . htmlspecialchars($row['usuario']) . "</td>
-                                                                <td>{$row['created']}</td>
-                                                                <td>$" . number_format($row['total_price'], 2, ',', '.') . "</td>
-                                                                <td>" . number_format($row['total_price_cop'], 0, ',', '.') . "</td>
-                                                                <td>" . number_format($row['total_price_bs'], 2, ',', '.') . "</td>
-                                                                <td><a href='detallesVenta.php?id={$orderId}' title='{$productosTexto}'>Detalles</a></td>
-                                                            </tr>
-                                                        ";
-                                                        $contador++;
-                                                    }
-
-
-                                                    ?>
+                                                <tbody id="datos-tabla">
                                                 </tbody>
                                             </table>
 
@@ -409,7 +127,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                             <div class="col-lg-6">
                                 <div class="x_panel tile">
-                                    <div class="p-0 card-body" id="apex_chart_1">
+                                    <div class="p-0 card-body">
                                         <!-- Punto de Venta -->
                                         <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
                                             <div class="py-1">
@@ -426,9 +144,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_Punto, 2, '.', '.'); ?>
-                                                </span><small>Bs</small>
+                                                <span class="fs-15 fw-semibold" id="total_Punto">
+                                                </span><small> Bs</small>
                                             </div>
                                         </div>
                                         <!-- Pago Móvil -->
@@ -447,9 +164,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_Pmovil, 2, '.', '.'); ?>
-                                                </span><small>Bs</small>
+                                                <span class="fs-15 fw-semibold" id="total_Pmovil">
+                                                </span><small> Bs</small>
                                             </div>
                                         </div>
 
@@ -470,9 +186,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_Transferencia, 2, '.', '.'); ?>
-                                                </span><small>Bs</small>
+                                                <span class="fs-15 fw-semibold" id="total_Transferencia">
+                                                </span><small> Bs</small>
                                             </div>
                                         </div>
 
@@ -492,9 +207,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_Biopago, 2, '.', '.'); ?>
-                                                </span><small>Bs</small>
+                                                <span class="fs-15 fw-semibold" id="total_Biopago">
+                                                </span><small> Bs</small>
                                             </div>
                                         </div>
 
@@ -514,9 +228,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_Efectivo, 2, '.', '.'); ?>
-                                                </span><small>Bs</small>
+                                                <span class="fs-15 fw-semibold" id="total_Efectivo">
+                                                </span><small> Bs</small>
                                             </div>
                                         </div>
 
@@ -536,9 +249,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_Dolares, 2, '.', '.'); ?>
-                                                </span><small>$ </small>
+                                                <span class="fs-15 fw-semibold" id="total_Dolares"></span><small> $ </small>
                                             </div>
                                         </div>
 
@@ -559,10 +270,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                             </div>
                                             <div class="p-2">
-                                                <span class="fs-15 fw-semibold">
-                                                    <?php echo number_format($total_pesos, 0, '.', '.'); ?>
-                                                </span>
-                                                <small>Cop</small>
+                                                <span class="fs-15 fw-semibold" id="total_pesos"></span>
+                                                <small> Cop</small>
                                             </div>
                                         </div>
 
@@ -572,60 +281,50 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                 </div>
                             </div>
-
-
                             <div class='col-lg-6'>
-
-
-
                                 <div class='x_panel tile'>
                                     <div class='x_title'>
                                         <div class='clearfix'></div>
                                     </div>
                                     <div class='x_content'>
 
-                                        <div class="p-0 card-body" id="apex_chart_1">
+                                        <div class="p-0 card-body">
                                             <?php
 
                                             $items = [
                                                 [
                                                     'titulo' => 'Bolivares',
-                                                    'subtitulo' => totalizar_formatear([$gananciasBolivar]) . ' - Ganancias',
-                                                    'valor' => totalizar_formatear([$total_Punto, $total_Pmovil, $total_Transferencia, $total_Efectivo, $total_Biopago]),
-                                                    'prefijo' => '',
+                                                    'subtitulo' => 'ganacias_Bolivares',
+                                                    'valor' => 'valor_Bolivares',
                                                     'bg' => 'bg-warning',
                                                     'text' => 'text-dark'
                                                 ],
                                                 [
                                                     'titulo' => 'Dolares',
-                                                    'subtitulo' => totalizar_formatear([$gananciasDolares]) . ' - Ganancias',
-                                                    'valor' => totalizar_formatear([$total_Dolares]),
-                                                    'prefijo' => '$ ',
+                                                    'subtitulo' => 'ganacias_Dolares',
+                                                    'valor' => 'valor_Dolares',
                                                     'bg' => 'bg-success',
                                                     'text' => 'text-white'
                                                 ],
                                                 [
                                                     'titulo' => 'Pesos',
-                                                    'subtitulo' => totalizar_formatear([$gananciasPeso]) . ' - Ganancias',
-                                                    'valor' => totalizar_formatear([$total_pesos]),
-                                                    'prefijo' => '',
+                                                    'subtitulo' => 'ganacias_Pesos',
+                                                    'valor' => 'valor_Pesos',
                                                     'bg' => 'bg-secondary',
                                                     'text' => 'text-white'
                                                 ],
 
                                                 [
                                                     'titulo' => 'Mayor',
-                                                    'subtitulo' => '$' . number_format(returnGanancias('4'), '2', '.', '.') . ' Ganancias.',
-                                                    'valor' => number_format($total_mayor, '2', '.', ','),
-                                                    'prefijo' => '$ ',
+                                                    'subtitulo' => 'ganacias_Mayor',
+                                                    'valor' => 'valor_Mayor',
                                                     'bg' => 'bg-dark',
                                                     'text' => 'text-white'
                                                 ],
                                                 [
                                                     'titulo' => 'Detal',
-                                                    'subtitulo' => '$' . number_format(returnGanancias('1'), '2', '.', ',') . ' Ganancias.',
-                                                    'valor' => number_format($total_detal, '2', '.', '.'),
-                                                    'prefijo' => '$ ',
+                                                    'subtitulo' => 'ganacias_Detal',
+                                                    'valor' => 'valor_Detal',
                                                     'bg' => 'bg-dark',
                                                     'text' => 'text-white'
                                                 ],
@@ -644,14 +343,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                 </div>
                                                                 <h6 class='d-flex mb-0 align-items-center'>
                                                                     <span>
-                                                                        <p class='m-0'>{$item['titulo']}</p>
-                                                                        <small class='text-muted'>{$item['subtitulo']}</small>
+                                                                        <p class='m-0' >{$item['titulo']}</p>
+                                                                        <small class='text-muted' id='{$item['subtitulo']}'></small>
                                                                     </span>
                                                                 </h6>
                                                             </div>
                                                         </div>
                                                         <div class='p-2'>
-                                                            <div class='fs-15 fw-semibold'>{$item['prefijo']}{$item['valor']}</div>
+                                                            <div class='fs-15 fw-semibold' id='{$item['valor']}'></div>
                                                         </div>
                                                     </div>
                                                     ";
@@ -690,13 +389,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
                 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
                 <script src='../build/js/custom.js'></script>
+                <script src='../build/js/global-loader.js'></script>
                 <script>
-                    document.getElementById('fechaSolic').addEventListener('change', function() {
-                        const fecha = this.value
-                        window.location.href = '?fechaSolic=' + fecha
-                        console.log(fecha)
-                    })
+                    let table = new DataTable('#datatable');
+                    const periodo = 'dia';
                 </script>
+
+                <script src='../build/js/info_ventas.js'></script>
     </body>
 
     </html>
