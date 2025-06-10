@@ -31,9 +31,12 @@ class CalculadoraPrecios
         $origen = $producto["origen"];
         $precioCompra = (float) $producto["precio_compra"];
         $porcentaje = (float) $producto["porcentaje"];
+        $mayor = $producto["mayor"];
+        $cantidad_por_precio = ($mayor == '1' ? 1 : $cantidadUnidad);
 
         // Precio en dólares por unidad
-        $precioDolarCompra = $precioCompra / $cantidadUnidad;
+        $precioDolarCompra = $precioCompra / $cantidad_por_precio;
+
 
         // Precio de venta en dólares
         $precioDolarVenta = $precioDolarCompra + ($precioDolarCompra * $porcentaje / 100);

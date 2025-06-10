@@ -14,47 +14,6 @@ date_default_timezone_set('America/Manaus');
 
     <?php require_once('includes/headers.php'); ?>
 
-    <?php
-    @$accion = $_GET['accion'];
-
-    switch ($accion) {
-        case ('enviado'):
-            echo '<script>
-            function mensaje(){	
-			alertify.success("Reporte enviado correctamente."); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
-
-            break;
-
-
-
-        case ('conexion'):
-            echo '<script>
-            function mensaje(){	
-			alertify.error("Error de conexion, intente de nuevo.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-            break;
-
-
-        case ('correo'):
-            echo '<script>
-            function mensaje(){	
-			alertify.error("El administrador no ha agredo un correo.");}
-            </script>
-            <body onload="mensaje()">
-            </body>';
-            break;
-    }
-
-    ?>
-
-
-
-
 
 </head>
 

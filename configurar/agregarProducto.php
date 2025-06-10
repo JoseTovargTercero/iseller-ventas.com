@@ -4,7 +4,7 @@ require_once('session.php');
 header('Content-Type: application/json');
 
 // Sanitizar y preparar los datos
-$nombre = $_POST['nombre'] ?? '';
+$nombre = strtoupper($_POST['nombre']) ?? '';
 $precio = $_POST['precio'] ?? 0;
 $cantidad = $_POST['cantidad'] ?? 0;
 $porcentaje = $_POST['porcentaje'] ?? 0;

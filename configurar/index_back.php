@@ -263,7 +263,7 @@ function obtenerVentasPorDia($conexion, $columna, $valor)
     $diaNum = (int)$row['dia']; // Asegura que sea entero del 1 al 7
     if (isset($diasSemana[$diaNum])) {
       $nombreDia = $diasSemana[$diaNum];
-      $ventasPorDia[$nombreDia] += $row['total_price'];
+      $ventasPorDia[$nombreDia] += number_format($row['total_price'], '2', '.', '');
     }
   }
 

@@ -242,13 +242,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       const opcionesPago = `
                     <select id="metodoPago" class="form-control">
                         <option value="">Seleccione</option>
-                        <option value="option1">Punto</option>
-                        <option value="option2">Pago Movil</option>
-                        <option value="option3">Transferencia</option>
-                        <option value="option7">BioPago</option>
-                        <option value="option4">Efectivo</option>
-                        <option value="option5">Dolares</option>
-                        <option value="option6">Pesos</option>
+                        <option value="1">Punto</option>
+                        <option value="2">Pago Movil</option>
+                        <option value="3">Transferencia</option>
+                        <option value="7">BioPago</option>
+                        <option value="4">Efectivo</option>
+                        <option value="5">Dolares</option>
+                        <option value="6">Pesos</option>
                     </select>`;
 
       document.addEventListener('click', function(event) {

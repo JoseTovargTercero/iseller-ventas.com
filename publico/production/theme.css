@@ -1241,3 +1241,8 @@ progress {
 .avatar-group-dense .avatar-5xl:not(:first-child) {
     margin-left: -6rem;
 }
+
+.badge-subtle-success {
+    color: var(--falcon-success-text-emphasis) !important;
+    background-color: var(--falcon-success-bg-subtle);
+}

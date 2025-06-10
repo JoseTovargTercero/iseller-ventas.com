@@ -37,7 +37,7 @@
     // Búsqueda por nombre
     $producto = "%{$producto}%";
     $query = "
-        SELECT p.id, p.nombre, p.codigo, s.stock, s.porcentaje, p.cantidad_unidades, p.origen, p.precio_compra 
+        SELECT p.id, p.mayor, p.nombre, p.codigo, s.stock, s.porcentaje, p.cantidad_unidades, p.origen, p.precio_compra 
         FROM productos p
         INNER JOIN stock s ON p.id = s.id_producto
         WHERE p.nombre LIKE ?
@@ -51,7 +51,7 @@
     // Búsqueda por código de barras
     $producto = removeNonNumeric($producto);
     $query = "
-        SELECT p.id, p.nombre, p.codigo, s.stock, s.porcentaje, p.cantidad_unidades, p.origen, p.precio_compra 
+        SELECT p.id, p.mayor, p.nombre, p.codigo, s.stock, s.porcentaje, p.cantidad_unidades, p.origen, p.precio_compra 
         FROM productos p
         INNER JOIN stock s ON p.id = s.id_producto
         WHERE p.codigo_barras = ?
@@ -81,7 +81,9 @@
         'precio_dolar_visible' => $precios['precio_venta_dolar'],
         'precio_peso_visible'  => $precios['precio_venta_peso'],
         'precio_bs_visible'    => $precios['precio_venta_bs'],
+        'cantidad_unidades'    => $row['cantidad_unidades'],
         'codigo'               => $row['codigo'],
+        'mayor'               => $row['mayor'],
       ];
     }
 

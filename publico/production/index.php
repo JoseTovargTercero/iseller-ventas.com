@@ -491,26 +491,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         apex_chart.updateSeries([{
                             name: 'Ventas',
                             data: [
-                                ventas_semana.Lunes,
-                                ventas_semana.Martes,
-                                ventas_semana.Miercoles,
-                                ventas_semana.Jueves,
-                                ventas_semana.Viernes,
-                                ventas_semana.Sabado,
-                                ventas_semana.Domingo
+                                recortarADosDecimales(ventas_semana.Lunes),
+                                recortarADosDecimales(ventas_semana.Martes),
+                                recortarADosDecimales(ventas_semana.Miercoles),
+                                recortarADosDecimales(ventas_semana.Jueves),
+                                recortarADosDecimales(ventas_semana.Viernes),
+                                recortarADosDecimales(ventas_semana.Sabado),
+                                recortarADosDecimales(ventas_semana.Domingo)
                             ]
 
                         }]);
 
-
-                        console.log(json)
-
                         document.getElementById('venta_dia').innerText = `$${json.totalVentasDiarias}`;
                         document.getElementById('venta_semana').innerText = `$${json.totalVentasSemana}`;
                         document.getElementById('venta_mes').innerText = `$${json.totalVentasMes}`;
-
-
-
 
                         let porcentaje_avance_dia = calcularPorcentajeAvance(json.VentasDiarias_anterior, json.totalVentasDiarias)
                         let porcentaje_avance_semana = calcularPorcentajeAvance(json.VentasSemana_anterior, json.totalVentasSemana)

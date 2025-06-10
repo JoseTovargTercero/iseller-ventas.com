@@ -21,6 +21,7 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
               LEFT JOIN stock s ON p.id = s.id_producto AND s.id_sucursal = ?
               WHERE s.id_producto IS NULL
                 AND p.nombre LIKE ?
+                AND p.mayor IS NULL
                 AND p.activo = 0";
 
     $stmt = $conexion->prepare($query);

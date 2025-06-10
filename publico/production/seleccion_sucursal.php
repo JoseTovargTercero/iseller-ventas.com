@@ -97,7 +97,13 @@ if ($_SESSION['nivel'] == 1) {
 
                     loader.cargar('sucursales', '_sucursales').then(data => {
 
-                        console.log(data)
+
+                        // Verificamos si data es un array y está vacío
+                        if (!Array.isArray(data) || data.length === 0) {
+                            window.location.href = 'sucursales.php';
+                            return;
+                        }
+
 
                         if (data) {
                             const section = document.querySelector('#sucursales');

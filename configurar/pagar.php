@@ -11,6 +11,9 @@ $tipo = 1;
 $precioPesoVenta = $input['precioPesoVenta'] ?? 0;
 $precioBsVenta = $input['precioBsVenta'] ?? 0;
 
+$precioPesoVenta = number_format($precioPesoVenta, '2', '.', '');
+$precioBsVenta = number_format($precioBsVenta, '2', '.', '');
+
 
 if (!$id || !$pagoTipo || !$tipo) {
     echo json_encode(["success" => false, "message" => "Faltan parámetros requeridos."]);
@@ -24,6 +27,28 @@ $date4 = date('Y-W');
 $date5 = date('Y');
 
 try {
+
+    // Consulta de tipo para ventas al mayor
+
+    $stmt = mysqli_prepare($conexion, "SELECT * FROM `orden` WHERE id = ?");
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            if ($row['tipoPago'] == 4) {
+                $tipo = 4;
+            }
+        }
+    }
+    $stmt->close();
+
+    // Consulta de tipo para ventas al mayor
+
+
+
+
+
     $conexion->begin_transaction();
 
     // Verificar existencia del crédito

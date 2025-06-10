@@ -1,34 +1,26 @@
 <?php
 require_once("configuracion.php");
-require_once("session.php");
+require_once('session.php');
 header('Content-Type: application/json');
 
 $response = [];
 
 
-$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$_POST["sucursal"] ?? null);
-
-if ($sucursal == null) {
-    throw new Exception("No se recibió la sucursal", 1);
-    exit;
-}
-
-
-// buscar el archivo encargado de los datos del producto para obtener el porcentaje perzonalizado
-
 if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
     $q = $conexion->real_escape_string(trim($_POST['producto']));
 
+    // Consulta para obtener productos que NO están en la tabla 'stock' para la sucursal
     $query = "SELECT p.id, p.nombre
-    FROM productos p
-    INNER JOIN stock s ON p.id = s.id_producto
-    WHERE p.nombre LIKE ?
-      AND p.activo = 0
-      AND p.mayor IS NULL
-      AND s.id_sucursal = ?";
+              FROM productos p
+              LEFT JOIN stock s ON p.id = s.id_producto
+              WHERE s.id_producto_mayor IS NULL
+                AND p.mayor IS NULL
+                AND p.nombre LIKE ?
+                AND p.activo = 0";
+
     $stmt = $conexion->prepare($query);
     $like = "%$q%";
-    $stmt->bind_param("si", $like, $sucursal);
+    $stmt->bind_param("s", $like);
     $stmt->execute();
     $result = $stmt->get_result();
 

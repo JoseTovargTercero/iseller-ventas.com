@@ -33,7 +33,10 @@ try {
 
     // Si hay que copiar productos
     if ($productos_accion === 'copiar') {
-        $query = "SELECT id, porcentaje FROM productos WHERE bss_id = ? AND activo = 0";
+
+
+
+        $query = "SELECT id, porcentaje, mayor, id_producto_relacionado FROM productos WHERE bss_id = ? AND activo = 0 ";
         $stmt = $conexion->prepare($query);
         $stmt->bind_param("i", $bss_id);
 
@@ -42,23 +45,71 @@ try {
         }
 
         $result = $stmt->get_result();
-        $valores = [];
+        $detal = [];
+        $pre_mayor = [];
 
         while ($row = $result->fetch_assoc()) {
             $id_producto = (int)$row['id'];
             $porcentaje = (float)$row['porcentaje'];
-            $valores[] = "($id_producto, $porcentaje, $id_registro, $bss_id)";
+            $id_producto_relacionado = $row['id_producto_relacionado'];
+
+            if ($row['mayor'] == '1') {
+                $pre_mayor[] = [$id_producto, $porcentaje, $id_registro, $bss_id, $id_producto_relacionado];
+            } else {
+                $detal[] = "($id_producto, $porcentaje, $id_registro, $bss_id)";
+            }
         }
 
         $stmt->close();
 
-        if (!empty($valores)) {
-            $sql_insert = "INSERT INTO stock (id_producto, porcentaje, id_sucursal, bss_id) VALUES " . implode(",", $valores);
+
+        // Registro de productos al detal
+        if (!empty($detal)) {
+            $sql_insert = "INSERT INTO stock (id_producto, porcentaje, id_sucursal, bss_id) VALUES " . implode(",", $detal);
             if (!$conexion->query($sql_insert)) {
                 throw new Exception("Error al insertar en stock: " . $conexion->error);
             }
         }
+
+
+        // Registro de productos al mayor
+        if (!empty($pre_mayor)) {
+            // $stmt2 = mysqli_prepare($conexion, "SELECT * FROM `stock` WHERE id = ? AND bss_id = ? AND id_sucursal = ? LIMIT 1");
+            $stmt2 = $conexion->prepare("SELECT id FROM stock WHERE id_producto = ? AND bss_id = ? AND id_sucursal = ? LIMIT 1");
+
+
+            $mayor = [];
+
+            foreach ($pre_mayor as $key => $item) {
+
+                $stmt2->bind_param('iii',  $item[4], $bss_id, $id_registro);
+                $stmt2->execute();
+                $result2 = $stmt2->get_result();
+                if ($result2->num_rows > 0) {
+                    $row = $result2->fetch_assoc();
+                    $id_stock = (int)$row['id'];
+
+                    $mayor[] = "($item[0], $item[1], $item[2], $item[3], 1, $id_stock)";
+                } else {
+                    // Log o manejo de error si no se encuentra el producto relacionado
+                    throw new Exception("Producto relacionado no encontrado en stock (ID: $item[4])");
+                }
+            }
+
+
+
+
+
+            $sql_insert = "INSERT INTO stock (id_producto, porcentaje, id_sucursal, bss_id, mayor, id_stock) VALUES " . implode(",", $mayor);
+            if (!$conexion->query($sql_insert)) {
+                throw new Exception("Error al insertar en stock: " . $conexion->error);
+            }
+            $stmt2->close();
+        }
     }
+
+
+
 
     // Si todo va bien
     $conexion->commit();

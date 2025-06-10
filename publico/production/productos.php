@@ -26,31 +26,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <html lang="es">
 
     <head>
-
         <title>Productos</title>
         <?php require_once('includes/headers.php'); ?>
-
-        <?php
-        @$accion = $_GET['accion'];
-        @$origen = $_GET['origen'];
-
-        switch ($accion) {
-
-
-            case ('borrado'):
-                echo '<script>
-            function mensaje(){	
-			alertify.success("Producto borrado correctamente"); }
-            </script>
-            <body onload="mensaje()">
-            </body>';
-
-                break;
-        }
-
-        ?>
-
-
+        <link rel="stylesheet" href="theme.css">
 
     </head>
 
@@ -531,13 +509,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             console.log(row.nombre)
                                             console.log(row.id)
                                         }
+
+                                        const rest = (row.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : row.stock)
+
+
+
                                         tabla.row.add([
                                             contador++,
                                             row.nombre,
                                             row.precio_compra,
                                             row.cantidad_unidades,
                                             row.porcentaje,
-                                            row.stock,
+                                            rest,
                                             formatNumber(row.precio_venta_dolar),
                                             formatNumber(formatPeso(row.precio_venta_peso)),
                                             formatNumber(recortarADosDecimales(row.precio_venta_bs)),

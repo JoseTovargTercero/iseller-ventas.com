@@ -50,6 +50,7 @@ $sql = "SELECT
             p.precio_compra,
             p.porcentaje,
             p.nombre,
+            p.mayor,
             p.id,
             s.stock,
             p.codigo_barras
@@ -85,6 +86,7 @@ if ($result->num_rows > 0) {
                 'precio_dolar_visible' => $precios['precio_venta_dolar'],
                 'precio_peso_visible' => $precios['precio_venta_peso'],
                 'precio_bs_visible' => $precios['precio_venta_bs'],
+                'mayor' => $row['mayor'],
             ];
 
             $codigos[] = $codigo;
@@ -108,6 +110,8 @@ $stmt->close();
 
     <title>Ventas </title>
     <?php require_once('includes/headers.php'); ?>
+    <link rel="stylesheet" href="theme.css">
+
 </head>
 
 <script>
@@ -654,7 +658,7 @@ $stmt->close();
                         dataType: 'html'
                     })
                     .done(function(result) {
-                        console.log(result)
+                        //     console.log(result)
                         total_pesos = 0
                         total_dolares = 0
                         total_bolivares = 0
@@ -923,7 +927,7 @@ $stmt->close();
 
                             const resultado = JSON.parse(result);
 
-                            console.log(resultado)
+                            //console.log(resultado)
 
                             if (resultado.status == 'error' && resultado.mensaje == 'Sucursal no especificada.') {
                                 Alerta.toast('error', 'No se ha especificado ninguna sucursal')
@@ -935,10 +939,11 @@ $stmt->close();
 
                                 if (resultado.status == 'ok') {
                                     resultado.data.forEach(item => {
+                                        const rest = (item.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : item.stock)
 
                                         $("#tabla_resultado_codigo_producto").append(`
                                                 <tr>
-                                                    <td><span>${item.stock}</span></td>
+                                                    <td>${rest}</td>
                                                     <td style="font-size: 15px;"><span>${item.nombre}</span></td>
                                                     <td style="place-content: center" class="text-center text-total text-success"><span>${formatNumber(item.precio_dolar_visible)}$</span></td>
                                                     <td style="place-content: center" class="text-center text-total text-info"><span>${formatNumber(formatPeso(item.precio_peso_visible))} Cop</span></td>
@@ -1036,7 +1041,10 @@ $stmt->close();
             });
 
 
-            function addtocar(id, codigo, dolarventa_p, pesoventa_p, bolivarventa_p, cantidad_scann = null) {
+
+            function addtocar(id, codigo, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+
+
 
                 // Seleccionar el input usando el valor de data-cantidad-id
                 const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
@@ -1061,6 +1069,8 @@ $stmt->close();
                         },
                     })
                     .done(function(result) {
+
+
                         actualizar_carrito()
                         $("#tabla_resultado_codigo_producto").html('');
                         if (modo == 1) {

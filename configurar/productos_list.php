@@ -58,7 +58,7 @@ $where = !$filtro
     ? "S.bss_id = $bss_id"
     : "S.id_sucursal = $filtro";
 
-$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo
+$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo
 FROM stock AS S
 LEFT JOIN productos AS P ON P.id = S.id_producto
 WHERE $where AND P.activo = 0
@@ -89,7 +89,9 @@ while ($row = $result->fetch_assoc()) {
         "codigo_barras" => $row['codigo_barras'],
         "origen" =>  $row['origen'],
         "proveedor" =>  $row['proveedor'],
-        "activo" =>  $row['activo']
+        "activo" =>  $row['activo'],
+        "mayor" =>  $row['mayor'],
+
     ];
 }
 

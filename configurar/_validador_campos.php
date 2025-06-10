@@ -21,7 +21,7 @@ class ValidadorCampos
         $fuente = $this->origen === 'GET' ? $_GET : $_POST;
 
         foreach ($this->campos as $campo) {
-            if (empty($fuente[$campo])) {
+            if (!isset($fuente[$campo]) || $fuente[$campo] === '') {
                 $this->faltantes[] = $campo;
             }
         }

@@ -80,6 +80,7 @@ function agregarAlCarrito($conexion, $cart)
     global $pesoDolar, $dolarBolivar;
 
     $valorUnidad = $producto['precio_compra'] / $producto['cantidad_unidades'];
+    $mayor = floatval($producto['mayor']);
 
     $itemData = [
         'codigo' => $producto['codigo'],
@@ -91,7 +92,9 @@ function agregarAlCarrito($conexion, $cart)
         'price' => $dolarventa,
         'pricePeso' => $pesoventa,
         'priceBolivar' => $bolivarventa,
-        'qty' => $cant
+        'qty' => $cant,
+        'mayor' => $mayor,
+        'cantidadPaca' => $producto['cantidad_unidades']
     ];
 
     $cart->insert($itemData);
@@ -185,6 +188,18 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
     exit;
 }*/
 
+function es_venta_mayor($cart)
+{
+    $result = false;
+
+    foreach ($cart->contents() as $item) {
+        if ($item['mayor'] == '1') {
+            $result = true;
+        }
+    }
+    return true;
+}
+
 
 function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
 {
@@ -209,6 +224,18 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
         if ($tipo == 'credito') {
             $statusV = 2;
         }
+
+
+
+        // verifica el $cart, si hay algun producto al mayor, el statuV pasa a ser 4
+        if (es_venta_mayor($cart)) {
+            if ($tipo == 'credito') {
+                $pagoTipo = 4;
+            } else {
+                $statusV = 4;
+            }
+        }
+
 
         $mes = date('Y-m');
         $ano = date('Y');
@@ -304,8 +331,13 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
     );
 
     // Preparar consultas para stock
-    $stmtStock  = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+    $stmtStock  = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+    // para obtener la cantidad actual
     $updateStmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+    $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
+    // para actualizar la cantidad actual
+    $stmtStockParaMayor  = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+
 
     foreach ($cart->contents() as $item) {
 
@@ -326,19 +358,49 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
         );
         $insertStmt->execute();
 
-        // Actualizar stock
-        $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
-        $stmtStock->execute();
-        $result = $stmtStock->get_result()->fetch_assoc();
 
-        $stock = max(0, $result['stock'] - $item['qty']);
 
-        $updateStmt->bind_param("iiii", $stock, $item['id'], $id_sucursal, $bss_id);
-        $updateStmt->execute();
+        if ($item['mayor'] == '1') {
+
+            $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
+            $stmtStock->execute();
+            $result = $stmtStock->get_result()->fetch_assoc();
+            $id_stock = $result['id_stock'];
+
+
+
+            $stmtStockParaMayor->bind_param("iii", $id_stock, $id_sucursal, $bss_id);
+            $stmtStockParaMayor->execute();
+            $result = $stmtStockParaMayor->get_result()->fetch_assoc();
+            $stock = max(0, $result['stock'] - ($item['qty'] * $item['cantidadPaca']));
+            // se debe multiplicar por la cantidad
+
+
+
+
+            $updateStmtMayor->bind_param("iiii", $stock, $id_stock, $id_sucursal, $bss_id);
+            $updateStmtMayor->execute();
+        } else {
+
+            // Actualizar stock
+            $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
+            $stmtStock->execute();
+            $result = $stmtStock->get_result()->fetch_assoc();
+            $stock = max(0, $result['stock'] - $item['qty']);
+
+
+            $updateStmt->bind_param("iiii", $stock, $item['id'], $id_sucursal, $bss_id);
+            $updateStmt->execute();
+        }
     }
+
+
+
+
 
     // Cerrar todas las sentencias
     $insertStmt->close();
     $stmtStock->close();
     $updateStmt->close();
+    $updateStmtMayor->close();
 }
