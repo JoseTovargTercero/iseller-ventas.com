@@ -187,8 +187,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <label class='form-label ' for='first-name'>Origen </label>
                                                         <select class="form-control" required='required' name="origenProducto" id="origenProducto">
                                                             <option value="">Seleccione</option>
-                                                            <option <?php echo ($origen == 'v' ? 'selected' : '') ?> value="v">Venezolano</option>
-                                                            <option <?php echo ($origen == 'c' ? 'selected' : '') ?> value="c">Colombiano</option>
+                                                            <option value="v">Venezolano</option>
+                                                            <option value="c">Colombiano</option>
                                                         </select>
 
                                                     </div>
@@ -208,7 +208,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <input type='text' id='porcentaje' name='porcentaje' required='required' class='form-control ' placeholder='XXX'>
                                                         <?php
 
-                                                        if ($origen == "nuevo") {
+                                                        if (@$origen == "nuevo") {
                                                             echo " <input type='text' hidden name='origen' value='nuevo'>";
                                                         } else {
                                                         }
@@ -698,6 +698,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         datos.porcentaje.replace('%', '').trim() :
                         datos.porcentaje;
                     document.getElementById('porcentaje').value = porcentajeLimpio;
+
+                    let origen = datos.origen
+
+                    if (origen == '') {
+                        origen = 'v'
+                    }
 
                     document.getElementById('origenProducto').value = datos.origen;
                     document.getElementById('proveedor').value = datos.proveedor;
