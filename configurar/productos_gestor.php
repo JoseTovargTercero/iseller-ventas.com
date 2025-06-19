@@ -65,9 +65,12 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
             // Actualizar porcentaje en stock para todos los registros del producto
             $stmt2 = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ?");
             $stmt2->bind_param("si", $porcentaje, $id);
-            $stmt2->execute();
-            $success = $stmt2->affected_rows > 0;
-            $message = $success ? "Precio actualizado correctamente" : "No se modificó el precio ni el porcentaje en stock";
+
+            if ($stmt2->execute()) {
+                $message =  "Precio actualizado correctamente";
+            } else {
+                $message =  "No se modificó el precio ni el porcentaje en stock";
+            }
             $stmt2->close();
         } elseif ($metodo === 'porcentaje') {
             // Actualizar solo porcentaje en la tabla stock para un producto y sucursal específicos
