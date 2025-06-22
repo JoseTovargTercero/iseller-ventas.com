@@ -96,8 +96,10 @@ if ($result->num_rows > 0) {
 
 $stmt->close();
 
-
-
+/*
+echo '<pre>';
+print_r($data);
+echo '</pre>';*/
 ?>
 
 
@@ -865,14 +867,15 @@ $stmt->close();
 
 
             // Cargar lista de productos
-            function buscarProducto(producto, modo) {
+            function buscarProducto(lectura, modo) {
                 if (modo == 2) {
-                    const codigo = producto.trim();
+                    const codigo = lectura.trim();
 
-                    if (!productos.hasOwnProperty(codigo)) {
+                    if (!productos[codigo]) {
                         Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
+                        return
                     } else {
-                        const datos = productos[producto.trim()];
+                        const datos = productos[lectura.trim()];
                         $('.section-scanner').removeClass('hide');
 
                         // Construir solo las tasas visibles según tasasMostrar
@@ -919,7 +922,7 @@ $stmt->close();
                             type: 'POST',
                             dataType: 'html',
                             data: {
-                                producto: producto,
+                                producto: lectura,
                                 modo: modo
                             },
                         })
@@ -1124,7 +1127,7 @@ $stmt->close();
                         if (modo == 1) {
                             alert('activa el modo escaner')
                         } else {
-                            buscarProducto(barcode, 2);
+                            buscarProducto(barcode.replace(/Shift/g, ""), 2);
                         }
                     }
                     barcode = ""; // Reiniciar el código de barras
