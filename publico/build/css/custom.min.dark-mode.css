@@ -6641,3 +6641,8 @@ input[type="number"] {
 .checkbox_item.citem_3 .checkbox_wrap .checkbox_mark:before {
     background: #484848 !important;
 }
+
+
+.dropdown-menu {
+    background-color: #2a2a2a !important;
+}

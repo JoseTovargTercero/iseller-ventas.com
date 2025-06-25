@@ -175,7 +175,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                 $.ajax({
-                    url: "../../configurar/consulta_codigo_producto _inexistente.php",
+                    url: "../../configurar/consulta_codigo_producto_inexistente.php",
                     type: "POST",
                     dataType: "json", // <-- importante: estamos esperando JSON ahora
                     data: {

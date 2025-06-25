@@ -306,11 +306,13 @@ echo '</pre>';*/
 
                     <div class="row ">
 
+
+
                         <div class="col-lg-12">
                             <div class="x_panel" style="min-height: 60vh">
                                 <div class="x_title d-flex justify-content-between">
                                     <h2 style="font-size: 15px; font-weight: bold">Carrito </h2>
-                                    <button class="btn btn-success btn-sm" id="open-modal"> <i class='bx bx-search-alt' style="vertical-align: text-bottom;"></i> Búsqueda manual</button>
+                                    <button class="btn btn-success btn-sm" id="open-modal"> <i class='bx bx-search-alt' style="vertical-align: text-bottom;"></i> Búsqueda</button>
                                 </div>
                                 <div class="x_content cart">
                                     <div>
@@ -324,7 +326,6 @@ echo '</pre>';*/
                                                         <th style="width:20%" class="column-title">BS</th>
                                                         <th style="width:10%" class="column-title">Dolares</th>
                                                         <th style="width:10%" class="column-title"></th>
-                                                        <th style="width:5%" class="column-title"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -336,11 +337,14 @@ echo '</pre>';*/
 
                                         </div>
 
+
+
+
                                         <section class="d-flex section-scanner hide">
                                             <div id="result-escaner"> </div>
                                         </section>
 
-                                        <div style=" bottom: 0;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
+                                        <div style=" bottom: 0; flex-wrap: wrap-reverse;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
 
 
                                             <?php
@@ -678,13 +682,22 @@ echo '</pre>';*/
                                     <td style="width:20%" class="ac-c">${formatNumber(element.subtotalBolivar)} Bs</td>
                                     <td style="width:10%" class="ac-c">$${formatNumber(element.subtotalDolar)}</td>
                                     <td style="width:10%" class="ac-c">
-                                        <div class="d-flex">
-                                            <button class="btn btn-secondary btn-sm" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
-                                            <button class="btn btn-secondary btn-sm" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
+
+
+                                        <a href="javascript:;" aria-haspopup="true" id="drop-${element.id}" data-toggle="dropdown" aria-expanded="true">
+                                            <i class="line icon-options-vertical"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-usermenu pull-left " aria-labelledby="drop-${element.id}" x-placement="bottom-start">
+                                            <a class="dropdown-item">OPCIONES:</a>
+                                            <hr class="hr-dr">
+
+                                            <div class="px-3" style="display: flex; flex-direction: column;">
+                                            
+                                            <button class="btn btn-success btn-sm" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i> Aumentar</button>
+                                            <button class="btn btn-secondary btn-sm" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i> Disminuir</button>
+                                            <button class="btn btn-danger btn-sm" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i> Quitar</button>
+                                            </div>
                                         </div>
-                                    </td>
-                                    <td style="width:5%">
-                                        <button class="btn btn-danger btn-sm" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
                                     </td>
                                 </tr>`);
                             });
@@ -709,6 +722,10 @@ echo '</pre>';*/
                         } else {
                             $('#botones_acciones').addClass('hide');
                         }
+                        $('[data-toggle="popover"]').popover({
+                            html: true
+                        });
+
                     });
             }
             actualizar_carrito()
