@@ -1,6 +1,4 @@
 ﻿<?php
-$id = $_GET['id'];
-$qty = $_GET['qty'];
 require_once("../../configurar/configuracion.php");
 require_once('../../configurar/session.php');
 
@@ -11,113 +9,68 @@ require_once('../../configurar/session.php');
 <head>
   <meta charset="UTF-8">
   <title>Loader #6 - Jelly Box</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src='js/jquery.min.js'></script>
+  <!--
+
+  <link rel="stylesheet" href="../assets/css/styles-ticket.css">
+
+
+  <link rel="stylesheet" href="https://printjs.crabbly.com/print.min.css">
+  <script src="https://printjs.crabbly.com/print.min.js"></script>
+
+
+  -->
+  <link rel="stylesheet" href="https://printjs-4de6.kxcdn.com/print.min.css">
+  <script src="https://printjs-4de6.kxcdn.com/print.min.js"></script>
+
 
   <style>
-    /* NOTE: The styles were added inline because Prefixfree needs access to your styles and they must be inlined if they are on local disk! */
-    #loader {
-      /* Uncomment this to make it run! */
-      /*
-     animation: loader 5s linear infinite; 
-  */
-
-      position: absolute;
-      top: calc(50% - 20px);
-      left: calc(50% - 20px);
+    #ticket {
+      width: 58mm;
+      max-width: 100%;
+      font-family: monospace;
+      font-size: 11px;
+      margin: 0 auto;
+      padding: 0;
     }
 
-    @keyframes loader {
-      0% {
-        left: -100px
-      }
-
-      100% {
-        left: 110%;
-      }
+    table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    #box {
-      width: 50px;
-      height: 50px;
-      background: #fff;
-      animation: animate .5s linear infinite;
-      position: absolute;
-      top: 0;
-      left: 0;
-      border-radius: 3px;
+    th,
+    td {
+      text-align: left;
+      padding: 2px 0;
     }
 
-    @keyframes animate {
-      17% {
-        border-bottom-right-radius: 3px;
-      }
-
-      25% {
-        transform: translateY(9px) rotate(22.5deg);
-      }
-
-      50% {
-        transform: translateY(18px) scale(1, .9) rotate(45deg);
-        border-bottom-right-radius: 40px;
-      }
-
-      75% {
-        transform: translateY(9px) rotate(67.5deg);
-      }
-
-      100% {
-        transform: translateY(0) rotate(90deg);
-      }
-    }
-
-    #shadow {
-      width: 50px;
-      height: 5px;
-      background: #000;
-      opacity: 0.1;
-      position: absolute;
-      top: 59px;
-      left: 0;
-      border-radius: 50%;
-      animation: shadow .5s linear infinite;
-    }
-
-    @keyframes shadow {
-      50% {
-        transform: scale(1.2, 1);
-      }
-    }
-
-
-    body {
-      background: #6997DB;
-      overflow: hidden;
-    }
-
-    h4 {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      margin: 0;
-      font-weight: 200;
-      opacity: .5;
-      font-family: sans-serif;
-      color: #fff;
-    }
-
-    .line {
-      border-bottom: 0.1px solid black;
-      border-style: dotted;
-
+    .centrado {
+      text-align: center;
     }
 
     .total {
-      width: 90%;
       text-align: right;
-      font-size: 14px;
+      margin-top: 10px;
       font-weight: bold;
-      padding-right: 10px;
+    }
+
+    /* SOLO para impresión */
+    @media print {
+      @page {
+        size: 58mm auto;
+        margin: 0;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #ticket {
+        width: 58mm;
+        margin: 0 auto;
+        page-break-after: avoid;
+      }
     }
   </style>
 
@@ -127,123 +80,120 @@ require_once('../../configurar/session.php');
 
 
 
-
-
-
-
-
-
-
-
-
 <body>
-  <div id="loader">
-    <div id="shadow"></div>
-    <div id="box"></div>
-  </div>
-  <h4>Loader #6</h4>
 
+  <div class="ticket" id="ticket" style="height: fit-content !important;">
 
-  <div class="ticket" id="ticket" style="margin-left: -10px !important;">
-
-    <div class="containerImg">
-      <img class="imgCompany" src="images/logo.png" alt="Logotipo">
-
-    </div>
-
-    <p class="centrado">J410285427
-      <br>Mercado Rebusque Mayabiro
-      <br><?php
-          echo date('Y-m-d H:i a')
-          ?>
-      <br>
-      <strong>
-
-
-      </strong>
+    <p class="text-center">
+      J410285427<br>
+      Mercado Rebusque Mayabiro<br>
+      <?= date('Y-m-d H:i a') ?><br>
+      <strong></strong>
       <small>* Nota de entrega</small>
     </p>
-    <br>
-    <section id="resultTable"></section>
 
+    <?php
+    $id = $_GET['id'];
+    $totalPrice = 0;
+    $moneda = '';
+    $ticketsFijo = 1;
 
-    <br>
-    <br>
-    <div class="line"></div>
-    <p class="centrado" style="font-size: 10px;">¡GRACIAS POR SU COMPRA!
-    <div class="line"></div>
-    <br>
-    <br>
-    <br>
-    <br>
-    ...
+    $queryOrden = "SELECT * FROM orden WHERE id='$id'";
+    $ordenResult = $conexion->query($queryOrden);
 
-  </div>
+    if ($ordenResult->num_rows > 0) {
+      $orden = $ordenResult->fetch_assoc();
+      $tipopago = $orden['tipoPago'];
 
-  <script>
-    var id = "<?php echo $id ?>";
-    var qty = "<?php echo $qty ?>";
-
-
-    function consultarCantidad(params) {
-      $.ajax({
-          url: 'articulosTicketQty.php',
-          type: 'POST',
-          dataType: 'html',
-          data: {
-            id: params
-          },
-        })
-
-        .done(function(resultado1) {
-
-
-          if (qty != resultado1.trim()) {
-            setTimeout(consultarCantidad(id), 500);
-            //   alert('reconsultando. Esperado '+ qty + '. Result ' + resultado1.trim())
-          } else {
-            consultar(id)
-          }
-
-        })
-    }
-
-    consultarCantidad(id)
-
-
-    function consultar(params) {
-      $.ajax({
-          url: 'articulosTicket.php',
-          type: 'POST',
-          dataType: 'html',
-          data: {
-            id: params
-          },
-        })
-
-        .done(function(resultado1) {
-          $('#resultTable').html(resultado1)
-          const myTimeout = setTimeout(myStopFunction, 100);
-
-        })
-
-
-    }
-
-
-
-
-    //http://localhost/iseller/publico/production/ticket.php?id=104&accion=vendido
-
-    function myStopFunction() {
-
-      if ($('#resultTable').html() != '' && $('#resultTable').html() != undefined) {
-        imprimir()
-        //alert('Se imprimira el ticket')
-      } else {
-        consultar(id)
+      switch ($tipopago) {
+        case '5':
+          $monedaTexto = 'USD';
+          break;
+        case '6':
+          $monedaTexto = 'COP';
+          break;
+        default:
+          $monedaTexto = 'BS';
+          break;
       }
 
+      echo "<table>
+            <thead>
+              <tr>
+                <th class='cantidad'>#</th>
+                <th class='producto'>Producto</th>
+                <th class='precio'>$monedaTexto</th>
+              </tr>
+            </thead>
+            <tbody>";
+
+      $queryArticulos = "SELECT oa.quantity, oa.precio_venta_dolar, oa.precio_venta_bs, oa.precio_venta_cop, p.nombre 
+                       FROM orden_articulos oa 
+                       LEFT JOIN productos p ON p.id = oa.product_id
+                       WHERE oa.order_id = '$id'";
+
+      $articulosResult = $conexion->query($queryArticulos);
+      if ($articulosResult->num_rows > 0) {
+        while ($articulo = $articulosResult->fetch_assoc()) {
+          $cantidad = $articulo['quantity'];
+          $precio = 0;
+
+          switch ($tipopago) {
+            case '5':
+              $precio = $articulo['precio_venta_dolar'] * $cantidad;
+              $moneda = '<small>$</small>';
+              break;
+            case '6':
+              $precio = $articulo['precio_venta_cop'] * $cantidad;
+              $moneda = '<small>COP</small>';
+              break;
+            default:
+              $precio = $articulo['precio_venta_bs'] * $cantidad;
+              $moneda = '<small>BS</small>';
+              break;
+          }
+
+          $totalPrice += $precio;
+
+          echo "<tr>
+                <td class='cantidad'>$cantidad</td>
+                <td class='producto'>{$articulo['nombre']}</td>
+                <td class='precio'>" . number_format($precio, 2, ',', '.') . "</td>
+              </tr>";
+        }
+      }
+
+      echo "</tbody></table>";
+      echo "<br><div class='total'>Total: " . number_format($totalPrice, 2, ',', '.') . " $moneda</div>";
+    }
+    ?>
+
+    <br>
+    <div class="line"></div>
+    <p class="text-center" style="font-size: 10px;">¡GRACIAS POR SU COMPRA!</p>
+    <div class="line"></div>
+
+  </div>
+  <button onclick="imprimirTicket()">
+    Imprimir Ticket
+  </button>
+
+  <script>
+    function imprimirTicket() {
+      printJS({
+        printable: 'ticket',
+        type: 'html',
+        scanStyles: false,
+        style: `
+      @page { size: 58mm auto; margin: 0; }
+      body { margin: 0; padding: 0; }
+      #ticket { width: 58mm; margin: 0 auto; font-family: monospace; font-size: 11px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 2px 0; }
+      .centrado { text-align: center; }
+      .total { text-align: right; font-weight: bold; margin-top: 10px; }
+    `
+      });
     }
 
     function imprimir() {
@@ -253,9 +203,9 @@ require_once('../../configurar/session.php');
       document.body.innerHTML = printContents;
       window.print();
       document.body.innerHTML = originalContents;
-      open('ventas.php?id=' + id, '_self').close();
-
+      //open('ventas.php?id=' + id, '_self').close();
     }
+    //imprimir()
   </script>
 
 </body>

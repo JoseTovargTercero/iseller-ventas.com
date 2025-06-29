@@ -1,5 +1,4 @@
 <?php
-
 class CalculadoraPrecios
 {
     private float $pesoDolar;
@@ -35,6 +34,7 @@ class CalculadoraPrecios
         $cantidad_por_precio = ($mayor == '1' ? 1 : $cantidadUnidad);
 
         // Precio en dólares por unidad
+
         $precioDolarCompra = $precioCompra / $cantidad_por_precio;
 
 

@@ -71,28 +71,29 @@ $result = $conexion->query($sql);
 $datos = [];
 
 while ($row = $result->fetch_assoc()) {
-    $precios = $calculadora->calcularPrecios($row);
 
+    if ($row["cantidad_unidades"] != 0 && $row["precio_compra"] != 0) {
+        $precios = $calculadora->calcularPrecios($row);
 
+        $datos[] = [
+            "id" => $row["producto_id"],
+            "stock_id" => $row["id"],
+            "nombre" => $row["nombre"],
+            "precio_compra" => number_format((float) $row["precio_compra"], 2, ',', '.') . ' $',
+            "cantidad_unidades" => $row["cantidad_unidades"],
+            "porcentaje" => number_format($row["porcentaje"], 2) . '%',
+            "stock" => $row["stock"],
+            "precio_venta_dolar" => $precios['precio_venta_dolar'],
+            "precio_venta_bs" => $precios['precio_venta_bs'],
+            "precio_venta_peso" => $precios['precio_venta_peso'],
+            "codigo_barras" => $row['codigo_barras'],
+            "origen" =>  $row['origen'],
+            "proveedor" =>  $row['proveedor'],
+            "activo" =>  $row['activo'],
+            "mayor" =>  $row['mayor'],
 
-    $datos[] = [
-        "id" => $row["producto_id"],
-        "stock_id" => $row["id"],
-        "nombre" => $row["nombre"],
-        "precio_compra" => number_format((float) $row["precio_compra"], 2, ',', '.') . ' $',
-        "cantidad_unidades" => $row["cantidad_unidades"],
-        "porcentaje" => number_format($row["porcentaje"], 2) . '%',
-        "stock" => $row["stock"],
-        "precio_venta_dolar" => $precios['precio_venta_dolar'],
-        "precio_venta_bs" => $precios['precio_venta_bs'],
-        "precio_venta_peso" => $precios['precio_venta_peso'],
-        "codigo_barras" => $row['codigo_barras'],
-        "origen" =>  $row['origen'],
-        "proveedor" =>  $row['proveedor'],
-        "activo" =>  $row['activo'],
-        "mayor" =>  $row['mayor'],
-
-    ];
+        ];
+    }
 }
 
 echo json_encode(['status' => 'success', "data" => $datos], JSON_PRETTY_PRINT);

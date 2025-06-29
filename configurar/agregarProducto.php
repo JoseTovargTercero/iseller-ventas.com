@@ -5,8 +5,8 @@ header('Content-Type: application/json');
 
 // Sanitizar y preparar los datos
 $nombre = strtoupper($_POST['nombre']) ?? '';
-$precio = $_POST['precio'] ?? 0;
-$cantidad = $_POST['cantidad'] ?? 0;
+$precio = $_POST['precio'];
+$cantidad = $_POST['cantidad'];
 $porcentaje = $_POST['porcentaje'] ?? 0;
 $codigo = $_POST['codigo'] ?? 'ND';
 $categoria = $_POST['categoria'] ?? '';
@@ -23,9 +23,15 @@ if (empty($nombre)) {
   exit;
 }
 
+
+
 $conexion->begin_transaction();
 
 try {
+
+  if ($precio == '' || $cantidad == '' || $origenProducto == '' || $proveedor == '' || $nombre == '') {
+    throw new Exception('Faltan datos.');
+  }
   // Insertar en productos
   $query = "INSERT INTO productos (
       nombre, precio_compra, cantidad_unidades, porcentaje, codigo_barras, origen, proveedor, bss_id
