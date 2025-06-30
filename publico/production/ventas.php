@@ -427,6 +427,8 @@ echo '</pre>';*/
         <!-- FastClick -->
         <script>
             const base_url = '../../configurar/';
+            const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
+
             // lista de ventas
             function cargarUltimasOrdenes() {
                 fetch(base_url + 'ultimas_ventas.php')
@@ -446,7 +448,7 @@ echo '</pre>';*/
                                     <td>${orden.fecha}</td>
                                     <td>$${orden.total}</td>
                                     <td><a href="detallesVenta.php?id=${orden.id}">Detalles</a></td>
-                                    <td style="text-align: center"><a style="font-size: 22px" href="ticket.php?id=${orden.id}"><i class="line icon-printer"></i></a></td>
+                                    <td style="text-align: center"><a style="font-size: 22px"  onclick="print(${orden.id})"><i class="line icon-printer"></i></a></td>
                                     <td><a class="btn btn-info btn-sm" style="cursor: pointer; color: white" onclick="confirm(${orden.id})">Deshacer</a></td>
                                 `;
                             tabla.appendChild(row);
@@ -459,6 +461,122 @@ echo '</pre>';*/
 
             // Llamar cuando cargue la página
             document.addEventListener('DOMContentLoaded', cargarUltimasOrdenes);
+
+
+            function print(id) {
+                $('#cargando').show();
+
+                $.ajax({
+                        url: base_url + 'contenido_ticket.php',
+                        type: 'POST',
+                        data: {
+                            id
+                        },
+                        dataType: 'html'
+                    })
+                    .done(function(result) {
+                        const fecha = new Date().toLocaleString('es-VE', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+
+                        const contenido = `
+                            <html>
+                            <head>
+                                <title>Ticket</title>
+                                <style>
+                                 * {
+                                        box-sizing: border-box;
+                                    }
+
+                                    body {
+                                        font-family: Arial, sans-serif;
+                                        font-size: 11px !important;
+                                        margin: 0;
+                                        padding: 0;
+                                        max-width: 44mm
+                                    }
+
+
+                                    .centrado {
+                                        text-align: center;
+                                    }
+
+                                      @media print {
+                                    @page {
+                                        size: 44mm auto;
+                                        margin: 0;
+                                    }
+
+                                    body, html {
+                                        margin: 0;
+                                        padding: 0;
+                                    }
+
+                                    #ticket {
+                                        page-break-after: avoid;
+                                    }
+                                }
+
+                                 table {
+                                    width: 100%; /* Usa 100% en lugar de 58mm para que no exceda su contenedor */
+                                    border-collapse: collapse;
+                                    table-layout: fixed; /* Asegura que las columnas se ajusten */
+                                    
+                                }
+
+                                th, td {
+                                    text-align: left;
+                                    padding: 2px 0;
+                                }
+
+                                .line {
+                                    border-top: 1px dashed #000;
+                                    margin: 5px 0;
+                                }
+
+                                </style>
+                            </head>
+                              <body>
+                                <div class="ticket" id="ticket">
+                                    <p class="centrado">
+                                        ${sucursal_n}
+                                        <br>
+                                        ${fecha}<br>
+                                        <strong></strong><br>
+                                        <small>* Nota de entrega</small>
+                                    </p>
+                                    ${result}
+                                    <div class="line"></div>
+                                    <p class="centrado" style="font-size: 10px;">¡GRACIAS POR SU COMPRA!</p>
+                                    <div class="line"></div>
+                                </div>
+                              </body>
+                            </html>
+                        `;
+
+                        const ventana = window.open('', '_blank', 'width=600,height=600');
+                        ventana.document.open();
+                        ventana.document.write(contenido);
+                        ventana.document.close();
+
+                        ventana.onload = function() {
+                            ventana.print();
+                            //    ventana.close();
+                        };
+
+                        $('#cargando').hide();
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('Error al cargar el ticket:', error);
+                        $('#cargando').hide();
+                        alert('Hubo un error al generar el ticket. Intente nuevamente.');
+                    });
+            }
 
 
 
@@ -1367,7 +1485,6 @@ echo '</pre>';*/
 
             const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
 
-            const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
             agregarNombreSucursal(sucursal_n)
         </script>
 </body>

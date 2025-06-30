@@ -66,7 +66,7 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
 function agregarAlCarrito($conexion, $cart)
 {
     $id = intval($_REQUEST['id']);
-    $cant = floatval($_REQUEST['cant']);
+    $cant = $_REQUEST['cant'];
     $dolarventa = floatval($_REQUEST['dolarventa']);
     $pesoventa = floatval($_REQUEST['pesoventa']);
     $bolivarventa = floatval($_REQUEST['bolivarventa']);
@@ -343,7 +343,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
 
         // Ejecutar inserción del artículo de la orden
         $insertStmt->bind_param(
-            "iiidddddddi",
+            "iiddddddddi",
             $orderID,
             $item['id'],
             $item['qty'],
