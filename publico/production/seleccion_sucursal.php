@@ -116,7 +116,7 @@ if ($_SESSION['nivel'] == 1) {
 
                                 fila.innerHTML = `
                                   <li id="s-${data.id}" class="list-group-item d-flex justify-content-between align-items-center" >
-                                                ${data.nombre} ${data.principal}
+                                                ${data.nombre} 
                                                <button data-id='${data.id}' class="btn-def btn btn-sm btn-danger btn-delete" title="Seleccionar"><i class="bx bx-store"></i></button>
                                             </li>
                             `;
