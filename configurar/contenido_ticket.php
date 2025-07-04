@@ -6,6 +6,21 @@ $totalPrice = 0;
 $moneda = '';
 $ticketsFijo = 0;
 $precio = 0;
+$moneda = $_POST["moneda"];
+
+
+function redondearCentena($numero)
+{
+    $resto = $numero % 100;
+
+    if ($resto > 50) {
+        return ceil($numero / 100) * 100; // Redondea hacia arriba
+    } else {
+        return floor($numero / 100) * 100; // Redondea hacia abajo
+    }
+}
+
+
 
 $queryOrden = "SELECT * FROM orden WHERE id='$id'";
 $ordenResult = $conexion->query($queryOrden);
@@ -14,18 +29,22 @@ if ($ordenResult->num_rows > 0) {
     $orden = $ordenResult->fetch_assoc();
     $tipopago = $orden['tipoPago'];
 
-    /*  switch ($tipopago) {
-        case '5':
-            $monedaTexto = 'USD';
-            break;
-        case '6':
-            $monedaTexto = 'COP';
-            break;
-        default:
-            $monedaTexto = 'BS';
-            break;
-    }*/
-    $monedaTexto = 'USD';
+    if ($moneda == 'default') {
+        switch ($tipopago) {
+            case '5':
+                $monedaTexto = 'USD';
+                break;
+            case '6':
+                $monedaTexto = 'COP';
+                break;
+            default:
+                $monedaTexto = 'BS';
+                break;
+        }
+    } else {
+        $monedaTexto = $moneda;
+    }
+
 
     echo "<table>
         <thead>
@@ -46,23 +65,40 @@ if ($ordenResult->num_rows > 0) {
     if ($articulosResult->num_rows > 0) {
         while ($articulo = $articulosResult->fetch_assoc()) {
             $cantidad = $articulo['quantity'];
-            /*
-            switch ($tipopago) {
-                case '5':
-                    $precio = $articulo['precio_venta_dolar'] * $cantidad;
-                    $moneda = '<small>$</small>';
-                    break;
-                case '6':
-                    $precio = $articulo['precio_venta_cop'] * $cantidad;
-                    $moneda = '<small>COP</small>';
-                    break;
-                default:
-                    $precio = $articulo['precio_venta_bs'] * $cantidad;
-                    $moneda = '<small>BS</small>';
-                    break;
-            }*/
-            $precio = $articulo['precio_venta_dolar'] * $cantidad;
-            $moneda = '<small>$</small>';
+
+            if ($moneda == 'default') {
+
+                switch ($tipopago) {
+                    case '5':
+                        $precio = $articulo['precio_venta_dolar'] * $cantidad;
+                        $monedaTexto = '<small>$</small>';
+                        break;
+                    case '6':
+                        $precio = redondearCentena($articulo['precio_venta_cop'] * $cantidad);
+                        $monedaTexto = '<small>COP</small>';
+                        break;
+                    default:
+                        $precio = $articulo['precio_venta_bs'] * $cantidad;
+                        $monedaTexto = '<small>BS</small>';
+                        break;
+                }
+            } else {
+                //TODO: REDONDEAR CUANDO SEA PESOS 
+                switch ($moneda) {
+                    case 'USD':
+                        $precio = $articulo['precio_venta_dolar'] * $cantidad;
+                        $monedaTexto = '<small>$</small>';
+                        break;
+                    case 'COP':
+                        $precio = redondearCentena($articulo['precio_venta_cop'] * $cantidad);
+                        $monedaTexto = '<small>COP</small>';
+                        break;
+                    default:
+                        $precio = $articulo['precio_venta_bs'] * $cantidad;
+                        $monedaTexto = '<small>BS</small>';
+                        break;
+                }
+            }
 
             $totalPrice += $precio;
 
@@ -75,5 +111,5 @@ if ($ordenResult->num_rows > 0) {
     }
 
     echo "</tbody></table>";
-    echo "<br><div>Total: " . number_format($totalPrice, 2, ',', '.') . " $moneda</div>";
+    echo "<br><div>Total: " . number_format($totalPrice, 2, ',', '.') . " $monedaTexto</div>";
 }

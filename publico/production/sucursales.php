@@ -20,6 +20,11 @@ if ($_SESSION['nivel'] == 1) {
         <?php
         require_once('includes/headers.php');
         ?>
+        <style>
+            td {
+                vertical-align: middle !important;
+            }
+        </style>
     </head>
 
     <body class='nav-md'>
@@ -54,7 +59,7 @@ if ($_SESSION['nivel'] == 1) {
 
 
                     <section id="section_edit" class="hide w-100  to-animate fadeInRight animated">
-                        <form id='form-data' class='form-horizontal form-label-left'>
+                        <form id='form-data' enctype="multipart/form-data" class='form-horizontal form-label-left'>
                             <div class='row'>
                                 <div class='col-md-7 col-sm-7 m-auto'>
                                     <div class='x_panel'>
@@ -73,6 +78,15 @@ if ($_SESSION['nivel'] == 1) {
                                                 <label class='form-label ' for='first-name'>Cantidad mínima para stock crítico</label>
                                                 <input type='text' id='edit_stock_critico' name='edit_stock_critico' required='required' class='form-control '>
                                             </div>
+
+
+                                            <!-- Carga de imagen -->
+                                            <div class="mb-3">
+                                                <label for="foto2" class="form-label fw-semibold">Logo de la sucursal (JPG o PNG)</label>
+                                                <input type="file" id="foto2" name="foto2" class="form-control" accept=".jpg, .jpeg, .png" required>
+                                            </div>
+
+
 
                                             <div class='ln_solid'></div>
 
@@ -101,6 +115,7 @@ if ($_SESSION['nivel'] == 1) {
                                         <table id='datatable-responsive' class='table table-striped' style='width:100%'>
                                             <thead>
                                                 <tr class='headings'>
+                                                    <th class='column-title'></th>
                                                     <th class='column-title'>Tipo</th>
                                                     <th class='column-title'>Nombre</th>
                                                     <th class='column-title text-center'>Usuarios</th>
@@ -179,6 +194,14 @@ if ($_SESSION['nivel'] == 1) {
                                 placeholder="Ej: 10" required>
                         </div>
 
+                        <!-- Carga de imagen -->
+                        <div class="mb-3">
+                            <label for="foto" class="form-label fw-semibold">Logo de la sucursal (JPG o PNG)</label>
+                            <input type="file" id="foto" name="foto" class="form-control" accept=".jpg, .jpeg, .png" required>
+                        </div>
+
+
+
                         <!-- Acción sobre productos -->
                         <div class="mb-3">
                             <label for="productos_accion" class="form-label fw-semibold">Acción para productos registrados</label>
@@ -227,6 +250,7 @@ if ($_SESSION['nivel'] == 1) {
                     const formData = new FormData(form);
                     // recorre los campos, todos son obligatorios
                     for (const [key, value] of formData.entries()) {
+                        if (key === 'foto') continue; // Lo validamos aparte
                         if (!value) {
                             Alerta.toast('error', `Todos los campos son obligatorios.`);
                             return;
@@ -297,6 +321,12 @@ if ($_SESSION['nivel'] == 1) {
                                     sucursales[item.id] = item
                                     const fila = `
                                     <tr>
+                                        <td>
+                                                <img class="avatar" 
+                                                src="images/sucursal_logo/${item.id}.png" 
+                                                height="50px" 
+                                                onerror="this.onerror=null; this.src='images/sucursal_logo/default.png';">
+                                            </td>
                                         <td>${item.tipo}</td>
                                         <td>${item.nombre}</td>
                                         <td class='text-center'>${item.usuarios}</td>
@@ -309,6 +339,7 @@ if ($_SESSION['nivel'] == 1) {
                                 `;
                                     $tabla.append(fila);
                                 });
+
                             } else {
                                 $tabla.append('<tr><td colspan="4">-- Sin resultados --</td></tr>');
                             }
@@ -319,6 +350,7 @@ if ($_SESSION['nivel'] == 1) {
                     .catch(error => {
                         console.error("Error en la solicitud:", error);
                     });
+
             }
             cargar_tabla()
 

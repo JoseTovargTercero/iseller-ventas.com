@@ -243,6 +243,7 @@ echo '</pre>';*/
     .table td,
     .table th {
         padding: 2px !important;
+        vertical-align: middle;
     }
 
     .table tfoot {
@@ -383,7 +384,7 @@ echo '</pre>';*/
                                 </div>
                                 <div class="x_content ">
                                     <div class="">
-                                        <table class='table table-striped table-bordered' style='width:100%'>
+                                        <table class="table table-striped">
                                             <thead>
                                                 <tr>
                                                     <th class='column-title'>#</th>
@@ -424,10 +425,12 @@ echo '</pre>';*/
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
         <!-- FastClick -->
         <script>
             const base_url = '../../configurar/';
             const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
+            const sucursal_i = <?php echo json_encode($sucursal) ?>;
 
             // lista de ventas
             function cargarUltimasOrdenes() {
@@ -448,8 +451,24 @@ echo '</pre>';*/
                                     <td>${orden.fecha}</td>
                                     <td>$${orden.total}</td>
                                     <td><a href="detallesVenta.php?id=${orden.id}">Detalles</a></td>
-                                    <td style="text-align: center"><a style="font-size: 22px"  onclick="print(${orden.id})"><i class="line icon-printer"></i></a></td>
-                                    <td><a class="btn btn-info btn-sm" style="cursor: pointer; color: white" onclick="confirm(${orden.id})">Deshacer</a></td>
+                                    <td style="text-align: center">
+                                    <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+                                        <button type="button" class="btn btn-sm btn-success" onclick="print(${orden.id})">
+                                            <i class="line icon-printer"></i>
+                                        </button>
+                                        <div class="btn-group" role="group">
+                                            <button id="btnGroupDrop1" type="button" class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+                                            <li><a class="dropdown-item" onclick="print(${orden.id}, 'USD')">Imprimir en dolares</a></li>
+                                            <li><a class="dropdown-item" onclick="print(${orden.id}, 'COP')">Imprimir en pesos</a></li>
+                                            <li><a class="dropdown-item" onclick="print(${orden.id}, 'BS')">Imprimir en bolivares</a></li>
+                                            </ul>
+                                        </div>
+                                        </div>    
+                                    </td>
+
+                                    <td style="text-align: center"><a class="btn btn-danger btn-sm" style="cursor: pointer; color: white" title="Deshacer compra" onclick="confirm(${orden.id})"><i class="line icon-reload"></i></a></td>
                                 `;
                             tabla.appendChild(row);
                         });
@@ -463,14 +482,15 @@ echo '</pre>';*/
             document.addEventListener('DOMContentLoaded', cargarUltimasOrdenes);
 
 
-            function print(id) {
+            function print(id, moneda = 'default') {
                 $('#cargando').show();
 
                 $.ajax({
                         url: base_url + 'contenido_ticket.php',
                         type: 'POST',
                         data: {
-                            id
+                            id: id,
+                            moneda: moneda
                         },
                         dataType: 'html'
                     })
@@ -544,6 +564,9 @@ echo '</pre>';*/
                               <body>
                                 <div class="ticket" id="ticket">
                                     <p class="centrado">
+ <img src="images/sucursal_logo/${sucursal_i}.png" height="50px" onerror="this.parentNode.removeChild(this)">
+                                    <br>
+                                    <br>
                                         ${sucursal_n}
                                         <br>
                                         ${fecha}<br>
@@ -566,7 +589,7 @@ echo '</pre>';*/
 
                         ventana.onload = function() {
                             ventana.print();
-                            //    ventana.close();
+                            ventana.close();
                         };
 
                         $('#cargando').hide();

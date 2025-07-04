@@ -19,6 +19,39 @@ if (empty($nombre) || empty($tipo)) {
 
 $conexion->begin_transaction();
 
+
+function cargarArchivo($archivo, $folder, $id)
+{
+    // Verifica si el archivo existe y no hubo error en la subida
+    if (isset($_FILES[$archivo]) && $_FILES[$archivo]['error'] === UPLOAD_ERR_OK) {
+
+        $source = $_FILES[$archivo]['tmp_name']; // Archivo temporal
+        $extension = pathinfo($_FILES[$archivo]['name'], PATHINFO_EXTENSION); // Obtener extensión real
+
+        // Validar extensión permitida
+        $ext_permitidas = ['jpg', 'jpeg', 'png'];
+        if (!in_array(strtolower($extension), $ext_permitidas)) {
+            echo "Extensión no permitida";
+            return;
+        }
+
+        // Crear el directorio si no existe
+        if (!file_exists($folder)) {
+            if (!mkdir($folder, 0777, true)) {
+                echo "No se pudo crear el directorio";
+                return;
+            }
+        }
+
+        $target_path = $folder . '/' . $id . '.png'; // Guardar como PNG
+        if (move_uploaded_file($source, $target_path)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
 try {
     // Insertar en sucursales
     $stmt = $conexion->prepare("INSERT INTO sucursales (bss_id, tipo, nombre, stockCritico) VALUES (?, ?, ?, ?)");
@@ -30,6 +63,9 @@ try {
 
     $id_registro = $conexion->insert_id;
     $stmt->close();
+
+
+    cargarArchivo("foto", '../publico/production/images/sucursal_logo/', $id_registro);
 
     // Si hay que copiar productos
     if ($productos_accion === 'copiar') {
