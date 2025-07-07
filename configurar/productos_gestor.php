@@ -68,6 +68,7 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
 
             if ($stmt2->execute()) {
                 $message =  "Precio actualizado correctamente";
+                $success = true;
             } else {
                 $message =  "No se modificó el precio ni el porcentaje en stock";
             }
