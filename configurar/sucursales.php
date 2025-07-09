@@ -109,7 +109,7 @@ try {
 
 
         // Registro de productos al mayor
-        if (!empty($pre_mayor)) {
+        /*   if (!empty($pre_mayor)) {
             // $stmt2 = mysqli_prepare($conexion, "SELECT * FROM `stock` WHERE id = ? AND bss_id = ? AND id_sucursal = ? LIMIT 1");
             $stmt2 = $conexion->prepare("SELECT id FROM stock WHERE id_producto = ? AND bss_id = ? AND id_sucursal = ? LIMIT 1");
 
@@ -141,7 +141,7 @@ try {
                 throw new Exception("Error al insertar en stock: " . $conexion->error);
             }
             $stmt2->close();
-        }
+        }*/
     }
 
 
