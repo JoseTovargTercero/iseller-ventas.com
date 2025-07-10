@@ -3,302 +3,271 @@ require_once('configuracion.php');
 require_once('session.php');
 header('Content-Type: application/json');
 
-/* CALCULAR VALOR DEL STOCK */
-
-
-// Decodificar a array asociativo
 $data = json_decode(file_get_contents('php://input'), true);
-
-
-/*
-$extraCond = '';
-if (@$data["sucursal"] != null) {
-  $sucursal = $data["sucursal"];
-  $extraCond = ' AND id_sucursal = ' . $sucursal;
-}
-
-if ($_SESSION["nivel"] == 2) {
-  $sucursal = $_SESSION["sucursal"];
-  $extraCond = ' AND id_sucursal = ' . $sucursal;
-}*/
-
-$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
+$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : ($data["sucursal"] ?? null);
 $extraCond = $sucursal !== null ? ' AND id_sucursal = ' . (int)$sucursal : '';
 
-
-
+$bss_id = $_SESSION['bss_id'] ?? 1;
 $stockCritico = 10;
 
-// Inicializamos los acumuladores
-$valor_stock_con_ganancia = 0;
-$valor_stock_sin_ganancia = 0;
-
-// Consulta de productos activos
-$stmt = mysqli_prepare($conexion, "SELECT P.precio_compra, P.cantidad_unidades, P.porcentaje, S.stock FROM productos AS P 
-LEFT JOIN stock AS S ON S.id_producto = P.id  
-WHERE P.activo='0' AND P.bss_id = $bss_id $extraCond");
-$stmt->execute();
-$resultado = $stmt->get_result();
-
-while ($producto = $resultado->fetch_assoc()) {
-  $precio_compra = (float) $producto['precio_compra'];
-  $unidades = (float) $producto['cantidad_unidades'];
-  $stock = (float) $producto['stock'];
-  $porcentaje = (float) $producto['porcentaje'];
-
-  // Evitar división por cero
-  if ($unidades <= 0) continue;
-
-  $valor_unitario_compra = $precio_compra / $unidades;
-  $valor_unitario_venta = $valor_unitario_compra * (1 + $porcentaje / 100);
-
-  $valor_stock_con_ganancia += $valor_unitario_venta * $stock;
-  $valor_stock_sin_ganancia += $valor_unitario_compra * $stock;
-}
-
-// Calculamos la ganancia esperada
-$gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
-
-
-$dia = date('Y-m-d');
+$hoy = date('Y-m-d');
 $semana = date('Y-W');
 $mes = date('Y-m');
 $ano = date('Y');
+$dia_ant = date('Y-m-d', strtotime('-1 day'));
+$semana_ant = date('Y-W', strtotime('-1 week'));
+$mes_ant = date('Y-m', strtotime('first day of -1 month'));
 
-
-
-function obtenerImportes($conexion, $tabla, $columna, $valor)
+function contar2($sql)
 {
-  global $bss_id;
-  global $extraCond;
-  $total = 0;
-  $sql = "SELECT importe FROM $tabla WHERE $columna='$valor'  AND bss_id = $bss_id $extraCond";
-  $res = $conexion->query($sql);
-  while ($row = $res->fetch_assoc()) {
-    $total += $row['importe'];
-  }
-  return $total;
+  global $conexion, $extraCond, $bss_id;
+  $res = $conexion->query(str_replace('##COND##', "bss_id = $bss_id $extraCond", $sql));
+  return $res ? (int)$res->fetch_row()[0] : 0;
 }
 
-$gastosMes = obtenerImportes($conexion, 'gastos', 'mes', $mes);
-$gastosSemana = obtenerImportes($conexion, 'gastos', 'semana', $semana);
-
-
-
-// Función para obtener total_price de órdenes
-function obtenerVentas($conexion, $columna, $valor)
+function obtenerImportes($tabla, $columna, $valor)
 {
-  global $bss_id;
-  global $extraCond;
-  $total = 0;
-  $sql = "SELECT total_price FROM orden WHERE ($columna='$valor' AND (status='1' OR status='4'))  AND bss_id = $bss_id $extraCond";
+  global $conexion, $bss_id, $extraCond;
+  $sql = "SELECT SUM(importe) AS total FROM $tabla WHERE $columna = '$valor' AND bss_id = $bss_id $extraCond";
   $res = $conexion->query($sql);
-  while ($row = $res->fetch_assoc()) {
-    $total += $row['total_price'];
-  }
-  return $total;
+  return $res ? (float)$res->fetch_assoc()['total'] : 0;
+}
+/*
+function obtenerVentas($columna, $valor, $status = [1, 4])
+{
+  global $conexion, $bss_id, $extraCond;
+  $statusList = implode(",", array_map('intval', $status));
+  $sql = "SELECT SUM(total_price) AS total FROM orden WHERE $columna = '$valor' AND status IN ($statusList) AND bss_id = $bss_id $extraCond";
+  $res = $conexion->query($sql);
+  return $res ? (float)$res->fetch_assoc()['total'] : 0;
+}*/
+
+
+// Ventas por dia de la semana
+$diasSemana = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miercoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sabado', 7 => 'Domingo'];
+$arraySemana = array_fill_keys($diasSemana, 0);
+$res = $conexion->query("SELECT dia, total_price FROM orden WHERE semana = '$semana' AND status IN (1,4) AND bss_id = $bss_id $extraCond");
+while ($row = $res->fetch_assoc()) {
+  $dia = (int)$row['dia'];
+  if (isset($diasSemana[$dia])) $arraySemana[$diasSemana[$dia]] += (float)$row['total_price'];
 }
 
-$totalVentasDiarias = obtenerVentas($conexion, 'modified', $dia);
-$totalVentasSemana = obtenerVentas($conexion, 'semana', $semana);
-$totalVentasMes = obtenerVentas($conexion, 'fecha', $mes);
 
 
-// FECHAS ANTERIORES
-$dia_anterior = date('Y-m-d', strtotime('-1 day'));
-$semana_anterior = date('Y-W', strtotime('-1 week'));
-
-// Para el mes anterior, hay que tener en cuenta el cambio de año
-$mes_anterior = date('Y-m', strtotime('first day of -1 month'));
-
-// Para el año anterior
-$ano_anterior = date('Y', strtotime('-1 year'));
-
-$totalVentasDiarias_anterior = obtenerVentas($conexion, 'modified', $dia_anterior);
-$totalVentasSemana_anterior = obtenerVentas($conexion, 'semana', $semana_anterior);
-$totalVentasMes_anterior = obtenerVentas($conexion, 'fecha', $mes_anterior);
 
 
-// Función para calcular ganancias
-function calcularGanancias($conexion, $columna, $valor)
+
+
+
+
+$bss_id = 3;
+
+
+function obtenerVentas($bss_id, $extraCond)
 {
+
+  global $hoy, $dia_ant, $semana, $semana_ant, $mes, $mes_ant, $diasSemana, $conexion;
+
+  $ventas = [
+    'hoy' => 0,
+    'ayer' => 0,
+    'semana' => 0,
+    'semana_ant' => 0,
+    'mes' => 0,
+    'mes_ant' => 0,
+    'por_dia_semana' => array_fill_keys($diasSemana, 0),
+    'gananciasDia' => 0,
+    'gananciasSemana' => 0,
+    'gananciasMes' => 0,
+  ];
+
+  $ordenes = [];
+  $res = $conexion->query("SELECT id, total_price, modified, semana, fecha, dia FROM orden WHERE bss_id = $bss_id AND status IN (1,4)");
+  while ($row = $res->fetch_assoc()) {
+    $id = $row['id'];
+    $precio = (float)$row['total_price'];
+    $mod = $row['modified'];
+    $sem = $row['semana'];
+    $fec = $row['fecha'];
+    $diaN = (int)$row['dia'];
+
+    if ($mod === $hoy) $ventas['hoy'] += $precio;
+    if ($mod === $dia_ant) $ventas['ayer'] += $precio;
+    if ($sem === $semana) $ventas['semana'] += $precio;
+    if ($sem === $semana_ant) $ventas['semana_ant'] += $precio;
+    if ($fec === $mes) $ventas['mes'] += $precio;
+    if ($fec === $mes_ant) $ventas['mes_ant'] += $precio;
+
+    $nombreDia = $diasSemana[$diaN] ?? null;
+    if ($nombreDia) $ventas['por_dia_semana'][$nombreDia] += $precio;
+
+    $ordenes[$id] = ['mod' => $mod, 'sem' => $sem, 'fec' => $fec, 'total' => $precio];
+  }
+
+  $costos = [
+    'dia' => 0,
+    'semana' => 0,
+    'mes' => 0
+  ];
+
+  $ids = implode(',', array_keys($ordenes));
+  if ($ids) {
+    $res = $conexion->query("SELECT order_id, precio, quantity FROM orden_articulos WHERE order_id IN ($ids)");
+    while ($row = $res->fetch_assoc()) {
+      $order_id = $row['order_id'];
+      $costo = $row['precio'] * $row['quantity'];
+      $o = $ordenes[$order_id];
+      if ($o['mod'] === $hoy) $costos['dia'] += $costo;
+      if ($o['sem'] === $semana) $costos['semana'] += $costo;
+      if ($o['fec'] === $mes) $costos['mes'] += $costo;
+    }
+  }
+
+  $ventas['gananciasDia'] = $ventas['hoy'] - $costos['dia'];
+  $ventas['gananciasSemana'] = $ventas['semana'] - $costos['semana'];
+  $ventas['gananciasMes'] = $ventas['mes'] - $costos['mes'];
+
+  return $ventas;
+}
+
+$ventasResumen = obtenerVentas($bss_id, $extraCond);
+
+// Uso de la variable como reemplazo a las llamadas anteriores
+$totalVentasDiarias = $ventasResumen['hoy'];
+$totalVentasSemana = $ventasResumen['semana'];
+$totalVentasMes = $ventasResumen['mes'];
+$totalVentasDiarias_anterior = $ventasResumen['ayer'];
+$totalVentasSemana_anterior = $ventasResumen['semana_ant'];
+$totalVentasMes_anterior = $ventasResumen['mes_ant'];
+$gananciasDi = $ventasResumen['gananciasDia'];
+$gananciasSe = $ventasResumen['gananciasSemana'];
+$gananciasMes = $ventasResumen['gananciasMes'];
+$arraySemana = $ventasResumen['por_dia_semana'];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+
+function calcularGanancias($columna, $valor)
+{
+  global $conexion, $bss_id, $extraCond;
   $ventas = 0;
   $costos = 0;
-  global $bss_id;
-  global $extraCond;
-
-  $sql = "SELECT id, total_price FROM orden WHERE ($columna='$valor' AND (status='1' OR status='4')) AND bss_id = $bss_id $extraCond";
-  $res = $conexion->query($sql);
-  while ($row = $res->fetch_assoc()) {
-    $ventas += $row['total_price'];
-    $orden_id = $row['id'];
-    $articulos = $conexion->query("SELECT precio, quantity FROM orden_articulos WHERE order_id='$orden_id'");
-    while ($articulo = $articulos->fetch_assoc()) {
-      $costos += $articulo['precio'] * $articulo['quantity'];
+  $ordenes = $conexion->query("SELECT id, total_price FROM orden WHERE $columna = '$valor' AND status IN (1, 4) AND bss_id = $bss_id $extraCond");
+  while ($o = $ordenes->fetch_assoc()) {
+    $ventas += $o['total_price'];
+    $articulos = $conexion->query("SELECT precio, quantity FROM orden_articulos WHERE order_id = {$o['id']}");
+    while ($a = $articulos->fetch_assoc()) {
+      $costos += $a['precio'] * $a['quantity'];
     }
   }
   return $ventas - $costos;
+}*/
+
+// Valor de stock
+$valor_stock_con_ganancia = 0;
+$valor_stock_sin_ganancia = 0;
+$res = $conexion->query("SELECT P.precio_compra, P.cantidad_unidades, P.porcentaje, S.stock 
+  FROM productos AS P 
+  LEFT JOIN stock AS S ON S.id_producto = P.id 
+  WHERE P.activo='0' AND P.bss_id = $bss_id $extraCond");
+
+while ($row = $res->fetch_assoc()) {
+  $unidad = $row['cantidad_unidades'] ?: 1;
+  $unit_cost = $row['precio_compra'] / $unidad;
+  $unit_sale = $unit_cost * (1 + $row['porcentaje'] / 100);
+  $valor_stock_con_ganancia += $unit_sale * $row['stock'];
+  $valor_stock_sin_ganancia += $unit_cost * $row['stock'];
 }
+$gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
+/*
+// Ventas y ganancias
+$totalVentasDiarias = obtenerVentas('modified', $hoy);
+$totalVentasSemana = obtenerVentas('semana', $semana);
+$totalVentasMes = obtenerVentas('fecha', $mes);
+$totalVentasDiarias_anterior = obtenerVentas('modified', $dia_ant);
+$totalVentasSemana_anterior = obtenerVentas('semana', $semana_ant);
+$totalVentasMes_anterior = obtenerVentas('fecha', $mes_ant);
+$gananciasDi = calcularGanancias('modified', $hoy);
+$gananciasSe = calcularGanancias('semana', $semana);
+$gananciasMes = calcularGanancias('fecha', $mes);*/
+$gastosSemana = obtenerImportes('gastos', 'semana', $semana);
+$gastosMes = obtenerImportes('gastos', 'mes', $mes);
 
+$ventas = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' AND status IN (1,4) AND ##COND##");
+$credit = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' AND status = 2 AND ##COND##");
+$cantidadCritica = contar2("SELECT COUNT(*) FROM productos WHERE stock <= $stockCritico AND activo = 0 AND ##COND##");
 
-$gananciasDi = calcularGanancias($conexion, 'modified', $dia);
-$gananciasSe = calcularGanancias($conexion, 'semana', $semana);
-$gananciasMes = calcularGanancias($conexion, 'fecha', $mes);
-
-
-// Contadores
-$ventas = contar("SELECT COUNT(*) FROM orden WHERE (modified='$dia' AND (status='1' OR status='4'))");
-$credit = contar("SELECT COUNT(*) FROM orden WHERE modified='$dia' AND status='2'");
-$cantidadCritica = contar("SELECT COUNT(*) FROM productos WHERE stock<='$stockCritico' AND activo='0'"); // TODO HERE
-
-
-
-// Productos despachados hoy
 $despachados = 0;
-$res = $conexion->query("SELECT id FROM orden WHERE modified='$dia' AND status NOT IN ('5', '5.2')  AND bss_id = $bss_id $extraCond");
+$res = $conexion->query("SELECT id FROM orden WHERE modified = '$hoy' AND status NOT IN ('5','5.2') AND bss_id = $bss_id $extraCond");
 while ($row = $res->fetch_assoc()) {
-  $articulos = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id='{$row['id']}'");
-  while ($articulo = $articulos->fetch_assoc()) {
-    $despachados += $articulo['quantity'];
-  }
+  $arts = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id = {$row['id']}");
+  while ($a = $arts->fetch_assoc()) $despachados += $a['quantity'];
 }
-$despachados = $despachados ?: 0;
 
-
-// Productos despachados en el mes (status 3)
 $despachados22 = 0;
-$res = $conexion->query("SELECT id FROM orden WHERE fecha='$mes' AND status='3' AND bss_id = $bss_id $extraCond");
+$res = $conexion->query("SELECT id FROM orden WHERE fecha = '$mes' AND status = '3' AND bss_id = $bss_id $extraCond");
 while ($row = $res->fetch_assoc()) {
-  $articulos = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id='{$row['id']}'");
-  while ($articulo = $articulos->fetch_assoc()) {
-    $despachados22 += $articulo['quantity'];
-  }
-}
-$despachados22 = $despachados22 ?: 0;
-
-
-// Ventas confirmadas con status 3 del mes
-$totalVentasMesDejado = 0;
-$res = $conexion->query("SELECT total_price FROM orden WHERE fecha='$mes' AND status='3' AND bss_id = $bss_id $extraCond");
-while ($row = $res->fetch_assoc()) {
-  $totalVentasMesDejado += $row['total_price'];
+  $arts = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id = {$row['id']}");
+  while ($a = $arts->fetch_assoc()) $despachados22 += $a['quantity'];
 }
 
+//$totalVentasMesDejado = obtenerVentas('fecha', $mes, [3]);
+$totalVentasMesDejado = 10;
 
-// Stock actual en almacén
 $almacen = 0;
-$query = "
-  SELECT stock.stock
-  FROM stock
-  LEFT JOIN productos AS P ON P.id = stock.id_producto
-  WHERE stock.bss_id = $bss_id AND P.activo = 0 $extraCond
-";
-
-$res = $conexion->query($query);
-while ($row = $res->fetch_assoc()) {
-  $almacen += $row['stock'];
-}
-
-
-// Funciones adicionales para estadísticas semanales
-function ventasSemana($semana)
-{
-  global $conexion;
-  return round(obtenerVentas($conexion, 'semana', $semana), 1, PHP_ROUND_HALF_DOWN);
-}
-
-function gananciasSemana($semana)
-{
-  global $conexion;
-  $ganancia = calcularGanancias($conexion, 'semana', $semana);
-  return round($ganancia ?: 0, 2, PHP_ROUND_HALF_DOWN);
-}
-
-function gastosSemana($semana)
-{
-  global $conexion;
-  return obtenerImportes($conexion, 'gastos', 'semana', $semana);
-}
+$res = $conexion->query("SELECT stock.stock FROM stock LEFT JOIN productos AS P ON P.id = stock.id_producto WHERE stock.bss_id = $bss_id AND P.activo = 0 $extraCond");
+while ($row = $res->fetch_assoc()) $almacen += $row['stock'];
 
 // Análisis por semanas
 $arraSemanas = [];
 $res = $conexion->query("SELECT DISTINCT semana FROM orden WHERE bss_id = $bss_id $extraCond ORDER BY semana ASC");
 while ($row = $res->fetch_assoc()) {
   $semanaC = $row['semana'];
-  $ventas = ventasSemana($semanaC);
-  $gastos = gastosSemana($semanaC);
-  $gananciaNeta = gananciasSemana($semanaC) - $gastos;
-  $arraSemanas[$semanaC] = [$ventas, $gananciaNeta, $gastos];
+  $ventasS = obtenerVentas('semana', $semanaC);
+  //$gananciaNeta = calcularGanancias('semana', $semanaC) - obtenerImportes('gastos', 'semana', $semanaC);
+  $gananciaNeta = 10;
+  $gasto = obtenerImportes('gastos', 'semana', $semanaC);
+  $arraSemanas[$semanaC] = [$ventasS, $gananciaNeta, $gasto];
 }
 
 
 
-function obtenerVentasPorDia($conexion, $columna, $valor)
-{
-  global $bss_id;
-  global $extraCond;
-
-  // Mapea los números de días (1 a 7) a nombres de días en español
-  $diasSemana = [
-    1 => 'Lunes',
-    2 => 'Martes',
-    3 => 'Miercoles',
-    4 => 'Jueves',
-    5 => 'Viernes',
-    6 => 'Sabado',
-    7 => 'Domingo'
-  ];
-
-  $ventasPorDia = array_fill_keys($diasSemana, 0); // Inicializa con 0 cada día
-
-  $sql = "SELECT dia, total_price 
-            FROM orden 
-            WHERE ($columna = '$valor' AND (status = '1' OR status = '4')) 
-              AND bss_id = $bss_id 
-              $extraCond";
-
-  $res = $conexion->query($sql);
-
-  while ($row = $res->fetch_assoc()) {
-    $diaNum = (int)$row['dia']; // Asegura que sea entero del 1 al 7
-    if (isset($diasSemana[$diaNum])) {
-      $nombreDia = $diasSemana[$diaNum];
-      $ventasPorDia[$nombreDia] += number_format($row['total_price'], '2', '.', '');
-    }
-  }
-
-  return $ventasPorDia;
-}
-
-$arraySemana = obtenerVentasPorDia($conexion, 'semana', $semana);
-
-
-
-
-
-
-
+// Salida JSON
 echo json_encode([
   'filtro' => $extraCond,
-  'totalVentasDiarias'     => number_format($totalVentasDiarias, '1', '.', ','), // Listo
-  'totalVentasSemana'      => number_format($totalVentasSemana, '1', '.', ','), // Listo
-  'totalVentasMes'         => number_format($totalVentasMes, '1', '.', ','), // Listo
-  'VentasDiarias_anterior' => number_format($totalVentasDiarias_anterior, '1', '.', ','), // Listo
-  'VentasSemana_anterior'  => number_format($totalVentasSemana_anterior, '1', '.', ','), // Listo
-  'VentasMes_anterior'     => number_format($totalVentasMes_anterior, '1', '.', ','), // Listo
-  'gananciasDia'           => number_format($gananciasDi, '1', '.', ','),
-  'gananciasSemana'        => number_format($gananciasSe, '1', '.', ','),
-  'gastosSemana'           => number_format($gastosSemana, '1', '.', ','),
-  'gananciasMes'           => number_format($gananciasMes, '1', '.', '.'), // Total de ventas Listo
-  'gastosMes'              => number_format($gastosMes, '1', '.', '.'), // Total de ventas, Listo
-  'ventasHoy'              => number_format($ventas, '1', '.', '.'), // Total de ventas, Listo
-  'creditosHoy'            => (int)$credit,
-  'despachadosHoy'         => (int)$despachados,
-  'cantidadCritica'        => (int)$cantidadCritica,
-  'ventasMesDescontado'    => number_format($totalVentasMesDejado, '0', '.', ','),
-  'almacenProductos'       => number_format((int)$almacen, '0', '.', ','),
-  'valorStockSinGanancia'  => number_format($valor_stock_sin_ganancia, '1', '.', ','),
-  'gananciasEsperadas'     => number_format($gananciasEsperadas, '1', '.', ','),
-  'ventasSemanas'          => $arraSemanas, // Este ya está en formato array asociativo*/
-  'ventasSemana'           => $arraySemana
+  'totalVentasDiarias' => number_format($totalVentasDiarias, 1, '.', ','),
+  'totalVentasSemana' => number_format($totalVentasSemana, 1, '.', ','),
+  'totalVentasMes' => number_format($totalVentasMes, 1, '.', ','),
+  'VentasDiarias_anterior' => number_format($totalVentasDiarias_anterior, 1, '.', ','),
+  'VentasSemana_anterior' => number_format($totalVentasSemana_anterior, 1, '.', ','),
+  'VentasMes_anterior' => number_format($totalVentasMes_anterior, 1, '.', ','),
+  'gananciasDia' => number_format($gananciasDi, 1, '.', ','),
+  'gananciasSemana' => number_format($gananciasSe, 1, '.', ','),
+  'gastosSemana' => number_format($gastosSemana, 1, '.', ','),
+  'gananciasMes' => number_format($gananciasMes, 1, '.', '.'),
+  'gastosMes' => number_format($gastosMes, 1, '.', '.'),
+  'ventasHoy' => number_format($ventas, 1, '.', '.'),
+  'creditosHoy' => $credit,
+  'despachadosHoy' => $despachados,
+  'cantidadCritica' => $cantidadCritica,
+  'ventasMesDescontado' => number_format($totalVentasMesDejado, 0, '.', ','),
+  'almacenProductos' => number_format((int)$almacen, 0, '.', ','),
+  'valorStockSinGanancia' => number_format($valor_stock_sin_ganancia, 1, '.', ','),
+  'gananciasEsperadas' => number_format($gananciasEsperadas, 1, '.', ','),
+  'ventasSemanas' => $arraSemanas,
+  'ventasSemana' => $arraySemana
 ]);

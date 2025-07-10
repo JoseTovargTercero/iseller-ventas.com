@@ -689,6 +689,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 function cargarDatosForm(datos, opcion) {
                     productos_editar = datos.id
                     metodo_editar = opcion
+
+
                     // Asignación de valores
                     document.getElementById('nombre').value = datos.nombre;
                     document.getElementById('precioMonedaOrigen').value = datos.precio_compra;
