@@ -335,6 +335,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/amcharts5/xy.js"></script>
         <script src="../vendors/amcharts5/themes/Animated.js"></script>
         <script src="../vendors/amcharts5/themes/Material.js"></script>
+        <script src="../build/js/global-loader.js"></script>
 
         <script>
             // Progreso superior
@@ -708,9 +709,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             // document ready function
 
-            $(document).ready(function() {
-                cargar_tabla();
-            });
+            //    $(document).ready(function() {
+            cargar_tabla();
+            //    });
 
 
             document.getElementById('sucursal').addEventListener('change', function() {

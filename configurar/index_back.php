@@ -4,8 +4,9 @@ require_once('session.php');
 header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents('php://input'), true);
-$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : ($data["sucursal"] ?? null);
+$sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
 $extraCond = $sucursal !== null ? ' AND id_sucursal = ' . (int)$sucursal : '';
+
 
 $bss_id = $_SESSION['bss_id'] ?? 1;
 $stockCritico = 10;
@@ -60,7 +61,6 @@ while ($row = $res->fetch_assoc()) {
 
 
 
-$bss_id = 3;
 
 
 function obtenerVentas($bss_id, $extraCond)
@@ -82,7 +82,8 @@ function obtenerVentas($bss_id, $extraCond)
   ];
 
   $ordenes = [];
-  $res = $conexion->query("SELECT id, total_price, modified, semana, fecha, dia FROM orden WHERE bss_id = $bss_id AND status IN (1,4)");
+
+  $res = $conexion->query("SELECT id, total_price, modified, semana, fecha, dia FROM orden WHERE (fecha = '$mes' OR fecha = '$mes_ant') AND bss_id = $bss_id AND status IN (1,4) $extraCond");
   while ($row = $res->fetch_assoc()) {
     $id = $row['id'];
     $precio = (float)$row['total_price'];
@@ -99,7 +100,7 @@ function obtenerVentas($bss_id, $extraCond)
     if ($fec === $mes_ant) $ventas['mes_ant'] += $precio;
 
     $nombreDia = $diasSemana[$diaN] ?? null;
-    if ($nombreDia) $ventas['por_dia_semana'][$nombreDia] += $precio;
+    if ($nombreDia && $sem === $semana) $ventas['por_dia_semana'][$nombreDia] += $precio;
 
     $ordenes[$id] = ['mod' => $mod, 'sem' => $sem, 'fec' => $fec, 'total' => $precio];
   }
@@ -136,12 +137,15 @@ $ventasResumen = obtenerVentas($bss_id, $extraCond);
 $totalVentasDiarias = $ventasResumen['hoy'];
 $totalVentasSemana = $ventasResumen['semana'];
 $totalVentasMes = $ventasResumen['mes'];
+
 $totalVentasDiarias_anterior = $ventasResumen['ayer'];
 $totalVentasSemana_anterior = $ventasResumen['semana_ant'];
 $totalVentasMes_anterior = $ventasResumen['mes_ant'];
+
 $gananciasDi = $ventasResumen['gananciasDia'];
 $gananciasSe = $ventasResumen['gananciasSemana'];
 $gananciasMes = $ventasResumen['gananciasMes'];
+
 $arraySemana = $ventasResumen['por_dia_semana'];
 
 
@@ -237,7 +241,8 @@ $arraSemanas = [];
 $res = $conexion->query("SELECT DISTINCT semana FROM orden WHERE bss_id = $bss_id $extraCond ORDER BY semana ASC");
 while ($row = $res->fetch_assoc()) {
   $semanaC = $row['semana'];
-  $ventasS = obtenerVentas('semana', $semanaC);
+  //$ventasS = obtenerVentas('semana', $semanaC);
+  $ventasS = 10;
   //$gananciaNeta = calcularGanancias('semana', $semanaC) - obtenerImportes('gastos', 'semana', $semanaC);
   $gananciaNeta = 10;
   $gasto = obtenerImportes('gastos', 'semana', $semanaC);
