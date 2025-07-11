@@ -58,8 +58,14 @@ class CalculadoraPrecios
         // Bolívares → dólares
         $precio_bolivar_dolar = $precioBsVenta / $this->bcv;
 
-        // Determinar precio visible en pesos
-        $valorPesos = isset($this->data_monedas['precio_peso_visible']) ? $precioPesoVenta : $precioBolivarPeso;
+        // Determinar precio visible en pesos // precio_peso_visible es el resultado de multiplicar los dolares * la tasa de pesos
+
+        $valorPesos = isset($this->data_monedas['precio_peso_visible']) ||
+            $origen == 'c' ? $precioPesoVenta : $precioBolivarPeso;
+
+
+
+
 
         // Determinar precio visible en dólares
         $precioDolar = isset($this->data_monedas['precio_dolar_visible']) ? $precioDolarVisible : number_format($precio_bolivar_dolar, 2, '.', ',');
