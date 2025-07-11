@@ -71,10 +71,13 @@ function getProductos($orderId)
 
     $productos = [];
     while ($row = $res->fetch_assoc()) {
+        $datos = datosProductos($row['product_id']);
+        if (empty($datos)) continue;
+
         $productos[] = [
             'id'       => (int)$row['product_id'],
             'cantidad' => (int)$row['quantity'],
-            'datos'    => datosProductos($row['product_id']),
+            'datos'    => $datos,
         ];
     }
     $stmt->close();
@@ -100,11 +103,11 @@ $payload = [
     'ordenes'         => [],
     'totales_global'  => ['usd' => 0, 'cop' => 0, 'bs' => 0],
 ];
+$totales = ['usd' => 0, 'cop' => 0, 'bs' => 0];
 
 while ($row = $res->fetch_assoc()) {
     $productos = getProductos($row['order_id']);
 
-    $totales = ['usd' => 0, 'cop' => 0, 'bs' => 0];
     foreach ($productos as $p) {
         $totales['usd'] += $p['datos']['precio_dolar_visible'] * $p['cantidad'];
         $totales['cop'] += $p['datos']['precio_peso_visible']  * $p['cantidad'];

@@ -149,7 +149,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
           if (!res.ok) throw new Error('Error al obtener datos');
           const data = await res.json();
-
           // Limpia el tbody
           tbody.innerHTML = '';
 
