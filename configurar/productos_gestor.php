@@ -82,7 +82,7 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
                 $sucursal_id = $_SESSION['sucursal'];
             }
 
-            $check = $conexion->prepare("SELECT porcentaje FROM stock WHERE id = ? AND id_sucursal = ?");
+            $check = $conexion->prepare("SELECT porcentaje FROM stock WHERE id_producto = ? AND id_sucursal = ?");
             $check->bind_param("ii", $id, $sucursal_id);
             $check->execute();
             $check->store_result();
@@ -96,7 +96,7 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
                     $message = "⚠️ El porcentaje ingresado ya es el mismo";
                 } else {
                     // Ejecutar el UPDATE
-                    $stmt = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id = ? AND id_sucursal = ?");
+                    $stmt = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND id_sucursal = ?");
                     $stmt->bind_param("sii", $porcentaje, $id, $sucursal_id);
                     $stmt->execute();
 

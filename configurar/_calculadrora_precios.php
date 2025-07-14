@@ -79,6 +79,16 @@ class CalculadoraPrecios
 
     private function formatPeso(float $valor): float
     {
-        return round($valor, 0); // Puedes aplicar otro formato si tienes uno propio
+        if ($valor < 100) {
+            return 100;
+        }
+
+        $residuo = $valor % 100;
+
+        if ($residuo >= 50) {
+            return ceil($valor / 100) * 100; // Redondear hacia la siguiente centena
+        } else {
+            return floor($valor / 100) * 100; // Redondear hacia abajo
+        }
     }
 }
