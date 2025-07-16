@@ -5,7 +5,8 @@ header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents('php://input'), true);
 $sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
-$extraCond = $sucursal !== null ? ' AND id_sucursal = ' . (int)$sucursal : '';
+$sucursal = $sucursal === "todas" || $sucursal == "" || $sucursal == null ? "" : $sucursal; // Permitir que se envíe false para no filtrar por sucursal
+$extraCond = $sucursal !== "" ? ' AND id_sucursal = ' . (int)$sucursal : '';
 
 
 $bss_id = $_SESSION['bss_id'] ?? 1;
@@ -190,9 +191,9 @@ $res = $conexion->query("SELECT P.precio_compra, P.cantidad_unidades, P.porcenta
   WHERE P.activo='0' AND P.bss_id = $bss_id $extraCond");
 
 while ($row = $res->fetch_assoc()) {
-  $unidad = $row['cantidad_unidades'] ?: 1;
-  $unit_cost = $row['precio_compra'] / $unidad;
-  $unit_sale = $unit_cost * (1 + $row['porcentaje'] / 100);
+  $unidad = (float) $row['cantidad_unidades'] ?: 1;
+  $unit_cost = (float) $row['precio_compra'] / $unidad;
+  $unit_sale = (float)  $unit_cost * (1 + (float)  $row['porcentaje'] / 100);
   $valor_stock_con_ganancia += $unit_sale * $row['stock'];
   $valor_stock_sin_ganancia += $unit_cost * $row['stock'];
 }
