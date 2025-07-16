@@ -44,7 +44,7 @@ if ($conexion->connect_error) {
 }
 
 date_default_timezone_set('America/Manaus');
-//error_reporting(0);
+error_reporting(0);
 
 
 
