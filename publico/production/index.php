@@ -277,7 +277,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <?php if ($_SESSION["nivel"] == 1): ?>
                                             <div class="text-right col-auto"><select id="sucursal" class="me-2 form-control form-control-sm">
                                                     <?php if (count($sucursales) > 1): ?>
-                                                        <option value="">-- Seleccione --</option>
+                                                        <option value="todas">-- Seleccione --</option>
                                                     <?php endif; ?>
 
                                                     <?php foreach ($sucursales as $row): ?>

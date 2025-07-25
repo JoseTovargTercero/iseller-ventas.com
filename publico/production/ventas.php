@@ -1285,7 +1285,8 @@ echo '</pre>';*/
                         if (modo == 1) {
                             alert('activa el modo escaner')
                         } else {
-                            buscarProducto(barcode.replace(/Shift/g, ""), 2);
+                           // buscarProducto(barcode.replace(/Shift/g, ""), 2);
+                            buscarProducto(barcode.trim(), 2);
                         }
                     }
                     barcode = ""; // Reiniciar el código de barras

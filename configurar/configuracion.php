@@ -30,7 +30,7 @@ function cargarDotEnv($ruta)
 	}
 }
 
-cargarDotEnv(dirname(__DIR__) . '/../../');
+cargarDotEnv(dirname(__DIR__) . '/../');
 $usuario = $_ENV['DB_USER'];
 $contrasena = $_ENV['DB_PASS'];
 $baseDeDatos = $_ENV['DB_NAME'];
@@ -44,7 +44,7 @@ if ($conexion->connect_error) {
 }
 
 date_default_timezone_set('America/Manaus');
-//error_reporting(0);
+error_reporting(0);
 
 
 
