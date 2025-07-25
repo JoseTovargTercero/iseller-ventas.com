@@ -76,7 +76,7 @@ function getProductos($orderId)
 
         $productos[] = [
             'id'       => (int)$row['product_id'],
-            'cantidad' => (int)$row['quantity'],
+            'cantidad' => (float)$row['quantity'],
             'datos'    => $datos,
         ];
     }
