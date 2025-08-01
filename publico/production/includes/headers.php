@@ -35,3 +35,6 @@
 <script src="../assets/sweetalert2.all.min.js"></script>
 
 <script src="js/alerta.js"></script>
+<script src="js/menu.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons+Round">
+<script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>

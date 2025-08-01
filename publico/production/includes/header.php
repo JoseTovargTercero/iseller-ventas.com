@@ -12,40 +12,36 @@ function topnav()
     <script src='../assets/qrious.js'></script>
     <script src='../assets/qrcode.min.js'></script>
 
-    <div class='top_nav'>
+    <div class='top_nav' style="display: flex;">
         <div class='nav_menu'>
-            <div class='nav toggle '>
-                <a id='menu_toggle'><i class='icon-options-vertical'></i></a>
-            </div>
-            <nav class='nav navbar-nav'>
-                <ul class='navbar-right' style='text-align: right;'>
 
-                    <li class='nav-item dropdown open' style='padding-left: 15px;'>
-                        <a href='javascript:;' class='user-profile dropdown-toggle' aria-haspopup='true' id='navbarDropdown' data-toggle='dropdown' aria-expanded='false'>
-                            <img src='images/img.png' style='margin-top: -5px' height='50px'>
-                        </a>
-                        <div class='dropdown-menu dropdown-usermenu pull-right' aria-labelledby='navbarDropdown'>
-                            <a class='dropdown-item'><?= htmlspecialchars($_SESSION['nombre']) ?></a>
-                            <a class='dropdown-item'><?= $tipoUser ?></a>
-                            <hr class='hr-dr'>
+            <nav class='nav d-flex justify-content-between'>
+                <div class=" d-flex">
+                    <button id="toggle-navbar" class="navbar-toggle-btn">
+                        <ion-icon name="menu-outline"></ion-icon>
+                    </button>
+                </div>
 
-                            <?php if ($_SESSION['nivel'] == '1'): ?>
-                                <a class='dropdown-item' href='configuracion.php'>
-                                    <i class='line icon-settings pull-left'></i> &nbsp; Configuración
-                                </a>
-                                <a class='dropdown-item' href='cambiar_tasas.php'>
-                                    <i class='line icon-anchor'></i> &nbsp; Tasas de cambio
-                                </a>
-                            <?php endif; ?>
+                <ul class='navbar-right d-flex gap-2' style='text-align: right;'>
 
-                            <a class='dropdown-item' href='../../configurar/darkMode.php'>
-                                <i class='bx bx-sun'></i> &nbsp; Modo de luz
-                            </a>
 
-                            <hr class='hr-dr'>
-                            <a class='dropdown-item' href='../../login/salir.php'>Cerrar Sesión</a>
-                        </div>
-                    </li>
+
+                    <?php
+                    $darkMode = isset($_SESSION["darkMode"]) && $_SESSION["darkMode"] === "SI";
+                    $btnClass = $darkMode ? 'btn-dark text-white' : 'btn-light';
+                    $iconTheme = $darkMode ? 'sunny-outline' : 'moon-outline';
+                    ?>
+
+                    <a class="btn <?= $btnClass ?> item" href="../../configurar/darkMode.php" title="Cambiar modo de tema">
+                        <ion-icon name="<?= $iconTheme ?>"></ion-icon>
+                    </a>
+
+                    <a class="btn <?= $btnClass ?> item <?= $darkMode ? '' : 'text-danger' ?>" href="../../login/salir.php" title="Cerrar sesión">
+                        <ion-icon name="log-out-outline"></ion-icon>
+                    </a>
+
+
+
 
                 </ul>
             </nav>

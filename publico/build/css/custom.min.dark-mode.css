@@ -1220,8 +1220,8 @@ html {
 .left_col {
     height: 100%;
     position: fixed;
-    background-color: #343434;
-    border-right: 2px solid #343434;
+    background-color: #1e1d22;
+    border-right: 2px solid #1e1d22;
 }
 
 .container {
@@ -1453,6 +1453,7 @@ html {
     margin-bottom: 10px;
     width: 100%;
     position: relative;
+    height: 65px;
 
 }
 
@@ -1492,14 +1493,12 @@ html {
 }
 
 body .container.body .right_col {
-    background: #424242
+    background: #1e1d22
 }
 
 .nav-md .container.body .right_col {
     padding: 10px 20px 0;
-    margin-left: 230px;
-
-
+    margin-left: 5em;
 }
 
 .nav_title {
@@ -1659,6 +1658,7 @@ body .container.body .right_col {
 }
 
 .container {
+    margin: 0 !important;
     width: 100%;
     padding: 0;
     max-width: 100%
@@ -1699,7 +1699,6 @@ body::-webkit-scrollbar-thumb {
 
 .main_container .top_nav {
     display: block;
-    margin-left: 233px
 }
 
 .no-padding {
@@ -2190,7 +2189,7 @@ a:focus {
 }
 
 footer {
-    background: #343434;
+    background: #1e1d22;
     padding: 10px 20px;
     display: block
 }
@@ -2871,7 +2870,7 @@ div.box {
 }
 
 ul.msg_list li {
-    background: #343434;
+    background: #1e1d22;
     padding: 5px;
     display: -ms-flexbox;
     display: flex;
@@ -2937,7 +2936,7 @@ ul.msg_list li a .message {
 
 .navbar-nav .open .dropdown-menu {
     position: absolute;
-    background: #343434;
+    background: #1e1d22;
     margin-top: 0;
     border: none;
     -webkit-box-shadow: none;
@@ -6228,7 +6227,7 @@ ul.notifications {
 }
 
 .nav-md {
-    background-color: #343434;
+    background-color: #1e1d22;
 }
 
 .fastReport {
@@ -6558,7 +6557,6 @@ input[type="number"] {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     width: 80%;
     height: 90vh;
-    max-width: 90%;
     padding: 1.5em;
     z-index: 2;
     text-align: left;
@@ -6645,4 +6643,19 @@ input[type="number"] {
 
 .dropdown-menu {
     background-color: #2a2a2a !important;
+}
+
+.navbar-item-inner {
+    color: #e1e1e1;
+}
+
+.navdrop-menu a {
+    color: #fff;
+}
+
+
+#navbar {
+
+    background-color: #343434;
+
 }

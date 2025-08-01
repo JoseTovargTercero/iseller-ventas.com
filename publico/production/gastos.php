@@ -1,6 +1,7 @@
 <?php
 require_once('includes/requires.php');
 
+error_reporting(0);
 
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
@@ -408,21 +409,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <div class='container body'>
             <div class='main_container'>
-                <div class='col-md-3 left_col'>
 
-                    <div class='left_col scroll-view'>
-                        <div class='navbar nav_title' style='border: 0;'>
-                            <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
-                                    <img style='max-width:140px'><span> </a>
-                        </div>
-                        <div class='clearfix'></div>
-                        <!-- /menu profile quick info -->
-                        <br />
-                        <?php echo $menu ?>
-                    </div>
+                <?php echo $menu ?>
 
-                </div>
                 <style>
                     .h3ini {
                         font-size: 16px;

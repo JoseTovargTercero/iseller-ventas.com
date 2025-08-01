@@ -242,13 +242,10 @@ echo '</pre>';*/
 
     .table td,
     .table th {
-        padding: 2px !important;
+        padding: 5px 2px !important;
         vertical-align: middle;
     }
 
-    .table tfoot {
-        background-color: #343a40;
-    }
 
     #result-escaner {
         width: -webkit-fill-available;
@@ -262,7 +259,7 @@ echo '</pre>';*/
 
 
     .text-total {
-        font-size: 18px !important;
+        font-size: 1rem;
         font-weight: bold;
     }
 
@@ -273,29 +270,22 @@ echo '</pre>';*/
         place-content: space-between;
 
     }
+
+    .btn-group-sm>.btn,
+    .btn-sm {
+        font-size: 0.64rem !important;
+        padding: .20rem .34rem
+    }
 </style>
 <div class="contenedor-loader" id="cargando">
     <span class="loader"></span>
 </div>
 
-<body class='nav-md' style="background-color: #ebebeb;">
+<body class='nav-md'>
     <div class='container body'>
         <div class='main_container'>
+            <?php echo $menu ?>
 
-            <div class='col-md-3 left_col'>
-
-                <div class='left_col scroll-view'>
-                    <div class='navbar nav_title' style='border: 0;'>
-                        <a href='index.php' class='site_title'>
-                            <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
-                                <img style='max-width:140px'><span> </a>
-                    </div>
-                    <div class='clearfix'></div>
-                    <!-- /menu profile quick info -->
-                    <br />
-                    <?php echo $menu ?>
-                </div>
-            </div>
             <!-- top navigation -->
             <?php echo $topnav ?>
             <!-- /top navigation -->
@@ -312,21 +302,25 @@ echo '</pre>';*/
                         <div class="col-lg-12">
                             <div class="x_panel" style="min-height: 60vh">
                                 <div class="x_title d-flex justify-content-between">
-                                    <h2 style="font-size: 15px; font-weight: bold">Carrito </h2>
-                                    <button class="btn btn-success btn-sm" id="open-modal"> <i class='bx bx-search-alt' style="vertical-align: text-bottom;"></i> Búsqueda</button>
+                                    <div style="display: grid">
+                                        <h2>Carrito del cliente</h2>
+                                        <span><b>SUCURSAL: </b><span id="sucursal_nombre">
+                                            </span></span>
+                                    </div>
+                                    <button class="btn btn-success" style="height: min-content" id="open-modal"> (B) Búsqueda</button>
                                 </div>
                                 <div class="x_content cart">
                                     <div>
-                                        <div class="table-container">
-                                            <table class="table table-striped  table-fixed" id="tabla-carrito">
-                                                <thead class="thead-dark" style="min-width:100%; ">
+                                        <div class="table-container" style="overflow: auto">
+                                            <table class="table table-striped table-hover" id="tabla-carrito">
+                                                <thead style="min-width:100%; ">
                                                     <tr>
                                                         <th style="width:5%" class="column-title">Cant.</th>
                                                         <th style="width:30%" class="column-title">Producto</th>
                                                         <th style="width:20%" class="column-title">Peso</th>
                                                         <th style="width:20%" class="column-title">BS</th>
                                                         <th style="width:10%" class="column-title">Dolares</th>
-                                                        <th style="width:10%" class="column-title"></th>
+                                                        <th style="width:10%" class="column-title">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -363,9 +357,9 @@ echo '</pre>';*/
 
 
                                             <a onclick="destroy_cart()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
-                                            <button class="btn btn-light" id="calcularVuelto">Calcular cambio</button>
+                                            <button class="btn btn-light" id="calcularVuelto">(C) Calcular cambio</button>
                                             <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
-                                            <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">Vender</button>
+                                            <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">(V) Vender</button>
                                         </div>
 
                                     </div>
@@ -384,7 +378,7 @@ echo '</pre>';*/
                                 </div>
                                 <div class="x_content ">
                                     <div class="">
-                                        <table class="table table-striped">
+                                        <table class="table table-responsive table-striped">
                                             <thead>
                                                 <tr>
                                                     <th class='column-title'>#</th>
@@ -817,28 +811,15 @@ echo '</pre>';*/
                             resultado.carrito.forEach(element => {
                                 $("#tabla-carrito tbody").append(`
                                 <tr>
-                                    <td style="width:5%" class="ac-c">${element.cantidad}</td>
+                                    <td style="width:5%; text-align: center" class="ac-c">${element.cantidad}</td>
                                     <td style="width:30%" class="ac-c">${element.nombre}</td>
                                     <td style="width:20%" class="ac-c">${element.subtotalPeso} P</td>
                                     <td style="width:20%" class="ac-c">${formatNumber(element.subtotalBolivar)} Bs</td>
                                     <td style="width:10%" class="ac-c">$${formatNumber(element.subtotalDolar)}</td>
                                     <td style="width:10%" class="ac-c">
-
-
-                                        <a href="javascript:;" aria-haspopup="true" id="drop-${element.id}" data-toggle="dropdown" aria-expanded="true">
-                                            <i class="line icon-options-vertical"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-usermenu pull-left " aria-labelledby="drop-${element.id}" x-placement="bottom-start">
-                                            <a class="dropdown-item">OPCIONES:</a>
-                                            <hr class="hr-dr">
-
-                                            <div class="px-3" style="display: flex; flex-direction: column;">
-                                            
-                                            <button class="btn btn-success btn-sm" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i> Aumentar</button>
-                                            <button class="btn btn-secondary btn-sm" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i> Disminuir</button>
-                                            <button class="btn btn-danger btn-sm" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i> Quitar</button>
-                                            </div>
-                                        </div>
+                                             <button class="btn btn-sm btn-outline-success" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
                                     </td>
                                 </tr>`);
                             });
@@ -855,7 +836,6 @@ echo '</pre>';*/
                                         <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-bolivar" class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
                                         <td style="padding-top: 0.5rem !important; width:10%" id="precio-total-dolar" class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
                                         <td style="padding-top: 0.5rem !important; width:10%"></td>
-                                        <td style="padding-top: 0.5rem !important; width:5%"></td>
                                     </tr>
                                     `);
 
@@ -1285,7 +1265,7 @@ echo '</pre>';*/
                         if (modo == 1) {
                             alert('activa el modo escaner')
                         } else {
-                           // buscarProducto(barcode.replace(/Shift/g, ""), 2);
+                            // buscarProducto(barcode.replace(/Shift/g, ""), 2);
                             buscarProducto(barcode.trim(), 2);
                         }
                     }
@@ -1495,16 +1475,14 @@ echo '</pre>';*/
                     return;
                 }
 
-                const li = document.createElement('li');
-                li.className = 'nav-item';
+                const div = document.getElementById('sucursal_nombre');
                 const element = (nv == 1 ? 'a' : 'span');
 
                 const a = document.createElement(element);
                 a.href = (nv == 1 ? 'seleccion_sucursal.php' : '');
                 a.textContent = sucursal_n;
 
-                li.appendChild(a);
-                navbar.appendChild(li);
+                div.appendChild(a);
             }
 
             const nv = <?php echo json_encode($_SESSION["nivel"]) ?>

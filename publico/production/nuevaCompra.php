@@ -48,40 +48,118 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <body class='nav-md'>
         <div class='container body'>
             <div class='main_container'>
-                <div class='col-md-3 left_col'>
-                    <div class='left_col scroll-view'>
-                        <div class='navbar nav_title' style='border: 0;'>
-                            <a href='index.php' class='site_title'>
-                                <img src='images/logo1-inv-compact.png' style='max-width:45px; opacity: 0.8'> <span>
-                                    <img style='max-width:140px'><span> </a>
+                <?php echo $menu ?>
+                <!-- top navigation -->
+                <?php echo $topnav ?>
+                <!-- /top navigation -->
+                <!-- page content -->
+                <div class='right_col' role='main'>
+                    <div class=''>
+
+
+                        <div class="col-lg-12">
+                            <h4>Compras</h4>
+                            <p style="margin-top: -10px;">Nuevas compras realizadas</p>
+
+
                         </div>
                         <div class='clearfix'></div>
-                        <!-- /menu profile quick info -->
-                        <br />
-                        <?php echo $menu ?>
-                    </div>
-                </div>
-            </div>
-            <!-- top navigation -->
-            <?php echo $topnav ?>
-            <!-- /top navigation -->
-            <!-- page content -->
-            <div class='right_col' role='main'>
-                <div class=''>
+                        <div class="col-lg-6">
+                            <form id='demo-form2'>
+                                <div class="x_panel">
+                                    <div class="x_title">
+                                        <h2>Datos del Producto <small>* obligatorio</small></h2>
+                                        <ul class="nav navbar-right panel_toolbox">
+                                            <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                                            </li>
+                                        </ul>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="x_content">
+                                        <div class='x_content'>
+                                            <?php if ($tipo_u == 1): ?>
+                                                <div class='form-group mb-3'>
+                                                    <label class='form-label' for='first-name'>Sucursal </label>
+                                                    <select class="form-control" id="sucursal" name="sucursal">
+                                                        <?php if (count($sucursales) > 1): ?>
+                                                            <option value="">-- Seleccione --</option>
+                                                        <?php endif; ?>
+
+                                                        <?php foreach ($sucursales as $row): ?>
+                                                            <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                                <?= htmlspecialchars($row['nombre']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            <?php endif; ?>
 
 
-                    <div class="col-lg-12">
-                        <h4>Compras</h4>
-                        <p style="margin-top: -10px;">Nuevas compras realizadas</p>
+                                            <div class='mb-3 form-group'>
+                                                <div class='row'>
+                                                    <div class="col-lg-4">
+                                                        <label for='codigo' for='codigo'>Filtro</label>
+                                                        <input type='text' required="required" class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
+                                                    </div>
+                                                    <div class="col-lg-8">
+                                                        <label for='producto'>Seleccione el producto</label>
+                                                        <select id="producto" name="producto" class="form-control" required>
+                                                            <option>-- Indique un filtro --</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
 
+                                            <div class="mb-3 form-group">
+                                                <label class="form-label" for="comprado">Unidades compradas</label>
+                                                <input type="text" id="comprado" name="comprado" required="required" class="form-control" placeholder="Cantidad de unidades compradas">
+                                            </div>
 
-                    </div>
-                    <div class='clearfix'></div>
-                    <div class="col-lg-6">
-                        <form id='demo-form2'>
+                                            <div class="ln_solid"></div>
+
+                                            <div class="form-group">
+                                                <label for="precio">Precio de Compra</label>
+                                                <div class="row">
+
+                                                    <div class="input-con-simbolo col-md-7">
+                                                        <input type="text" class="form-control form-control-simbolo" id="precio" name="precio" required="required" placeholder="Introduzca el precio">
+                                                        <span class="simbolo-final">$</span>
+                                                    </div>
+
+                                                    <div class="col-md-5">
+                                                        <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal-button">Calcular precio</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mb-3">
+                                                <div class="col-lg-6">
+                                                    <label for="cantidad">Unidades por bulto</label>
+                                                    <input type="number" id="cantidad" placeholder="Unidades por bulto/paquete/caja/etc" name="cantidad" required="required" class="form-control">
+                                                </div>
+                                                <div class="col-lg-6">
+                                                    <label for="porcentaje">Porcentaje</label>
+                                                    <input type="number" id="porcentaje" name="porcentaje" placeholder="Porcentaje de ganancia" required="required" class="form-control">
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group mb-3">
+                                                <label for="proveedor">Proveedor</label>
+                                                <input type="text" id="proveedor" name="proveedor" placeholder="Nombre del proveedor" required="required" class="form-control">
+                                            </div>
+
+                                            <div class='form-group mt-3 text-end'>
+                                                <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Agregar">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-lg-6">
                             <div class="x_panel">
                                 <div class="x_title">
-                                    <h2>Datos del Producto <small>* obligatorio</small></h2>
+                                    <h2>Compras</h2>
                                     <ul class="nav navbar-right panel_toolbox">
                                         <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
                                         </li>
@@ -89,112 +167,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <div class="clearfix"></div>
                                 </div>
                                 <div class="x_content">
-                                    <div class='x_content'>
-                                        <?php if ($tipo_u == 1): ?>
-                                            <div class='form-group mb-3'>
-                                                <label class='form-label' for='first-name'>Sucursal </label>
-                                                <select class="form-control" id="sucursal" name="sucursal">
-                                                    <?php if (count($sucursales) > 1): ?>
-                                                        <option value="">-- Seleccione --</option>
-                                                    <?php endif; ?>
-
-                                                    <?php foreach ($sucursales as $row): ?>
-                                                        <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                                            <?= htmlspecialchars($row['nombre']) ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
+                                    <div class="row">
+                                        <div class="col-lg-12">
+                                            <p class="font-13 m-b-30">Lista general de los productos agregados al inventario.</p>
+                                            <div class="card-box table-responsive" style="max-height: 70vh;">
+                                                <table id="datatable" class="table table-striped table-bordered" style="width:100%">
+                                                    <thead>
+                                                        <tr class="headings">
+                                                            <th class="column-title">Producto</th>
+                                                            <th class="column-title">Cantidad</th>
+                                                            <th class="column-title"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        <?php endif; ?>
-
-
-                                        <div class='mb-3 form-group'>
-                                            <div class='row'>
-                                                <div class="col-lg-4">
-                                                    <label for='codigo' for='codigo'>Filtro</label>
-                                                    <input type='text' required="required" class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
-                                                </div>
-                                                <div class="col-lg-8">
-                                                    <label for='producto'>Seleccione el producto</label>
-                                                    <select id="producto" name="producto" class="form-control" required>
-                                                        <option>-- Indique un filtro --</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="mb-3 form-group">
-                                            <label class="form-label" for="comprado">Unidades compradas</label>
-                                            <input type="text" id="comprado" name="comprado" required="required" class="form-control" placeholder="Cantidad de unidades compradas">
-                                        </div>
-
-                                        <div class="ln_solid"></div>
-
-                                        <div class="form-group">
-                                            <label for="precio">Precio de Compra</label>
-                                            <div class="row">
-
-                                                <div class="input-con-simbolo col-md-7">
-                                                    <input type="text" class="form-control form-control-simbolo" id="precio" name="precio" required="required" placeholder="Introduzca el precio">
-                                                    <span class="simbolo-final">$</span>
-                                                </div>
-
-                                                <div class="col-md-5">
-                                                    <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal-button">Calcular precio</button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mb-3">
-                                            <div class="col-lg-6">
-                                                <label for="cantidad">Unidades por bulto</label>
-                                                <input type="number" id="cantidad" placeholder="Unidades por bulto/paquete/caja/etc" name="cantidad" required="required" class="form-control">
-                                            </div>
-                                            <div class="col-lg-6">
-                                                <label for="porcentaje">Porcentaje</label>
-                                                <input type="number" id="porcentaje" name="porcentaje" placeholder="Porcentaje de ganancia" required="required" class="form-control">
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group mb-3">
-                                            <label for="proveedor">Proveedor</label>
-                                            <input type="text" id="proveedor" name="proveedor" placeholder="Nombre del proveedor" required="required" class="form-control">
-                                        </div>
-
-                                        <div class='form-group mt-3 text-end'>
-                                            <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Agregar">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="x_panel">
-                            <div class="x_title">
-                                <h2>Compras</h2>
-                                <ul class="nav navbar-right panel_toolbox">
-                                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                    </li>
-                                </ul>
-                                <div class="clearfix"></div>
-                            </div>
-                            <div class="x_content">
-                                <div class="row">
-                                    <div class="col-lg-12">
-                                        <p class="font-13 m-b-30">Lista general de los productos agregados al inventario.</p>
-                                        <div class="card-box table-responsive" style="max-height: 70vh;">
-                                            <table id="datatable" class="table table-striped table-bordered" style="width:100%">
-                                                <thead>
-                                                    <tr class="headings">
-                                                        <th class="column-title">Producto</th>
-                                                        <th class="column-title">Cantidad</th>
-                                                        <th class="column-title"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                </tbody>
-                                            </table>
                                         </div>
                                     </div>
                                 </div>
@@ -203,7 +191,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>
                 </div>
             </div>
-        </div>
         </div>
         <?php require('../assets/templates/modal.html'); ?>
         <!-- Bootstrap -->
