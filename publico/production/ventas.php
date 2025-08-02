@@ -381,9 +381,6 @@ echo '</pre>';*/
                                         <table class="table table-responsive table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th class='column-title'>#</th>
-                                                    <th class='column-title'>Tipo</th>
-                                                    <th class='column-title'>Pago por</th>
                                                     <th class='column-title'>Fecha</th>
                                                     <th class='column-title'>Monto</th>
                                                     <th class='column-title'>Detalles</th>
@@ -439,10 +436,11 @@ echo '</pre>';*/
                         data.forEach(orden => {
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                    <td>${contador++}</td>
-                                    <td>${orden.tipoVenta}</td>
-                                    <td>${orden.pagoPor}</td>
-                                    <td>${orden.fecha}</td>
+                                    <td> 
+                                    ${orden.pagoPor} 
+                                    <small>(${orden.tipoVenta})</small>
+                                    <br>
+                                    <small class="text-muted">${orden.fecha}</small></td>
                                     <td>$${orden.total}</td>
                                     <td><a href="detallesVenta.php?id=${orden.id}">Detalles</a></td>
                                     <td style="text-align: center">

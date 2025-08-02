@@ -197,7 +197,7 @@ function es_venta_mayor($cart)
             $result = true;
         }
     }
-    return true;
+    return $result;
 }
 
 
