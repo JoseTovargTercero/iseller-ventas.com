@@ -1,3 +1,9 @@
+<?php
+// redirecciona a login.php
+header("Location: login.php");
+exit;
+?>
+
 <!DOCTYPE html>
 <!--
 	Moon by GetTemplates.co
@@ -56,13 +62,13 @@
                         <li class="nav-item">
                             <a class="nav-link" href="#tasas">Tasas de cambio</a>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item" style="display: none;">
                             <a class="nav-link" href="#capturas">Capturas</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#pricing">Planes</a>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item" style="display: none;">
                             <a class="nav-link" href="registro.html">Contacto</a>
                         </li>
                         <li class="nav-item ml-3">
@@ -140,14 +146,14 @@
                         <!-- Counter Item -->
                         <div class="col-md-3 col-sm-6 counter-item">
                             <i class="lnr lnr-briefcase"></i>
-                            <span class="number" data-from="0" data-to="32" data-refresh-interval="100">32</span>
+                            <span class="number" data-from="0" data-to="23418" data-refresh-interval="100">23418</span>
                             <h4>Ventas este mes</h4>
                         </div>
                         <!-- End of Counter Item -->
                         <!-- Counter Item -->
                         <div class="col-md-3 col-sm-6 counter-item">
                             <i class="lnr lnr-heart"></i>
-                            <span class="number" data-from="0" data-to="38" data-refresh-interval="100">38</span>
+                            <span class="number" data-from="0" data-to="38" data-refresh-interval="100">44168</span>
                             <h4>Usuarios registrados</h4>
                         </div>
                         <!-- End of Counter Item -->
@@ -250,7 +256,7 @@
             </div>
         </section>
         <!-- End of Features Section-->
-        <section id="tasas" class="featurettes bg-white">
+        <section id="tasas" class="featurettes bg-white" style="display: none;">
 
             <div class="container">
                 <div class="section-content">
@@ -325,7 +331,7 @@
 
         </section>
         <!-- End of Blog Section --> <!-- Portfolio Section -->
-        <section id="capturas" class="bg-white">
+        <section id="capturas" class="bg-white" style="display: none;">
             <div class="container">
                 <div class="section-content">
                     <!-- Section Title -->

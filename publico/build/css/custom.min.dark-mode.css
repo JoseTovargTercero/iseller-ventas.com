@@ -1450,7 +1450,6 @@ html {
     float: left;
     padding: 5px;
     background: #343434;
-    margin-bottom: 10px;
     width: 100%;
     position: relative;
     height: 65px;
@@ -6658,4 +6657,8 @@ input[type="number"] {
 
     background-color: #343434;
 
+}
+
+.modal-content {
+    background-color: #383838 !important;
 }

@@ -662,3 +662,11 @@ textarea:disabled {
         height: 100vh !important;
     }
 }
+
+.btn-config {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    z-index: 99;
+    margin: 0 15px 15px 0;
+}

@@ -44,6 +44,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
+
+    $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ?");
+    $stmt->bind_param('s', $bss_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $usuarios[] = $row;
+        }
+    }
+    $stmt->close();
+
+
+
+
 ?>
 
     <!DOCTYPE html>
@@ -144,8 +159,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                    <h4>Inicio</h4>
-                    <p style="margin-top: -10px;">Resumen y estadísticas</p>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="h3ini">Inicio</h3>
+                            <p style="margin-top: -10px;">Resumen y estadísticas</p>
+                        </div>
+                        <?php if ($_SESSION["nivel"] == 1): ?>
+                            <div style="    align-self: anchor-center;">
+                                <button type="button" style="height: min-content;" class="btn btn-success btn-sm" data-toggle="modal" data-target="#exampleModalCenter">
+                                    Aplicar Filtro
+                                </button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
 
 
 
@@ -251,6 +277,81 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         </div>
                     </div>
 
+                    <?php if ($_SESSION["nivel"] == 1): ?>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="exampleModalLongTitle">Modal title</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="mb-3">
+                                            <label for="sucursal" class="form-label">Sucursal</label>
+                                            <select id="sucursal" class="me-2 form-control form-control-sm">
+                                                <?php if (count($sucursales) > 1): ?>
+                                                    <option value="todas">-- Seleccione --</option>
+                                                <?php endif; ?>
+
+                                                <?php foreach ($sucursales as $row): ?>
+                                                    <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($row['nombre']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="usuario" class="form-label">Usuario</label>
+                                            <select id="usuario" class="me-2 form-control form-control-sm">
+                                                <option value="todos">-- Seleccione --</option>
+                                            </select>
+                                        </div>
+
+
+                                    </div>
+                                    <div class="modal-footer text-end">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    <?php endif; ?>
+
+
+
+                    <script>
+                        document.getElementById('sucursal').addEventListener('change', function() {
+                            const sucursalId = this.value;
+                            const usuarioSelect = document.getElementById('usuario');
+                            usuarioSelect.innerHTML = '<option value="todos">-- Seleccione --</option>'; // Limpiar opciones anteriores
+
+                            if (sucursalId === 'todas') {
+                                return;
+                            }
+
+                            // Filtrar usuarios por sucursal
+                            const usuariosFiltrados = <?php echo json_encode($usuarios); ?>.filter(usuario => usuario.id_sucursal == sucursalId);
+
+                            if (usuariosFiltrados.length > 0) {
+                                usuariosFiltrados.forEach(usuario => {
+                                    const option = document.createElement('option');
+                                    option.value = usuario.id;
+                                    option.textContent = usuario.nombre;
+                                    usuarioSelect.appendChild(option);
+                                });
+                            } else {
+                                usuarioSelect.innerHTML = '<option value="">No hay usuarios disponibles</option>';
+                            }
+                        });
+                    </script>
+
+
                     <div class='row '>
 
 
@@ -262,20 +363,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <div class="col">
                                             <h6 class="mb-0">Información de la sucursal</h6>
                                         </div>
-                                        <?php if ($_SESSION["nivel"] == 1): ?>
-                                            <div class="text-right col-auto"><select id="sucursal" class="me-2 form-control form-control-sm">
-                                                    <?php if (count($sucursales) > 1): ?>
-                                                        <option value="todas">-- Seleccione --</option>
-                                                    <?php endif; ?>
 
-                                                    <?php foreach ($sucursales as $row): ?>
-                                                        <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                                            <?= htmlspecialchars($row['nombre']) ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
-                                        <?php endif; ?>
                                     </div>
                                 </div>
 
@@ -434,14 +522,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-            function cargar_tabla(sucursal = null) {
+            function cargar_tabla(sucursal = null, usuario = null) {
                 fetch('../../configurar/index_back.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            sucursal: sucursal
+                            sucursal: sucursal,
+                            usuario: usuario
                         })
                     })
                     /*.then(response => response.text()) // Primero obtenemos el texto plano
@@ -705,6 +794,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             document.getElementById('sucursal').addEventListener('change', function() {
                 cargar_tabla(this.value);
             })
+            document.getElementById('usuario').addEventListener('change', function() {
+                const sucursal = document.getElementById('sucursal').value;
+                cargar_tabla(sucursal, this.value);
+            });
         </script>
 
 

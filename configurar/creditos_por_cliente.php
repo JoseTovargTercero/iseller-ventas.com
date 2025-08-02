@@ -103,9 +103,9 @@ $payload = [
     'ordenes'         => [],
     'totales_global'  => ['usd' => 0, 'cop' => 0, 'bs' => 0],
 ];
-$totales = ['usd' => 0, 'cop' => 0, 'bs' => 0];
 
 while ($row = $res->fetch_assoc()) {
+    $totales = ['usd' => 0, 'cop' => 0, 'bs' => 0];
     $productos = getProductos($row['order_id']);
 
     foreach ($productos as $p) {

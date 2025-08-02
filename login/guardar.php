@@ -18,7 +18,7 @@ if (empty($doc) || empty($contrasena)) {
 }
 
 // Consulta segura
-$stmt = mysqli_prepare($conexion, "SELECT id, nombre, bss_id, nivel, contrasena, id_sucursal FROM usuarios WHERE usuario = ? AND status = 0");
+$stmt = mysqli_prepare($conexion, "SELECT id, nombre, bss_id, nivel, contrasena, id_sucursal, darkMode FROM usuarios WHERE usuario = ? AND status = 0");
 $stmt->bind_param("s", $doc);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -50,6 +50,12 @@ if ($result->num_rows === 1) {
         $_SESSION['nivel'] = $usuario['nivel'];
         if ($usuario['nivel'] == 2) {
             $_SESSION['sucursal'] = $usuario['id_sucursal'];
+        }
+
+        if ($usuario['darkMode'] == 1) {
+            $_SESSION["darkMode"] = "SI";
+        } else {
+            $_SESSION["darkMode"] = "NO";
         }
         $_SESSION['bss_id'] = $usuario['bss_id'];
         $_SESSION["validate"] = "ok";
