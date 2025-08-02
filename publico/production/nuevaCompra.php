@@ -427,44 +427,35 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 modal_body.style = 'overflow: auto;'
                 modal_body.innerHTML = `<h2 class="mb-0 mt-0" id="titulo_modal">Calcular precio </h2>
                 <hr>
-                    <div class="item form-group">
-                        <label  for="moneda">Moneda 
-                        </label>
-                        <div class="col-md-9 col-sm-9 ">
+                    <div class=" form-group">
+                        <label  class="form-label"   for="moneda">Moneda </label>
                             <select id="moneda" class="form-control">
                                 <option >Seleccione</option>
                                 <option value="bs">Bolívares</option>
                                 <option value="cop">Pesos</option>
                             </select>
-                        </div>
                     </div>
 
-                    <div class="item form-group">
+                    <div class=" form-group">
                         <label class="form-label" for="tasa_proveedor">Tasa del proveedor
                         </label>
-                        <div class="col-md-9 col-sm-9 ">
                             <input type="text" id="tasa_proveedor" class="form-control">
-                        </div>
                     </div>
 
-                    <div class="item form-group">
+                    <div class=" form-group">
                         <label class="form-label" for="precio_proveedor">Precio
                         </label>
-                        <div class="col-md-9 col-sm-9 ">
                             <input type="text" id="precio_proveedor" class="form-control">
-                        </div>
                     </div>
 
-                    <div class="item form-group">
-                        <label  for="impuesto">Impuesto 
+                    <div class=" form-group">
+                        <label  class="form-label"  for="impuesto">Impuesto 
                         </label>
-                        <div class="col-md-9 col-sm-9 ">
                             <select id="impuesto" class="form-control">
                                 <option >Seleccione</option>
                                 <option value="exento">Exento</option>
                                 <option value="iva">Iva (16%)</option>
                             </select>
-                        </div>
                     </div>`
 
                 document.getElementById('modal').style = 'height: 100% !important;'
