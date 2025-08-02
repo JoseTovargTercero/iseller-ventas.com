@@ -11,10 +11,7 @@ if (empty($_SESSION["bss_id"])) {
     $bss_id = $_SESSION["bss_id"];
 }
 
-if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 1800)) {
-    session_unset();
-    session_destroy();
-}
+
 $_SESSION['LAST_ACTIVITY'] = time();
 
 // Warning: session_set_cookie_params(): Cannot change session cookie parameters when session is active in /home/gitcomco/bikerrockamazonas.com/is_p/configurar/session.php on line 3
