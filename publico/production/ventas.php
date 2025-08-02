@@ -379,7 +379,7 @@ echo '</pre>';*/
                                 <div class="x_content ">
                                     <div class="">
                                         <table class="table table-responsive table-striped">
-                                            <thead>
+                                            <thead style="font-size: medium;">
                                                 <tr>
                                                     <th class='column-title'>Fecha</th>
                                                     <th class='column-title'>Monto</th>
@@ -786,7 +786,7 @@ echo '</pre>';*/
                Gestiona el carrito y actualiza las cantidades de productos
             */
 
-            function actualizar_carrito(id = null, accion = null) {
+            function actualizar_carrito(id = null, accion = null, add = null) {
                 $.ajax({
                         url: id && accion ? base_url + 'cantidades.php' : base_url + 'carrito.php',
                         type: 'POST',
@@ -802,6 +802,9 @@ echo '</pre>';*/
                         total_dolares = 0
                         total_bolivares = 0
 
+                        if (add == "add") {
+                            Alerta.toast('success', 'Agregado correctamte')
+                        }
                         const resultado = JSON.parse(result);
                         $("#tabla-carrito tbody").html('');
                         $("#tabla-carrito tfoot").html('');
@@ -950,7 +953,6 @@ echo '</pre>';*/
                 if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                     $('#search').val('')
                     document.getElementById("search").focus();
-                    Alerta.toast('success', 'Agregado correctamte')
                     modo = 2
                 }
 
@@ -1210,7 +1212,7 @@ echo '</pre>';*/
                     .done(function(result) {
 
 
-                        actualizar_carrito()
+                        actualizar_carrito(null, null, 'add')
                         $("#tabla_resultado_codigo_producto").html('');
                         if (modo == 1) {
                             $("#search").val('');

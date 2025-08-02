@@ -17,6 +17,20 @@ $extraCond = $sucursal ? ' AND id_sucursal=' . $sucursal : '';
 $extraCond2 = $extraCond != '' ? ' AND o.id_sucursal=' . $sucursal : '';
 
 
+
+
+$user_cond = "";
+if ($extraCond != '' && isset($input['usuario'])) {
+  if ($input['usuario'] != 'todos') {
+    $usuario = (int)$input['usuario'];
+    $user_cond = " AND customer_id  = $usuario";
+  }
+}
+
+
+
+
+
 switch ($periodo_tiempo) {
   case 'dia':
     $today = ($filtro_fecha == '' ? date('Y-m-d') : $filtro_fecha);
@@ -44,7 +58,7 @@ $total = 0;
 $totalVentas = 0;
 
 // Ventas status = 1
-$query = "SELECT total_price FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '1' AND bss_id='$bss_id' $extraCond";
+$query = "SELECT total_price FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '1' AND bss_id='$bss_id' $extraCond $user_cond";
 $result = $conexion->query($query);
 
 if ($result && $result->num_rows > 0) {
@@ -58,7 +72,7 @@ if ($result && $result->num_rows > 0) {
 $total2 = 0;
 $totalVentas2 = 0;
 
-$query = "SELECT total_price_bs FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '4' AND bss_id='$bss_id' $extraCond";
+$query = "SELECT total_price_bs FROM orden WHERE $tipoFiltroColumna = '$today' AND status = '4' AND bss_id='$bss_id' $extraCond $user_cond";
 $result = $conexion->query($query);
 
 if ($result && $result->num_rows > 0) {
@@ -76,9 +90,10 @@ function returnGanancias($tipo)
   global $extraCond;
   global $today;
   global $tipoFiltroColumna;
+  global $user_cond;
   $ganancias = 0;
 
-  $sqlGanancias = "SELECT * FROM orden WHERE $tipoFiltroColumna='$today' AND status='$tipo' AND bss_id='$bss_id' $extraCond";
+  $sqlGanancias = "SELECT * FROM orden WHERE $tipoFiltroColumna='$today' AND status='$tipo' AND bss_id='$bss_id' $extraCond $user_cond";
   $search = $conexion->query($sqlGanancias);
   if ($search->num_rows > 0) {
     while ($row = $search->fetch_assoc()) {
@@ -113,6 +128,7 @@ function obtenerTotalPorTipoPago($conexion, $today, $tipoPago, $campoTotal)
 {
   global $tipoFiltroColumna;
   global $extraCond;
+  global $user_cond;
 
   global $bss_id;
   $sql = "
@@ -121,7 +137,7 @@ function obtenerTotalPorTipoPago($conexion, $today, $tipoPago, $campoTotal)
          WHERE $tipoFiltroColumna = ? 
          AND tipoPago = ? 
          AND (status = '1' OR status = '4')
-         AND bss_id='$bss_id' $extraCond
+         AND bss_id='$bss_id' $extraCond $user_cond
      ";
   $stmt = $conexion->prepare($sql);
   $stmt->bind_param("si", $today, $tipoPago);
@@ -152,13 +168,14 @@ function obtenerVentasTotalesPorStatus($conexion, $today, $statuses = ['1', '3']
   global $tipoFiltroColumna;
   global $bss_id;
   global $extraCond;
+  global $user_cond;
 
   $statusList = "'" . implode("','", $statuses) . "'";
   $query = "SELECT total_price, total_price_bs, total_price_cop 
          FROM orden 
          WHERE $tipoFiltroColumna = '$today' 
          AND status IN ($statusList)
-          AND bss_id='$bss_id' $extraCond";
+          AND bss_id='$bss_id' $extraCond $user_cond";
 
   $result = $conexion->query($query);
 
@@ -176,6 +193,7 @@ function calcularGananciaPorTipoPago($conexion, $today, $tipoPago, $campoPrecioA
   global $tipoFiltroColumna;
   global $bss_id;
   global $extraCond;
+  global $user_cond;
 
   $query = "
          SELECT id, $campoTotalOrden AS monto 
@@ -183,7 +201,7 @@ function calcularGananciaPorTipoPago($conexion, $today, $tipoPago, $campoPrecioA
          WHERE $tipoFiltroColumna = '$today' 
          AND status IN ('1', '4') 
          AND tipoPago = '$tipoPago'
-          AND bss_id='$bss_id' $extraCond
+          AND bss_id='$bss_id' $extraCond $user_cond
      ";
 
   $result = $conexion->query($query);
@@ -222,6 +240,7 @@ function calcularGananciaPorMoneda($conexion, $today, $tipoPagos, $campoMontoOrd
   global $tipoFiltroColumna;
   global $bss_id;
   global $extraCond;
+  global $user_cond;
 
   // Preparar lista de tipoPago para la consulta
   $tipos = implode("','", $tipoPagos);
@@ -232,7 +251,7 @@ function calcularGananciaPorMoneda($conexion, $today, $tipoPagos, $campoMontoOrd
          WHERE $tipoFiltroColumna = ? 
          AND status IN ('1', '4') 
          AND tipoPago IN ('$tipos')
-          AND bss_id='$bss_id' $extraCond
+          AND bss_id='$bss_id' $extraCond $user_cond
      ";
 
   $stmt = $conexion->prepare($query);
@@ -310,7 +329,7 @@ SELECT o.*, u.nombre AS usuario
 FROM orden o
 JOIN usuarios u ON o.customer_id = u.id
 WHERE (o.status = '1'  OR o.status = '2' OR o.status = '4') AND o.$tipoFiltroColumna = '$today'
- AND o.bss_id='$bss_id' $extraCond2
+ AND o.bss_id='$bss_id' $extraCond2 $user_cond
 ORDER BY o.id DESC
 LIMIT 150
 ";

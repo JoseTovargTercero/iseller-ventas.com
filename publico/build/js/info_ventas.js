@@ -1,9 +1,14 @@
-["fechaSolic", "sucursal_selector"].forEach((id) => {
+["fechaSolic", "sucursal_selector", "usuario"].forEach((id) => {
   document.getElementById(id).addEventListener("change", cargarInfo);
 });
 function cargarInfo() {
   const fechaSolic = document.getElementById("fechaSolic").value;
   const sucursal = document.getElementById("sucursal_selector").value;
+  let usuario = document.getElementById("usuario").value;
+
+  if (usuario === "") {
+    usuario = "todos";
+  }
 
   fetch("../../configurar/listaVentas_back.php", {
     method: "POST",
@@ -14,8 +19,13 @@ function cargarInfo() {
       periodo: periodo,
       fechaSolic: fechaSolic,
       sucursal: sucursal,
+      usuario: usuario,
     }),
   })
+    /*.then((response) => response.text()) // Primero obtenemos el texto plano
+    .then((text) => {
+      console.log(text);
+    })*/
     .then((response) => response.json())
     .then((data) => {
       table.clear();

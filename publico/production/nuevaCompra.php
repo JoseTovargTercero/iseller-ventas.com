@@ -420,7 +420,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             cargarTabla()
 
 
-
+ 
             // MODIFICAR EL MODAL
             $(document).ready(function() {
                 const modal_body = document.getElementById('modal-body')
