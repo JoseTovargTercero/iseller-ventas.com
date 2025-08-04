@@ -59,7 +59,6 @@ $sql = "SELECT
         FROM productos p
         INNER JOIN stock s ON p.id = s.id_producto
         WHERE p.activo = 0
-        AND p.codigo_barras != ''
         AND s.id_sucursal = ?
         AND s.bss_id = ?";
 
@@ -82,7 +81,7 @@ if ($result->num_rows > 0) {
         // Formatear nombre
         /* PRODUCTOS PARA LA BUSQUEDA */
 
-        $valorUnidad = $row['precio_compra'] / $row['cantidad_unidades'];
+        $valorUnidad = (float) $row['precio_compra'] / (float) $row['cantidad_unidades'];
         $mayor = floatval($row['mayor']);
 
 
