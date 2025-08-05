@@ -9,7 +9,7 @@
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Moon - Multipurpose Bootstrap 4 Template by GetTemplates.co</title>
+  <title>Inicio de sesion</title>
   <meta name="description" content="Core HTML Project">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel='icon' href='publico/production/images/favicon.ico' type='image/ico' />
@@ -25,6 +25,7 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="web/css/style.min.css">
+  <link rel="stylesheet" href="publico/build/css/loader.css">
   <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
   <link href="https://file.myfontastic.com/7vRKgqrN3iFEnLHuqYhYuL/icons.css" rel="stylesheet">
 
@@ -36,6 +37,15 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
 </head>
+
+<!--
+<div class="loader-container hide" id="loader">
+  <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+    <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
+  </svg>
+</div>
+-->
+
 
 <body data-spy="scroll" data-target="#navbar-nav-header" class="static-layout">
   <div class="boxed-page animate__animated animate__fadeIn" style="max-width: fit-content;margin-left: auto;margin-right: auto;">
@@ -120,6 +130,7 @@
   <script src="web/vendor/lightcase/lightcase.js"></script>
   <script src="web/vendor/waypoints/waypoint.min.js"></script>
   <script src="web/vendor/countTo/jquery.countTo.js"></script>
+  <script src="publico/build/js/global-loader.js"></script>
 
   <!-- Main JS -->
   <script src="web/js/app.min.js "></script>

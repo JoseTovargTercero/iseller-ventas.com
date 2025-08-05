@@ -4,7 +4,7 @@ require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
-
+    $bss_id = $_SESSION['bss_id'];
     $idProducto = $_GET['id'];
     $nivelUsuario = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
@@ -146,6 +146,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
         return $totalVentasDiarias . '*' . $totalGananciasDiarias;
     }
+
+
+
+
+
 
     $query6 = $conexion->query("SELECT * FROM productos WHERE id='$idProducto'");
     if ($query6->num_rows > 0) {
@@ -383,9 +388,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <body class='nav-md'>
         <div class='container body'>
             <div class='main_container'>
-                
-                        <?php echo $menu ?>
-                    
+
+                <?php echo $menu ?>
+
                 <!-- top navigation -->
                 <?php echo $topnav ?>
                 <!-- /top navigation -->
@@ -516,122 +521,109 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
 
 
+                            <div class="col-md-12 col-sm-12  ">
+                                <div class="x_panel ">
+                                    <div class="x_content ">
 
-                            <div class="col-lg-6">
-                                <div class="x_panel">
-                                    <div class="x_title">
-                                        <h2>Compras</h2>
+                                        <div class="table-responsive col-lg-12">
+                                            <?php
 
-                                        <div class="clearfix"></div>
-                                    </div>
-                                    <div class="x_content">
-                                        <div class="row">
-                                            <div class="col-lg-12">
-                                                <div class="card-box table-responsive">
-                                                    <p class="text-muted font-13 m-b-30">
-                                                        Ultimas compras del producto
-                                                    </p>
-                                                    <table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
+
+
+                                            // Fechas
+                                            $hoy = date('Y-m-d');
+                                            $semana = date('Y-W');
+                                            $mes = date('Y-m');
+
+                                            // Reutilizar función para obtener datos por fecha
+                                            function obtenerVentasPorFecha($conexion, $idProducto, $campoFecha, $valorFecha, $sucursal)
+                                            {
+                                                $queryOrdenes = "SELECT id FROM orden WHERE $campoFecha='$valorFecha' AND id_sucursal=$sucursal";
+                                                $ordenes = $conexion->query($queryOrdenes);
+
+                                                $cantidad = 0;
+                                                $total = 0;
+
+                                                while ($orden = $ordenes->fetch_assoc()) {
+                                                    $idOrden = $orden['id'];
+                                                    $queryArticulos = "SELECT precio, quantity, precio_venta_dolar FROM orden_articulos WHERE order_id='$idOrden' AND product_id='$idProducto'";
+                                                    $articulos = $conexion->query($queryArticulos);
+
+                                                    while ($articulo = $articulos->fetch_assoc()) {
+                                                        $precio = $articulo['precio_venta_dolar'];
+                                                        $subtotal = $precio * $articulo['quantity'];
+                                                        $cantidad += $articulo['quantity'];
+                                                        $total += $subtotal;
+                                                    }
+                                                }
+
+                                                return ['cantidad' => $cantidad, 'total' => number_format($total, 2, '.', ',')];
+                                            }
+
+
+                                            // Día final del mes
+                                            $mesActual = date('m');
+                                            $diasMes = cal_days_in_month(CAL_GREGORIAN, $mesActual, date('Y'));
+                                            $diaHoy = date('d');
+
+
+
+                                            $stmt = mysqli_prepare($conexion, "SELECT id, nombre FROM `sucursales` WHERE bss_id = ?");
+                                            $stmt->bind_param('s', $bss_id);
+                                            $stmt->execute();
+                                            $result = $stmt->get_result();
+                                            if ($result->num_rows > 0) {
+                                                while ($row = $result->fetch_assoc()) {
+                                                    $sucursal = $row['id'];
+
+
+                                                    $ventasDia = obtenerVentasPorFecha($conexion, $idProducto, 'modified', $hoy, $sucursal);
+                                                    $ventasMes = obtenerVentasPorFecha($conexion, $idProducto, 'fecha', $mes, $sucursal);
+                                                    $ventasSemana = obtenerVentasPorFecha($conexion, $idProducto, 'semana', $semana, $sucursal);
+
+
+
+                                                    echo <<<HTML
+                                                        <div class="text-center">
+                                                            <h2 class="">{$row['nombre']}</h2>
+                                                        </div>
+                                                      <table class="table table-striped  jambo_table bulk_action">
                                                         <thead>
                                                             <tr class="headings">
-                                                                <th class="column-title">#</th>
-                                                                <th class="column-title">Fecha </th>
-                                                                <th class="column-title">Usuario </th>
-                                                                <th class="column-title">Cantidad</th>
-                                                                <th class="column-title">USD</th>
+
+                                                                <th class="column-title">Periodo</th>
+                                                                <th class="column-title">Despachos</th>
+                                                                <th class="column-title">Valor (Referencial)</th>
                                                             </tr>
+
                                                         </thead>
 
                                                         <tbody>
-                                                            <?php
-
-                                                            echo $idcode;
-
-                                                            $tabla6 = '';
-                                                            $contador = 1;
-
-
-
-                                                            $query2 = "SELECT * FROM compras WHERE cod='$idcode' ORDER BY id DESC LIMIT 150";
-                                                            $buscarAlumnos22 = $conexion->query($query2);
-                                                            if ($buscarAlumnos22->num_rows > 0) {
-                                                                while ($row6 = $buscarAlumnos22->fetch_assoc()) {
-
-                                                                    $valor = $row6["precio"];
-                                                                    $precioBsVenta = $valor * $tasaCambioDolar;
-
-
-                                                                    $tabla6 .= '<tr class="even pointer">
-                                                                                            <td class=" ">' . $contador++ . '</td>
-                                                                                            <td class=" ">' . $row6["fecha"] . '</td>
-                                                                                            <td class=" ">' . $row6["user"] . '</td>
-                                                                                        
-                                                                                            <td class=" ">' . $row6["cantidad"] . '</td>
-                                                                                            
-                                                                                            <td class=" ">' . round($valor, 2, PHP_ROUND_HALF_DOWN) . ' <small>$</small></td>
-                                                                                            
-                                                                                        </tr>';
-                                                                }
-                                                                echo $tabla6;
-                                                            }
-                                                            ?>
+                                                            <tr class="even pointer">
+                                                                <td>Hoy</td>
+                                                                <td>{$ventasDia['cantidad']}</td>
+                                                                <td>{$ventasDia['total']}$</td>
+                                                            </tr>
+                                                            <tr class="even pointer">
+                                                                <td>Esta Semana</td>
+                                                                <td>{$ventasSemana['cantidad']}</td>
+                                                                <td>{$ventasSemana['total']}$</td>
+                                                            </tr>
+                                                            <tr class="even pointer">
+                                                                <td>Este Mes</td>
+                                                                <td>{$ventasMes['cantidad']}</td>
+                                                                <td>{$ventasMes['total']}$</td>
+                                                            </tr>
                                                         </tbody>
                                                     </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-sm-6  ">
-                                <div class="x_panel ">
-                                    <div class="x_title">
-                                        <h2>Producto</h2>
-                                        <div class="clearfix"></div>
-                                    </div>
-                                    <div class="x_content ">
-
-
-                                        <?php
-
-
-
-
-                                        $totalcomprasdia = 0;
-                                        $totalcomprasMes = 0;
-                                        $totalcomprasSemana = 0;
-
-                                        $mesaso = date("Y-m");
-                                        $diaso = date("Y-m-d");
-
-
-                                        $query22222 = "SELECT * FROM compras WHERE semana='$semana' AND cod='$idcode'";
-                                        $buscarAlumnos22222 = $conexion->query($query22222);
-                                        if ($buscarAlumnos22222->num_rows > 0) {
-                                            while ($filaAlumnos22222 = $buscarAlumnos22222->fetch_assoc()) {
-                                                $comprasSemana = $filaAlumnos22222['cantidad'];
-                                                $totalcomprasSemana += $comprasSemana;
+                                                    HTML;
+                                                }
                                             }
-                                        }
+                                            $stmt->close();
 
-                                        $query222222 = "SELECT * FROM compras WHERE mes='$mesaso' AND cod='$idcode'";
-                                        $buscarAlumnos222222 = $conexion->query($query222222);
-                                        if ($buscarAlumnos222222->num_rows > 0) {
-                                            while ($filaAlumnos222222 = $buscarAlumnos222222->fetch_assoc()) {
-                                                $comprasMes = $filaAlumnos222222['cantidad'];
-                                                $totalcomprasMes += $comprasMes;
-                                            }
-                                        }
-                                        $query2222222 = "SELECT * FROM compras WHERE dia='$diaso' AND cod='$idcode'";
-                                        $buscarAlumnos2222222 = $conexion->query($query2222222);
-                                        if ($buscarAlumnos2222222->num_rows > 0) {
-                                            while ($filaAlumnos2222222 = $buscarAlumnos2222222->fetch_assoc()) {
-                                                $comprasdia = $filaAlumnos2222222['cantidad'];
-                                                $totalcomprasdia += $comprasdia;
-                                            }
-                                        }
 
 
+                                            ?>
 
 
 
@@ -639,298 +631,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-
-
-                                        ?>
-
-                                        <div class="table-responsive col-lg-12">
-                                            <h2 class="title"></h2>
-
-                                            <table class="table table-striped  jambo_table bulk_action">
-                                                <thead>
-                                                    <tr class="headings">
-
-                                                        <th style="width:10%;" class="column-title">Precio <small>(Compra)</small></th>
-                                                        <th style="width:9%;" class="column-title">Porcentaje</th>
-                                                        <th style="width:10%;" class="column-title">Stock</th>
-                                                        <th style="width:9%;" class="column-title">Venta Usd</th>
-                                                        <th style="width:9%;" class="column-title">Venta Cop</th>
-                                                        <th style="width:9%;" class="column-title">Venta Bs</th>
-
-                                                    </tr>
-
-                                                </thead>
-                                                <tbody>
-                                                    <?php
-
-                                                    $tabla6 = '';
-                                                    $tabla6 .= '
-                                  <tr class="even pointer">
-                                                    <td class=" ">' . $pCompra . '</td>
-                                                    <td class=" ">' . $porcentajee . '</td>
-                                                    <td class=" ">' . $diponible . '</td>
-                                                    <td class=" ">' . number_format($precioDolarVenta, '2', '.', '.') . '</td>
-                                                    <td class=" ">' . number_format($precioPesoVenta, '0', '.', '.') . '</td>
-                                                    <td class=" ">' . number_format($precioBsVentaAct, '2', '.', '.') . '</td>
-
-
-                                                  </tr>
-
-
-
-
-
-
-
-                               ';
-
-                                                    echo $tabla6;
-
-
-
-
-
-                                                    //////////////////////////////////////////////////////////////
-                                                    //////////////////////////////////////////////////////////////
-                                                    //////////////////////////////////////////////////////////////
-                                                    //////////////////////////////////////////////////////////////
-                                                    //////////////////////////////////////////////////////////////
-                                                    ///////////////////GANANCIAS DE LA SEMANA/////////////////////
-
-
-                                                    $query2222222 = "SELECT * FROM orden_articulos WHERE product_id='$idProducto'";
-                                                    $buscarAlumnos2222222 = $conexion->query($query2222222);
-                                                    if ($buscarAlumnos2222222->num_rows > 0) {
-                                                        $precioPrducto = 0;
-                                                        $cantidadinicial = 0;
-                                                        while ($filaAlumnos2222222 = $buscarAlumnos2222222->fetch_assoc()) {
-                                                            $precioPrducto1 = $filaAlumnos2222222['precio'];
-                                                            $percioporcantidad = $precioPrducto1 * $filaAlumnos2222222['quantity'];
-                                                            $precioPrducto += $percioporcantidad;
-                                                            $cantidadinicial += $filaAlumnos2222222['quantity'];
-                                                        }
-                                                    }
-
-
-
-                                                    $query222222 = "SELECT * FROM productos WHERE id='$idProducto'";
-                                                    $buscarAlumnos222222 = $conexion->query($query222222);
-                                                    if ($buscarAlumnos222222->num_rows > 0) {
-                                                        while ($filaAlumnos222222 = $buscarAlumnos222222->fetch_assoc()) {
-                                                            $porcen = $filaAlumnos222222['porcentaje'];
-                                                        }
-                                                    }
-
-                                                    $precioPrducto2 = $precioPrducto * $porcen / 100;
-
-
-                                                    $precioPrducto3 =  $precioPrducto2 + $precioPrducto;
-
-                                                    $gananciasSe = $precioPrducto3;
-
-
-
-
-                                                    $hoy = date('Y-m-d');
-                                                    $semana = date('Y-W');
-                                                    $mes = date('Y-m');
-
-
-
-
-                                                    $query2222222 = "SELECT * FROM orden WHERE modified='$hoy'";
-                                                    $buscarAlumnos2222222 = $conexion->query($query2222222);
-                                                    if ($buscarAlumnos2222222->num_rows > 0) {
-                                                        while ($filaAlumnos2222222 = $buscarAlumnos2222222->fetch_assoc()) {
-                                                            $compraDay = $filaAlumnos2222222['id'];
-
-                                                            $quer2y2222222 = "SELECT * FROM orden_articulos WHERE 	order_id='$compraDay' AND product_id='$idProducto'";
-                                                            $buscarAlumnos22222222 = $conexion->query($quer2y2222222);
-                                                            if ($buscarAlumnos22222222->num_rows > 0) {
-                                                                while ($filaAlumnos22222222 = $buscarAlumnos22222222->fetch_assoc()) {
-                                                                    $cantidadReil += $filaAlumnos22222222['quantity'];
-
-                                                                    $precio2 = $filaAlumnos22222222['precio'] + $porporpor;
-                                                                    $precio2 = number_format($precio2, '2', '.', '.');
-                                                                    $precio22 = $precio2 * $filaAlumnos22222222['quantity'];
-                                                                    $precio222 += $precio22;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
-                                                    if ($cantidadReil == "") {
-                                                        $cantidadReil = 0;
-                                                    }
-
-
-
-
-                                                    $query3333333 = "SELECT * FROM orden WHERE fecha='$mes'";
-                                                    $buscarAlumnos3333333 = $conexion->query($query3333333);
-                                                    if ($buscarAlumnos3333333->num_rows > 0) {
-                                                        while ($filaAlumnos3333333 = $buscarAlumnos3333333->fetch_assoc()) {
-                                                            $compraDay2 = $filaAlumnos3333333['id'];
-                                                            $quer3y3333333 = "SELECT * FROM orden_articulos WHERE 	order_id='$compraDay2' AND product_id='$idProducto'";
-                                                            $buscarAlumnos33333333 = $conexion->query($quer3y3333333);
-                                                            if ($buscarAlumnos33333333->num_rows > 0) {
-                                                                while ($filaAlumnos33333333 = $buscarAlumnos33333333->fetch_assoc()) {
-
-                                                                    $cantidadReil2 += $filaAlumnos33333333['quantity'];
-
-                                                                    $precio1 = $filaAlumnos33333333['precio'] + $porporpor;
-                                                                    $precio1 = number_format($precio1, '2', '.', '.');
-                                                                    $precio11 = $precio1 * $filaAlumnos33333333['quantity'];
-                                                                    $precio111 += $precio11;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
-                                                    if ($cantidadReil2 == "") {
-                                                        $cantidadReil2 = 0;
-                                                    }
-
-
-
-                                                    $query4444444 = "SELECT * FROM orden WHERE semana='$semana'";
-                                                    $buscarAlumnos4444444 = $conexion->query($query4444444);
-                                                    if ($buscarAlumnos4444444->num_rows > 0) {
-                                                        while ($filaAlumnos4444444 = $buscarAlumnos4444444->fetch_assoc()) {
-                                                            $compraDay4 = $filaAlumnos4444444['id'];
-                                                            $quer4y4444444 = "SELECT * FROM orden_articulos WHERE 	order_id='$compraDay4' AND product_id='$idProducto'";
-                                                            $buscarAlumnos44444444 = $conexion->query($quer4y4444444);
-                                                            if ($buscarAlumnos44444444->num_rows > 0) {
-                                                                while ($filaAlumnos44444444 = $buscarAlumnos44444444->fetch_assoc()) {
-
-                                                                    $cantidadReil4 += $filaAlumnos44444444['quantity'];
-
-                                                                    $precio3 = $filaAlumnos44444444['precio'] + $porporpor;
-                                                                    $precio3 = number_format($precio3, '2', '.', '.');
-
-                                                                    $precio33 = $precio3 * $filaAlumnos44444444['quantity'];
-                                                                    $precio333 += $precio33;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
-                                                    if ($cantidadReil4 == "") {
-                                                        $cantidadReil4 = 0;
-                                                    }
-
-
-
-
-                                                    switch (date('m')) {
-                                                        case ('01'):
-                                                            $finFor = 31;
-                                                            break;
-
-                                                        case ('02'):
-                                                            $finFor = 28;
-                                                            break;
-
-                                                        case ('03'):
-                                                            $finFor = 31;
-                                                            break;
-
-                                                        case ('04'):
-                                                            $finFor = 30;
-                                                            break;
-
-                                                        case ('05'):
-                                                            $finFor = 31;
-                                                            break;
-
-                                                        case ('06'):
-                                                            $finFor = 30;
-                                                            break;
-
-                                                        case ('07'):
-                                                            $finFor = 31;
-                                                            break;
-
-                                                        case ('08'):
-                                                            $finFor = 31;
-                                                            break;
-
-                                                        case ('09'):
-                                                            $finFor = 30;
-                                                            break;
-
-                                                        case ('10'):
-                                                            $finFor = 31;
-                                                            break;
-
-                                                        case ('11'):
-                                                            $finFor = 30;
-                                                            break;
-
-                                                        case ('12'):
-                                                            $finFor = 31;
-                                                            break;
-                                                    }
-
-                                                    $hoy = date('d');
-
-
-
-
-
-
-
-                                                    ?>
-
-
-                                                </tbody>
-
-
-
-                                            </table>
-
-
-                                            <table class="table table-striped  jambo_table bulk_action">
-                                                <thead>
-                                                    <tr class="headings">
-
-                                                        <th class="column-title">Periodo</th>
-                                                        <th class="column-title">Despachos</th>
-                                                        <th class="column-title">Valor (Referencial)</th>
-
-                                                        <th class="column-title">Comprado</th>
-
-                                                    </tr>
-
-                                                </thead>
-
-                                                <tbody>
-
-                                                    <tr class="even pointer">
-                                                        <td class=" ">Hoy</td>
-                                                        <td class=" "><?php echo  $cantidadReil; ?></td>
-                                                        <td class=" "><?php echo number_format($precio222, '2', '.', '.'); ?>$</td>
-                                                        <td class=" "><?php echo $totalcomprasdia; ?></td>
-
-
-                                                    </tr>
-                                                    <tr class="even pointer">
-                                                        <td class=" ">Esta Semana</td>
-                                                        <td class=" "><?php echo  $cantidadReil4; ?></td>
-                                                        <td class=" "><?php echo number_format($precio333, '2', '.', '.'); ?>$</td>
-                                                        <td class=" "><?php echo $totalcomprasSemana; ?></td>
-
-
-                                                    </tr>
-                                                    <tr class="even pointer">
-                                                        <td class=" ">Este mes</td>
-                                                        <td class=" "><?php echo  $cantidadReil2; ?></td>
-                                                        <td class=" "><?php echo number_format($precio111, '2', '.', '.'); ?>$</td>
-                                                        <td class=" "><?php echo $totalcomprasMes; ?></td>
-
-                                                    </tr>
-                                                </tbody>
-                                            </table>
                                             <br>
                                         </div>
                                     </div>
@@ -960,25 +660,29 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <script src="../build/js/custom.js"></script>
 
-        <script src="chart/js/graph2.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
         <script>
             //new Date().getFullYear()
 
 
-            $(function() {
-                $('#graph').graphify({
-                    //options: true,
-                    start: 'bar',
-                    obj: {
-                        id: 'gggx',
-                        width: '100%',
-                        height: 350,
-                        padding: 10,
-                        xGrid: true,
-                        legend: true,
-                        scale: <?php echo $scala  ?>,
-                        points: [
-                            [
+
+            document.addEventListener("DOMContentLoaded", function() {
+                // === PRIMER GRÁFICO ===
+                const options1 = {
+                    chart: {
+                        type: 'bar',
+                        height: 350
+                    },
+                    theme: {
+                        mode: 'dark' // 👈 Aplica texto y ejes oscuros
+                    },
+                    tooltip: {
+                        theme: 'dark'
+                    },
+                    series: [{
+                            name: 'Detal (G)',
+                            data: [
                                 <?php echo  explode('*', ventasMensuales('1', date('Y') . '-01'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('1', date('Y') . '-02'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('1', date('Y') . '-03'))[1]  ?>,
@@ -991,9 +695,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <?php echo  explode('*', ventasMensuales('1', date('Y') . '-10'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('1', date('Y') . '-11'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('1', date('Y') . '-12'))[1]  ?>
-                            ],
-
-                            [
+                            ]
+                        },
+                        {
+                            name: 'Mayor (G)',
+                            data: [
                                 <?php echo  explode('*', ventasMensuales('4', date('Y') . '-01'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('4', date('Y') . '-02'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('4', date('Y') . '-03'))[1]  ?>,
@@ -1006,81 +712,62 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <?php echo  explode('*', ventasMensuales('4', date('Y') . '-10'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('4', date('Y') . '-11'))[1]  ?>,
                                 <?php echo  explode('*', ventasMensuales('4', date('Y') . '-12'))[1]  ?>
-
                             ]
-                        ],
-                        colors: ['#1caf9a', '#a1efe3'],
-                        xDist: 110,
-                        dataNames: ['Detal (G)', 'Mayor (G)'],
-                        xName: 'Ventas_Semana',
-                        animations: true,
-                        design: {
-                            tooltipColor: '#fff',
-                            gridColor: '#f3f1f1',
-                            tooltipBoxColor: '#d9534f',
-                            averageLineColor: '#d9534f',
-                            pointColor: '#d9534f',
-                            lineStrokeColor: 'grey',
-                            yLabelsColor: 'red'
                         }
-                    }
-                });
-                $('#graph2').graphify({
-                    start: 'area',
-                    obj: {
-                        id: 'lol',
-                        legend: false,
-                        showPoints: true,
-                        width: '100%',
-                        legendX: 450,
-                        pieSize: 200,
-                        shadow: true,
-                        height: 400,
-                        animations: true,
-                        x: [2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012],
-                        points: [17, 33, 64, 22, 87, 45, 38, 33, 64, 22, 87, 45, 38, 33, 64, 22, 87, 45, 38],
-                        xDist: 100,
-                        scale: 12,
-                        yDist: 35,
-                        grid: false,
-                        xName: 'Semana',
-                        dataNames: ['Amount'],
-                        design: {
-                            lineColor: '#d9534f',
-                            tooltipFontSize: '20px',
-                            pointColor: '#d9534f',
-                            barColor: '#428bca',
-                            areaColor: '#f0ad4e'
-                        }
-                    }
-                });
-                var bar = new GraphBar({
-                    attachTo: '#graph3',
-                    special: 'combo',
-                    height: 725,
-                    width: '100%',
-                    yDist: 60,
-                    xDist: 150,
-                    showPoints: false,
-                    xGrid: false,
-                    legend: true,
-                    points: [
-                        [17, 21, 51, 74, 12, 49, 33],
-                        [32, 15, 75, 20, 45, 90, 52]
                     ],
-                    colors: ['red', 'orange'],
-                    dataNames: ['Hot', 'Warm'],
-                    xName: 'Day',
-                    tooltipWidth: 15,
-                    design: {
-                        tooltipColor: '#fff',
-                        gridColor: 'black',
-                        tooltipBoxColor: 'green',
-                        averageLineColor: 'blue',
+                    xaxis: {
+                        categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                        title: {
+                            text: 'Ventas_Semana'
+                        }
+                    },
+                    colors: ['#1caf9a', '#a1efe3'],
+                    legend: {
+                        position: 'top'
                     }
-                });
-                bar.init();
+                };
+
+                const chart1 = new ApexCharts(document.querySelector("#graph"), options1);
+                chart1.render();
+
+                // === SEGUNDO GRÁFICO ===
+                const options2 = {
+                    chart: {
+                        type: 'area',
+                        height: 400
+                    },
+                    series: [{
+                        name: 'Amount',
+                        data: [17, 33, 64, 22, 87, 45, 38, 33, 64, 22, 87, 45, 38, 33, 64, 22, 87, 45, 38]
+                    }],
+                    xaxis: {
+                        categories: [2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012],
+                        title: {
+                            text: 'Semana'
+                        }
+                    },
+                    colors: ['#f0ad4e'],
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        colors: ['#d9534f']
+                    },
+                    markers: {
+                        size: 5,
+                        colors: ['#d9534f']
+                    },
+                    tooltip: {
+                        style: {
+                            fontSize: '20px'
+                        }
+                    }
+                };
+
             });
+        </script>
+
         </script>
     </body>
 
