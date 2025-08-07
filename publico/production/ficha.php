@@ -122,30 +122,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-    function ventasMensuales($tipo, $mes)
-    {
-        global $conexion;
-        global $id;
-        $totalVentasDiarias = 0;
-        $totalGananciasDiarias = 0;
 
-        $query2222 = "SELECT * FROM orden WHERE fecha='$mes' AND status='$tipo'";
-        $buscarAlumnos2222 = $conexion->query($query2222);
-        if ($buscarAlumnos2222->num_rows > 0) {
-            while ($filaAlumnos2222 = $buscarAlumnos2222->fetch_assoc()) {
-                $idVenta = $filaAlumnos2222['id'];
-                if ($tipo == '4') {
-                    $por = $filaAlumnos2222['descontado'];
-                    $totalVentasDiarias += verificarProductoVenta($id, $idVenta) - (verificarProductoVenta($id, $idVenta) * $por / 100);
-                    $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, $por);
-                } else {
-                    $totalVentasDiarias += verificarProductoVenta($id, $idVenta);
-                    $totalGananciasDiarias += verificarProductoVentaGanancias($id, $idVenta, $tipo, 0);
-                }
-            }
-        }
-        return $totalVentasDiarias . '*' . $totalGananciasDiarias;
-    }
+
+
+
+
 
 
 
@@ -155,152 +136,147 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $query6 = $conexion->query("SELECT * FROM productos WHERE id='$idProducto'");
     if ($query6->num_rows > 0) {
         while ($row6 = $query6->fetch_assoc()) {
-
-            $cantidadUnidad = $row6["cantidad_unidades"];
-            $precioDolarCompra = $row6["precio_compra"] / $cantidadUnidad;
-            $porcentaje = $row6["porcentaje"];
-            $foto = $row6["foto"];
-            $codeProducto = $row6["codigo"];
-
-
-            $precioDolarVenta = ($precioDolarCompra * $porcentaje / 100) + $precioDolarCompra;
-            $porporpor = $precioDolarCompra * $porcentaje / 100;
-
-
-
-            $precioBsVentaAct = $precioDolarVenta * $dolarBolivar;
-            $precioPesoVenta =  $precioDolarVenta * $pesoDolar;
-
-
-            if ($foto == "SI") {
-                $imgProducto = '<img  class=" imgProducto" alt="Avatar" src="images/stock/' . $codeProducto . '.jpg" alt="">';
-            } else {
-                $imgProducto = '<img  class=" imgProducto" alt="Avatar" src="images/producto_base.png" alt="">';
-            }
-
-
-
-            $idcode = $row6["codigo"];
-            $idp = $row6["id"];
             $nombreP = $row6["nombre"];
-            $pCompra = $row6["precio_compra"] . " $";
-            $porcentajee = $row6["porcentaje"] . '%';
-            $diponible = $row6["stock"];
         }
     }
+
+
+
+
+    // Optimizado
+
+
+
+    function ventasMensualesAnual($tipo, $anio)
+    {
+        global $conexion, $id;
+        $resultados = [];
+
+        // Inicializar array de enero a diciembre
+        for ($mes = 1; $mes <= 12; $mes++) {
+            $mesKey = str_pad($mes, 2, '0', STR_PAD_LEFT);
+            $resultados[$mesKey] = ['ventas' => 0, 'ganancias' => 0];
+        }
+
+        // Buscar todas las órdenes del año y tipo
+        $inicio = "$anio-01";
+        $fin = "$anio-12";
+
+        $query = "SELECT id, fecha, descontado FROM orden 
+              WHERE fecha LIKE '$anio-%' AND status = ?";
+        $stmt = $conexion->prepare($query);
+        $stmt->bind_param('s', $tipo);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        while ($fila = $res->fetch_assoc()) {
+            $mes = substr($fila['fecha'], 5, 2);
+            $idVenta = $fila['id'];
+            $descuento = floatval($fila['descontado']);
+
+            $venta = verificarProductoVenta($id, $idVenta);
+            $ganancia = verificarProductoVentaGanancias($id, $idVenta, $tipo, $tipo == '4' ? $descuento : 0);
+
+            if ($tipo == '4') {
+                $venta = $venta - ($venta * $descuento / 100);
+            }
+
+            $resultados[$mes]['ventas'] += $venta;
+            $resultados[$mes]['ganancias'] += $ganancia;
+        }
+
+        return $resultados;
+    }
+
+
+    $datosDetal = ventasMensualesAnual('1', date('Y'));
+    $datosMayor = ventasMensualesAnual('4', date('Y'));
+
+    // Construir arrays de ganancias para los 12 meses
+    function obtenerSerieGanancia($datos)
+    {
+        $serie = [];
+        for ($mes = 1; $mes <= 12; $mes++) {
+            $mesKey = str_pad($mes, 2, '0', STR_PAD_LEFT);
+            $serie[] = round($datos[$mesKey]['ganancias'], 2);
+        }
+        return implode(',', $serie);
+    }
+
+    $mesActual = date('m');
+
+
+
+
+
+
+
 
 
     function ventasSemana($semana, $dia)
     {
         global $conexion;
-        $totalVentasMes0 = 0;
+        $total = 0;
 
-        $query0000 = "SELECT * FROM orden WHERE semana='$semana' AND dia='$dia' AND status='1' OR semana='$semana' AND dia='$dia' AND status='4'";
-        $buscarAlumnos0000 = $conexion->query($query0000);
-        if ($buscarAlumnos0000->num_rows > 0) {
-            while ($filaAlumnos0000 = $buscarAlumnos0000->fetch_assoc()) {
-                $VentasMes0 = $filaAlumnos0000['total_price'];
-                $totalVentasMes0 += $VentasMes0;
-            }
+        $query = "SELECT total_price FROM orden WHERE semana = ? AND dia = ? AND status IN (1, 4)";
+        $stmt = $conexion->prepare($query);
+        $stmt->bind_param('ss', $semana, $dia);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($fila = $result->fetch_assoc()) {
+            $total += floatval($fila['total_price']);
         }
-        if ($totalVentasMes0 == "") {
-            $totalVentasMes0 = "0";
-        }
-        return round($totalVentasMes0, 1, PHP_ROUND_HALF_DOWN);
+
+        return round($total, 1, PHP_ROUND_HALF_DOWN);
     }
 
-
-
-
-
-
-    function gananciasSemana($semana, $dia)
+    function mostrarVentaDesdeAnual($titulo, $datosAnuales, $mes)
     {
-        global $conexion;
-        $VentasSeA = 0;
-        $precioTotalA = 0;
+        $mesKey = str_pad($mes, 2, '0', STR_PAD_LEFT);
+        $ventas = $datosAnuales[$mesKey]['ventas'] ?? 0;
+        $ganancias = $datosAnuales[$mesKey]['ganancias'] ?? 0;
 
-        $queryAAAAA3 = "SELECT * FROM orden WHERE semana='$semana' AND dia='$dia' AND status='1' OR semana='$semana' AND dia='$dia' AND status='4'";
-        $buscarAlumnosAAAAA3 = $conexion->query($queryAAAAA3);
-        if ($buscarAlumnosAAAAA3->num_rows > 0) {
-            while ($filaAlumnosAAAAA3 = $buscarAlumnosAAAAA3->fetch_assoc()) {
-                $VentaA = $filaAlumnosAAAAA3['id'];
-                $VentasSeA += $filaAlumnosAAAAA3['total_price'];
-                $queryAAAAAA33 = "SELECT * FROM orden_articulos WHERE order_id='$VentaA'";
-                $buscarAlumnosAAAAAA33 = $conexion->query($queryAAAAAA33);
-                if ($buscarAlumnosAAAAAA33->num_rows > 0) {
-                    while ($filaAlumnosAAAAAA33 = $buscarAlumnosAAAAAA33->fetch_assoc()) {
-                        $VentaPrductoA = $filaAlumnosAAAAAA33['product_id'];
-                        $quantityA = $filaAlumnosAAAAAA33['quantity'];
+        $ventasFormatted = number_format($ventas, 2, '.', '.');
+        $gananciasFormatted = number_format($ganancias, 2, '.', '.');
 
-                        $precioPrductoA = number_format($filaAlumnosAAAAAA33['precio'], '2', '.', '.');
-                        $precioNetoA = $precioPrductoA * $quantityA;
-                        $precioTotalA += $precioNetoA;
-                    }
-                }
-                $gananciasANO = $VentasSeA - $precioTotalA;
-            }
-        }
-        if ($gananciasANO == "") {
-            $gananciasANO = "0";
-        }
-        return round($gananciasANO, 2, PHP_ROUND_HALF_DOWN);
+        echo <<<HTML
+        <div class="animated flipInY col-lg-2">
+            <div class="tile-stats" style="text-align:center">
+                <div>
+                    <div class="count count33">{$ventasFormatted}$</div>
+                    <span class="tagGanancias">{$gananciasFormatted}$</span>
+                    <h3 class="h3ini h3edit">{$titulo}</h3>
+                </div>
+            </div>
+        </div>
+        HTML;
     }
 
+    function mostrarVenta($titulo, $funcion, $param1, $param2 = null)
+    {
+        $resultado = $param2 ? $funcion($param1, $param2) : $funcion($param1);
+        [$monto, $ganancia] = explode('*', $resultado);
+        $monto = number_format($monto, 2, '.', '.');
+        $ganancia = number_format($ganancia, 2, '.', '.');
 
-
-
-
-
-
-
-
-
-
-
-
-    $ultimaScala = 10;
-    for ($i = 1; $i <= 7; $i++) {
-        if (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 1000) {
-            $scala = 200;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 900) {
-            $scala = 100;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 800) {
-            $scala = 90;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 700) {
-            $scala = 80;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 600) {
-            $scala = 70;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 500) {
-            $scala = 60;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 400) {
-            $scala = 50;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 300) {
-            $scala = 40;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 200) {
-            $scala = 30;
-        } elseif (explode('*', ventasMensuales('1', date('Y') . '-' . $i))[1] > 100) {
-            $scala = 20;
-        } else {
-            $scala = 10;
-        }
-
-        if ($ultimaScala <= $scala) {
-            $ultimaScala = $scala;
-        }
+        echo <<<HTML
+        <div class="animated flipInY col-lg-2">
+            <div class="tile-stats" style="text-align:center">
+                <div>
+                    <div class="count count33">{$monto}$</div>
+                    <span class="tagGanancias">{$ganancia}$</span>
+                    <h3 class="h3ini h3edit">{$titulo}</h3>
+                </div>
+            </div>
+        </div>
+        HTML;
     }
-
-    $scala = $ultimaScala;
-
-
-
-
-
 
 
 ?>
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="es">
 
     <head>
         <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
@@ -313,74 +289,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <title>Producto</title>
         <?php require_once('includes/headers.php'); ?>
 
-        <style>
-            .gray {
-                color: rgba(52, 73, 94, 0.94);
-                font-size: 24px;
-
-
-            }
-
-            .fav {
-                color: #1ABB9C;
-                font-size: 24px;
-
-
-            }
-
-            .nofav {
-                color: lightgray;
-                font-size: 24px;
-
-
-            }
-
-            .right_col {
-                min-height: 100% !important;
-            }
-
-
-            .right {
-                font-size: 28px;
-                float: right;
-            }
-
-            .color {
-                background-color: whitesmoke;
-                border: 1px solid lightgray;
-                opacity: 0.5;
-                margin-bottom: 80px;
-            }
-
-            .color:hover {
-                background-color: whitesmoke;
-                border: 1px solid lightgray;
-                opacity: 1;
-            }
-
-            .title {
-                text-align: center;
-                font-size: 28px;
-                margin-bottom: 18px;
-            }
-
-            .title2 {
-                font-family: 'Kaushan Script', cursive;
-                text-align: center;
-                font-size: 62px;
-            }
-
-            .style {
-                margin-left: 10%;
-                height: 470px !important;
-                width: 80% !important;
-            }
-
-            table.jambo_table thead {
-                background: #32d7c1;
-                color: #ffffff;
-            }
-        </style>
 
 
     </head>
@@ -404,74 +312,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         <div class='row'>
 
-                            <div class="animated flipInY col-lg-2">
-                                <div class="tile-stats" style="text-align:center">
-                                    <div>
-                                        <div class="count count3"><?php echo number_format(explode('*', ventasDiarias('4'))[0], '2', '.', '.'); ?>$</div>
-                                        <span class="tagGanancias"><?php echo number_format(explode('*', ventasDiarias('4'))[1], '2', '.', '.'); ?>$</span>
-                                        <h3 class="h3ini h3edit">Ventas al mayor del dia</h3>
-                                    </div>
-                                </div>
-                            </div>
+                            <?php
+                            mostrarVenta('Ventas al mayor del dia', 'ventasDiarias', '4');
+                            mostrarVenta('Ventas al mayor de la semana', 'ventasSemanales', '4');
+                            mostrarVentaDesdeAnual('Ventas al mayor del mes', $datosMayor, $mesActual);
 
-
-                            <div class="animated flipInY col-lg-2">
-                                <div class="tile-stats" style="text-align:center">
-                                    <div>
-                                        <div class="count count33"><?php echo number_format(explode('*', ventasSemanales('4'))[0], '2', '.', '.'); ?>$</div>
-                                        <span class="tagGanancias"><?php echo number_format(explode('*', ventasSemanales('4'))[1], '2', '.', '.'); ?>$</span>
-                                        <h3 class="h3ini h3edit">Ventas al mayor de la semana</h3>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="animated flipInY col-lg-2">
-                                <div class="tile-stats" style="text-align:center">
-                                    <div>
-                                        <div class="count count33"><?php echo number_format(explode('*', ventasMensuales('4',  date('Y-m')))[0], '2', '.', '.'); ?>$</div>
-                                        <span class="tagGanancias"><?php echo number_format(explode('*', ventasMensuales('4',  date('Y-m')))[1], '2', '.', '.'); ?>$</span>
-                                        <h3 class="h3ini h3edit">Ventas al mayor del mes</h3>
-                                    </div>
-                                </div>
-                            </div>
-
-
-
-
-                            <div class="animated flipInY col-lg-2">
-                                <div class="tile-stats" style="text-align:center">
-                                    <div>
-                                        <div class="count count33"><?php echo number_format(explode('*', ventasDiarias('1'))[0], '2', '.', '.'); ?>$</div>
-                                        <span class="tagGanancias"><?php echo number_format(explode('*', ventasDiarias('1'))[1], '2', '.', '.'); ?>$</span>
-                                        <h3 class="h3ini h3edit">Ventas al detal del dia</h3>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="animated flipInY col-lg-2">
-                                <div class="tile-stats" style="text-align:center">
-                                    <div>
-                                        <div class="count count33"><?php echo number_format(explode('*', ventasSemanales('1'))[0], '2', '.', '.'); ?>$</div>
-                                        <span class="tagGanancias"><?php echo number_format(explode('*', ventasSemanales('1'))[1], '2', '.', '.'); ?>$</span>
-                                        <h3 class="h3ini h3edit">Ventas al detal de la semana</h3>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="animated flipInY col-lg-2">
-                                <div class="tile-stats" style="text-align:center">
-                                    <div>
-                                        <div class="count count33"><?php echo number_format(explode('*', ventasMensuales('1',  date('Y-m')))[0], '2', '.', '.'); ?>$</div>
-                                        <span class="tagGanancias"><?php echo number_format(explode('*', ventasMensuales('1',  date('Y-m')))[1], '2', '.', '.'); ?>$</span>
-                                        <h3 class="h3ini h3edit">Ventas al detal del mes</h3>
-                                    </div>
-                                </div>
-                            </div>
+                            mostrarVenta('Ventas al detal del dia', 'ventasDiarias', '1');
+                            mostrarVenta('Ventas al detal de la semana', 'ventasSemanales', '1');
+                            mostrarVentaDesdeAnual('Ventas al detal del mes', $datosDetal, $mesActual);
+                            ?>
 
                         </div>
-
-
-
 
 
 
@@ -502,7 +353,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         <div class="row">
 
-                            <div class="col-lg-12">
+                            <div class="col-lg-12" style="display: none;">
 
                                 <div class='x_panel tile '>
                                     <div class='x_title'>
@@ -666,106 +517,44 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             //new Date().getFullYear()
 
 
+            /*     document.addEventListener("DOMContentLoaded", function() {
+                     const options1 = {
+                         chart: {
+                             type: 'bar',
+                             height: 350
+                         },
+                         theme: {
+                             mode: 'dark'
+                         },
+                         tooltip: {
+                             theme: 'dark'
+                         },
+                         series: [{
+                                 name: 'Detal (G)',
+                                 data: [<?php // echo obtenerSerieGanancia($datosDetal); 
+                                        ?>]
+                             },
+                             {
+                                 name: 'Mayor (G)',
+                                 data: [<?php // echo obtenerSerieGanancia($datosMayor); 
+                                        ?>]
+                             }
+                         ],
+                         xaxis: {
+                             categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                             title: {
+                                 text: 'Ventas_Mensuales'
+                             }
+                         },
+                         colors: ['#1caf9a', '#a1efe3'],
+                         legend: {
+                             position: 'top'
+                         }
+                     };
 
-            document.addEventListener("DOMContentLoaded", function() {
-                // === PRIMER GRÁFICO ===
-                const options1 = {
-                    chart: {
-                        type: 'bar',
-                        height: 350
-                    },
-                    theme: {
-                        mode: 'dark' // 👈 Aplica texto y ejes oscuros
-                    },
-                    tooltip: {
-                        theme: 'dark'
-                    },
-                    series: [{
-                            name: 'Detal (G)',
-                            data: [
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-01'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-02'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-03'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-04'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-05'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-06'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-07'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-08'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-09'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-10'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-11'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('1', date('Y') . '-12'))[1]  ?>
-                            ]
-                        },
-                        {
-                            name: 'Mayor (G)',
-                            data: [
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-01'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-02'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-03'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-04'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-05'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-06'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-07'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-08'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-09'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-10'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-11'))[1]  ?>,
-                                <?php echo  explode('*', ventasMensuales('4', date('Y') . '-12'))[1]  ?>
-                            ]
-                        }
-                    ],
-                    xaxis: {
-                        categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-                        title: {
-                            text: 'Ventas_Semana'
-                        }
-                    },
-                    colors: ['#1caf9a', '#a1efe3'],
-                    legend: {
-                        position: 'top'
-                    }
-                };
-
-                const chart1 = new ApexCharts(document.querySelector("#graph"), options1);
-                chart1.render();
-
-                // === SEGUNDO GRÁFICO ===
-                const options2 = {
-                    chart: {
-                        type: 'area',
-                        height: 400
-                    },
-                    series: [{
-                        name: 'Amount',
-                        data: [17, 33, 64, 22, 87, 45, 38, 33, 64, 22, 87, 45, 38, 33, 64, 22, 87, 45, 38]
-                    }],
-                    xaxis: {
-                        categories: [2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012],
-                        title: {
-                            text: 'Semana'
-                        }
-                    },
-                    colors: ['#f0ad4e'],
-                    dataLabels: {
-                        enabled: false
-                    },
-                    stroke: {
-                        curve: 'smooth',
-                        colors: ['#d9534f']
-                    },
-                    markers: {
-                        size: 5,
-                        colors: ['#d9534f']
-                    },
-                    tooltip: {
-                        style: {
-                            fontSize: '20px'
-                        }
-                    }
-                };
-
-            });
+                     const chart = new ApexCharts(document.querySelector("#graph"), options1);
+                     chart.render();
+                 });*/
         </script>
 
         </script>

@@ -19,80 +19,128 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <title>Control de Creditos</title>
     <?php require_once('includes/headers.php'); ?>
-
-    <?php
-
-    switch (@$_GET['accion']) {
-      case ('pagado'):
-        echo '<script>
-          function mensajeVenta(){	
-          alertify.success("Credito cancelado correctamente");  }
-                </script>
-                <body onload="mensajeVenta()">
-                </body>';
-        break;
-    }
-
-
-
-
-    ?>
-
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
   </head>
 
   <body class="nav-md">
     <div class="container body">
       <div class="main_container">
-        
-            <?php echo $menu ?>
-        
+
+        <?php echo $menu ?>
+
         <!-- top navigation -->
         <?php echo $topnav ?>
         <!-- /top navigation -->
         <!-- page content -->
         <div class="right_col" role="main">
           <div class="">
-            <h4>Creditos</h4>
-            <p style="margin-top: -10px;">Listado de creditos otorgados</p>
-            <div class="clearfix"></div>
+            <div class="mb-3 d-flex justify-content-between">
+              <div>
+                <h4>Creditos</h4>
+                <p style="margin-top: -10px;">Listado de creditos otorgados</p>
+              </div>
+              <div>
+                <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pills-home-tab" data-bs-toggle="pill" data-bs-target="#pills-home" type="button" role="tab" aria-controls="pills-home" aria-selected="true">Creditos otorgados
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pills-profile-tab" data-bs-toggle="pill" data-bs-target="#pills-profile" type="button" role="tab" aria-controls="pills-profile" aria-selected="false">Deuda total y abonos</button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+
+
             <div class="row" style="display: block;">
               <div class="col-lg-12">
-                <div class="x_panel  fadeInUp animated">
-                  <div class="x_title">
-                    <h2>Creditos</h2>
-
-                    <div class="clearfix"></div>
-                  </div>
-                  <div class="x_content">
-                    <div class="row">
-                      <div class="col-lg-12">
-                        <div class="card-box table-responsive">
-
-                          <table id="tabla-creditos" class="table table-bordered" style="width:100%">
-                            <thead>
-                              <tr class="headings">
-                                <th class="column-title">#</th>
-                                <th class="column-title">Producto</th>
-                                <th class="column-title text-center">Valor ($)</th>
-                                <th class="column-title text-center">Valor (COP)</th>
-                                <th class="column-title text-center">Valor (BS)</th>
-                                <th class="column-title text-center">Pagar</th>
-                              </tr>
-                            </thead>
-
-                            <tbody>
-
-                            </tbody>
-                          </table>
 
 
+                <div class="tab-content" id="pills-tabContent">
+                  <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
+                    <div class="x_panel  fadeInUp animated">
+                      <div class="x_title">
+                        <h2>Creditos otorgados</h2>
 
+                        <div class="clearfix"></div>
+                      </div>
+                      <div class="x_content">
+                        <div class="row">
+                          <div class="col-lg-12">
+                            <div class="card-box table-responsive">
+
+                              <table id="tabla-creditos" class="table table-bordered" style="width:100%">
+                                <thead>
+                                  <tr class="headings">
+                                    <th class="column-title">#</th>
+                                    <th class="column-title">Producto</th>
+                                    <th class="column-title text-center">Valor ($)</th>
+                                    <th class="column-title text-center">Valor (COP)</th>
+                                    <th class="column-title text-center">Valor (BS)</th>
+                                    <th class="column-title text-center">Pagar</th>
+                                  </tr>
+                                </thead>
+
+                                <tbody>
+
+                                </tbody>
+                              </table>
+
+
+
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                  </div>
+                  <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
+                    <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
+                      <div class="x_panel  fadeInUp animated">
+                        <div class="x_title">
+                          <h2>Deuda total y abonos</h2>
+
+                          <div class="clearfix"></div>
+                        </div>
+                        <div class="x_content">
+                          <div class="row">
+                            <div class="col-lg-12">
+                              <div class="card-box table-responsive">
+
+                                <table id="tabla-abonos" class="table table-bordered" style="width:100%">
+                                  <thead>
+                                    <tr class="headings">
+                                      <th class="column-title">#</th>
+                                      <th class="column-title">Producto</th>
+                                      <th class="column-title text-center">Valor ($)</th>
+                                      <th class="column-title text-center">Valor (COP)</th>
+                                      <th class="column-title text-center">Valor (BS)</th>
+                                      <th class="column-title text-center">Pagar</th>
+                                    </tr>
+                                  </thead>
+
+                                  <tbody>
+
+                                  </tbody>
+                                </table>
+
+
+
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
+
+
+
               </div>
             </div>
           </div>
@@ -105,17 +153,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <!-- Bootstrap -->
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- DataTables core -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <!-- Buttons extension -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <!-- PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="../build/js/custom.js"></script>
 
 
@@ -135,6 +175,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             body: `cliente=${encodeURIComponent(cliente)}`
           });
 
+          console.log(res)
           if (!res.ok) throw new Error('Error al obtener datos');
           const data = await res.json();
           // Limpia el tbody
@@ -196,35 +237,108 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             </button>
           </td>
         </tr>
-      `);
+          `);
           });
 
           // 3. Fila totales globales
           const tg = data.totales_global;
           tbody.insertAdjacentHTML('beforeend', `
-      <tr style="background-color: rgba(0,0,0,.2);">
-        <td colspan="2">DEUDA TOTAL:</td>
-        <td class="text-center"><b>${tg.usd.toFixed(2)} <small>$</small></b></td>
-        <td class="text-center"><b>${tg.cop.toLocaleString('es-CO')} <small>Cop</small></b></td>
-        <td class="text-center"><b>${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></b></td>
-        <td></td>
-      </tr>
-    `);
+          <tr style="background-color: rgba(0,0,0,.2);">
+            <td colspan="2">DEUDA TOTAL:</td>
+            <td class="text-center"><b>${tg.usd.toFixed(2)} <small>$</small></b></td>
+            <td class="text-center"><b>${tg.cop.toLocaleString('es-CO')} <small>Cop</small></b></td>
+            <td class="text-center"><b>${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></b></td>
+            <td></td>
+          </tr>
+        `);
 
         } catch (error) {
           console.error(error);
           tbody.innerHTML = `
-      <tr><td colspan="6" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>
-    `;
+          <tr><td colspan="6" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>
+        `;
         }
       }
 
-      /* Ejecuta al cargar la página (o según tu framework) */
-      document.addEventListener('DOMContentLoaded', cargarCreditos);
 
       // cargar tabla
+      async function cargarDeuda() {
+        const tbody = document.querySelector('#tabla-abonos tbody');
+        if (!tbody) return;
 
+        try {
+          const res = await fetch('../../configurar/creditos_por_cliente_total_abonado.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `cliente=${encodeURIComponent(cliente)}`
+          });
 
+          if (!res.ok) throw new Error('Error al obtener datos');
+          const data = await res.json();
+
+          // Limpia el tbody
+          tbody.innerHTML = '';
+
+          const productos = data.productos || [];
+
+          if (productos.length === 0) {
+            window.location.href = 'creditos.php';
+            return;
+          }
+
+          // Recorre productos uno por uno
+          productos.forEach(prod => {
+            const {
+              nombre,
+              precio_dolar,
+              precio_peso,
+              precio_bs,
+              cantidad,
+              total_usd,
+              total_cop,
+              total_bs
+            } = prod;
+
+            tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${prod.codigo}</td>
+          <td>${nombre}</td>
+          <td class="text-center">${total_usd.toFixed(2)} <small>$</small></td>
+          <td class="text-center">${total_cop.toLocaleString('es-CO')} <small>Cop</small></td>
+          <td class="text-center">${total_bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></td>
+          <td class="text-center">${cantidad}</td>
+        </tr>
+         `);
+          });
+
+          // Fila de totales globales
+          const tg = data.deuda_restante;
+          tbody.insertAdjacentHTML('beforeend', `
+          <tr style="background-color: rgba(0,0,0,.2);">
+            <td colspan="2"><b>DEUDA TOTAL:</b></td>
+            <td class="text-center"><b>${tg.usd.toFixed(2)} <small>$</small></b></td>
+            <td class="text-center"><b>${tg.cop.toLocaleString('es-CO')} <small>Cop</small></b></td>
+            <td class="text-center"><b>${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></b></td>
+            <td></td>
+          </tr>
+        `);
+
+        } catch (error) {
+          console.error(error);
+          tbody.innerHTML = `
+          <tr><td colspan="6" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>
+        `;
+        }
+      }
+
+      // Finalizar cargar tablas
+
+      document.addEventListener('DOMContentLoaded', cargarCreditos);
+      //      document.addEventListener('DOMContentLoaded', cargarDeuda);
+
+      // cargar tabla
 
       const opcionesPago = `
                     <select id="metodoPago" class="form-control">
@@ -249,12 +363,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           const precioBsVenta = elemento.getAttribute('data-precioBsVenta')
           const tipoCompra = elemento.getAttribute('data-tipoCompra')
 
+          console.log(data_id_credito)
+          console.log(data_id)
+          console.log(precioPesoVenta)
+          console.log(precioBsVenta)
+          console.log(tipoCompra)
+          return
+
+
           pagar(data_id_credito, data_id, precioPesoVenta, precioBsVenta, tipoCompra);
         }
 
       });
-
-
 
 
       function pagar(credito, compra, precioPesoVenta, precioBsVenta, tipoCompra) {
