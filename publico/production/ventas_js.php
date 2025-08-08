@@ -105,8 +105,6 @@ if ($result->num_rows > 0) {
         /* PRODUCTOS PARA LA BUSQUEDA */
 
 
-
-
         //  PARA LA BUSQUEDA POR CODIGO DE BARRA
         if (strlen($codigo) > 5) {
 
@@ -114,6 +112,7 @@ if ($result->num_rows > 0) {
             $data[trim($codigo)] = [
                 'id' => $row['id'],
                 'stock' => $row['stock'],
+                'codigo' => trim($codigo),
                 'nombre' => $nombre,
                 'precio_dolar_visible' => $precios['precio_venta_dolar'],
                 'precio_peso_visible' => $precios['precio_venta_peso'],
@@ -149,23 +148,7 @@ echo '</pre>';
     <link rel="stylesheet" href="theme.css">
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 </head>
-<script>
-    var productos = <?php echo json_encode($data); ?>;
-    var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
-    var codigos = []
 
-
-
-
-
-    <?php
-
-    foreach ($codigos as  $value) {
-        echo 'codigos.push("' . trim($value) . '");';
-    }
-
-    ?>
-</script>
 
 
 <style>
@@ -330,7 +313,7 @@ echo '</pre>';
             <div class="right_col h-100" role='main'>
                 <div class=''>
 
-                    <h4 class="mb-0">Ventas</h4>
+                    <h4 class="mb-0 text-danger">Ventas</h4>
                     <p>Caja de despacho</p>
 
                     <div class="row ">
@@ -394,7 +377,7 @@ echo '</pre>';
                                             ?>
 
 
-                                            <a onclick="destroy_cart()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
+                                            <a onclick="vaciarCarritoJs()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
                                             <button class="btn btn-light" id="calcularVuelto">(C) Calcular cambio</button>
                                             <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
                                             <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">(V) Vender</button>
@@ -457,12 +440,19 @@ echo '</pre>';
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
         <!-- FastClick -->
         <script>
+            var productos = <?php echo json_encode($data); ?>;
+            var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
+            var codigos = []
+
+
+
             const base_url = '../../configurar/';
             const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
             const sucursal_i = <?php echo json_encode($sucursal) ?>;
 
 
             /* buscador de productos */
+            const codigos_indexados = Object.values(productos);
             const productos_indexados = Object.values(productos_por_id);
 
             // Instanciar Fuse con configuración mínima y precisa
@@ -474,8 +464,18 @@ echo '</pre>';
                 useExtendedSearch: false // Acelera búsqueda si no usas operadores especiales
             });
 
+
+            const fuseCodigos = new Fuse(codigos_indexados, {
+                keys: ['codigo'], // Puedes incluir 'codigo' si deseas buscar también por él
+                threshold: 0, // 0.1 puede ser demasiado estricto para nombres incompletos
+                ignoreLocation: false, // Permite coincidencias en cualquier parte del string
+                includeScore: false, // No necesitas el score si solo devuelves los ítems
+                useExtendedSearch: true // Acelera búsqueda si no usas operadores especiales
+            });
+
             // Función de búsqueda rápida y limpia
-            const buscarConFuse = termino => fuse.search(termino).map(r => r.item);
+            const buscarConFuse = termino => fuse.search(`=${termino}`).map(r => r.item);
+            const buscarCodigoFuse = codigo => fuseCodigos.search(codigo).map(r => r.item);
 
             /* buscador de productos */
 
@@ -661,27 +661,27 @@ echo '</pre>';
 
 
             // Destruir carrito
-            function destroy_cart() {
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: "Esta acción vaciará tu carrito.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, vaciar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        fetch(base_url + "cart-destroy.php")
-                            .then(response => {
-                                actualizar_carrito()
-                            })
-                            .catch(error => {
-                                console.error("Error en la solicitud:", error);
-                                Swal.fire('Error', 'Ocurrió un problema al vaciar el carrito.', 'error');
-                            });
-                    }
-                });
-            }
+            /*   function destroy_cart() {
+                   Swal.fire({
+                       title: '¿Estás seguro?',
+                       text: "Esta acción vaciará tu carrito.",
+                       icon: 'warning',
+                       showCancelButton: true,
+                       confirmButtonText: 'Sí, vaciar',
+                       cancelButtonText: 'Cancelar'
+                   }).then((result) => {
+                       if (result.isConfirmed) {
+                           fetch(base_url + "cart-destroy.php")
+                               .then(response => {
+                                   actualizar_carrito()
+                               })
+                               .catch(error => {
+                                   console.error("Error en la solicitud:", error);
+                                   Swal.fire('Error', 'Ocurrió un problema al vaciar el carrito.', 'error');
+                               });
+                       }
+                   });
+               }*/
             // Destruir carrito
 
 
@@ -844,83 +844,6 @@ echo '</pre>';
 
 
 
-
-
-            /* 
-            ACTUALIZAR CARRITO
-               Gestiona el carrito y actualiza las cantidades de productos
-            */
-
-            function actualizar_carrito(id = null, accion = null, add = null) {
-                $.ajax({
-                        url: id && accion ? base_url + 'cantidades.php' : base_url + 'carrito.php',
-                        type: 'POST',
-                        data: id && accion ? {
-                            id,
-                            accion
-                        } : {},
-                        dataType: 'html'
-                    })
-                    .done(function(result) {
-                        //     console.log(result)
-                        total_pesos = 0
-                        total_dolares = 0
-                        total_bolivares = 0
-
-                        if (add == "add") {
-                            Alerta.toast('success', 'Agregado correctamte')
-                        }
-                        const resultado = JSON.parse(result);
-                        $("#tabla-carrito tbody").html('');
-                        $("#tabla-carrito tfoot").html('');
-                        if (resultado.cantidad > 0) {
-                            resultado.carrito.forEach(element => {
-                                $("#tabla-carrito tbody").append(`
-                                <tr>
-                                    <td style="width:5%; text-align: center" class="ac-c">${element.cantidad}</td>
-                                    <td style="width:30%" class="ac-c">${element.nombre}</td>
-                                    <td style="width:20%" class="ac-c">${element.subtotalPeso} P</td>
-                                    <td style="width:20%" class="ac-c">${formatNumber(element.subtotalBolivar)} Bs</td>
-                                    <td style="width:10%" class="ac-c">$${formatNumber(element.subtotalDolar)}</td>
-                                    <td style="width:10%" class="ac-c">
-                                             <button class="btn btn-sm btn-outline-success" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
-                                    </td>
-                                </tr>`);
-                            });
-
-                            total_pesos = parseFloat(resultado.total.pesos);
-                            total_dolares = parseFloat(resultado.total.dolares);
-                            total_bolivares = parseFloat(resultado.total.bolivares);
-
-                            $("#tabla-carrito tfoot").html(`
-                                    <tr >
-                                        <td style="padding-top: 0.5rem !important; width:5%"></td>
-                                        <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
-                                        <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
-                                        <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-bolivar" class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
-                                        <td style="padding-top: 0.5rem !important; width:10%" id="precio-total-dolar" class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
-                                        <td style="padding-top: 0.5rem !important; width:10%"></td>
-                                    </tr>
-                                    `);
-
-                            $('#botones_acciones').removeClass('hide');
-                        } else {
-                            $('#botones_acciones').addClass('hide');
-                        }
-                        $('[data-toggle="popover"]').popover({
-                            html: true
-                        });
-
-                    });
-            }
-            actualizar_carrito()
-
-            // ACTUALIZAR CARRITO
-
-
-
             function calcularVuelto() {
                 if (total_dolares == 0) return;
 
@@ -1065,24 +988,23 @@ echo '</pre>';
 
 
 
-
-
-
-            // Cargar lista de productos
+            // Se usa para el modo lector
             function buscarProducto(lectura, modo) {
-                if (modo == 2) {
-                    const codigo = lectura.trim();
+                const codigo = parseFloat(lectura.trim().replace(/[^0-9]/g, '')); // Eliminar caracteres no numéricos
 
-                    if (!productos[codigo]) {
-                        Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
-                        return
-                    } else {
-                        const datos = productos[lectura.trim()];
-                        $('.section-scanner').removeClass('hide');
+                const resultado = buscarCodigoFuse(codigo)
 
-                        // Construir solo las tasas visibles según tasasMostrar
 
-                        $("#result-escaner").append(`
+                if (resultado.length > 0) {
+                    Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
+                    return
+                } else {
+                    const datos = productos[lectura.trim()];
+                    $('.section-scanner').removeClass('hide');
+
+                    // Construir solo las tasas visibles según tasasMostrar
+
+                    $("#result-escaner").append(`
                                     <div class="row">
                                         <div class="col-lg-4 ac-c">
                                             [${datos.stock}] <b>${datos.nombre}</b>
@@ -1112,39 +1034,12 @@ echo '</pre>';
                                     </div>
                                 `);
 
-                        setTimeout(() => {
-                            $(`#btn_${datos.id}`).removeClass('no-send');
-                        }, 500);
-                        ultimo_escaneado = datos.id;
-                    }
-
-                } else {
-                    $.ajax({
-                            url: base_url + 'consulta_producto.php',
-                            type: 'POST',
-                            dataType: 'html',
-                            data: {
-                                producto: lectura,
-                                modo: modo
-                            },
-                        })
-                        .done(function(result) {
-
-                            const resultado = JSON.parse(result);
-
-                            console.log(resultado)
-
-                            return
-                            if (resultado.status == 'error' && resultado.mensaje == 'Sucursal no especificada.') {
-                                Alerta.toast('error', 'No se ha especificado ninguna sucursal')
-                                return
-                            }
-                            if (modo == 1) {
-                                $("#tabla_resultado_codigo_producto").html('');
-                                representarResultado(resultado)
-                            }
-                        });
+                    setTimeout(() => {
+                        $(`#btn_${datos.id}`).removeClass('no-send');
+                    }, 900);
+                    ultimo_escaneado = datos.id;
                 }
+
             }
 
 
@@ -1253,17 +1148,15 @@ echo '</pre>';
                         </div>
                         `
                 }
-                //here
             })
 
-            // HERE
+
             $(document).on('keyup', '#search', function() {
                 var nombreProducto = $(this).val();
                 if (nombreProducto.length > 2) {
 
                     let resultados = buscarConFuse(nombreProducto)
                     representarResultado(resultados)
-                    // buscarProducto(nombreProducto, 1);
 
 
                 } else {
@@ -1277,7 +1170,7 @@ echo '</pre>';
 
 
 
-            function addtocar(id, codigo, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+            function addtocar(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
 
 
 
@@ -1296,7 +1189,6 @@ echo '</pre>';
                         data: {
                             action: 'addToCart',
                             id: id,
-                            codigo: codigo,
                             dolarventa: dolarventa_p,
                             pesoventa: peso,
                             bolivarventa: bolivarventa_p,
@@ -1306,7 +1198,7 @@ echo '</pre>';
                     .done(function(result) {
 
 
-                        actualizar_carrito(null, null, 'add')
+                        actualizar_carrito()
                         $("#tabla_resultado_codigo_producto").html('');
                         if (modo == 1) {
                             $("#search").val('');
@@ -1315,10 +1207,294 @@ echo '</pre>';
             }
 
 
+
+            /* ** CARRITO DE COMPRAS CON JS */
+            var carritoActivo = JSON.parse(localStorage.getItem('carritoActivo')) || {};
+
+
+            // Agregar un producto al carrito
+            function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+                // Seleccionar el input usando el valor de data-cantidad-id
+                const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
+                let cant = inputCantidad ? parseFloat(inputCantidad.value) : 1;
+                if (cantidad_scann != null) {
+                    cant = parseFloat(cantidad_scann);
+                }
+
+                // Validar que el producto existe en productos_por_id
+                if (!productos_por_id[id]) {
+                    console.error(`Producto con ID ${id} no encontrado.`);
+                    return;
+                }
+
+                const producto = productos_por_id[id];
+
+                // Si ya existe en el carrito, sumar cantidad
+                if (carritoActivo[id]) {
+                    carritoActivo[id].qty += cant;
+                } else {
+                    // Si no existe, crearlo
+                    carritoActivo[id] = {
+                        id: producto.id,
+                        name: producto.nombre,
+                        price_C: parseFloat(producto.precio_dolar_visible),
+                        price_C_Bs: parseFloat(producto.precio_bs_visible),
+                        price_C_Cop: parseFloat(producto.precio_peso_visible),
+                        price: parseFloat(dolarventa_p),
+                        pricePeso: parseFloat(pesoventa_p),
+                        priceBolivar: parseFloat(bolivarventa_p),
+                        qty: cant,
+                        mayor: mayor,
+                        cantidadPaca: 1 // valor por defecto
+                    };
+                }
+
+                // Guardar en localStorage
+                localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
+                actualizarCarritoJs()
+                console.log(carritoActivo);
+            }
+
+            function vaciarCarritoJs() {
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: "Esta acción vaciará tu carrito.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, vaciar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        localStorage.removeItem('carritoActivo');
+                        carritoActivo = {};
+                        actualizarCarritoJs();
+                        Alerta.toast('success', 'Carrito vaciado correctamente');
+                    }
+                });
+            }
+
+
+            // Actualizar la vista del carrito
+            function actualizarCarritoJs(id = null, accion = null) {
+
+                // Si hay una acción sobre un producto
+                if (id && accion) {
+                    if (carritoActivo[id]) {
+                        if (accion === 'sumar') {
+                            carritoActivo[id].qty += 1;
+                        } else if (accion === 'restar') {
+                            carritoActivo[id].qty -= 1;
+                            if (carritoActivo[id].qty <= 0) {
+                                delete carritoActivo[id];
+                            }
+                        }
+                    }
+                    localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
+                }
+
+                // Reset de totales
+                total_pesos = 0
+                total_dolares = 0
+                total_bolivares = 0
+
+
+                // Limpiar tabla
+                $("#tabla-carrito tbody").html('');
+                $("#tabla-carrito tfoot").html('');
+
+                // Convertir carrito en array para iterar
+                const items = Object.values(carritoActivo);
+
+                if (items.length > 0) {
+                    items.forEach(element => {
+                        let subtotalPeso = element.pricePeso * element.qty;
+                        let subtotalBolivar = element.priceBolivar * element.qty;
+                        let subtotalDolar = element.price * element.qty;
+
+                        $("#tabla-carrito tbody").append(`
+                        <tr>
+                            <td style="width:5%; text-align: center" class="ac-c">${element.qty}</td>
+                            <td style="width:30%" class="ac-c">${element.name}</td>
+                            <td style="width:20%" class="ac-c">${formatNumber(formatPeso(subtotalPeso))} P</td>
+                            <td style="width:20%" class="ac-c">${formatNumber(subtotalBolivar)} Bs</td>
+                            <td style="width:10%" class="ac-c">$${formatNumber(subtotalDolar)}</td>
+                            <td style="width:10%" class="ac-c">
+                                <button class="btn btn-sm btn-outline-success" onclick="actualizarCarritoJs('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="actualizarCarritoJs('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="quitarProductoJs('${element.id}')"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                        </tr>
+                        `);
+
+                        total_pesos += subtotalPeso;
+                        total_dolares += subtotalDolar;
+                        total_bolivares += subtotalBolivar;
+                    });
+
+                    $("#tabla-carrito tfoot").html(`
+                        <tr>
+                            <td style="padding-top: 0.5rem !important; width:5%"></td>
+                            <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
+                            <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(total_pesos))} P</td>
+                            <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-bolivar" class="text-total text-danger">${formatNumber(total_bolivares)} Bs</td>
+                            <td style="padding-top: 0.5rem !important; width:10%" id="precio-total-dolar" class="text-total text-success">$${formatNumber(total_dolares)}</td>
+                            <td style="padding-top: 0.5rem !important; width:10%"></td>
+                        </tr>
+                    `);
+
+                    $('#botones_acciones').removeClass('hide');
+                } else {
+                    $('#botones_acciones').addClass('hide');
+                }
+
+                $('[data-toggle="popover"]').popover({
+                    html: true
+                });
+            }
+
+            actualizarCarritoJs();
+
+            function quitarProductoJs(id) {
+
+                if (carritoActivo[id]) {
+                    delete carritoActivo[id]; // Eliminar producto específico
+                    localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
+                }
+
+                actualizarCarritoJs();
+            }
+
+            /* ** CARRITO DE COMPRAS CON JS */
+            function formatNumber(num) {
+                return parseFloat(num).toLocaleString('es-VE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+
+
+
+
+
+            // Verificar la conexion
+            function comprobarConexion(callback) {
+                // Función que realiza la verificación
+                async function verificar() {
+                    try {
+                        // Intento de fetch a un recurso confiable (Google)
+                        const respuesta = await fetch("https://www.google.com/favicon.ico?_=" + Date.now(), {
+                            method: "HEAD",
+                            mode: "no-cors",
+                            cache: "no-store"
+                        });
+                        // Si llega aquí, hay conexión
+                        callback(true);
+                    } catch (e) {
+                        console.warn("Sin conexión. Reintentando en 20 segundos...");
+                        setTimeout(verificar, 20000);
+                    }
+                }
+
+                verificar();
+            }
+
+            // Uso:
+            comprobarConexion((hayConexion) => {
+                if (hayConexion) {
+                    console.log("✅ Conexión detectada");
+                    // Aquí puedes hacer lo que necesites
+                }
+            });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            /// delete
+            function actualizar_carrito(id = null, accion = null) {
+                $.ajax({
+                        url: base_url + 'carrito.php',
+                        type: 'POST',
+                        data: id && accion ? {
+                            id,
+                            accion
+                        } : {},
+                        dataType: 'html'
+                    })
+                    .done(function(result) {
+                        //     console.log(result)
+                        total_pesos = 0
+                        total_dolares = 0
+                        total_bolivares = 0
+
+                        const resultado = JSON.parse(result);
+                        $("#tabla-carrito tbody").html('');
+                        $("#tabla-carrito tfoot").html('');
+                        if (resultado.cantidad > 0) {
+                            resultado.carrito.forEach(element => {
+                                $("#tabla-carrito tbody").append(`
+                                <tr>
+                                    <td style="width:5%; text-align: center" class="ac-c">${element.cantidad}</td>
+                                    <td style="width:30%" class="ac-c">${element.nombre}</td>
+                                    <td style="width:20%" class="ac-c">${element.subtotalPeso} P</td>
+                                    <td style="width:20%" class="ac-c">${formatNumber(element.subtotalBolivar)} Bs</td>
+                                    <td style="width:10%" class="ac-c">$${formatNumber(element.subtotalDolar)}</td>
+                                    <td style="width:10%" class="ac-c">
+                                             <button class="btn btn-sm btn-outline-success" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
+                                    </td>
+                                </tr>`);
+                            });
+
+                            total_pesos = parseFloat(resultado.total.pesos);
+                            total_dolares = parseFloat(resultado.total.dolares);
+                            total_bolivares = parseFloat(resultado.total.bolivares);
+
+                            $("#tabla-carrito tfoot").html(`
+                                    <tr >
+                                        <td style="padding-top: 0.5rem !important; width:5%"></td>
+                                        <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
+                                        <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
+                                        <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-bolivar" class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
+                                        <td style="padding-top: 0.5rem !important; width:10%" id="precio-total-dolar" class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
+                                        <td style="padding-top: 0.5rem !important; width:10%"></td>
+                                    </tr>
+                                    `);
+
+                            $('#botones_acciones').removeClass('hide');
+                        } else {
+                            $('#botones_acciones').addClass('hide');
+                        }
+                        $('[data-toggle="popover"]').popover({
+                            html: true
+                        });
+
+                    });
+            }
+            /// delete
+
+
+
+
+
+
+
+
             document.addEventListener('click', function(event) {
                 if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                     let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
-                    let codigo_p = event.target.closest('.btn-add-to-car').getAttribute('data-codigo');
 
                     let dolarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_D')
                     let pesoventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_P')
@@ -1330,15 +1506,13 @@ echo '</pre>';
                     $('.section-scanner').addClass('hide')
 
 
-                    addtocar(id_p, codigo_p, dolarventa_p, pesoventa_p, bolivarventa_p, cantidad_scan);
+                    addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, cantidad_scan);
 
                     // ocultar footer del modal
                     const modal_footer = document.getElementById('modal-footer')
                     modal_footer.classList.add('hide')
                 }
             });
-
-
 
 
             let barcode = "";

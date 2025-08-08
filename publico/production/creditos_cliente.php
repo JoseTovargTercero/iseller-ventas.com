@@ -363,13 +363,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           const precioBsVenta = elemento.getAttribute('data-precioBsVenta')
           const tipoCompra = elemento.getAttribute('data-tipoCompra')
 
-          console.log(data_id_credito)
-          console.log(data_id)
-          console.log(precioPesoVenta)
-          console.log(precioBsVenta)
-          console.log(tipoCompra)
-          return
-
 
           pagar(data_id_credito, data_id, precioPesoVenta, precioBsVenta, tipoCompra);
         }
