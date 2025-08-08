@@ -11,14 +11,18 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
     //$q = 'POLLO E';
 
     // Consulta para obtener productos que NO están en la tabla 'stock' para la sucursal
-    $query = "SELECT p.id, p.nombre
-              FROM productos p
-              LEFT JOIN stock s ON p.id = s.id_producto
-              WHERE s.id_producto_mayor IS NULL
-                AND p.mayor IS NULL
-                AND p.nombre LIKE ?
-                AND p.bss_id = ?
-                AND p.activo = 0";
+    $query = "SELECT 
+    p.id, 
+    p.nombre
+FROM productos p
+LEFT JOIN stock s 
+    ON p.id = s.id_producto
+WHERE s.id_producto_mayor IS NULL
+  AND p.mayor IS NULL
+  AND p.nombre LIKE ?
+  AND p.bss_id = ?
+  AND p.activo = 0
+GROUP BY p.id, p.nombre";
 
     $stmt = $conexion->prepare($query);
     $like = "%$q%";

@@ -215,7 +215,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <div class='ln_solid'></div>
 
 
-                                                    <div class="mb-3">
+                                                    <div class="mb-3" style="display: none;">
                                                         <h6 class="mb-3">Sucursales donde se va a vender el producto</h6>
                                                         <?php
                                                         $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
@@ -228,7 +228,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                                 echo <<<HTML
                                                         <div class="form-check">
-                                                            <input class="form-check-input" {$checked} name="sucursales[]" data-nombre="{$row['nombre']}" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
+                                                            <input class="form-check-input" checked name="sucursales[]" data-nombre="{$row['nombre']}" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
                                                             <label class="form-check-label" for="suc-{$row['id']}">
                                                                 {$row['nombre']}
                                                             </label>

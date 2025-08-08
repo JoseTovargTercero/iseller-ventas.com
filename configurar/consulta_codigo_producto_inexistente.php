@@ -22,11 +22,12 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
               WHERE s.id_producto IS NULL
                 AND p.nombre LIKE ?
                 AND p.mayor IS NULL
+                AND p.bss_id = ?
                 AND p.activo = 0";
 
     $stmt = $conexion->prepare($query);
     $like = "%$q%";
-    $stmt->bind_param("is", $sucursal, $like);
+    $stmt->bind_param("isI", $sucursal, $like, $bss_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
