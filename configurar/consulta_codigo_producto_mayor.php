@@ -8,6 +8,7 @@ $response = [];
 
 if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
     $q = $conexion->real_escape_string(trim($_POST['producto']));
+    //$q = 'POLLO E';
 
     // Consulta para obtener productos que NO están en la tabla 'stock' para la sucursal
     $query = "SELECT p.id, p.nombre
@@ -16,11 +17,12 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
               WHERE s.id_producto_mayor IS NULL
                 AND p.mayor IS NULL
                 AND p.nombre LIKE ?
+                AND p.bss_id = ?
                 AND p.activo = 0";
 
     $stmt = $conexion->prepare($query);
     $like = "%$q%";
-    $stmt->bind_param("s", $like);
+    $stmt->bind_param("si", $like, $bss_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
