@@ -77,7 +77,7 @@
           <div class="title-wrap mt-3">
             <h2 class="section-title">Inicio de sesión </h2>
             <p class="section-sub-title">
-              Por favor ingresa tu correo electrónico y contraseña para ingresare a tu cuenta <a href="registro.php">aquí</a>.
+              Por favor ingresa tu correo electrónico y contraseña para ingresar a tu cuenta <a href="registro.php">aquí</a>.
             </p>
           </div>
           <div class="row">
