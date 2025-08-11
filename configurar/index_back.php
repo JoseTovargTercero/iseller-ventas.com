@@ -144,6 +144,8 @@ function obtenerVentas($bss_id, $extraCond)
 
 $ventasResumen = obtenerVentas($bss_id, $extraCond);
 
+
+
 // Uso de la variable como reemplazo a las llamadas anteriores
 $totalVentasDiarias = $ventasResumen['hoy'];
 $totalVentasSemana = $ventasResumen['semana'];
@@ -265,25 +267,25 @@ while ($row = $res->fetch_assoc()) {
 // Salida JSON
 echo json_encode([
   'filtro' => $extraCond,
-  'totalVentasDiarias' => number_format($totalVentasDiarias, 1, '.', ','),
-  'totalVentasSemana' => number_format($totalVentasSemana, 1, '.', ','),
-  'totalVentasMes' => number_format($totalVentasMes, 1, '.', ','),
-  'VentasDiarias_anterior' => number_format($totalVentasDiarias_anterior, 1, '.', ','),
-  'VentasSemana_anterior' => number_format($totalVentasSemana_anterior, 1, '.', ','),
-  'VentasMes_anterior' => number_format($totalVentasMes_anterior, 1, '.', ','),
-  'gananciasDia' => number_format($gananciasDi, 1, '.', ','),
-  'gananciasSemana' => number_format($gananciasSe, 1, '.', ','),
-  'gastosSemana' => number_format($gastosSemana, 1, '.', ','),
-  'gananciasMes' => number_format($gananciasMes, 1, '.', '.'),
-  'gastosMes' => number_format($gastosMes, 1, '.', '.'),
-  'ventasHoy' => number_format($ventas, 1, '.', '.'),
+  'totalVentasDiarias' => number_format($totalVentasDiarias, 2, '.', ','),
+  'totalVentasSemana' => number_format($totalVentasSemana, 2, '.', ','),
+  'totalVentasMes' => number_format($totalVentasMes, 2, '.', ','),
+  'VentasDiarias_anterior' => number_format($totalVentasDiarias_anterior, 2, '.', ','),
+  'VentasSemana_anterior' => number_format($totalVentasSemana_anterior, 2, '.', ','),
+  'VentasMes_anterior' => number_format($totalVentasMes_anterior, 2, '.', ','),
+  'gananciasDia' => number_format($gananciasDi, 2, '.', ','),
+  'gananciasSemana' => number_format($gananciasSe, 2, '.', ','),
+  'gastosSemana' => number_format($gastosSemana, 2, '.', ','),
+  'gananciasMes' => number_format($gananciasMes, 2, '.', '.'),
+  'gastosMes' => number_format($gastosMes, 2, '.', '.'),
+  'ventasHoy' => number_format($ventas, 2, '.', '.'),
   'creditosHoy' => $credit,
   'despachadosHoy' => $despachados,
   'cantidadCritica' => $cantidadCritica,
-  'ventasMesDescontado' => number_format($totalVentasMesDejado, 0, '.', ','),
-  'almacenProductos' => number_format((int)$almacen, 0, '.', ','),
-  'valorStockSinGanancia' => number_format($valor_stock_sin_ganancia, 1, '.', ','),
-  'gananciasEsperadas' => number_format($gananciasEsperadas, 1, '.', ','),
+  'ventasMesDescontado' => number_format($totalVentasMesDejado, 2, '.', ','),
+  'almacenProductos' => number_format((int)$almacen, 2, '.', ','),
+  'valorStockSinGanancia' => number_format($valor_stock_sin_ganancia, 2, '.', ','),
+  'gananciasEsperadas' => number_format($gananciasEsperadas, 2, '.', ','),
   'ventasSemanas' => $arraSemanas,
   'ventasSemana' => $arraySemana
 ]);
