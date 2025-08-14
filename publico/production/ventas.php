@@ -2156,8 +2156,7 @@ echo '</pre>';
                     // Hay conexión
                     // quitarAviso();
                     document.getElementById('alert-internet').classList.remove('hide');
-
-                    callback(false);
+                    callback(true);
                 } catch (e) {
                     // No hay conexión
                     document.getElementById('alert-internet').classList.add('hide');
