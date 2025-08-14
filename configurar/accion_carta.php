@@ -8,13 +8,11 @@ require_once('session.php');
 require("_tasas_cambio.php");
 
 $desscontado = '';
-$tickets = 0;
 
 $id_sucursal = $_SESSION["sucursal"];
 $bss_id = $_SESSION["bss_id"];
 
 // Obtener configuración del sistema
-$tickets = 0;
 
 // Funciones auxiliares
 function diaSemana($fecha)
@@ -32,18 +30,7 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
     $action = $_REQUEST['action'];
 
     switch ($action) {
-        case 'addToCart':
-            agregarAlCarrito($conexion, $cart);
-            break;
-
-        case 'placeOrder':
-            procesarOrden($conexion, $cart, 'contado', $tickets);
-            break;
-
-        case 'placeOrderCredito':
-            procesarOrden($conexion, $cart, 'credito', $tickets);
-            break;
-        case 'procesarCarrtios':
+        case 'enviarPedidos':
             procesarCarritos();
             break;
 
@@ -58,40 +45,83 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
 // FUNCIONES
 // -----------------------------------------------------------
 
-function procesarCarritos() {}
-
-function agregarAlCarrito($conexion, $cart)
+function procesarCarritos()
 {
-    $id = intval($_REQUEST['id']);
-    $cant = $_REQUEST['cant'];
-    $dolarventa = floatval($_REQUEST['dolarventa']);
-    $pesoventa = floatval($_REQUEST['pesoventa']);
-    $bolivarventa = floatval($_REQUEST['bolivarventa']);
+    $pedidos = $_REQUEST['pedidos'];
+    global $conexion;
+    // recorre pedidos, cada pedido es un carrito. que posee un 'metodoPago', despacho (puede se placeOrder o placeOrderCredito), y un array de productos
+    $pedidos = json_decode($pedidos, true);
+    if (empty($pedidos)) {
+        echo json_encode(['status' => false, 'data' => 'No hay pedidos para procesar']);
+        return;
+    }
 
-    $stmt = $conexion->prepare("SELECT * FROM productos WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $producto = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    $errores = [];
 
-    global $pesoDolar, $dolarBolivar;
+    foreach ($pedidos as $pedido) {
+        $metodoPago = str_replace('option', '', $pedido['metodoPago']);
+        $valorFinalBs = $pedido['valorFinalBs'];
+        $valorFinalCop = $pedido['valorFinalCop'];
+        $despacho = $pedido['despacho'];
+        $productos = $pedido['productos'];
+        $idPedido = $pedido['id'];
+        $cliente = $pedido['datosCliente'] ?? []; // Cliente puede ser un array vacío si no se proporciona información
 
-    $valorUnidad = $producto['precio_compra'] / $producto['cantidad_unidades'];
-    $mayor = floatval($producto['mayor']);
+        if (empty($productos)) {
+            $errores[] = "El pedido con método de pago '$metodoPago' no tiene productos.";
+            continue;
+        }
+
+        // Crear un nuevo carrito
+        $cart = new Cart;
+
+        // Agregar productos al carrito
+        foreach ($productos as $producto) {
+            agregarAlCarrito($cart, $producto);
+        }
+
+        // Procesar la orden según el método de pago
+        $tipoVeta = ($despacho == '2' ? 'credito' : 'contado'); // Credito/contado
+
+        $respuesta = procesarOrden(
+            $conexion,
+            $cart,
+            $tipoVeta,
+            $despacho,
+            $metodoPago,
+            $valorFinalBs,
+            $valorFinalCop,
+            $cliente
+        );
+        if (!$respuesta['status']) {
+            $errores[$idPedido] = $respuesta['data'];
+        }
+    }
+    if (empty($errores)) {
+        echo json_encode(['status' => true, 'data' => 'Todos las vetnas se procesaron correctamente.']);
+    } else {
+        echo json_encode(['status' => false, 'data' => $errores]);
+    }
+}
+
+
+
+function agregarAlCarrito($cart, $producto)
+{
+    $mayor = $producto['mayor'] = 'undefined' ? '0' : ($producto['mayor'] ?? 0);
 
     $itemData = [
-        'codigo' => $producto['codigo'],
         'id' => $producto['id'],
-        'name' => $producto['nombre'],
-        'price_C' => $valorUnidad,
-        'price_C_Bs' => $valorUnidad * $dolarBolivar,
-        'price_C_Cop' => $valorUnidad * $pesoDolar,
-        'price' => $dolarventa,
-        'pricePeso' => $pesoventa,
-        'priceBolivar' => $bolivarventa,
-        'qty' => $cant,
+        'name' => $producto['name'],
+        'price_C' => $producto['price_C'],
+        'price_C_Bs' => $producto['price_C_Bs'],
+        'price_C_Cop' => $producto['price_C_Cop'],
+        'price' => floatval($producto['price']),
+        'pricePeso' => floatval($producto['pricePeso']),
+        'priceBolivar' => floatval($producto['priceBolivar']),
+        'qty' => $producto['qty'],
         'mayor' => $mayor,
-        'cantidadPaca' => $producto['cantidad_unidades']
+        'cantidadPaca' => $producto['cantidadPaca']
     ];
 
     $cart->insert($itemData);
@@ -110,8 +140,17 @@ function es_venta_mayor($cart)
     return $result;
 }
 
+/* * Procesa la orden de compra, ya sea al contado o a crédito.
+ * @param object $conexion Conexión a la base de datos.
+ * @param object $cart Objeto del carrito de compras.
+ * @param string $tipoVenta Tipo de venta ( 1 es venta normal. 2 es credito, 3 es descuento, 4 es venta al mayor ).
+ * @param int $compraTipo Tipo de compra (1 para detal, 2 para mayor).
+ * @param int $pagoTipo Tipo de pago (Punto, biopago, pesos, etc).
+ * @param float $precioBs Precio en bolívares.
+ * @param float $precioCop Precio en pesos colombianos.
+ */
 
-function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = [])
 {
     global $id_sucursal, $bss_id;
 
@@ -125,24 +164,21 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
     try {
         // Datos base
         $fechaVenta = date('Y-m-d');
-        $compraTipo = $_GET['compraTipo'] ?? 1;
-        $pagoTipo = $_GET['pagoTipo'] ?? 0;
-        $precioBs = $_GET['valorFinalBs'] ?? 0;
-        $precioCop = formatPeso($_GET['valorFinalCop'] ?? 0);
+        $precioCop = formatPeso($precioCop ?? 0);
+
         $valorFinalVenta = $cart->total();
-        $statusV = $_GET['statusV'] ?? 1;
+        $compraTipo = 1; // Detal por defecto
         if ($tipo == 'credito') {
-            $statusV = 2;
+            $tipoVenta = 2;
         }
-
-
 
         // verifica el $cart, si hay algun producto al mayor, el statuV pasa a ser 4
         if (es_venta_mayor($cart)) {
+            $compraTipo = 4; // Venta al mayor
             if ($tipo == 'credito') {
                 $pagoTipo = 4;
             } else {
-                $statusV = 4;
+                $tipoVenta = 4;
             }
         }
 
@@ -167,7 +203,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
 
         $stmt->bind_param(
             "iisssssddsiii",
-            $statusV,
+            $tipoVenta,
             $_SESSION['id'],
             $valorFinalVenta,
             $fechaVenta,
@@ -201,7 +237,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
 
         // Si es crédito, guardar info
         if ($tipo === 'credito') {
-            $nombreC = $_GET['nombreC'] ?? '';
+            $nombreC = $cliente['nombre'] ?? '';
 
             $stmtC = $conexion->prepare("
                 INSERT INTO creditos (order_id, total_price, negocio, tipoCompra, bss_id, sucursal_id)
@@ -215,15 +251,13 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
         $conexion->commit(); // Éxito
 
         $cart->destroy();
-        $msg = ($tipo === 'credito') ? 'Crédito otorgado con éxito' : 'Venta realizada con éxito';
 
+        return ['status' => true];
         echo json_encode(['status' => true, 'data' => $msg, 'id' => $orderID]);
     } catch (Exception $e) {
         $conexion->rollback();
-        echo json_encode(['status' => false, 'data' => 'Error al procesar orden: ' . $e->getMessage()]);
+        return ['status' => false, 'data' => 'Error al procesar la orden: ' . $e->getMessage()];
     }
-
-    exit;
 }
 
 

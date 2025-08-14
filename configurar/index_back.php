@@ -243,7 +243,7 @@ while ($row = $res->fetch_assoc()) {
 }
 
 //$totalVentasMesDejado = obtenerVentas('fecha', $mes, [3]);
-$totalVentasMesDejado = 0;
+$totalVentasMesDejado = 0; //TODO arreglar
 
 $almacen = 0;
 $res = $conexion->query("SELECT stock.stock FROM stock LEFT JOIN productos AS P ON P.id = stock.id_producto WHERE stock.bss_id = $bss_id AND P.activo = 0 $extraCond ");

@@ -9,7 +9,7 @@
 
 /* TABLA CON HEADER Y FOOT FIJOS */
 .table-container {
-    height: 60vh;
+    height: 50vh;
     overflow: hidden;
     position: relative;
 }

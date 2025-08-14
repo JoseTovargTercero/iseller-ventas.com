@@ -5768,8 +5768,11 @@ function camposVacios(campos) {
   return campos.some((campo) => !campo || campo.trim() === "");
 }
 
+function formatearMiles(numero) {
+  return numero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 // CAPTURA TODAS LA PETCIONES Y LAS MANDA A CONSOLA
-const DEBUG = true; // Cambia a false en producción
+const DEBUG = false; // Cambia a false en producción
 
 // Debug para fetch
 if (DEBUG) {

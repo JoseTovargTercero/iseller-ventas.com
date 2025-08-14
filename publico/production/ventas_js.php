@@ -109,7 +109,7 @@ if ($result->num_rows > 0) {
         if (strlen($codigo) > 5) {
 
 
-            $data[trim($codigo)] = [
+            $data["$codigo"] = [
                 'id' => $row['id'],
                 'stock' => $row['stock'],
                 'codigo' => trim($codigo),
@@ -149,6 +149,7 @@ echo '</pre>';
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
 
 </head>
 
@@ -300,12 +301,189 @@ echo '</pre>';
         font-size: 0.64rem !important;
         padding: .20rem .34rem
     }
+
+    .totales-pendiente {
+        gap: 5px;
+    }
 </style>
 <div class="contenedor-loader" id="cargando">
     <span class="loader"></span>
 </div>
 
 <body class='nav-md'>
+
+    <style>
+        .section-scanner {
+            position: fixed;
+            inset: 0;
+            /* Equivalente a top:0; right:0; bottom:0; left:0 */
+            z-index: 999;
+            background-color: rgba(0, 0, 0, 0.55);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+            transition: opacity 0.3s ease;
+        }
+
+        .section-scanner.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #result-escaner {
+            position: relative;
+            background: #1c1c1c;
+            padding: 20px;
+            border-radius: 12px;
+            min-width: 300px;
+            max-width: 50%;
+            min-height: 150px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4);
+            color: white;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        /* Botón de cerrar */
+        #result-escaner .btn-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #ccc;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        #result-escaner .btn-close:hover {
+            color: #fff;
+        }
+
+        /* Animación */
+        @keyframes modalFadeIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Contenedor principal del producto escaneado */
+        .scan-product {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 15px;
+            border-radius: 10px;
+            color: #fff;
+        }
+
+        /* Encabezado con nombre y stock */
+        .scan-product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .scan-stock {
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+
+        /* Sección de precios */
+        .scan-prices {
+            display: flex;
+            gap: 15px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .scan-price-usd {
+            color: #4caf50;
+        }
+
+        .scan-price-cop {
+            color: #00bcd4;
+        }
+
+        .scan-price-bs {
+            color: #f44336;
+        }
+
+        /* Controles (cantidad + botones) */
+        .scan-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scan-quantity {
+            max-width: 80px;
+            text-align: center;
+            border-radius: 6px;
+            border: none;
+            padding: 5px;
+            font-size: 1rem;
+        }
+
+        /* Botones */
+        .scan-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background 0.2s ease;
+        }
+
+        .scan-btn.add {
+            background: #4caf50;
+            color: white;
+        }
+
+        .scan-btn.add:hover {
+            background: #45a049;
+        }
+
+        .scan-btn.remove {
+            background: #f44336;
+            color: white;
+        }
+
+        .scan-btn.remove:hover {
+            background: #e53935;
+        }
+    </style>
+
+    <section class="d-flex section-scanner hide" id="section-scanner">
+        <div id="result-escaner"> </div>
+    </section>
+
+    <script>
+        function cerrarScanner() {
+            document.getElementById('section-scanner').classList.add('hide');
+            document.getElementById('result-escaner').innerHTML = ''; // Limpiar el contenido del escáner
+        }
+        // al precionar la tecla escape se cierra el scanner
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                cerrarScanner();
+            }
+        });
+    </script>
+
+
     <div class='container body'>
         <div class='main_container'>
             <?php echo $menu ?>
@@ -330,10 +508,10 @@ echo '</pre>';
                                 <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">Carrito activo</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="false">Reservados</button>
+                                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="false">No guardados <span id="cantidad-no-enviada"></span> </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">No guardados <span id="no-guardados"></span></button>
+                                <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">Reservados <span id="cantidad-reservados"></span></button>
                             </li>
                         </ul>
 
@@ -374,21 +552,59 @@ echo '</pre>';
                     .btn-list-item {
                         flex-direction: column
                     }
+
+                    .botones-container {
+                        display: grid;
+                        gap: 10px;
+                        /* Espacio entre botones */
+                        grid-template-columns: repeat(3, 1fr);
+                        /* 4 columnas */
+                    }
+
+                    .botones-container .error-internet {
+                        grid-column: 1 / -1;
+                    }
+
+                    .btn-info {
+                        background-color: #40909d !important;
+                    }
+
+                    /* Para pantallas medianas (2 columnas) */
+                    @media (max-width: 992px) {
+                        .botones-container {
+                            grid-template-columns: repeat(2, 1fr);
+                        }
+                    }
+
+
+
+                    /* Para pantallas pequeñas (1 columna) */
+                    @media (max-width: 576px) {
+                        .botones-container {
+                            grid-template-columns: 1fr;
+                        }
+                    }
+
+                    .alert-danger {
+                        color: #721c24;
+                        background-color: #f8d7da;
+                        border-color: #f5c6cb;
+                    }
                 </style>
 
 
 
 
                 <div class="row" id="myTabContent">
-                    <div class="tab-pane fade col-lg-12" id="home" role="tabpanel" aria-labelledby="home-tab">
-                        <div class="x_panel" style="min-height: 60vh">
+                    <div class="tab-pane fade col-lg-12  show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                        <div class="x_panel" style="min-height: 80vh">
                             <div class="x_title d-flex justify-content-between">
                                 <div style="display: grid">
                                     <h2>Carrito del cliente</h2>
                                     <span><b>SUCURSAL: </b><span id="sucursal_nombre">
                                         </span></span>
                                 </div>
-                                <button class="btn btn-success" style="height: min-content" id="open-modal"> (B) Búsqueda</button>
+                                <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal"> (B) BÚSQUEDA</button>
                             </div>
                             <div class="x_content cart">
                                 <div>
@@ -416,31 +632,42 @@ echo '</pre>';
 
 
 
-                                    <section class="d-flex section-scanner hide">
-                                        <div id="result-escaner"> </div>
-                                    </section>
 
-                                    <div style=" bottom: 0; flex-wrap: wrap-reverse;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
+                                    <div style=" bottom: 0; flex-wrap: wrap-reverse;" class="pt-3 botones-container hide w-100" id="botones_acciones">
 
 
                                         <?php
 
                                         // Mostrar botones según permisos
                                         if (!empty($_SESSION['permisos'][11]) || $_SESSION["nivel"] == 1) {
-                                            echo '<button onclick="confirmarVenta(\'credito\')" class="btn btn-info text-white">Crédito</button>';
+                                            echo '<button onclick="confirmarVenta(\'credito\')" class="btn btn-dark text-white">CRÉDITO</button>';
                                         }
 
                                         if (!empty($_SESSION['permisos'][12]) || $_SESSION["nivel"] == 1) {
-                                            echo '<a onclick="confirmarDescuento()" class="btn btn-dark text-white" style="cursor: pointer">Descontar</a>';
+                                            echo '<a onclick="confirmarDescuento()" class="btn btn-dark text-white" style="cursor: pointer">DESCONTAR PRODUCTOS</a>';
                                         }
 
                                         ?>
 
 
-                                        <a onclick="vaciarCarritoJs()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
-                                        <button class="btn btn-light" id="calcularVuelto">(C) Calcular cambio</button>
-                                        <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
-                                        <button id="btn-vender" class="btn btn-success" style="color:white;">(V) Vender</button>
+                                        <button class="btn btn-dark" id="btn-reservar">RESERVAR CARRITO</button>
+                                        <button class="btn btn-dark" id="calcularVuelto">(C) CALCULAR CAMBIO</button>
+                                        <button id="btn-vender" class="btn btn-dark" style="color:white;">(V) VENDER</button>
+                                        <a onclick="vaciarCarritoJs()" class="btn btn-danger " style="color:white; cursor: pointer">DESTRUIR CARRITO</a>
+
+
+
+                                        <div class="error-internet">
+
+                                            <div class="alert alert-danger hide" id="alert-internet" role="alert" style="display: flex;gap: 5px;">
+                                                <ion-icon style="font-size: 20px ;" name="warning-outline"></ion-icon>
+                                                <span>
+                                                    En estos momentos no tiene conexion a internet, las ventas se guardaran en su dispositivo y se enviarán cuando vuelva a tener conexión.
+
+                                                </span>
+
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -448,7 +675,7 @@ echo '</pre>';
                         </div>
                     </div>
 
-                    <div class="tab-pane fade col-lg-12 show active " id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                    <div class="tab-pane fade col-lg-12 " id="profile" role="tabpanel" aria-labelledby="profile-tab">
                         <div class="x_panel" style="min-height: 60vh">
                             <div class="x_title d-flex justify-content-between">
                                 <div>
@@ -457,48 +684,28 @@ echo '</pre>';
                             </div>
                             <div class="x_content cart">
                                 <ul class="p-0" id="ul-productos-sin-enviar">
-                                    <li class="list-none item-reservado">
-                                        <div class="item-reservado-header p-3">
-                                            <div class="avatar">
-                                                <ion-icon name="briefcase-outline"></ion-icon>
-                                            </div>
-                                            <div>
-                                                <p class="m-0 p-0"> 01-05-2025 02:55 PM</p>
-                                                <small class="text-muted">FECHA DEL CARRITO</small>
-                                            </div>
-                                        </div>
 
-                                        <div class="item-reservado-body pl-4 pb-3 d-flex justify-content-between">
-                                            <div class="d-flex justify-content-between flex-column">
-                                                <div>
-                                                    <span>PRODUCTOS: </span> <span>
-                                                        <span class="badge bg-light text-dark">lorem lorem lorem</span>
-                                                        <span class="badge bg-light text-dark">lorem lorem lorem</span>
-                                                        <span class="badge bg-light text-dark">lorem lorem lorem</span>
-
-                                                    </span>
-                                                </div>
-
-
-                                                <div class="d-flex justify-content-between">
-                                                    <p>TOTALES:</p>
-                                                    <p class="text-info">3.000,00 P</p>
-                                                    <p class="text-danger">115,38 Bs</p>
-                                                    <p class="text-success">$0,89</p>
-                                                </div>
-                                            </div>
-                                            <div class="btn-list-item text-center d-flex pr-4">
-                                                <button class="btn btn-success">Modificar</button>
-                                                <button class="btn btn-secondary text-dark">Cancelar envio</button>
-                                            </div>
-                                        </div>
-
-                                    </li>
                                 </ul>
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade col-lg-12" id="contact" role="tabpanel" aria-labelledby="contact-tab">...</div>
+                    <div class="tab-pane fade col-lg-12" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+
+                        <div class="x_panel" style="min-height: 60vh">
+                            <div class="x_title d-flex justify-content-between">
+                                <div>
+                                    <h2>Reservados</h2>
+                                </div>
+                            </div>
+                            <div class="x_content cart">
+                                <ul class="p-0" id="ul-productos-reservados">
+
+                                </ul>
+                            </div>
+                        </div>
+
+
+                    </div>
                 </div>
 
 
@@ -594,6 +801,17 @@ echo '</pre>';
         /* buscador de productos */
 
 
+
+
+        const metodosPago = {
+            'option1': 'Punto',
+            'option2': 'Pago Móvil',
+            'option3': 'Transferencia',
+            'option4': 'Efectivo',
+            'option5': 'Dólares',
+            'option6': 'Pesos',
+            'option7': 'BioPago'
+        };
 
 
 
@@ -774,29 +992,6 @@ echo '</pre>';
 
 
 
-        // Destruir carrito
-        /*   function destroy_cart() {
-               Swal.fire({
-                   title: '¿Estás seguro?',
-                   text: "Esta acción vaciará tu carrito.",
-                   icon: 'warning',
-                   showCancelButton: true,
-                   confirmButtonText: 'Sí, vaciar',
-                   cancelButtonText: 'Cancelar'
-               }).then((result) => {
-                   if (result.isConfirmed) {
-                       fetch(base_url + "cart-destroy.php")
-                           .then(response => {
-                               actualizar_carrito()
-                           })
-                           .catch(error => {
-                               console.error("Error en la solicitud:", error);
-                               Swal.fire('Error', 'Ocurrió un problema al vaciar el carrito.', 'error');
-                           });
-                   }
-               });
-           }*/
-        // Destruir carrito
 
 
         // Obtener listado de tasas a mostrar
@@ -832,7 +1027,9 @@ echo '</pre>';
 
         function confirmarVenta(tipo = 'venta') {
             // 1. Reglas comunes ───────────────────────────────────────────────
-            if (total_dolares === 0) return; // nada que vender
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                return false;
+            }
             $('button').blur(); // quitar focus de botones
 
             if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
@@ -897,10 +1094,10 @@ echo '</pre>';
 
                 if (esCredito) {
                     const nombreCliente = result.value; // valor devuelto en preConfirm
-                    procesarPedido('0', 'placeOrderCredito', nombreCliente);
+                    procesarPedido('0', 2, nombreCliente);
                 } else {
                     const metodoPago = result.value; // e.g. "option3"
-                    procesarPedido(metodoPago, 'placeOrder');
+                    procesarPedido(metodoPago, 1);
                 }
             });
         }
@@ -1022,11 +1219,13 @@ echo '</pre>';
         // Se usa para el modo lector
         function buscarProducto(lectura, modo) {
             const codigo = parseFloat(lectura.trim().replace(/[^0-9]/g, '')); // Eliminar caracteres no numéricos
+            console.log(String(codigo))
 
-            const resultado = buscarCodigoFuse(codigo)
+            const resultado = buscarCodigoFuse(String(codigo));
 
+            console.log(resultado)
 
-            if (resultado.length > 0) {
+            if (resultado.length == 0) {
                 Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
                 return
             } else {
@@ -1034,36 +1233,39 @@ echo '</pre>';
                 $('.section-scanner').removeClass('hide');
 
                 // Construir solo las tasas visibles según tasasMostrar
+                $("#result-escaner").html(`
+                <div class="scan-product">
+                    <div class="scan-product-header">
+                        <span><b>${datos.nombre}</b></span>
+                        <span class="scan-stock">${datos.stock} en stock</span>
+                    </div>
 
-                $("#result-escaner").append(`
-                                    <div class="row">
-                                        <div class="col-lg-4 ac-c">
-                                            [${datos.stock}] <b>${datos.nombre}</b>
-                                        </div>
-                                        <div class="col-lg-8 d-flex" style="gap: 8px; justify-content: flex-end;">
-                                            <div class="d-flex" style="gap: 8px; font-size: 1rem">
-                                               <div class="ac-c text-bold text-success">$${formatNumber(datos.precio_dolar_visible)}</div>
-                                                <div class="ac-c text-bold text-info">${formatNumber(formatPeso(datos.precio_peso_visible))} P</div>
-                                                <div class="ac-c text-bold text-danger">${formatNumber(recortarADosDecimales(datos.precio_bs_visible))} Bs</div>
-                                            </div>
+                    <div class="scan-prices">
+                        <span class="scan-price-usd">$${formatNumber(datos.precio_dolar_visible)}</span>
+                        <span class="scan-price-cop">${formatearMiles(datos.precio_peso_visible)} P</span>
+                        <span class="scan-price-bs">${formatNumber(recortarADosDecimales(datos.precio_bs_visible))} Bs</span>
+                    </div>
 
-                                            <input type="number" id="cantidad-scan" style="max-width: 30%;" class="cantidad-input cantidad-scan text-center form-control" data-cantidad-id="${datos.id}" value="1">
+                    <div class="scan-controls">
+                        <input type="number" id="cantidad-scan" class="scan-quantity cantidad-scan" 
+                            data-cantidad-id="${datos.id}" value="1">
 
-                                            <button class="m-0 btn  btn-success btn-add-to-car no-send" id="btn_${datos.id}"
-                                                data-add-id="${datos.id}"
-                                                data-codigo="${datos.codigo}"
-                                                data-P_D="${datos.precio_dolar_visible}"
-                                                data-P_P="${datos.precio_peso_visible}"
-                                                data-P_B="${datos.precio_bs_visible}">
-                                                <i class="bx bx-cart-add"></i>
-                                            </button>
+                        <button class="scan-btn add btn-add-to-car no-send" 
+                            id="btn_${datos.id}"
+                            data-add-id="${datos.id}"
+                            data-codigo="${datos.codigo}"
+                            data-P_D="${datos.precio_dolar_visible}"
+                            data-P_P="${datos.precio_peso_visible}"
+                            data-P_B="${datos.precio_bs_visible}">
+                            <i class="bx bx-cart-add"></i>
+                        </button>
 
-                                            <button class="m-0 btn btn-danger delete-scan">
-                                                <i class="bx bx-cart-download"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                `);
+                        <button class="scan-btn remove delete-scan">
+                            <i class="bx bx-cart-download"></i>
+                        </button>
+                    </div>
+                </div>
+            `);
 
                 setTimeout(() => {
                     $(`#btn_${datos.id}`).removeClass('no-send');
@@ -1093,7 +1295,7 @@ echo '</pre>';
                                 <span>${formatNumber(item.precio_dolar_visible)}$</span>
                             </td>
                             <td style="place-content: center" class="text-center text-total text-info">
-                                <span>${formatNumber(formatPeso(item.precio_peso_visible))} Cop</span>
+                                <span>${formatearMiles(formatPeso(item.precio_peso_visible))} Cop</span>
                             </td>
                             <td style="place-content: center" class="text-center text-total text-danger">
                                 <span>${formatNumber(recortarADosDecimales(item.precio_bs_visible))} Bs</span>
@@ -1201,94 +1403,90 @@ echo '</pre>';
 
 
 
-        function addtocar(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+
+        // * IndexedBD //
+        // Inicializar base IndexedDB con Dexie
+        const db = new Dexie("POS_DB");
+
+        // Definir estructura
+        db.version(1).stores({
+            carritoActivo: 'id', // clave primaria será el id del producto
+            carritosVenta: 'id', // para ventas ya procesadas
+            carritosReservados: 'id' // para reservados
+        });
+        // * IndexedBD //
 
 
+        let carritoActivo = {};
 
-            // Seleccionar el input usando el valor de data-cantidad-id
-            const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
-            let cant = inputCantidad ? inputCantidad.value : 1;
-            if (cantidad_scann != null) {
-                cant = cantidad_scann;
-            }
-            const peso = formatPeso(pesoventa_p)
+        // Cargar carrito activo desde IndexedDB al iniciar
+        (async function cargarCarritoInicial() {
+            const items = await db.carritoActivo.toArray();
+            carritoActivo = items.reduce((obj, item) => {
+                obj[item.id] = item;
+                return obj;
+            }, {});
+            actualizarCarritoJs();
+        })();
 
-            $.ajax({
-                    url: base_url + 'accion_carta.php',
-                    type: 'POST',
-                    dataType: 'html',
-                    data: {
-                        action: 'addToCart',
-                        id: id,
-                        dolarventa: dolarventa_p,
-                        pesoventa: peso,
-                        bolivarventa: bolivarventa_p,
-                        cant: cant
-                    },
-                })
-                .done(function(result) {
-
-
-                    actualizar_carrito()
-                    $("#tabla_resultado_codigo_producto").html('');
-                    if (modo == 1) {
-                        $("#search").val('');
-                    }
-                })
+        async function actualizarCarritoActivo() {
+            const items = await db.carritoActivo.toArray();
+            carritoActivo = items.reduce((obj, item) => {
+                obj[item.id] = item;
+                return obj;
+            }, {});
+            actualizarCarritoJs();
         }
 
 
-
-        /* ** CARRITO DE COMPRAS CON JS */
-        var carritoActivo = JSON.parse(localStorage.getItem('carritoActivo')) || {};
-        var carritosVenta = JSON.parse(localStorage.getItem('carritosVenta')) || {};
-        var carritosReservados = JSON.parse(localStorage.getItem('carritosReservados')) || {};
-
-
-        // Agregar un producto al carrito
-        function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
-            // Seleccionar el input usando el valor de data-cantidad-id
+        // REVISADO
+        async function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
             const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
             let cant = inputCantidad ? parseFloat(inputCantidad.value) : 1;
-            if (cantidad_scann != null) {
-                cant = parseFloat(cantidad_scann);
-            }
 
-            // Validar que el producto existe en productos_por_id
+            if (cantidad_scann != null) cant = parseFloat(cantidad_scann);
+
             if (!productos_por_id[id]) {
                 console.error(`Producto con ID ${id} no encontrado.`);
                 return;
             }
+            const idPedido = id.toString(); // Asegurarse de que el ID sea una cadena
 
-            const producto = productos_por_id[id];
+            const producto = productos_por_id[idPedido];
 
-            // Si ya existe en el carrito, sumar cantidad
-            if (carritoActivo[id]) {
-                carritoActivo[id].qty += cant;
+            if (carritoActivo[idPedido]) {
+                carritoActivo[idPedido].qty += cant;
             } else {
-                // Si no existe, crearlo
-                carritoActivo[id] = {
-                    id: producto.id,
+                carritoActivo[idPedido] = {
+                    id: idPedido,
                     name: producto.nombre,
-                    price_C: parseFloat(producto.precio_dolar_visible),
-                    price_C_Bs: parseFloat(producto.precio_bs_visible),
-                    price_C_Cop: parseFloat(producto.precio_peso_visible),
+                    price_C: parseFloat(producto.price_C),
+                    price_C_Bs: parseFloat(producto.price_C_Bs),
+                    price_C_Cop: parseFloat(producto.price_C_Cop),
                     price: parseFloat(dolarventa_p),
                     pricePeso: parseFloat(pesoventa_p),
                     priceBolivar: parseFloat(bolivarventa_p),
                     qty: cant,
                     mayor: mayor,
-                    cantidadPaca: 1 // valor por defecto
+                    cantidadPaca: 1
                 };
             }
 
-            // Guardar en localStorage
-            localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
-            actualizarCarritoJs()
-            console.log(carritoActivo);
+            if (carritoActivo[idPedido].qty == 0) {
+                await db.carritoActivo.delete(idPedido);
+            } else {
+                await db.carritoActivo.put(carritoActivo[idPedido]);
+            }
+
+            $("#tabla_resultado_codigo_producto").html('');
+            actualizarCarritoJs();
+            $("#search").val('');
         }
 
         function vaciarCarritoJs() {
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                return false;
+            }
             Swal.fire({
                 title: '¿Estás seguro?',
                 text: "Esta acción vaciará tu carrito.",
@@ -1296,9 +1494,9 @@ echo '</pre>';
                 showCancelButton: true,
                 confirmButtonText: 'Sí, vaciar',
                 cancelButtonText: 'Cancelar'
-            }).then((result) => {
+            }).then(async (result) => {
                 if (result.isConfirmed) {
-                    localStorage.removeItem('carritoActivo');
+                    await db.carritoActivo.clear();
                     carritoActivo = {};
                     actualizarCarritoJs();
                     Alerta.toast('success', 'Carrito vaciado correctamente');
@@ -1307,35 +1505,16 @@ echo '</pre>';
         }
 
 
-        // Actualizar la vista del carrito
-        function actualizarCarritoJs(id = null, accion = null) {
+        async function actualizarCarritoJs() {
 
-            // Si hay una acción sobre un producto
-            if (id && accion) {
-                if (carritoActivo[id]) {
-                    if (accion === 'sumar') {
-                        carritoActivo[id].qty += 1;
-                    } else if (accion === 'restar') {
-                        carritoActivo[id].qty -= 1;
-                        if (carritoActivo[id].qty <= 0) {
-                            delete carritoActivo[id];
-                        }
-                    }
-                }
-                localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
-            }
-
-            // Reset de totales
-            total_pesos = 0
-            total_dolares = 0
-            total_bolivares = 0
-
-
-            // Limpiar tabla
             $("#tabla-carrito tbody").html('');
             $("#tabla-carrito tfoot").html('');
 
-            // Convertir carrito en array para iterar
+            // Para sumar o restar unidades a un producto específico
+
+            total_pesos = total_dolares = total_bolivares = 0;
+
+
             const items = Object.values(carritoActivo);
 
             if (items.length > 0) {
@@ -1346,18 +1525,18 @@ echo '</pre>';
 
                     $("#tabla-carrito tbody").append(`
                         <tr>
-                            <td style="width:5%; text-align: center" class="ac-c">${element.qty}</td>
-                            <td style="width:30%" class="ac-c">${element.name}</td>
-                            <td style="width:20%" class="ac-c">${formatNumber(formatPeso(subtotalPeso))} P</td>
-                            <td style="width:20%" class="ac-c">${formatNumber(subtotalBolivar)} Bs</td>
-                            <td style="width:10%" class="ac-c">$${formatNumber(subtotalDolar)}</td>
-                            <td style="width:10%" class="ac-c">
-                                <button class="btn btn-sm btn-outline-success" onclick="actualizarCarritoJs('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="actualizarCarritoJs('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="quitarProductoJs('${element.id}')"><i class="fa fa-trash-o"></i></button>
+                            <td class="ac-c">${element.qty}</td>
+                            <td class="ac-c">${element.name}</td>
+                            <td class="ac-c">${formatearMiles(subtotalPeso)} Cop</td>
+                            <td class="ac-c">${formatNumber(subtotalBolivar)} Bs</td>
+                            <td class="ac-c">$${formatNumber(subtotalDolar)}</td>
+                            <td class="ac-c">
+                                <button class="btn btn-sm btn-outline-success" onclick="actualizarProductosCantidad('${element.id}', 'sumar')"><ion-icon style="font-size: 12px" name="arrow-up"></ion-icon></button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="actualizarProductosCantidad('${element.id}', 'restar')"><ion-icon style="font-size: 12px" name="arrow-down"></ion-icon></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="quitarProductoJs('${element.id}')"><ion-icon style="font-size: 12px"  name="trash-outline"></ion-icon></button>
                             </td>
                         </tr>
-                        `);
+                    `);
 
                     total_pesos += subtotalPeso;
                     total_dolares += subtotalDolar;
@@ -1365,39 +1544,56 @@ echo '</pre>';
                 });
 
                 $("#tabla-carrito tfoot").html(`
-                        <tr>
-                            <td style="padding-top: 0.5rem !important; width:5%"></td>
-                            <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
-                            <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(total_pesos))} P</td>
-                            <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-bolivar" class="text-total text-danger">${formatNumber(total_bolivares)} Bs</td>
-                            <td style="padding-top: 0.5rem !important; width:10%" id="precio-total-dolar" class="text-total text-success">$${formatNumber(total_dolares)}</td>
-                            <td style="padding-top: 0.5rem !important; width:10%"></td>
-                        </tr>
+                    <tr>
+                        <td></td>
+                        <td><b>TOTAL:</b></td>
+                        <td class="text-info">${formatearMiles(total_pesos)} Cop</td>
+                        <td class="text-danger">${formatNumber(total_bolivares)} Bs</td>
+                        <td class="text-success">$${formatNumber(total_dolares)}</td>
+                        <td></td>
+                    </tr>
                     `);
 
                 $('#botones_acciones').removeClass('hide');
             } else {
                 $('#botones_acciones').addClass('hide');
             }
-
-            $('[data-toggle="popover"]').popover({
-                html: true
-            });
         }
 
-        actualizarCarritoJs();
-
-        function quitarProductoJs(id) {
-
-            if (carritoActivo[id]) {
-                delete carritoActivo[id]; // Eliminar producto específico
-                localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
+        // Para sumar o restar unidades a un producto específico
+        async function actualizarProductosCantidad(id, accion) {
+            if (id && accion) {
+                if (carritoActivo[id]) {
+                    if (accion === 'sumar') {
+                        carritoActivo[id].qty += 1;
+                        await db.carritoActivo.put(carritoActivo[id]);
+                    } else if (accion === 'restar') {
+                        carritoActivo[id].qty -= 1;
+                        if (carritoActivo[id].qty <= 0) {
+                            delete carritoActivo[id]; // también quitar de memoria
+                            await deleteFromIndexedDB('carritoActivo', id);
+                        } else {
+                            await db.carritoActivo.put(carritoActivo[id]);
+                        }
+                    }
+                    actualizarCarritoJs();
+                }
             }
-
-            actualizarCarritoJs();
         }
 
-        /* ** CARRITO DE COMPRAS CON JS */
+        // Eliminar un producto del carrito
+        async function quitarProductoJs(id) {
+            await deleteFromIndexedDB('carritoActivo', id);
+            await actualizarCarritoActivo()
+        }
+        // Eliminar un producto del carrito
+
+
+
+
+        // ======================
+        // FORMATEO DE NÚMEROS
+        // ======================
         function formatNumber(num) {
             return parseFloat(num).toLocaleString('es-VE', {
                 minimumFractionDigits: 2,
@@ -1405,216 +1601,532 @@ echo '</pre>';
             });
         }
 
-
-
-
-
-
-
-        /*
-        var carritoActivo = JSON.parse(localStorage.getItem('carritoActivo')) || {};
-        var carritosVenta = JSON.parse(localStorage.getItem('carritosVenta')) || {};
-        var carritosReservados = JSON.parse(localStorage.getItem('carritosReservados')) || {};
-        */
-
-
-
-
-        function procesarPedido(metodoPago, despacho, nombreC = null) {
+        // ======================
+        // PROCESAR PEDIDO (VENTA)
+        // ======================
+        async function procesarPedido(metodoPago, despacho, nombreC = null) {
             if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
                 console.warn("No hay carrito activo para procesar.");
                 return false;
             }
 
-            // Generar un ID único para este pedido
-            const idPedido = Date.now().toString();
+            const idPedido = String(Date.now());;
             const datosCliente = {
                 nombre: nombreC || "",
                 cedula: "",
                 telefono: ""
-            }
-
-            // Construir el objeto pedido con el formato solicitado
-            let nuevoPedido = {
-                id: idPedido,
-                metodoPago: metodoPago,
-                despacho: despacho,
-                datosCliente: datosCliente || "",
-                productos: carritoActivo // Asumiendo carritoActivo es el objeto con productos en ese formato
             };
 
-            // Guardar en carritosVenta con idPedido como clave
-            carritosVenta[idPedido] = nuevoPedido;
-
-            // Guardar en localStorage
-            localStorage.setItem('carritosVenta', JSON.stringify(carritosVenta));
-
-            localStorage.removeItem('carritoActivo');
+            const valorFinalVenta = total_dolares;
+            const valorFinalBs = total_bolivares;
+            const valorFinalCop = total_pesos;
 
 
-            console.log(`✅ Pedido procesado: ${idPedido}`);
-            console.log(carritosVenta);
-            return true;
+            let nuevoPedido = {
+                id: idPedido,
+                metodoPago,
+                despacho, // 1= Venta normal, 2= crédito, 3= descuento
+                valorFinalVenta,
+                valorFinalBs,
+                valorFinalCop,
+                datosCliente,
+                productos: carritoActivo
+            };
+
+            // Guardar en IndexedDB
+            try {
+                await db.carritosVenta.put(nuevoPedido);
+                //  console.log(`Pedido ${idPedido} guardado en IndexedDB`);
+
+
+                // Limpiar carrito activo
+                carritoActivo = {};
+                await db.carritoActivo.clear();
+
+                $("#tabla-carrito tbody").html('');
+                $("#tabla-carrito tfoot").html('');
+
+                // Llamar función de envío (puede sincronizar cuando haya internet)
+                enviarPedidosProcesados();
+
+                return true;
+
+
+            } catch (e) {
+                console.error("Error guardando en IndexedDB, ", e);
+            }
+
 
         }
-
 
         document.getElementById('btn-vender').addEventListener('click', function() {
             confirmarVenta('venta');
         });
 
 
+        // ======================
+        // GUARDAR CARRITO RESERVADO
+        // ======================
+        async function reservarCarrito() {
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                console.warn("No hay carrito activo para procesar.");
+                return false;
+            }
 
-        function enviarPedidosProcesados() {
-            if (Object.keys(carritosVenta).length === 0) {
+            Swal.fire({
+                title: 'Identifique el carrito para reservar',
+                html: `<input id="cliente" class="form-control" placeholder="Identificador (puede ser el nombre del cliente)">`,
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#32d7c0',
+                customClass: {
+                    popup: 'swal-metodo-pago'
+                },
+                didOpen: () => Swal.getConfirmButton().setAttribute('id', 'btnVender'),
+                preConfirm: () => {
+                    const nombre = document.getElementById('cliente').value.trim();
+                    if (!nombre) Swal.showValidationMessage('Por favor, ingresa el identificador del carrito');
+                    return nombre;
+                }
+            }).then(async (result) => {
+                if (!result.isConfirmed) return;
+
+                const cliente = result.value;
+                const idPedido = String(Date.now());;
+
+                let nuevoPedidoReservado = {
+                    cliente,
+                    id: idPedido,
+                    productos: carritoActivo
+                };
+
+                // Guardar en IndexedDB
+                try {
+                    await db.carritosReservados.put(nuevoPedidoReservado);
+                    console.log(`Carrito reservado ${idPedido} guardado en IndexedDB`);
+                } catch (e) {
+                    console.error("Error guardando en IndexedDB:", e);
+                }
+                await db.carritoActivo.clear();
+                carritoActivo = {};
+
+                $("#tabla-carrito tbody").html('');
+                $("#tabla-carrito tfoot").html('');
+                Alerta.toast('success', 'Carrito reservado correctamente');
+
+                actualizarProductosReservados();
+            });
+        }
+
+        document.getElementById('btn-reservar').addEventListener('click', function() {
+            reservarCarrito();
+        });
+
+        // ======================
+        // ENVIAR PEDIDOS PROCESADOS
+        // ======================
+        async function enviarPedidosProcesados() {
+            // Leer pedidos de IndexedDB primero
+
+            let pedidosIndexedDB = await db.carritosVenta.toArray();
+
+            if (pedidosIndexedDB.length === 0) {
                 console.warn("No hay pedidos procesados para enviar.");
                 return;
             }
 
-            // Verificar conexión antes de enviar
-            comprobarConexion(function(hayInternet) {
+            total_dolares = 0;
+            total_bolivares = 0;
+            total_pesos = 0;
+
+
+            comprobarConexion(async function(hayInternet) {
                 if (!hayInternet) {
-                    // se deben dibujar los pedidos pendientes en 
-                    actualizarProductosSinEnviar()
+                    Alerta.toast('warning', 'No hay conexión a internet. Las ventas se guardarán localmente.');
+                    actualizarProductosSinEnviar();
                     return;
                 }
 
-                // Si hay internet, procedemos con el envío
-                const pedidosArray = Object.values(carritosVenta);
 
-                $.ajax({
-                        url: base_url + 'accion_carta.php',
-                        type: 'POST',
-                        data: {
-                            action: 'enviarPedidos',
-                            pedidos: JSON.stringify(pedidosArray)
+                fetch(base_url + 'accion_carta.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        dataType: 'json'
+                        body: new URLSearchParams({
+                            action: 'enviarPedidos',
+                            pedidos: JSON.stringify(pedidosIndexedDB)
+                        })
                     })
-                    .done(function(response) {
+                    .then(response => response.json())
+                    .then(async (response) => {
+
+                        // limpiar carrito activo LÓGICA
                         if (response.status) {
-                            Alerta.toast('success', response.message);
-                            // Limpiar carritosVenta después de enviar
-                            localStorage.removeItem('carritosVenta');
+                            Alerta.toast('success', 'Informacion enviada correctamente.');
+                            // Limpiar IndexedDB
+                            await db.carritosVenta.clear();
                         } else {
-                            //Alerta.toast('error', response.message);
+                            Alerta.toast('error', response.data || 'Error en la respuesta del servidor.');
                         }
                     })
-                    .fail(function(xhr, status, error) {
+                    .catch((error) => {
+                        actualizarProductosSinEnviar();
                         console.error('Error al enviar los pedidos:', error);
                         Alerta.toast('error', 'Error al enviar los pedidos. Intente nuevamente.');
                     });
+
+
+
             });
         }
 
+        // ======================
+        // MOSTRAR CARRITOS RESERVADOS
+        // ======================
+        async function actualizarProductosReservados() {
+            document.getElementById('ul-productos-reservados').innerHTML = '';
+            document.getElementById('cantidad-reservados').innerHTML = '';
 
+            // Leer desde IndexedDB
+            let items = await db.carritosReservados.toArray();
+            items = items.reverse();
+
+            if (items.length > 0) {
+                document.getElementById('cantidad-reservados').innerHTML = `<span class="badge text-dark bg-warning">${items.length}</span>`;
+                items.forEach(element => {
+                    const fecha = new Date(parseInt(element.id));
+                    const fechaEspañol = fecha.toLocaleDateString('es-VE', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    const cliente = element.cliente || 'Cliente no especificado';
+
+                    let productosHTML = '';
+                    let totalPesos = 0;
+                    let totalDolares = 0;
+                    let totalBolivares = 0;
+                    Object.values(element.productos).forEach(prod => {
+                        productosHTML += `<span class="badge bg-light text-dark">${prod.name} (x${prod.qty})</span> `;
+                        totalPesos += prod.pricePeso * prod.qty;
+                        totalDolares += prod.price * prod.qty;
+                        totalBolivares += prod.priceBolivar * prod.qty;
+                    });
+
+                    let html = `
+                <li class="list-none item-reservado mb-2">
+                    <div class="item-reservado-header p-3">
+                        <div class="avatar">
+                            <ion-icon name="briefcase-outline"></ion-icon>
+                        </div>
+                        <div>
+                            <p class="m-0 p-0">${cliente}</p>
+                            <small>${fechaEspañol}</small>
+                        </div>
+                    </div>
+                    <div class="item-reservado-body pl-4 pb-3 row" >
+                        <div class="d-flex justify-content-between flex-column col-lg-9">
+                            <div>${productosHTML}</div>
+                            <div class="d-flex mt-2 totales-pendiente">
+                                <p>TOTALES:</p>
+                                <p class="text-info">${formatNumber(totalPesos)} P</p>
+                                <p class="text-danger">${formatNumber(totalBolivares)} Bs</p>
+                                <p class="text-success">$${formatNumber(totalDolares)}</p>
+                            </div>
+                        </div>
+                        <div class="btn-list-item text-center d-flex pr-4 col-lg-3 text-end">
+                            <button class="btn btn-success" onclick="retomarCarrito('${element.id}')">Retomar carrito</button>
+                            <button class="btn btn-danger" onclick="eliminarCarritoReservado('${element.id}')">Eliminar</button>
+                        </div>
+                    </div>
+                </li>
+            `;
+                    document.getElementById('ul-productos-reservados').innerHTML += html;
+                });
+            }
+        }
+
+        // ======================
+        // SINCRONIZACIÓN AUTOMÁTICA
+        // ======================
+
+        // Inicializar al cargar
+        actualizarProductosReservados();
         enviarPedidosProcesados();
 
 
+        //here
 
-        /*
-           <li class="list-none item-reservado">
-                                                <div class="item-reservado-header p-3">
-                                                    <div class="avatar">
-                                                        <ion-icon name="briefcase-outline"></ion-icon>
-                                                    </div>
-                                                    <div>
-                                                        <p class="m-0 p-0"> 01-05-2025 02:55 PM</p>
-                                                        <small class="text-muted">FECHA DEL CARRITO</small>
-                                                    </div>
-                                                </div>
+        async function deleteFromIndexedDB(storeName, id) {
+            try {
+                await db.table(storeName).delete(String(id));
+                console.log(`Registro con ID ${id} eliminado de ${storeName}`);
+            } catch (err) {
+                console.error(`Error eliminando de ${storeName}`, err);
+            }
+        }
 
-                                                <div class="item-reservado-body pl-4 pb-3 d-flex justify-content-between">
-                                                    <div class="d-flex justify-content-between flex-column">
-                                                        <div>
-                                                            <span>PRODUCTOS: </span> <span>
-                                                                <span class="badge bg-light text-dark">lorem lorem lorem</span>
-                                                                <span class="badge bg-light text-dark">lorem lorem lorem</span>
-                                                                <span class="badge bg-light text-dark">lorem lorem lorem</span>
+        // Obtiene un registro por clave primaria
+        async function getFromIndexedDB(storeName, id) {
+            try {
+                return await db.table(storeName).get(String(id)); // forzar string
+            } catch (error) {
+                console.error(`Error obteniendo registro de ${storeName}`, error);
+                return null;
+            }
+        }
 
-                                                            </span>
-                                                        </div>
-
-
-                                                        <div class="d-flex justify-content-between">
-                                                            <p>TOTALES:</p>
-                                                            <p class="text-info">3.000,00 P</p>
-                                                            <p class="text-danger">115,38 Bs</p>
-                                                            <p class="text-success">$0,89</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="btn-list-item text-center d-flex pr-4">
-                                                        <button class="btn btn-success">Modificar</button>
-                                                        <button class="btn btn-secondary text-dark">Cancelar envio</button>
-                                                    </div>
-                                                </div>
-
-                                            </li>
-
-                                            ul-productos-sin-enviar
-        */
-        function actualizarProductosSinEnviar() {
-            document.getElementById('ul-productos-sin-enviar').innerHTML = {}
+        // Obtiene todos los registros de un store
+        async function getAllFromIndexedDB(storeName) {
+            try {
+                return await db.table(storeName).toArray();
+            } catch (error) {
+                console.error(`Error obteniendo todos los registros de ${storeName}`, error);
+                return [];
+            }
         }
 
 
+        // RETOMAR CARRITO RESERVADO
+        async function retomarCarrito(carritoId) {
+            try {
+                const key = String(carritoId);
+                const carritoData = await getFromIndexedDB('carritosReservados', key);
 
+                if (!carritoData) {
+                    Alerta.toast('error', 'Carrito reservado no encontrado');
+                    return;
+                }
 
+                // 1) Limpiar store de carrito activo en IndexedDB
+                await db.carritoActivo.clear();
 
+                // 2) Reconstruir carritoActivo en memoria y preparar puts
+                carritoActivo = {}; // reset en memoria
+                const entries = Object.entries(carritoData.productos || {}); // [ [id, prod], ... ]
 
-
-        function procesarPedido2(metodoPago, despacho, nombreC = null) {
-            const valorFinalVenta = total_dolares;
-            const valorFinalBs = total_bolivares;
-            const valorFinalCop = total_pesos;
-            const pagoTipo = metodoPago.replace('option', '');
-            const action = despacho;
-            const compraTipo = 1;
-
-            // pendiente al nombre del cliente nombreC // placeOrderCredito
-
-            let tipoDespacho
-            if (despacho == 'placeOrderCredito') {
-                tipoDespacho = 2;
-            } else {
-                tipoDespacho = 1;
-            }
-
-            $.ajax({
-                    url: base_url + 'accion_carta.php',
-                    type: 'GET',
-                    data: {
-                        valorFinalVenta: valorFinalVenta,
-                        valorFinalBs: valorFinalBs,
-                        valorFinalCop: valorFinalCop,
-                        pagoTipo: pagoTipo,
-                        action: action,
-                        compraTipo: compraTipo,
-                        nombreC: nombreC,
-                        tipoV: tipoDespacho
-                    },
-                    dataType: 'html'
-                })
-                .done(function(result) {
-                    const response = JSON.parse(result)
-                    if (response.status) {
-                        total_pesos = 0
-                        total_dolares = 0
-                        total_bolivares = 0
-                        Alerta.toast('success', response.data)
-                        actualizar_carrito()
-                        cargarUltimasOrdenes()
-                    } else {
-                        Alerta.toast('error', 'No se pudo realizar la acción')
-                    }
-
+                const puts = entries.map(([prodId, prod]) => {
+                    const idStr = String(prod.id ?? prodId); // asegurar string consistente
+                    const record = {
+                        ...prod,
+                        id: idStr,
+                        qty: Number(prod.qty) || 1
+                    };
+                    // actualizar memoria
+                    carritoActivo[idStr] = record;
+                    // devolver la promesa put (no await aquí)
+                    return db.carritoActivo.put(record);
                 });
 
+                // 3) Esperar que terminen todas las operaciones de guardado
+                await Promise.all(puts);
+
+                // 4) Borrar el carrito reservado
+                await deleteFromIndexedDB('carritosReservados', key);
+
+                // Opcional: debug (quita en producción)
+                console.log('carritoActivo (en memoria) después de retomar:', carritoActivo);
+                console.log('Contenido de db.carritoActivo:', await db.carritoActivo.toArray());
+
+                // 5) Actualizar la UI solo ahora que la memoria y la DB están listas
+                await actualizarCarritoJs();
+
+                // 6) Actualizar lista de reservados y UI general
+                await actualizarProductosReservados();
+                Alerta.toast('success', 'Carrito retomado correctamente');
+                document.getElementById('home-tab')?.click();
+
+            } catch (error) {
+                console.error("Error al retomar carrito:", error);
+                Alerta.toast('error', 'Error al retomar carrito.');
+            }
         }
 
 
 
+        /*  async function retomarCarrito(carritoId) {
+              try {
+                  carritoData = await getFromIndexedDB('carritosReservados', carritoId);
+                  console.log(carritoData)
 
+                  if (carritoData) {
+                      carritoActivo = carritoData.productos;
+
+                      // Eliminar de memoria y de IndexedDB
+                      await deleteFromIndexedDB('carritosReservados', carritoId);
+
+                      //await db.carritoActivo.put(carritoActivo[idPedido]);
+                      await db.carritoActivo.put(carritoActivo);
+
+                      // Actualizar UI
+                      actualizarCarritoJs();
+                      actualizarProductosReservados();
+                      Alerta.toast('success', 'Carrito retomado correctamente');
+                      document.getElementById('home-tab').click();
+                  } else {
+                      Alerta.toast('error', 'Carrito reservado no encontrado');
+                  }
+              } catch (error) {
+                  console.error("Error al retomar carrito:", error);
+                  Alerta.toast('error', 'Error al retomar carrito.');
+              }
+          }*/
+        // RETOMAR CARRITO RESERVADO
+
+
+        // ELIMINAR CARRITO RESERVADO
+        async function eliminarCarritoReservado(carritoId) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción eliminará el carrito reservado.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await deleteFromIndexedDB('carritosReservados', carritoId);
+
+                    actualizarProductosReservados();
+                    Alerta.toast('success', 'Carrito eliminado correctamente');
+                }
+            });
+        }
+        // ELIMINAR CARRITO RESERVADO
+
+
+        // MOSTRAR PRODUCTOS SIN ENVIAR
+        async function actualizarProductosSinEnviar() {
+            document.getElementById('ul-productos-sin-enviar').innerHTML = '';
+            document.getElementById('cantidad-no-enviada').innerHTML = '';
+
+            items = await getAllFromIndexedDB('carritosVenta');
+            items.reverse();
+
+            if (items.length > 0) {
+                document.getElementById('cantidad-no-enviada').innerHTML = `<span class="badge bg-danger">${items.length}</span>`;
+
+                items.forEach(element => {
+                    const fecha = new Date(parseInt(element.id));
+                    const fechaEspañol = fecha.toLocaleDateString('es-VE', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+
+                    const metodoPago = element.metodoPago;
+                    let productosHTML = '';
+                    let totalPesos = 0,
+                        totalDolares = 0,
+                        totalBolivares = 0;
+
+                    Object.values(element.productos).forEach(prod => {
+                        productosHTML += `<span class="badge bg-light text-dark">${prod.name} (x${prod.qty})</span> `;
+                        totalPesos += prod.pricePeso * prod.qty;
+                        totalDolares += prod.price * prod.qty;
+                        totalBolivares += prod.priceBolivar * prod.qty;
+                    });
+
+                    let tipoVenta = {
+                        1: 'Venta',
+                        2: 'Crédito',
+                        3: 'Descuento'
+                    }
+
+                    let html = `
+                <li class="list-none item-reservado mb-2">
+                    <div class="item-reservado-header p-3">
+                        <div class="avatar"><ion-icon name="briefcase-outline"></ion-icon></div>
+                        <div>
+                            <p class="m-0 p-0">${fechaEspañol}</p>
+                            <small>Método de pago: <b class="text-success">${metodosPago[metodoPago] ?? 'PENDIENTE'}</b> - (${tipoVenta[element.despacho]})</small> 
+                        </div>
+                    </div>
+                    <div class="item-reservado-body pl-4 pb-3 row">
+                        <div class="d-flex justify-content-between flex-column col-lg-9">
+                            <div>${productosHTML}</div>
+                            <div class="d-flex mt-2 totales-pendiente">
+                                <p>TOTALES:</p>
+                                <p class="text-info">${formatearMiles(totalPesos)} P</p>
+                                <p class="text-danger">${formatNumber(totalBolivares)} Bs</p>
+                                <p class="text-success">$${formatNumber(totalDolares)}</p>
+                            </div>
+                        </div>
+                        <div class="hide btn-list-item text-center d-flex pr-4 col-lg-3 text-end">
+                            <button class="btn btn-success">Modificar</button>
+                            <button class="btn btn-secondary text-dark">Cancelar envío</button>
+                        </div>
+                    </div>
+                </li>
+            `;
+                    document.getElementById('ul-productos-sin-enviar').innerHTML += html;
+                });
+            }
+        }
+        // MOSTRAR PRODUCTOS SIN ENVIAR
+
+
+        /*
+                function procesarPedido2(metodoPago, despacho, nombreC = null) {
+                    const valorFinalVenta = total_dolares;
+                    const valorFinalBs = total_bolivares;
+                    const valorFinalCop = total_pesos;
+                    const pagoTipo = metodoPago.replace('option', '');
+                    const action = despacho;
+                    const compraTipo = 1;
+
+                    // pendiente al nombre del cliente nombreC // placeOrderCredito
+
+                    let tipoDespacho
+                    if (despacho == 'placeOrderCredito') {
+                        tipoDespacho = 2;
+                    } else {
+                        tipoDespacho = 1;
+                    }
+
+                    $.ajax({
+                            url: base_url + 'accion_carta.php',
+                            type: 'GET',
+                            data: {
+                                valorFinalVenta: valorFinalVenta,
+                                valorFinalBs: valorFinalBs,
+                                valorFinalCop: valorFinalCop,
+                                pagoTipo: pagoTipo,
+                                action: action,
+                                compraTipo: compraTipo,
+                                nombreC: nombreC,
+                                tipoV: tipoDespacho
+                            },
+                            dataType: 'html'
+                        })
+                        .done(function(result) {
+                            const response = JSON.parse(result)
+                            if (response.status) {
+                                total_pesos = 0
+                                total_dolares = 0
+                                total_bolivares = 0
+                                Alerta.toast('success', response.data)
+                                actualizar_carrito()
+                                cargarUltimasOrdenes()
+                            } else {
+                                Alerta.toast('error', 'No se pudo realizar la acción')
+                            }
+
+                        });
+
+                }
+
+
+
+        */
 
 
 
@@ -1629,36 +2141,8 @@ echo '</pre>';
 
         // Verificar la conexion
         function comprobarConexion(callback) {
-            let mensajeMostrado = false;
-            let divAviso = null;
 
-            // Crea el mensaje flotante si no existe
-            function mostrarAviso() {
-                if (!mensajeMostrado) {
-                    divAviso = document.createElement("div");
-                    divAviso.innerText = "🔴 Sin conexión a Internet";
-                    divAviso.style.position = "fixed";
-                    divAviso.style.bottom = "20px";
-                    divAviso.style.right = "20px";
-                    divAviso.style.background = "#e74c3c";
-                    divAviso.style.color = "white";
-                    divAviso.style.padding = "10px 20px";
-                    divAviso.style.borderRadius = "8px";
-                    divAviso.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
-                    divAviso.style.zIndex = "9999";
-                    divAviso.style.fontFamily = "sans-serif";
-                    document.body.appendChild(divAviso);
-                    mensajeMostrado = true;
-                }
-            }
 
-            // Elimina el mensaje
-            function quitarAviso() {
-                if (mensajeMostrado && divAviso) {
-                    divAviso.remove();
-                    mensajeMostrado = false;
-                }
-            }
 
             async function verificar() {
                 try {
@@ -1671,13 +2155,13 @@ echo '</pre>';
 
                     // Hay conexión
                     // quitarAviso();
+                    document.getElementById('alert-internet').classList.remove('hide');
 
-                    mostrarAviso();
                     callback(false);
-                    // callback(true);
                 } catch (e) {
                     // No hay conexión
-                    mostrarAviso();
+                    document.getElementById('alert-internet').classList.add('hide');
+
                     callback(false);
                     setTimeout(verificar, 20000); // Reintentar en 20 segundos
                 }
@@ -1685,89 +2169,6 @@ echo '</pre>';
 
             verificar();
         }
-
-        // Ejemplo de uso:
-        /*   comprobarConexion((hayInternet) => {
-         //      console.log(hayInternet ? "✅ Conectado" : "❌ Sin conexión");
-           });*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /// delete
-        function actualizar_carrito(id = null, accion = null) {
-            $.ajax({
-                    url: base_url + 'carrito.php',
-                    type: 'POST',
-                    data: id && accion ? {
-                        id,
-                        accion
-                    } : {},
-                    dataType: 'html'
-                })
-                .done(function(result) {
-                    //     console.log(result)
-                    total_pesos = 0
-                    total_dolares = 0
-                    total_bolivares = 0
-
-                    const resultado = JSON.parse(result);
-                    $("#tabla-carrito tbody").html('');
-                    $("#tabla-carrito tfoot").html('');
-                    if (resultado.cantidad > 0) {
-                        resultado.carrito.forEach(element => {
-                            $("#tabla-carrito tbody").append(`
-                                <tr>
-                                    <td style="width:5%; text-align: center" class="ac-c">${element.cantidad}</td>
-                                    <td style="width:30%" class="ac-c">${element.nombre}</td>
-                                    <td style="width:20%" class="ac-c">${element.subtotalPeso} P</td>
-                                    <td style="width:20%" class="ac-c">${formatNumber(element.subtotalBolivar)} Bs</td>
-                                    <td style="width:10%" class="ac-c">$${formatNumber(element.subtotalDolar)}</td>
-                                    <td style="width:10%" class="ac-c">
-                                             <button class="btn btn-sm btn-outline-success" onclick="actualizar_carrito('${element.id}', 'sumar')"><i class="fa fa-arrow-up"></i></button>
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="actualizar_carrito('${element.id}', 'restar')"><i class="fa fa-arrow-down"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
-                                    </td>
-                                </tr>`);
-                        });
-
-                        total_pesos = parseFloat(resultado.total.pesos);
-                        total_dolares = parseFloat(resultado.total.dolares);
-                        total_bolivares = parseFloat(resultado.total.bolivares);
-
-                        $("#tabla-carrito tfoot").html(`
-                                    <tr >
-                                        <td style="padding-top: 0.5rem !important; width:5%"></td>
-                                        <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
-                                        <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-pesos" class="text-total text-info">${formatNumber(formatPeso(resultado.total.pesos))} P</td>
-                                        <td style="padding-top: 0.5rem !important; width:20%" id="precio-total-bolivar" class="text-total text-danger">${formatNumber(resultado.total.bolivares)} Bs</td>
-                                        <td style="padding-top: 0.5rem !important; width:10%" id="precio-total-dolar" class="text-total text-success">$${formatNumber(resultado.total.dolares)}</td>
-                                        <td style="padding-top: 0.5rem !important; width:10%"></td>
-                                    </tr>
-                                    `);
-
-                        $('#botones_acciones').removeClass('hide');
-                    } else {
-                        $('#botones_acciones').addClass('hide');
-                    }
-                    $('[data-toggle="popover"]').popover({
-                        html: true
-                    });
-
-                });
-        }
-        /// delete
-
-
 
 
 
@@ -1788,7 +2189,7 @@ echo '</pre>';
                 $('.section-scanner').addClass('hide')
 
 
-                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, cantidad_scan);
+                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, null, cantidad_scan);
 
                 // ocultar footer del modal
                 const modal_footer = document.getElementById('modal-footer')
@@ -1832,13 +2233,14 @@ echo '</pre>';
         });
 
 
-
-
         $(document).ready(function() {
             document.getElementById("cargando").style.display = "none";
         });
 
         function confirm(id) {
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                return false;
+            }
             Swal.fire({
                 title: 'Esta seguro?',
                 html: 'Se eliminara la venta ¿desea continuar?',
@@ -1870,8 +2272,12 @@ echo '</pre>';
         }
 
 
+        //todo
 
         function confirmarDescuento() {
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                return false;
+            }
             Swal.fire({
                 title: 'Esta seguro?',
                 html: 'Se descontaran productos del almacen ¿desea continuar?',
@@ -1883,26 +2289,29 @@ echo '</pre>';
             }).then((result) => {
                 if (result.isConfirmed) {
 
+                    procesarPedido('0', 3);
 
-                    $.ajax({
-                        url: base_url + 'accion_carta.php',
-                        type: 'GET',
-                        data: {
-                            statusV: 3,
-                            action: 'placeOrder'
-                        }, // Pasar el parámetro id en la solicitud
-                        success: function(response) {
-                            const respuesta = JSON.parse(response)
-                            if (respuesta.status) {
-                                Alerta.toast('info', 'Se descontaron productos del inventario')
-                                actualizar_carrito()
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            // Manejar cualquier error
-                            console.error('Error al eliminar la venta:', error);
-                        }
-                    });
+                    /*  $.ajax({
+                          url: base_url + 'accion_carta.php',
+                          type: 'GET',
+                          data: {
+                              statusV: 3,
+                              action: 'placeOrder'
+                          }, // Pasar el parámetro id en la solicitud
+                          success: function(response) {
+                              const respuesta = JSON.parse(response)
+                              if (respuesta.status) {
+                                  Alerta.toast('info', 'Se descontaron productos del inventario')
+                                  actualizar_carrito()
+                              }
+                          },
+                          error: function(xhr, status, error) {
+                              // Manejar cualquier error
+                              console.error('Error al eliminar la venta:', error);
+                          }
+                      });
+
+                      */
                 }
             })
         }
@@ -1922,9 +2331,12 @@ echo '</pre>';
 
                 switch (key) {
                     case 'b':
+                        document.getElementById('home-tab')?.click();
+
                         openModalButton.click();
                         document.getElementById("search").focus();
                         document.getElementById("search").value = "";
+
                         break;
                     case 'v':
                         confirmarVenta();
@@ -1949,20 +2361,13 @@ echo '</pre>';
                             }
                         }
                         break;
-                    case '-':
-                        if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
-                            const cantidad = $('#cantidad-scan').val()
-                            const cantidadActual = parseInt(cantidad) - 1
-                            if (cantidadActual >= 1) {
-                                $('#cantidad-scan').val(cantidadActual)
-                            }
-                        }
-                        break;
+
 
 
                 }
             } else if (key === 'escape') {
                 closeModalButton.click();
+                document.getElementById("section-scanner").classList.add('hide');
             }
 
             if (swalPersonalizado) {
