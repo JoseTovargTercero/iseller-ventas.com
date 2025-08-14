@@ -36,20 +36,15 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
             agregarAlCarrito($conexion, $cart);
             break;
 
-        case 'updateCartItem':
-            actualizarItemCarrito($cart);
-            break;
-
-        case 'removeCartItem':
-            eliminarItemCarrito($cart);
-            break;
-
         case 'placeOrder':
             procesarOrden($conexion, $cart, 'contado', $tickets);
             break;
 
         case 'placeOrderCredito':
             procesarOrden($conexion, $cart, 'credito', $tickets);
+            break;
+        case 'procesarCarrtios':
+            procesarCarritos();
             break;
 
         default:
@@ -62,6 +57,8 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
 // -----------------------------------------------------------
 // FUNCIONES
 // -----------------------------------------------------------
+
+function procesarCarritos() {}
 
 function agregarAlCarrito($conexion, $cart)
 {
@@ -100,93 +97,6 @@ function agregarAlCarrito($conexion, $cart)
     $cart->insert($itemData);
 }
 
-function actualizarItemCarrito($cart)
-{
-    $itemData = [
-        'rowid' => $_REQUEST['id'],
-        'qty' => $_REQUEST['qty']
-    ];
-    echo $cart->update($itemData) ? 'ok' : 'err';
-    exit;
-}
-
-function eliminarItemCarrito($cart)
-{
-    $cart->remove($_REQUEST['id']);
-    echo json_encode(['status' => true, 'data' => 'Eliminado correctamente']);
-    exit;
-}
-/*
-function procesarOrden($conexion, $cart, $tipo = 'contado', $tickets = 0)
-{
-    global $id_sucursal, $bss_id;
-    if ($cart->total_items() <= 0 || empty($_SESSION['id'])) {
-        echo json_encode(['status' => false, 'data' => 'No hay productos en el carrito']);
-        return;
-    }
-
-    // Datos base
-    $fechaVenta = date('Y-m-d');
-    $compraTipo = $_GET['compraTipo'] ?? '1';
-    $pagoTipo = $_GET['pagoTipo'] ?? '';
-    $precioBs = $_GET['valorFinalBs'] ?? 0;
-    $precioCop = formatPeso($_GET['valorFinalCop'] ?? 0);
-    $valorFinalVenta = $_GET['valorFinalVenta'] ?? 0;
-    $statusV = $_GET['statusV'] ?? 1;
-    if ($tipo == 'credito') {
-        $statusV = 2;
-    }
-    $valorFinalVenta = $cart->total();
-
-    $mes = date('Y-m');
-    $ano = date('Y');
-    $semana =  date('Y-W');
-    $dia = date('N');
-
-    // Registrar orden
-    $stmt = $conexion->prepare("
-        INSERT INTO orden (status, customer_id, total_price, created, modified, fecha, semana, ano, total_price_bs, total_price_cop, tipoPago, dia, id_sucursal, bss_id)
-        VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
-    $stmt->bind_param("iisssssddsiii", $statusV, $_SESSION['id'], $valorFinalVenta, $fechaVenta,  $mes, $semana, $ano, $precioBs, $precioCop, $pagoTipo, $dia, $id_sucursal, $bss_id);
-    $stmt->execute();
-    $orderID = $stmt->insert_id;
-    $stmt->close();
-
-    // Guardar artículos
-    guardarArticulosOrden($conexion, $cart, $orderID);
-
-    $msg = 'Venta realizada con éxito';
-
-    // Si es crédito, guardar cliente
-    if ($tipo === 'credito') {
-        $nombreC = $_GET['nombreC'];
-
-        $stmtC = $conexion->prepare("
-            INSERT INTO creditos (order_id, total_price, negocio, tipoCompra, bss_id, sucursal_id)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $stmtC->bind_param("dsssii", $orderID, $valorFinalVenta, $nombreC, $compraTipo, $bss_id, $id_sucursal);
-        $stmtC->execute();
-        $stmtC->close();
-
-        $msg = 'Crédito otorgado éxito';
-    }
-
-
-
-    $cart->destroy();
-    $accion = ($statusV == 3) ? "descuento" : ($tipo == "credito" ? "credito" : "vendido");
-
-    // Redirigir
-    if ($tickets == 0) {
-        echo json_encode(['status' => true, 'data' => $msg, 'id' => $orderID]);
-    } else {
-        // $qty = count($cart->contents());
-        // header("Location: ../publico/production/ticket.php?id=$orderID&accion=$accion&qty=$qty");
-    }
-    exit;
-}*/
 
 function es_venta_mayor($cart)
 {
@@ -393,10 +303,6 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
             $updateStmt->execute();
         }
     }
-
-
-
-
 
     // Cerrar todas las sentencias
     $insertStmt->close();

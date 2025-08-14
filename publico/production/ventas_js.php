@@ -147,6 +147,9 @@ echo '</pre>';
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
 </head>
 
 
@@ -311,196 +314,307 @@ echo '</pre>';
             <?php echo $topnav ?>
             <!-- /top navigation -->
             <div class="right_col h-100" role='main'>
-                <div class=''>
-
-                    <h4 class="mb-0 text-danger">Ventas</h4>
-                    <p>Caja de despacho</p>
-
-                    <div class="row ">
 
 
 
-                        <div class="col-lg-12">
-                            <div class="x_panel" style="min-height: 60vh">
-                                <div class="x_title d-flex justify-content-between">
-                                    <div style="display: grid">
-                                        <h2>Carrito del cliente</h2>
-                                        <span><b>SUCURSAL: </b><span id="sucursal_nombre">
-                                            </span></span>
-                                    </div>
-                                    <button class="btn btn-success" style="height: min-content" id="open-modal"> (B) Búsqueda</button>
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0 text-danger">Ventas</h4>
+                        <p>Caja de despacho</p>
+                    </div>
+                    <div class="pt-1">
+
+
+                        <ul class="nav nav-tabs" id="myTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">Carrito activo</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="false">Reservados</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">No guardados <span id="no-guardados"></span></button>
+                            </li>
+                        </ul>
+
+
+
+
+                    </div>
+                </div>
+
+
+                <style>
+                    .text-dark {
+                        color: #5a5a5a !important;
+                    }
+
+                    .item-reservado {
+                        background-color: #22222217;
+                        border: 1px solid #00000045;
+                        border-radius: 5px;
+                        border-style: dashed;
+                    }
+
+                    .avatar {
+                        background: #8b8b8b14;
+                        padding: 7px;
+                        font-size: 25px;
+                        width: 45px;
+                        height: 45px;
+                        text-align: center;
+                        border-radius: 50%;
+                    }
+
+                    .item-reservado-header {
+                        display: flex;
+                        gap: 5px;
+                    }
+
+                    .btn-list-item {
+                        flex-direction: column
+                    }
+                </style>
+
+
+
+
+                <div class="row" id="myTabContent">
+                    <div class="tab-pane fade col-lg-12" id="home" role="tabpanel" aria-labelledby="home-tab">
+                        <div class="x_panel" style="min-height: 60vh">
+                            <div class="x_title d-flex justify-content-between">
+                                <div style="display: grid">
+                                    <h2>Carrito del cliente</h2>
+                                    <span><b>SUCURSAL: </b><span id="sucursal_nombre">
+                                        </span></span>
                                 </div>
-                                <div class="x_content cart">
-                                    <div>
-                                        <div class="table-container" style="overflow: auto">
-                                            <table class="table table-striped table-hover" id="tabla-carrito">
-                                                <thead style="min-width:100%; ">
-                                                    <tr>
-                                                        <th style="width:5%" class="column-title">Cant.</th>
-                                                        <th style="width:30%" class="column-title">Producto</th>
-                                                        <th style="width:20%" class="column-title">Peso</th>
-                                                        <th style="width:20%" class="column-title">BS</th>
-                                                        <th style="width:10%" class="column-title">Dolares</th>
-                                                        <th style="width:10%" class="column-title">Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
+                                <button class="btn btn-success" style="height: min-content" id="open-modal"> (B) Búsqueda</button>
+                            </div>
+                            <div class="x_content cart">
+                                <div>
+                                    <div class="table-container" style="overflow: auto">
+                                        <table class="table table-striped table-hover" id="tabla-carrito">
+                                            <thead style="min-width:100%; ">
+                                                <tr>
+                                                    <th style="width:5%" class="column-title">Cant.</th>
+                                                    <th style="width:30%" class="column-title">Producto</th>
+                                                    <th style="width:20%" class="column-title">Peso</th>
+                                                    <th style="width:20%" class="column-title">BS</th>
+                                                    <th style="width:10%" class="column-title">Dolares</th>
+                                                    <th style="width:10%" class="column-title">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
 
-                                                </tbody>
-                                                <tfoot></tfoot>
+                                            </tbody>
+                                            <tfoot></tfoot>
 
-                                            </table>
-
-                                        </div>
-
-
-
-
-                                        <section class="d-flex section-scanner hide">
-                                            <div id="result-escaner"> </div>
-                                        </section>
-
-                                        <div style=" bottom: 0; flex-wrap: wrap-reverse;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
-
-
-                                            <?php
-
-                                            // Mostrar botones según permisos
-                                            if (!empty($_SESSION['permisos'][11]) || $_SESSION["nivel"] == 1) {
-                                                echo '<button onclick="confirmarVenta(\'credito\')" class="btn btn-info text-white">Crédito</button>';
-                                            }
-
-                                            if (!empty($_SESSION['permisos'][12]) || $_SESSION["nivel"] == 1) {
-                                                echo '<a onclick="confirmarDescuento()" class="btn btn-dark text-white" style="cursor: pointer">Descontar</a>';
-                                            }
-
-                                            ?>
-
-
-                                            <a onclick="vaciarCarritoJs()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
-                                            <button class="btn btn-light" id="calcularVuelto">(C) Calcular cambio</button>
-                                            <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
-                                            <button onclick="confirmarVenta()" id="btn-vender" class="btn btn-success" style="color:white;">(V) Vender</button>
-                                        </div>
+                                        </table>
 
                                     </div>
+
+
+
+
+                                    <section class="d-flex section-scanner hide">
+                                        <div id="result-escaner"> </div>
+                                    </section>
+
+                                    <div style=" bottom: 0; flex-wrap: wrap-reverse;" class="pt-3 footer d-flex hide w-100 justify-content-center" id="botones_acciones">
+
+
+                                        <?php
+
+                                        // Mostrar botones según permisos
+                                        if (!empty($_SESSION['permisos'][11]) || $_SESSION["nivel"] == 1) {
+                                            echo '<button onclick="confirmarVenta(\'credito\')" class="btn btn-info text-white">Crédito</button>';
+                                        }
+
+                                        if (!empty($_SESSION['permisos'][12]) || $_SESSION["nivel"] == 1) {
+                                            echo '<a onclick="confirmarDescuento()" class="btn btn-dark text-white" style="cursor: pointer">Descontar</a>';
+                                        }
+
+                                        ?>
+
+
+                                        <a onclick="vaciarCarritoJs()" class="btn btn-danger " style="color:white; cursor: pointer">Destruir carrito</a>
+                                        <button class="btn btn-light" id="calcularVuelto">(C) Calcular cambio</button>
+                                        <button class="btn btn-warning text-dark hide" id="calcularDiferencia">Diferencia</button>
+                                        <button id="btn-vender" class="btn btn-success" style="color:white;">(V) Vender</button>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
 
-
-                        <div class="col-lg-12 mt-3 ">
-                            <div class="x_panel" style="padding-bottom: 30px;">
-                                <div class="x_title">
-                                    <h2 style="font-size: 15px; font-weight: bold">Ultimas ventas realizadas</h2>
-                                    <div class="clearfix"></div>
+                    <div class="tab-pane fade col-lg-12 show active " id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                        <div class="x_panel" style="min-height: 60vh">
+                            <div class="x_title d-flex justify-content-between">
+                                <div>
+                                    <h2>No guardados</h2>
                                 </div>
-                                <div class="x_content ">
-                                    <div class="">
-                                        <table class="table table-responsive table-striped">
-                                            <thead style="font-size: medium;">
-                                                <tr>
-                                                    <th class='column-title'>Fecha</th>
-                                                    <th class='column-title'>Monto</th>
-                                                    <th class='column-title'>Detalles</th>
-                                                    <th style="padding: 10px !important; text-align: center" class='column-title'>Ticket</th>
-                                                    <th style="width: 7%; padding: 10px !important" class='column-title'>Eliminar</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id='tabla_ventas'>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                            </div>
+                            <div class="x_content cart">
+                                <ul class="p-0" id="ul-productos-sin-enviar">
+                                    <li class="list-none item-reservado">
+                                        <div class="item-reservado-header p-3">
+                                            <div class="avatar">
+                                                <ion-icon name="briefcase-outline"></ion-icon>
+                                            </div>
+                                            <div>
+                                                <p class="m-0 p-0"> 01-05-2025 02:55 PM</p>
+                                                <small class="text-muted">FECHA DEL CARRITO</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="item-reservado-body pl-4 pb-3 d-flex justify-content-between">
+                                            <div class="d-flex justify-content-between flex-column">
+                                                <div>
+                                                    <span>PRODUCTOS: </span> <span>
+                                                        <span class="badge bg-light text-dark">lorem lorem lorem</span>
+                                                        <span class="badge bg-light text-dark">lorem lorem lorem</span>
+                                                        <span class="badge bg-light text-dark">lorem lorem lorem</span>
+
+                                                    </span>
+                                                </div>
+
+
+                                                <div class="d-flex justify-content-between">
+                                                    <p>TOTALES:</p>
+                                                    <p class="text-info">3.000,00 P</p>
+                                                    <p class="text-danger">115,38 Bs</p>
+                                                    <p class="text-success">$0,89</p>
+                                                </div>
+                                            </div>
+                                            <div class="btn-list-item text-center d-flex pr-4">
+                                                <button class="btn btn-success">Modificar</button>
+                                                <button class="btn btn-secondary text-dark">Cancelar envio</button>
+                                            </div>
+                                        </div>
+
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade col-lg-12" id="contact" role="tabpanel" aria-labelledby="contact-tab">...</div>
+                </div>
+
+
+                <div class="row">
+
+
+                    <div class="col-lg-12 mt-3 ">
+                        <div class="x_panel" style="padding-bottom: 30px;">
+                            <div class="x_title">
+                                <h2 style="font-size: 15px; font-weight: bold">Ultimas ventas realizadas</h2>
+                                <div class="clearfix"></div>
+                            </div>
+                            <div class="x_content ">
+                                <div class="">
+                                    <table class="table table-responsive table-striped">
+                                        <thead style="font-size: medium;">
+                                            <tr>
+                                                <th class='column-title'>Fecha</th>
+                                                <th class='column-title'>Monto</th>
+                                                <th class='column-title'>Detalles</th>
+                                                <th style="padding: 10px !important; text-align: center" class='column-title'>Ticket</th>
+                                                <th style="width: 7%; padding: 10px !important" class='column-title'>Eliminar</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id='tabla_ventas'>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
-
                     </div>
 
                 </div>
 
-
-                <?php require('../assets/templates/modal.html'); ?>
-
-                <!-- /page content -->
-
             </div>
+
+
+            <?php require('../assets/templates/modal.html'); ?>
+
+            <!-- /page content -->
+
         </div>
-        <!-- jQuery -->
-        <script src="../vendors/jquery/dist/jquery.min.js"></script>
-        <!-- Bootstrap -->
-        <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- FastClick -->
-        <script src="../vendors/fastclick/lib/fastclick.js"></script>
-        <script src="../vendors/nprogress/nprogress.js"></script>
-        <script src="../build/js/custom.js"></script>
-        <script src="../build/js/modal.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-        <!-- FastClick -->
-        <script>
-            var productos = <?php echo json_encode($data); ?>;
-            var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
-            var codigos = []
+    </div>
+    <!-- jQuery -->
+    <script src="../vendors/jquery/dist/jquery.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- FastClick -->
+    <script src="../vendors/fastclick/lib/fastclick.js"></script>
+    <script src="../vendors/nprogress/nprogress.js"></script>
+    <script src="../build/js/custom.js"></script>
+    <script src="../build/js/modal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <!-- FastClick -->
+    <script>
+        var productos = <?php echo json_encode($data); ?>;
+        var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
+        var codigos = []
 
 
 
-            const base_url = '../../configurar/';
-            const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
-            const sucursal_i = <?php echo json_encode($sucursal) ?>;
+        const base_url = '../../configurar/';
+        const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
+        const sucursal_i = <?php echo json_encode($sucursal) ?>;
 
 
-            /* buscador de productos */
-            const codigos_indexados = Object.values(productos);
-            const productos_indexados = Object.values(productos_por_id);
+        /* buscador de productos */
+        const codigos_indexados = Object.values(productos);
+        const productos_indexados = Object.values(productos_por_id);
 
-            // Instanciar Fuse con configuración mínima y precisa
-            const fuse = new Fuse(productos_indexados, {
-                keys: ['nombre'], // Puedes incluir 'codigo' si deseas buscar también por él
-                threshold: 0.2, // 0.1 puede ser demasiado estricto para nombres incompletos
-                ignoreLocation: true, // Permite coincidencias en cualquier parte del string
-                includeScore: false, // No necesitas el score si solo devuelves los ítems
-                useExtendedSearch: false // Acelera búsqueda si no usas operadores especiales
-            });
-
-
-            const fuseCodigos = new Fuse(codigos_indexados, {
-                keys: ['codigo'], // Puedes incluir 'codigo' si deseas buscar también por él
-                threshold: 0, // 0.1 puede ser demasiado estricto para nombres incompletos
-                ignoreLocation: false, // Permite coincidencias en cualquier parte del string
-                includeScore: false, // No necesitas el score si solo devuelves los ítems
-                useExtendedSearch: true // Acelera búsqueda si no usas operadores especiales
-            });
-
-            // Función de búsqueda rápida y limpia
-            const buscarConFuse = termino => fuse.search(`=${termino}`).map(r => r.item);
-            const buscarCodigoFuse = codigo => fuseCodigos.search(codigo).map(r => r.item);
-
-            /* buscador de productos */
+        // Instanciar Fuse con configuración mínima y precisa
+        const fuse = new Fuse(productos_indexados, {
+            keys: ['nombre'], // Puedes incluir 'codigo' si deseas buscar también por él
+            threshold: 0.28, // 0.1 puede ser demasiado estricto para nombres incompletos
+            ignoreLocation: true, // Permite coincidencias en cualquier parte del string
+            includeScore: false, // No necesitas el score si solo devuelves los ítems
+            useExtendedSearch: false // Acelera búsqueda si no usas operadores especiales
+        });
 
 
+        const fuseCodigos = new Fuse(codigos_indexados, {
+            keys: ['codigo'], // Puedes incluir 'codigo' si deseas buscar también por él
+            threshold: 0, // 0.1 puede ser demasiado estricto para nombres incompletos
+            ignoreLocation: false, // Permite coincidencias en cualquier parte del string
+            includeScore: false, // No necesitas el score si solo devuelves los ítems
+            useExtendedSearch: true // Acelera búsqueda si no usas operadores especiales
+        });
 
+        // Función de búsqueda rápida y limpia
+        const buscarConFuse = termino => fuse.search(`=${termino}`).map(r => r.item);
+        const buscarCodigoFuse = codigo => fuseCodigos.search(codigo).map(r => r.item);
 
-
+        /* buscador de productos */
 
 
 
 
 
-            // lista de ventas
-            function cargarUltimasOrdenes() {
-                fetch(base_url + 'ultimas_ventas.php')
-                    .then(response => response.json())
-                    .then(data => {
-                        const tabla = document.getElementById('tabla_ventas');
-                        tabla.innerHTML = ''; // Limpiar antes de insertar
 
-                        let contador = 1;
 
-                        data.forEach(orden => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
+
+
+
+        // lista de ventas
+        function cargarUltimasOrdenes() {
+            fetch(base_url + 'ultimas_ventas.php')
+                .then(response => response.json())
+                .then(data => {
+                    const tabla = document.getElementById('tabla_ventas');
+                    tabla.innerHTML = ''; // Limpiar antes de insertar
+
+                    let contador = 1;
+
+                    data.forEach(orden => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
                                     <td> 
                                     ${orden.pagoPor} 
                                     <small>(${orden.tipoVenta})</small>
@@ -527,41 +641,41 @@ echo '</pre>';
 
                                     <td style="text-align: center"><a class="btn btn-danger btn-sm" style="cursor: pointer; color: white" title="Deshacer compra" onclick="confirm(${orden.id})"><i class="line icon-reload"></i></a></td>
                                 `;
-                            tabla.appendChild(row);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error al cargar órdenes:', error);
+                        tabla.appendChild(row);
                     });
-            }
+                })
+                .catch(error => {
+                    console.error('Error al cargar órdenes:', error);
+                });
+        }
 
-            // Llamar cuando cargue la página
-            document.addEventListener('DOMContentLoaded', cargarUltimasOrdenes);
+        // Llamar cuando cargue la página
+        document.addEventListener('DOMContentLoaded', cargarUltimasOrdenes);
 
 
-            function print(id, moneda = 'default') {
-                $('#cargando').show();
+        function print(id, moneda = 'default') {
+            $('#cargando').show();
 
-                $.ajax({
-                        url: base_url + 'contenido_ticket.php',
-                        type: 'POST',
-                        data: {
-                            id: id,
-                            moneda: moneda
-                        },
-                        dataType: 'html'
-                    })
-                    .done(function(result) {
-                        const fecha = new Date().toLocaleString('es-VE', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true
-                        });
+            $.ajax({
+                    url: base_url + 'contenido_ticket.php',
+                    type: 'POST',
+                    data: {
+                        id: id,
+                        moneda: moneda
+                    },
+                    dataType: 'html'
+                })
+                .done(function(result) {
+                    const fecha = new Date().toLocaleString('es-VE', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
 
-                        const contenido = `
+                    const contenido = `
                             <html>
                             <head>
                                 <title>Ticket</title>
@@ -639,106 +753,106 @@ echo '</pre>';
                             </html>
                         `;
 
-                        const ventana = window.open('', '_blank', 'width=600,height=600');
-                        ventana.document.open();
-                        ventana.document.write(contenido);
-                        ventana.document.close();
+                    const ventana = window.open('', '_blank', 'width=600,height=600');
+                    ventana.document.open();
+                    ventana.document.write(contenido);
+                    ventana.document.close();
 
-                        ventana.onload = function() {
-                            ventana.print();
-                            ventana.close();
-                        };
+                    ventana.onload = function() {
+                        ventana.print();
+                        ventana.close();
+                    };
 
-                        $('#cargando').hide();
-                    })
-                    .fail(function(xhr, status, error) {
-                        console.error('Error al cargar el ticket:', error);
-                        $('#cargando').hide();
-                        alert('Hubo un error al generar el ticket. Intente nuevamente.');
-                    });
+                    $('#cargando').hide();
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Error al cargar el ticket:', error);
+                    $('#cargando').hide();
+                    alert('Hubo un error al generar el ticket. Intente nuevamente.');
+                });
+        }
+
+
+
+        // Destruir carrito
+        /*   function destroy_cart() {
+               Swal.fire({
+                   title: '¿Estás seguro?',
+                   text: "Esta acción vaciará tu carrito.",
+                   icon: 'warning',
+                   showCancelButton: true,
+                   confirmButtonText: 'Sí, vaciar',
+                   cancelButtonText: 'Cancelar'
+               }).then((result) => {
+                   if (result.isConfirmed) {
+                       fetch(base_url + "cart-destroy.php")
+                           .then(response => {
+                               actualizar_carrito()
+                           })
+                           .catch(error => {
+                               console.error("Error en la solicitud:", error);
+                               Swal.fire('Error', 'Ocurrió un problema al vaciar el carrito.', 'error');
+                           });
+                   }
+               });
+           }*/
+        // Destruir carrito
+
+
+        // Obtener listado de tasas a mostrar
+        var tasasMostrar
+
+        function cargarTasasMostrar() {
+            fetch(base_url + 'tasas_mostradas.php?accion=obtener')
+                .then(res => res.json())
+                .then(res => {
+
+                    if (res.status === 'success') {
+                        tasasMostrar = res.data;
+                    } else {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                })
+                .catch(error => {
+                    // Mostrar el error en consola para debugeo
+                    console.error("Error al obtener las tasas:", error);
+                    Swal.fire("Error", "Error al obtener las tasas.", "error");
+                });
+        }
+
+        cargarTasasMostrar();
+        // Obtener listado de tasas a mostrar
+
+
+        var total_pesos = 0;
+        var total_dolares = 0;
+        var total_bolivares = 0;
+
+
+
+        function confirmarVenta(tipo = 'venta') {
+            // 1. Reglas comunes ───────────────────────────────────────────────
+            if (total_dolares === 0) return; // nada que vender
+            $('button').blur(); // quitar focus de botones
+
+            if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
+                Swal.fire({
+                    title: 'Atención',
+                    html: 'Hay un producto en la cola de ventas, agréguelo al carrito o descártelo antes de continuar',
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#32d7c0',
+                });
+                return;
             }
 
+            // 2. Configurar diálogo dependiendo del tipo ───────────────────────
+            const esCredito = (tipo === 'credito');
 
-
-            // Destruir carrito
-            /*   function destroy_cart() {
-                   Swal.fire({
-                       title: '¿Estás seguro?',
-                       text: "Esta acción vaciará tu carrito.",
-                       icon: 'warning',
-                       showCancelButton: true,
-                       confirmButtonText: 'Sí, vaciar',
-                       cancelButtonText: 'Cancelar'
-                   }).then((result) => {
-                       if (result.isConfirmed) {
-                           fetch(base_url + "cart-destroy.php")
-                               .then(response => {
-                                   actualizar_carrito()
-                               })
-                               .catch(error => {
-                                   console.error("Error en la solicitud:", error);
-                                   Swal.fire('Error', 'Ocurrió un problema al vaciar el carrito.', 'error');
-                               });
-                       }
-                   });
-               }*/
-            // Destruir carrito
-
-
-            // Obtener listado de tasas a mostrar
-            var tasasMostrar
-
-            function cargarTasasMostrar() {
-                fetch(base_url + 'tasas_mostradas.php?accion=obtener')
-                    .then(res => res.json())
-                    .then(res => {
-
-                        if (res.status === 'success') {
-                            tasasMostrar = res.data;
-                        } else {
-                            Swal.fire("Error", res.message, "error");
-                        }
-                    })
-                    .catch(error => {
-                        // Mostrar el error en consola para debugeo
-                        console.error("Error al obtener las tasas:", error);
-                        Swal.fire("Error", "Error al obtener las tasas.", "error");
-                    });
-            }
-
-            cargarTasasMostrar();
-            // Obtener listado de tasas a mostrar
-
-
-            var total_pesos = 0;
-            var total_dolares = 0;
-            var total_bolivares = 0;
-
-
-
-            function confirmarVenta(tipo = 'venta') {
-                // 1. Reglas comunes ───────────────────────────────────────────────
-                if (total_dolares === 0) return; // nada que vender
-                $('button').blur(); // quitar focus de botones
-
-                if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
-                    Swal.fire({
-                        title: 'Atención',
-                        html: 'Hay un producto en la cola de ventas, agréguelo al carrito o descártelo antes de continuar',
-                        icon: 'warning',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#32d7c0',
-                    });
-                    return;
-                }
-
-                // 2. Configurar diálogo dependiendo del tipo ───────────────────────
-                const esCredito = (tipo === 'credito');
-
-                // 2.1 Contenido HTML
-                const htmlContent = esCredito ?
-                    `<input id="nombreCliente" class="form-control" placeholder="Nombre del cliente">` :
-                    `(1) Punto, (2) BioPago, (3) Pesos,<br> (4) Efectivo, (5) Pago Movil,
+            // 2.1 Contenido HTML
+            const htmlContent = esCredito ?
+                `<input id="nombreCliente" class="form-control" placeholder="Nombre del cliente">` :
+                `(1) Punto, (2) BioPago, (3) Pesos,<br> (4) Efectivo, (5) Pago Movil,
                (6) Transferencia, (7) Dólares.</>
                
            <select id="metodoPago" class="form-control">
@@ -752,259 +866,176 @@ echo '</pre>';
                <option value="option5">(7) Dólares</option>
            </select>`;
 
-                // 2.2 Título
-                const titulo = esCredito ?
-                    'Ingresa el nombre del cliente' :
-                    'Selecciona un método de pago';
+            // 2.2 Título
+            const titulo = esCredito ?
+                'Ingresa el nombre del cliente' :
+                'Selecciona un método de pago';
 
-                // 2.3 Diálogo SweetAlert2
-                Swal.fire({
-                    title: titulo,
-                    html: htmlContent,
-                    confirmButtonText: 'Continuar',
-                    confirmButtonColor: '#32d7c0',
-                    customClass: {
-                        popup: 'swal-metodo-pago'
-                    },
-                    didOpen: () => Swal.getConfirmButton().setAttribute('id', 'btnVender'),
-                    preConfirm: () => {
-                        if (esCredito) {
-                            const nombre = document.getElementById('nombreCliente').value.trim();
-                            if (!nombre) Swal.showValidationMessage('Por favor, ingresa el nombre del cliente');
-                            return nombre; // se devuelve para result.value
-                        } else {
-                            const metodo = document.getElementById('metodoPago').value;
-                            if (!metodo) Swal.showValidationMessage('Por favor, selecciona un método de pago');
-                            return metodo; // se devuelve para result.value
-                        }
-                    }
-                }).then((result) => {
-                    if (!result.isConfirmed) return;
-
+            // 2.3 Diálogo SweetAlert2
+            Swal.fire({
+                title: titulo,
+                html: htmlContent,
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#32d7c0',
+                customClass: {
+                    popup: 'swal-metodo-pago'
+                },
+                didOpen: () => Swal.getConfirmButton().setAttribute('id', 'btnVender'),
+                preConfirm: () => {
                     if (esCredito) {
-                        const nombreCliente = result.value; // valor devuelto en preConfirm
-                        procesarPedido('0', 'placeOrderCredito', nombreCliente);
+                        const nombre = document.getElementById('nombreCliente').value.trim();
+                        if (!nombre) Swal.showValidationMessage('Por favor, ingresa el nombre del cliente');
+                        return nombre; // se devuelve para result.value
                     } else {
-                        const metodoPago = result.value; // e.g. "option3"
-                        procesarPedido(metodoPago, 'placeOrder');
+                        const metodo = document.getElementById('metodoPago').value;
+                        if (!metodo) Swal.showValidationMessage('Por favor, selecciona un método de pago');
+                        return metodo; // se devuelve para result.value
                     }
-                });
-            }
-
-
-            function procesarPedido(metodoPago, despacho, nombreC = null) {
-                const valorFinalVenta = total_dolares;
-                const valorFinalBs = total_bolivares;
-                const valorFinalCop = total_pesos;
-                const pagoTipo = metodoPago.replace('option', '');
-                const action = despacho;
-                const compraTipo = 1;
-
-                // pendiente al nombre del cliente nombreC // placeOrderCredito
-
-                let tipoDespacho
-                if (despacho == 'placeOrderCredito') {
-                    tipoDespacho = 2;
-                } else {
-                    tipoDespacho = 1;
                 }
+            }).then((result) => {
+                if (!result.isConfirmed) return;
 
-                $.ajax({
-                        url: base_url + 'accion_carta.php',
-                        type: 'GET',
-                        data: {
-                            valorFinalVenta: valorFinalVenta,
-                            valorFinalBs: valorFinalBs,
-                            valorFinalCop: valorFinalCop,
-                            pagoTipo: pagoTipo,
-                            action: action,
-                            compraTipo: compraTipo,
-                            nombreC: nombreC,
-                            tipoV: tipoDespacho
-                        },
-                        dataType: 'html'
-                    })
-                    .done(function(result) {
-                        const response = JSON.parse(result)
-                        if (response.status) {
-                            total_pesos = 0
-                            total_dolares = 0
-                            total_bolivares = 0
-                            Alerta.toast('success', response.data)
-                            actualizar_carrito()
-                            cargarUltimasOrdenes()
-                        } else {
-                            Alerta.toast('error', 'No se pudo realizar la acción')
+                if (esCredito) {
+                    const nombreCliente = result.value; // valor devuelto en preConfirm
+                    procesarPedido('0', 'placeOrderCredito', nombreCliente);
+                } else {
+                    const metodoPago = result.value; // e.g. "option3"
+                    procesarPedido(metodoPago, 'placeOrder');
+                }
+            });
+        }
+
+
+
+        function calcularVuelto() {
+            if (total_dolares == 0) return;
+
+            total_pesos = String(total_pesos).replace(',', '');
+
+            let handleEnterKey;
+
+            Swal.fire({
+                title: 'Indique la cantidad recibida',
+                html: `<input type="number" id="cantidadRecibida" class="swal2-input" placeholder="Cantidad recibida">`,
+                confirmButtonText: 'Calcular vuelto',
+                confirmButtonColor: '#32d7c0',
+                didOpen: () => {
+                    const input = document.getElementById('cantidadRecibida');
+                    input.focus();
+
+                    handleEnterKey = (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            Swal.clickConfirm();
                         }
+                    };
 
-                    });
-
-            }
-
-
-
-
-            function calcularVuelto() {
-                if (total_dolares == 0) return;
-
-                total_pesos = String(total_pesos).replace(',', '');
-
-                let handleEnterKey;
-
-                Swal.fire({
-                    title: 'Indique la cantidad recibida',
-                    html: `<input type="number" id="cantidadRecibida" class="swal2-input" placeholder="Cantidad recibida">`,
-                    confirmButtonText: 'Calcular vuelto',
-                    confirmButtonColor: '#32d7c0',
-                    didOpen: () => {
-                        const input = document.getElementById('cantidadRecibida');
-                        input.focus();
-
-                        handleEnterKey = (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                Swal.clickConfirm();
-                            }
-                        };
-
-                        input.addEventListener('keydown', handleEnterKey);
-                    },
-                    willClose: () => {
-                        const input = document.getElementById('cantidadRecibida');
-                        if (input && handleEnterKey) {
-                            input.removeEventListener('keydown', handleEnterKey);
-                        }
-                    },
-                    preConfirm: () => {
-                        const cantidadRecibida = parseFloat(document.getElementById('cantidadRecibida').value);
-                        if (isNaN(cantidadRecibida) || cantidadRecibida <= 0) {
-                            Swal.showValidationMessage('Por favor, ingresa una cantidad válida');
-                        }
-                        return {
-                            cantidadRecibida
-                        };
+                    input.addEventListener('keydown', handleEnterKey);
+                },
+                willClose: () => {
+                    const input = document.getElementById('cantidadRecibida');
+                    if (input && handleEnterKey) {
+                        input.removeEventListener('keydown', handleEnterKey);
                     }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Aquí ya el primer Swal se cerró y el listener fue removido
+                },
+                preConfirm: () => {
+                    const cantidadRecibida = parseFloat(document.getElementById('cantidadRecibida').value);
+                    if (isNaN(cantidadRecibida) || cantidadRecibida <= 0) {
+                        Swal.showValidationMessage('Por favor, ingresa una cantidad válida');
+                    }
+                    return {
+                        cantidadRecibida
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Aquí ya el primer Swal se cerró y el listener fue removido
 
-                        const {
-                            cantidadRecibida
-                        } = result.value;
+                    const {
+                        cantidadRecibida
+                    } = result.value;
 
-                        let vueltoPesos = cantidadRecibida - parseInt(total_pesos);
-                        let vueltoDolares = cantidadRecibida - total_dolares;
-                        let vueltoBolivares = cantidadRecibida - total_bolivares;
+                    let vueltoPesos = cantidadRecibida - parseInt(total_pesos);
+                    let vueltoDolares = cantidadRecibida - total_dolares;
+                    let vueltoBolivares = cantidadRecibida - total_bolivares;
 
-                        // Ahora mostramos el segundo Swal sin que el Enter anterior lo cierre
-                        setTimeout(() => {
-                            Swal.fire({
-                                title: 'Vuelto calculado',
-                                html: `
+                    // Ahora mostramos el segundo Swal sin que el Enter anterior lo cierre
+                    setTimeout(() => {
+                        Swal.fire({
+                            title: 'Vuelto calculado',
+                            html: `
                                             <p><strong class="text-total text-info">Pesos:</strong> <span style="font-size: 18px">${formatNumber(vueltoPesos.toFixed(2))}</span></p>
                                             <p><strong class="text-total text-danger">Dólares:</strong> <span style="font-size: 18px">${formatNumber(vueltoDolares.toFixed(2))}</span></p>
                                             <p><strong class="text-total text-success">Bolívares:</strong> <span style="font-size: 18px">${formatNumber(vueltoBolivares.toFixed(2))}</span></p>
                                         `,
-                                confirmButtonText: 'Cerrar',
-                                confirmButtonColor: '#32d7c0',
-                                allowEscapeKey: true // Habilita cerrar con ESC
-                            });
-                        }, 50);
-                    }
-                });
-            }
-
-
-
-            document.getElementById('calcularVuelto').addEventListener('click', calcularVuelto)
-
-            let modo = 2
-
-            // Abrir el modal
-            openModalButton.addEventListener("click", () => {
-                modo = 1
-            });
-
-            // Cerrar el modal al hacer clic en el botón de cerrar o en el overlay
-            closeModalButton.addEventListener("click", () => {
-                modo = 2
-            });
-
-            modalOverlay.addEventListener("click", () => {
-                modo = 2
-
-            });
-
-
-
-            document.addEventListener('click', function(event) {
-                if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
-                    $('#search').val('')
-                    document.getElementById("search").focus();
-                    modo = 2
-                }
-
-
-                if (event.target.closest('.delete-scan')) {
-                    document.getElementById('result-escaner').innerHTML = '';
-                    $('.section-scanner').addClass('hide')
-                }
-
-            });
-
-            // Quitar producto del carrito
-
-            function quitar_producto(id) {
-                Swal.fire({
-                    title: 'Esta seguro?',
-                    html: '¿Desea eliminar este producto del carrito?',
-                    icon: 'question',
-                    confirmButtonText: 'Continuar',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#32d7c0',
-                    showCancelButton: true,
-                }).then((result) => {
-                    if (result.isConfirmed) {
-
-                        $.ajax({
-                            url: base_url + 'accion_carta.php',
-                            type: 'GET',
-                            data: {
-                                id: id,
-                                action: 'removeCartItem'
-                            }, // Pasar el parámetro id en la solicitud
-                            success: function(response) {
-                                actualizar_carrito()
-                            },
-                            error: function(xhr, status, error) {
-                                // Manejar cualquier error
-                                console.error('Error al eliminar la venta:', error);
-                            }
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#32d7c0',
+                            allowEscapeKey: true // Habilita cerrar con ESC
                         });
-                    }
-                })
+                    }, 50);
+                }
+            });
+        }
+
+
+
+        document.getElementById('calcularVuelto').addEventListener('click', calcularVuelto)
+
+        let modo = 2
+
+        // Abrir el modal
+        openModalButton.addEventListener("click", () => {
+            modo = 1
+        });
+
+        // Cerrar el modal al hacer clic en el botón de cerrar o en el overlay
+        closeModalButton.addEventListener("click", () => {
+            modo = 2
+        });
+
+        modalOverlay.addEventListener("click", () => {
+            modo = 2
+
+        });
+
+
+
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
+                $('#search').val('')
+                document.getElementById("search").focus();
+                modo = 2
             }
-            let ultimo_escaneado = 0
+
+
+            if (event.target.closest('.delete-scan')) {
+                document.getElementById('result-escaner').innerHTML = '';
+                $('.section-scanner').addClass('hide')
+            }
+
+        });
+
+        let ultimo_escaneado = 0
 
 
 
-            // Se usa para el modo lector
-            function buscarProducto(lectura, modo) {
-                const codigo = parseFloat(lectura.trim().replace(/[^0-9]/g, '')); // Eliminar caracteres no numéricos
+        // Se usa para el modo lector
+        function buscarProducto(lectura, modo) {
+            const codigo = parseFloat(lectura.trim().replace(/[^0-9]/g, '')); // Eliminar caracteres no numéricos
 
-                const resultado = buscarCodigoFuse(codigo)
+            const resultado = buscarCodigoFuse(codigo)
 
 
-                if (resultado.length > 0) {
-                    Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
-                    return
-                } else {
-                    const datos = productos[lectura.trim()];
-                    $('.section-scanner').removeClass('hide');
+            if (resultado.length > 0) {
+                Alerta.toast('error', 'El producto no existe, agrégalo de forma manual.')
+                return
+            } else {
+                const datos = productos[lectura.trim()];
+                $('.section-scanner').removeClass('hide');
 
-                    // Construir solo las tasas visibles según tasasMostrar
+                // Construir solo las tasas visibles según tasasMostrar
 
-                    $("#result-escaner").append(`
+                $("#result-escaner").append(`
                                     <div class="row">
                                         <div class="col-lg-4 ac-c">
                                             [${datos.stock}] <b>${datos.nombre}</b>
@@ -1034,27 +1065,27 @@ echo '</pre>';
                                     </div>
                                 `);
 
-                    setTimeout(() => {
-                        $(`#btn_${datos.id}`).removeClass('no-send');
-                    }, 900);
-                    ultimo_escaneado = datos.id;
-                }
-
+                setTimeout(() => {
+                    $(`#btn_${datos.id}`).removeClass('no-send');
+                }, 900);
+                ultimo_escaneado = datos.id;
             }
 
+        }
 
 
 
-            function representarResultado(resultado) {
-                $("#tabla_resultado_codigo_producto").html('')
-                if (!Array.isArray(resultado)) return;
 
-                resultado.forEach(item => {
-                    const rest = (item.mayor === '1' ?
-                        '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' :
-                        item.stock);
+        function representarResultado(resultado) {
+            $("#tabla_resultado_codigo_producto").html('')
+            if (!Array.isArray(resultado)) return;
 
-                    $("#tabla_resultado_codigo_producto").append(`
+            resultado.forEach(item => {
+                const rest = (item.mayor === '1' ?
+                    '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' :
+                    item.stock);
+
+                $("#tabla_resultado_codigo_producto").append(`
                         <tr>
                             <td>${rest}</td>
                             <td style="font-size: 15px;"><span>${item.nombre}</span></td>
@@ -1089,50 +1120,50 @@ echo '</pre>';
                             </td>
                         </tr>
                     `);
-                });
-            }
-
-
-
-
-
-
-            // Enter para escaneo
-            document.addEventListener('keyup', function(event) {
-                $('button').blur();
-                if (modo == 2 && ultimo_escaneado != 0 && event.key == 'Enter') {
-                    $('#btn_' + ultimo_escaneado).click();
-                }
             });
-            // Enter para escaneo
+        }
 
 
 
 
 
-            document.addEventListener('keyup', function(event) {
-                if (event.target.closest('.cantidad-input') && !event.target.closest('.cantidad-scan')) {
-                    const input = event.target.closest('.cantidad-input');
 
-                    const cantidad = input.value;
-                    const nombre = input.getAttribute('data-nombre');
-
-                    let precio_dolar = parseFloat(input.getAttribute('data-precios').split('/')[1]);
-                    let precio_peso = parseFloat(input.getAttribute('data-precios').split('/')[0]);
-                    let precio_bs = parseFloat(input.getAttribute('data-precios').split('/')[2]);
-
-                    precio_peso = Math.round(precio_peso / 100) * 100
-
-                    const modal_footer = document.getElementById('modal-footer')
-                    modal_footer.classList.remove('hide')
+        // Enter para escaneo
+        document.addEventListener('keyup', function(event) {
+            $('button').blur();
+            if (modo == 2 && ultimo_escaneado != 0 && event.key == 'Enter') {
+                $('#btn_' + ultimo_escaneado).click();
+            }
+        });
+        // Enter para escaneo
 
 
-                    let carrito_total_pesos = total_pesos + (precio_peso * cantidad);
-                    let carrito_total_dolar = total_dolares + (precio_dolar * cantidad);
-                    let carrito_total_bolivar = total_bolivares + (precio_bs * cantidad);
 
 
-                    modal_footer.innerHTML = `
+
+        document.addEventListener('keyup', function(event) {
+            if (event.target.closest('.cantidad-input') && !event.target.closest('.cantidad-scan')) {
+                const input = event.target.closest('.cantidad-input');
+
+                const cantidad = input.value;
+                const nombre = input.getAttribute('data-nombre');
+
+                let precio_dolar = parseFloat(input.getAttribute('data-precios').split('/')[1]);
+                let precio_peso = parseFloat(input.getAttribute('data-precios').split('/')[0]);
+                let precio_bs = parseFloat(input.getAttribute('data-precios').split('/')[2]);
+
+                precio_peso = Math.round(precio_peso / 100) * 100
+
+                const modal_footer = document.getElementById('modal-footer')
+                modal_footer.classList.remove('hide')
+
+
+                let carrito_total_pesos = total_pesos + (precio_peso * cantidad);
+                let carrito_total_dolar = total_dolares + (precio_dolar * cantidad);
+                let carrito_total_bolivar = total_bolivares + (precio_bs * cantidad);
+
+
+                modal_footer.innerHTML = `
                            <div class="d-flex" style='gap: 15px;'>
                          <div class="me-2 vista_precio">TOTAL CARRITO: </div>
                         <div class="me-2 vista_precio text-success">$${recortarADosDecimales(carrito_total_dolar)}</div>
@@ -1147,171 +1178,173 @@ echo '</pre>';
                         <div class="me-2 vista_precio text-danger">${formatNumber(recortarADosDecimales(precio_bs * cantidad))} Bs</div>
                         </div>
                         `
-                }
-            })
+            }
+        })
 
 
-            $(document).on('keyup', '#search', function() {
-                var nombreProducto = $(this).val();
-                if (nombreProducto.length > 2) {
+        $(document).on('keyup', '#search', function() {
+            var nombreProducto = $(this).val();
+            if (nombreProducto.length > 2) {
 
-                    let resultados = buscarConFuse(nombreProducto)
-                    representarResultado(resultados)
+                let resultados = buscarConFuse(nombreProducto)
+                representarResultado(resultados)
 
 
-                } else {
-                    // vacia la tabla
+            } else {
+                // vacia la tabla
+                $("#tabla_resultado_codigo_producto").html('');
+                const modal_footer = document.getElementById('modal-footer')
+                modal_footer.innerHTML = ''
+                modal_footer.classList.add('hide')
+            }
+        });
+
+
+
+        function addtocar(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+
+
+
+            // Seleccionar el input usando el valor de data-cantidad-id
+            const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
+            let cant = inputCantidad ? inputCantidad.value : 1;
+            if (cantidad_scann != null) {
+                cant = cantidad_scann;
+            }
+            const peso = formatPeso(pesoventa_p)
+
+            $.ajax({
+                    url: base_url + 'accion_carta.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: {
+                        action: 'addToCart',
+                        id: id,
+                        dolarventa: dolarventa_p,
+                        pesoventa: peso,
+                        bolivarventa: bolivarventa_p,
+                        cant: cant
+                    },
+                })
+                .done(function(result) {
+
+
+                    actualizar_carrito()
                     $("#tabla_resultado_codigo_producto").html('');
-                    const modal_footer = document.getElementById('modal-footer')
-                    modal_footer.innerHTML = ''
-                    modal_footer.classList.add('hide')
+                    if (modo == 1) {
+                        $("#search").val('');
+                    }
+                })
+        }
+
+
+
+        /* ** CARRITO DE COMPRAS CON JS */
+        var carritoActivo = JSON.parse(localStorage.getItem('carritoActivo')) || {};
+        var carritosVenta = JSON.parse(localStorage.getItem('carritosVenta')) || {};
+        var carritosReservados = JSON.parse(localStorage.getItem('carritosReservados')) || {};
+
+
+        // Agregar un producto al carrito
+        function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+            // Seleccionar el input usando el valor de data-cantidad-id
+            const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
+            let cant = inputCantidad ? parseFloat(inputCantidad.value) : 1;
+            if (cantidad_scann != null) {
+                cant = parseFloat(cantidad_scann);
+            }
+
+            // Validar que el producto existe en productos_por_id
+            if (!productos_por_id[id]) {
+                console.error(`Producto con ID ${id} no encontrado.`);
+                return;
+            }
+
+            const producto = productos_por_id[id];
+
+            // Si ya existe en el carrito, sumar cantidad
+            if (carritoActivo[id]) {
+                carritoActivo[id].qty += cant;
+            } else {
+                // Si no existe, crearlo
+                carritoActivo[id] = {
+                    id: producto.id,
+                    name: producto.nombre,
+                    price_C: parseFloat(producto.precio_dolar_visible),
+                    price_C_Bs: parseFloat(producto.precio_bs_visible),
+                    price_C_Cop: parseFloat(producto.precio_peso_visible),
+                    price: parseFloat(dolarventa_p),
+                    pricePeso: parseFloat(pesoventa_p),
+                    priceBolivar: parseFloat(bolivarventa_p),
+                    qty: cant,
+                    mayor: mayor,
+                    cantidadPaca: 1 // valor por defecto
+                };
+            }
+
+            // Guardar en localStorage
+            localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
+            actualizarCarritoJs()
+            console.log(carritoActivo);
+        }
+
+        function vaciarCarritoJs() {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción vaciará tu carrito.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, vaciar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('carritoActivo');
+                    carritoActivo = {};
+                    actualizarCarritoJs();
+                    Alerta.toast('success', 'Carrito vaciado correctamente');
                 }
             });
+        }
 
 
+        // Actualizar la vista del carrito
+        function actualizarCarritoJs(id = null, accion = null) {
 
-            function addtocar(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
-
-
-
-                // Seleccionar el input usando el valor de data-cantidad-id
-                const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
-                let cant = inputCantidad ? inputCantidad.value : 1;
-                if (cantidad_scann != null) {
-                    cant = cantidad_scann;
-                }
-                const peso = formatPeso(pesoventa_p)
-
-                $.ajax({
-                        url: base_url + 'accion_carta.php',
-                        type: 'POST',
-                        dataType: 'html',
-                        data: {
-                            action: 'addToCart',
-                            id: id,
-                            dolarventa: dolarventa_p,
-                            pesoventa: peso,
-                            bolivarventa: bolivarventa_p,
-                            cant: cant
-                        },
-                    })
-                    .done(function(result) {
-
-
-                        actualizar_carrito()
-                        $("#tabla_resultado_codigo_producto").html('');
-                        if (modo == 1) {
-                            $("#search").val('');
-                        }
-                    })
-            }
-
-
-
-            /* ** CARRITO DE COMPRAS CON JS */
-            var carritoActivo = JSON.parse(localStorage.getItem('carritoActivo')) || {};
-
-
-            // Agregar un producto al carrito
-            function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
-                // Seleccionar el input usando el valor de data-cantidad-id
-                const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
-                let cant = inputCantidad ? parseFloat(inputCantidad.value) : 1;
-                if (cantidad_scann != null) {
-                    cant = parseFloat(cantidad_scann);
-                }
-
-                // Validar que el producto existe en productos_por_id
-                if (!productos_por_id[id]) {
-                    console.error(`Producto con ID ${id} no encontrado.`);
-                    return;
-                }
-
-                const producto = productos_por_id[id];
-
-                // Si ya existe en el carrito, sumar cantidad
+            // Si hay una acción sobre un producto
+            if (id && accion) {
                 if (carritoActivo[id]) {
-                    carritoActivo[id].qty += cant;
-                } else {
-                    // Si no existe, crearlo
-                    carritoActivo[id] = {
-                        id: producto.id,
-                        name: producto.nombre,
-                        price_C: parseFloat(producto.precio_dolar_visible),
-                        price_C_Bs: parseFloat(producto.precio_bs_visible),
-                        price_C_Cop: parseFloat(producto.precio_peso_visible),
-                        price: parseFloat(dolarventa_p),
-                        pricePeso: parseFloat(pesoventa_p),
-                        priceBolivar: parseFloat(bolivarventa_p),
-                        qty: cant,
-                        mayor: mayor,
-                        cantidadPaca: 1 // valor por defecto
-                    };
-                }
-
-                // Guardar en localStorage
-                localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
-                actualizarCarritoJs()
-                console.log(carritoActivo);
-            }
-
-            function vaciarCarritoJs() {
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: "Esta acción vaciará tu carrito.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, vaciar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        localStorage.removeItem('carritoActivo');
-                        carritoActivo = {};
-                        actualizarCarritoJs();
-                        Alerta.toast('success', 'Carrito vaciado correctamente');
-                    }
-                });
-            }
-
-
-            // Actualizar la vista del carrito
-            function actualizarCarritoJs(id = null, accion = null) {
-
-                // Si hay una acción sobre un producto
-                if (id && accion) {
-                    if (carritoActivo[id]) {
-                        if (accion === 'sumar') {
-                            carritoActivo[id].qty += 1;
-                        } else if (accion === 'restar') {
-                            carritoActivo[id].qty -= 1;
-                            if (carritoActivo[id].qty <= 0) {
-                                delete carritoActivo[id];
-                            }
+                    if (accion === 'sumar') {
+                        carritoActivo[id].qty += 1;
+                    } else if (accion === 'restar') {
+                        carritoActivo[id].qty -= 1;
+                        if (carritoActivo[id].qty <= 0) {
+                            delete carritoActivo[id];
                         }
                     }
-                    localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
                 }
+                localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
+            }
 
-                // Reset de totales
-                total_pesos = 0
-                total_dolares = 0
-                total_bolivares = 0
+            // Reset de totales
+            total_pesos = 0
+            total_dolares = 0
+            total_bolivares = 0
 
 
-                // Limpiar tabla
-                $("#tabla-carrito tbody").html('');
-                $("#tabla-carrito tfoot").html('');
+            // Limpiar tabla
+            $("#tabla-carrito tbody").html('');
+            $("#tabla-carrito tfoot").html('');
 
-                // Convertir carrito en array para iterar
-                const items = Object.values(carritoActivo);
+            // Convertir carrito en array para iterar
+            const items = Object.values(carritoActivo);
 
-                if (items.length > 0) {
-                    items.forEach(element => {
-                        let subtotalPeso = element.pricePeso * element.qty;
-                        let subtotalBolivar = element.priceBolivar * element.qty;
-                        let subtotalDolar = element.price * element.qty;
+            if (items.length > 0) {
+                items.forEach(element => {
+                    let subtotalPeso = element.pricePeso * element.qty;
+                    let subtotalBolivar = element.priceBolivar * element.qty;
+                    let subtotalDolar = element.price * element.qty;
 
-                        $("#tabla-carrito tbody").append(`
+                    $("#tabla-carrito tbody").append(`
                         <tr>
                             <td style="width:5%; text-align: center" class="ac-c">${element.qty}</td>
                             <td style="width:30%" class="ac-c">${element.name}</td>
@@ -1326,12 +1359,12 @@ echo '</pre>';
                         </tr>
                         `);
 
-                        total_pesos += subtotalPeso;
-                        total_dolares += subtotalDolar;
-                        total_bolivares += subtotalBolivar;
-                    });
+                    total_pesos += subtotalPeso;
+                    total_dolares += subtotalDolar;
+                    total_bolivares += subtotalBolivar;
+                });
 
-                    $("#tabla-carrito tfoot").html(`
+                $("#tabla-carrito tfoot").html(`
                         <tr>
                             <td style="padding-top: 0.5rem !important; width:5%"></td>
                             <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
@@ -1342,70 +1375,35 @@ echo '</pre>';
                         </tr>
                     `);
 
-                    $('#botones_acciones').removeClass('hide');
-                } else {
-                    $('#botones_acciones').addClass('hide');
-                }
+                $('#botones_acciones').removeClass('hide');
+            } else {
+                $('#botones_acciones').addClass('hide');
+            }
 
-                $('[data-toggle="popover"]').popover({
-                    html: true
-                });
+            $('[data-toggle="popover"]').popover({
+                html: true
+            });
+        }
+
+        actualizarCarritoJs();
+
+        function quitarProductoJs(id) {
+
+            if (carritoActivo[id]) {
+                delete carritoActivo[id]; // Eliminar producto específico
+                localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
             }
 
             actualizarCarritoJs();
+        }
 
-            function quitarProductoJs(id) {
-
-                if (carritoActivo[id]) {
-                    delete carritoActivo[id]; // Eliminar producto específico
-                    localStorage.setItem('carritoActivo', JSON.stringify(carritoActivo));
-                }
-
-                actualizarCarritoJs();
-            }
-
-            /* ** CARRITO DE COMPRAS CON JS */
-            function formatNumber(num) {
-                return parseFloat(num).toLocaleString('es-VE', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-            }
-
-
-
-
-
-
-            // Verificar la conexion
-            function comprobarConexion(callback) {
-                // Función que realiza la verificación
-                async function verificar() {
-                    try {
-                        // Intento de fetch a un recurso confiable (Google)
-                        const respuesta = await fetch("https://www.google.com/favicon.ico?_=" + Date.now(), {
-                            method: "HEAD",
-                            mode: "no-cors",
-                            cache: "no-store"
-                        });
-                        // Si llega aquí, hay conexión
-                        callback(true);
-                    } catch (e) {
-                        console.warn("Sin conexión. Reintentando en 20 segundos...");
-                        setTimeout(verificar, 20000);
-                    }
-                }
-
-                verificar();
-            }
-
-            // Uso:
-            comprobarConexion((hayConexion) => {
-                if (hayConexion) {
-                    console.log("✅ Conexión detectada");
-                    // Aquí puedes hacer lo que necesites
-                }
+        /* ** CARRITO DE COMPRAS CON JS */
+        function formatNumber(num) {
+            return parseFloat(num).toLocaleString('es-VE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             });
+        }
 
 
 
@@ -1413,37 +1411,321 @@ echo '</pre>';
 
 
 
+        /*
+        var carritoActivo = JSON.parse(localStorage.getItem('carritoActivo')) || {};
+        var carritosVenta = JSON.parse(localStorage.getItem('carritosVenta')) || {};
+        var carritosReservados = JSON.parse(localStorage.getItem('carritosReservados')) || {};
+        */
 
 
 
 
+        function procesarPedido(metodoPago, despacho, nombreC = null) {
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                console.warn("No hay carrito activo para procesar.");
+                return false;
+            }
+
+            // Generar un ID único para este pedido
+            const idPedido = Date.now().toString();
+            const datosCliente = {
+                nombre: nombreC || "",
+                cedula: "",
+                telefono: ""
+            }
+
+            // Construir el objeto pedido con el formato solicitado
+            let nuevoPedido = {
+                id: idPedido,
+                metodoPago: metodoPago,
+                despacho: despacho,
+                datosCliente: datosCliente || "",
+                productos: carritoActivo // Asumiendo carritoActivo es el objeto con productos en ese formato
+            };
+
+            // Guardar en carritosVenta con idPedido como clave
+            carritosVenta[idPedido] = nuevoPedido;
+
+            // Guardar en localStorage
+            localStorage.setItem('carritosVenta', JSON.stringify(carritosVenta));
+
+            localStorage.removeItem('carritoActivo');
+
+
+            console.log(`✅ Pedido procesado: ${idPedido}`);
+            console.log(carritosVenta);
+            return true;
+
+        }
+
+
+        document.getElementById('btn-vender').addEventListener('click', function() {
+            confirmarVenta('venta');
+        });
 
 
 
+        function enviarPedidosProcesados() {
+            if (Object.keys(carritosVenta).length === 0) {
+                console.warn("No hay pedidos procesados para enviar.");
+                return;
+            }
 
-            /// delete
-            function actualizar_carrito(id = null, accion = null) {
+            // Verificar conexión antes de enviar
+            comprobarConexion(function(hayInternet) {
+                if (!hayInternet) {
+                    // se deben dibujar los pedidos pendientes en 
+                    actualizarProductosSinEnviar()
+                    return;
+                }
+
+                // Si hay internet, procedemos con el envío
+                const pedidosArray = Object.values(carritosVenta);
+
                 $.ajax({
-                        url: base_url + 'carrito.php',
+                        url: base_url + 'accion_carta.php',
                         type: 'POST',
-                        data: id && accion ? {
-                            id,
-                            accion
-                        } : {},
-                        dataType: 'html'
+                        data: {
+                            action: 'enviarPedidos',
+                            pedidos: JSON.stringify(pedidosArray)
+                        },
+                        dataType: 'json'
                     })
-                    .done(function(result) {
-                        //     console.log(result)
+                    .done(function(response) {
+                        if (response.status) {
+                            Alerta.toast('success', response.message);
+                            // Limpiar carritosVenta después de enviar
+                            localStorage.removeItem('carritosVenta');
+                        } else {
+                            //Alerta.toast('error', response.message);
+                        }
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('Error al enviar los pedidos:', error);
+                        Alerta.toast('error', 'Error al enviar los pedidos. Intente nuevamente.');
+                    });
+            });
+        }
+
+
+        enviarPedidosProcesados();
+
+
+
+        /*
+           <li class="list-none item-reservado">
+                                                <div class="item-reservado-header p-3">
+                                                    <div class="avatar">
+                                                        <ion-icon name="briefcase-outline"></ion-icon>
+                                                    </div>
+                                                    <div>
+                                                        <p class="m-0 p-0"> 01-05-2025 02:55 PM</p>
+                                                        <small class="text-muted">FECHA DEL CARRITO</small>
+                                                    </div>
+                                                </div>
+
+                                                <div class="item-reservado-body pl-4 pb-3 d-flex justify-content-between">
+                                                    <div class="d-flex justify-content-between flex-column">
+                                                        <div>
+                                                            <span>PRODUCTOS: </span> <span>
+                                                                <span class="badge bg-light text-dark">lorem lorem lorem</span>
+                                                                <span class="badge bg-light text-dark">lorem lorem lorem</span>
+                                                                <span class="badge bg-light text-dark">lorem lorem lorem</span>
+
+                                                            </span>
+                                                        </div>
+
+
+                                                        <div class="d-flex justify-content-between">
+                                                            <p>TOTALES:</p>
+                                                            <p class="text-info">3.000,00 P</p>
+                                                            <p class="text-danger">115,38 Bs</p>
+                                                            <p class="text-success">$0,89</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="btn-list-item text-center d-flex pr-4">
+                                                        <button class="btn btn-success">Modificar</button>
+                                                        <button class="btn btn-secondary text-dark">Cancelar envio</button>
+                                                    </div>
+                                                </div>
+
+                                            </li>
+
+                                            ul-productos-sin-enviar
+        */
+        function actualizarProductosSinEnviar() {
+            document.getElementById('ul-productos-sin-enviar').innerHTML = {}
+        }
+
+
+
+
+
+
+
+        function procesarPedido2(metodoPago, despacho, nombreC = null) {
+            const valorFinalVenta = total_dolares;
+            const valorFinalBs = total_bolivares;
+            const valorFinalCop = total_pesos;
+            const pagoTipo = metodoPago.replace('option', '');
+            const action = despacho;
+            const compraTipo = 1;
+
+            // pendiente al nombre del cliente nombreC // placeOrderCredito
+
+            let tipoDespacho
+            if (despacho == 'placeOrderCredito') {
+                tipoDespacho = 2;
+            } else {
+                tipoDespacho = 1;
+            }
+
+            $.ajax({
+                    url: base_url + 'accion_carta.php',
+                    type: 'GET',
+                    data: {
+                        valorFinalVenta: valorFinalVenta,
+                        valorFinalBs: valorFinalBs,
+                        valorFinalCop: valorFinalCop,
+                        pagoTipo: pagoTipo,
+                        action: action,
+                        compraTipo: compraTipo,
+                        nombreC: nombreC,
+                        tipoV: tipoDespacho
+                    },
+                    dataType: 'html'
+                })
+                .done(function(result) {
+                    const response = JSON.parse(result)
+                    if (response.status) {
                         total_pesos = 0
                         total_dolares = 0
                         total_bolivares = 0
+                        Alerta.toast('success', response.data)
+                        actualizar_carrito()
+                        cargarUltimasOrdenes()
+                    } else {
+                        Alerta.toast('error', 'No se pudo realizar la acción')
+                    }
 
-                        const resultado = JSON.parse(result);
-                        $("#tabla-carrito tbody").html('');
-                        $("#tabla-carrito tfoot").html('');
-                        if (resultado.cantidad > 0) {
-                            resultado.carrito.forEach(element => {
-                                $("#tabla-carrito tbody").append(`
+                });
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // Verificar la conexion
+        function comprobarConexion(callback) {
+            let mensajeMostrado = false;
+            let divAviso = null;
+
+            // Crea el mensaje flotante si no existe
+            function mostrarAviso() {
+                if (!mensajeMostrado) {
+                    divAviso = document.createElement("div");
+                    divAviso.innerText = "🔴 Sin conexión a Internet";
+                    divAviso.style.position = "fixed";
+                    divAviso.style.bottom = "20px";
+                    divAviso.style.right = "20px";
+                    divAviso.style.background = "#e74c3c";
+                    divAviso.style.color = "white";
+                    divAviso.style.padding = "10px 20px";
+                    divAviso.style.borderRadius = "8px";
+                    divAviso.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+                    divAviso.style.zIndex = "9999";
+                    divAviso.style.fontFamily = "sans-serif";
+                    document.body.appendChild(divAviso);
+                    mensajeMostrado = true;
+                }
+            }
+
+            // Elimina el mensaje
+            function quitarAviso() {
+                if (mensajeMostrado && divAviso) {
+                    divAviso.remove();
+                    mensajeMostrado = false;
+                }
+            }
+
+            async function verificar() {
+                try {
+                    // Intentar una solicitud ligera para comprobar conexión
+                    await fetch("https://www.google.com/favicon.ico?_=" + Date.now(), {
+                        method: "HEAD",
+                        mode: "no-cors",
+                        cache: "no-store"
+                    });
+
+                    // Hay conexión
+                    // quitarAviso();
+
+                    mostrarAviso();
+                    callback(false);
+                    // callback(true);
+                } catch (e) {
+                    // No hay conexión
+                    mostrarAviso();
+                    callback(false);
+                    setTimeout(verificar, 20000); // Reintentar en 20 segundos
+                }
+            }
+
+            verificar();
+        }
+
+        // Ejemplo de uso:
+        /*   comprobarConexion((hayInternet) => {
+         //      console.log(hayInternet ? "✅ Conectado" : "❌ Sin conexión");
+           });*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+        /// delete
+        function actualizar_carrito(id = null, accion = null) {
+            $.ajax({
+                    url: base_url + 'carrito.php',
+                    type: 'POST',
+                    data: id && accion ? {
+                        id,
+                        accion
+                    } : {},
+                    dataType: 'html'
+                })
+                .done(function(result) {
+                    //     console.log(result)
+                    total_pesos = 0
+                    total_dolares = 0
+                    total_bolivares = 0
+
+                    const resultado = JSON.parse(result);
+                    $("#tabla-carrito tbody").html('');
+                    $("#tabla-carrito tfoot").html('');
+                    if (resultado.cantidad > 0) {
+                        resultado.carrito.forEach(element => {
+                            $("#tabla-carrito tbody").append(`
                                 <tr>
                                     <td style="width:5%; text-align: center" class="ac-c">${element.cantidad}</td>
                                     <td style="width:30%" class="ac-c">${element.nombre}</td>
@@ -1456,13 +1738,13 @@ echo '</pre>';
                                             <button class="btn btn-sm btn-outline-danger" onclick="quitar_producto('${element.id}')"><i class="fa fa-trash-o"></i></button>
                                     </td>
                                 </tr>`);
-                            });
+                        });
 
-                            total_pesos = parseFloat(resultado.total.pesos);
-                            total_dolares = parseFloat(resultado.total.dolares);
-                            total_bolivares = parseFloat(resultado.total.bolivares);
+                        total_pesos = parseFloat(resultado.total.pesos);
+                        total_dolares = parseFloat(resultado.total.dolares);
+                        total_bolivares = parseFloat(resultado.total.bolivares);
 
-                            $("#tabla-carrito tfoot").html(`
+                        $("#tabla-carrito tfoot").html(`
                                     <tr >
                                         <td style="padding-top: 0.5rem !important; width:5%"></td>
                                         <td style="padding-top: 0.5rem !important; width:30%"><b>TOTAL:</b></td>
@@ -1473,290 +1755,290 @@ echo '</pre>';
                                     </tr>
                                     `);
 
-                            $('#botones_acciones').removeClass('hide');
-                        } else {
-                            $('#botones_acciones').addClass('hide');
-                        }
-                        $('[data-toggle="popover"]').popover({
-                            html: true
-                        });
-
+                        $('#botones_acciones').removeClass('hide');
+                    } else {
+                        $('#botones_acciones').addClass('hide');
+                    }
+                    $('[data-toggle="popover"]').popover({
+                        html: true
                     });
+
+                });
+        }
+        /// delete
+
+
+
+
+
+
+
+
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
+                let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
+
+                let dolarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_D')
+                let pesoventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_P')
+                let bolivarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_B')
+                let cantidad_scan = $('#cantidad-scan').val()
+
+                $('#result-escaner').html('')
+                $('#search').val('')
+                $('.section-scanner').addClass('hide')
+
+
+                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, cantidad_scan);
+
+                // ocultar footer del modal
+                const modal_footer = document.getElementById('modal-footer')
+                modal_footer.classList.add('hide')
             }
-            /// delete
+        });
 
 
+        let barcode = "";
+        let lastKeyTime = Date.now();
 
+        document.addEventListener("keydown", function(event) {
 
+            const currentTime = Date.now();
 
+            // Si el tiempo entre dos teclas es mayor a 100ms, se considera que no es un escaneo
+            if (currentTime - lastKeyTime > 100) {
+                barcode = ""; // Reiniciar el código de barras si el tiempo es mayor
+            }
 
-
-
-            document.addEventListener('click', function(event) {
-                if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
-                    let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
-
-                    let dolarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_D')
-                    let pesoventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_P')
-                    let bolivarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_B')
-                    let cantidad_scan = $('#cantidad-scan').val()
-
-                    $('#result-escaner').html('')
-                    $('#search').val('')
-                    $('.section-scanner').addClass('hide')
-
-
-                    addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, cantidad_scan);
-
-                    // ocultar footer del modal
-                    const modal_footer = document.getElementById('modal-footer')
-                    modal_footer.classList.add('hide')
-                }
-            });
-
-
-            let barcode = "";
-            let lastKeyTime = Date.now();
-
-            document.addEventListener("keydown", function(event) {
-
-                const currentTime = Date.now();
-
-                // Si el tiempo entre dos teclas es mayor a 100ms, se considera que no es un escaneo
-                if (currentTime - lastKeyTime > 100) {
-                    barcode = ""; // Reiniciar el código de barras si el tiempo es mayor
-                }
-
-                // Si la tecla es "Enter", significa que se ha terminado de escanear
-                if (event.key === "Enter") {
-                    if (barcode.length > 0) {
-                        if (modo == 1) {
-                            alert('activa el modo escaner')
-                        } else {
-                            // buscarProducto(barcode.replace(/Shift/g, ""), 2);
-                            buscarProducto(barcode.trim(), 2);
-                        }
+            // Si la tecla es "Enter", significa que se ha terminado de escanear
+            if (event.key === "Enter") {
+                if (barcode.length > 0) {
+                    if (modo == 1) {
+                        alert('activa el modo escaner')
+                    } else {
+                        // buscarProducto(barcode.replace(/Shift/g, ""), 2);
+                        buscarProducto(barcode.trim(), 2);
                     }
-                    barcode = ""; // Reiniciar el código de barras
-                } else {
-                    // Si es cualquier otra tecla, añadirla al código de barras
-                    barcode += event.key;
                 }
+                barcode = ""; // Reiniciar el código de barras
+            } else {
+                // Si es cualquier otra tecla, añadirla al código de barras
+                barcode += event.key;
+            }
 
-                lastKeyTime = currentTime; // Actualizar el tiempo de la última tecla presionada
+            lastKeyTime = currentTime; // Actualizar el tiempo de la última tecla presionada
 
 
 
-            });
+        });
 
 
 
 
-            $(document).ready(function() {
-                document.getElementById("cargando").style.display = "none";
-            });
+        $(document).ready(function() {
+            document.getElementById("cargando").style.display = "none";
+        });
 
-            function confirm(id) {
-                Swal.fire({
-                    title: 'Esta seguro?',
-                    html: 'Se eliminara la venta ¿desea continuar?',
-                    icon: 'question',
-                    confirmButtonText: 'Continuar',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#32d7c0',
-                    showCancelButton: true,
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        eliminarVenta(id)
-                    }
+        function confirm(id) {
+            Swal.fire({
+                title: 'Esta seguro?',
+                html: 'Se eliminara la venta ¿desea continuar?',
+                icon: 'question',
+                confirmButtonText: 'Continuar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#32d7c0',
+                showCancelButton: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    eliminarVenta(id)
+                }
+            })
+        }
+
+
+        function eliminarVenta(id) {
+            $.ajax({
+                    url: base_url + 'deleteVentaAjax.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: {
+                        id: id
+                    },
                 })
-            }
+                .done(function(resultado1) {
+                    cargarUltimasOrdenes()
+                })
+        }
 
 
-            function eliminarVenta(id) {
-                $.ajax({
-                        url: base_url + 'deleteVentaAjax.php',
-                        type: 'POST',
-                        dataType: 'html',
+
+        function confirmarDescuento() {
+            Swal.fire({
+                title: 'Esta seguro?',
+                html: 'Se descontaran productos del almacen ¿desea continuar?',
+                icon: 'question',
+                confirmButtonText: 'Continuar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#32d7c0',
+                showCancelButton: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+
+                    $.ajax({
+                        url: base_url + 'accion_carta.php',
+                        type: 'GET',
                         data: {
-                            id: id
-                        },
-                    })
-                    .done(function(resultado1) {
-                        cargarUltimasOrdenes()
-                    })
-            }
-
-
-
-            function confirmarDescuento() {
-                Swal.fire({
-                    title: 'Esta seguro?',
-                    html: 'Se descontaran productos del almacen ¿desea continuar?',
-                    icon: 'question',
-                    confirmButtonText: 'Continuar',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#32d7c0',
-                    showCancelButton: true,
-                }).then((result) => {
-                    if (result.isConfirmed) {
-
-
-                        $.ajax({
-                            url: base_url + 'accion_carta.php',
-                            type: 'GET',
-                            data: {
-                                statusV: 3,
-                                action: 'placeOrder'
-                            }, // Pasar el parámetro id en la solicitud
-                            success: function(response) {
-                                const respuesta = JSON.parse(response)
-                                if (respuesta.status) {
-                                    Alerta.toast('info', 'Se descontaron productos del inventario')
-                                    actualizar_carrito()
-                                }
-                            },
-                            error: function(xhr, status, error) {
-                                // Manejar cualquier error
-                                console.error('Error al eliminar la venta:', error);
+                            statusV: 3,
+                            action: 'placeOrder'
+                        }, // Pasar el parámetro id en la solicitud
+                        success: function(response) {
+                            const respuesta = JSON.parse(response)
+                            if (respuesta.status) {
+                                Alerta.toast('info', 'Se descontaron productos del inventario')
+                                actualizar_carrito()
                             }
-                        });
-                    }
-                })
-            }
+                        },
+                        error: function(xhr, status, error) {
+                            // Manejar cualquier error
+                            console.error('Error al eliminar la venta:', error);
+                        }
+                    });
+                }
+            })
+        }
 
 
-            // Control de funciones desde el teclado
-            let lastKey = null;
-            let actionTimeout = null;
+        // Control de funciones desde el teclado
+        let lastKey = null;
+        let actionTimeout = null;
 
-            // Lógica separada para ejecutar la acción según la tecla
-            function ejecutarAccion(key) {
-                const modal = document.querySelector('#modal-container');
-                const swalPersonalizado = document.querySelector('.swal2-popup.swal-metodo-pago');
+        // Lógica separada para ejecutar la acción según la tecla
+        function ejecutarAccion(key) {
+            const modal = document.querySelector('#modal-container');
+            const swalPersonalizado = document.querySelector('.swal2-popup.swal-metodo-pago');
 
-                if (!modal.classList.contains('active') && !swalPersonalizado) {
+            if (!modal.classList.contains('active') && !swalPersonalizado) {
 
 
-                    switch (key) {
-                        case 'b':
-                            openModalButton.click();
-                            document.getElementById("search").focus();
-                            document.getElementById("search").value = "";
-                            break;
-                        case 'v':
-                            confirmarVenta();
-                            break;
-                        case 'c':
-                            document.getElementById('calcularVuelto').click();
-                            break;
-                        case '+':
-                            if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
-                                const cantidad = $('#cantidad-scan').val()
-                                const cantidadActual = parseInt(cantidad) + 1
+                switch (key) {
+                    case 'b':
+                        openModalButton.click();
+                        document.getElementById("search").focus();
+                        document.getElementById("search").value = "";
+                        break;
+                    case 'v':
+                        confirmarVenta();
+                        break;
+                    case 'c':
+                        document.getElementById('calcularVuelto').click();
+                        break;
+                    case '+':
+                        if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
+                            const cantidad = $('#cantidad-scan').val()
+                            const cantidadActual = parseInt(cantidad) + 1
+                            $('#cantidad-scan').val(cantidadActual)
+                        }
+                        break;
+                    case '-':
+                        if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
+
+                            const cantidad = $('#cantidad-scan').val()
+                            const cantidadActual = parseInt(cantidad) - 1
+                            if (cantidadActual > 0) {
                                 $('#cantidad-scan').val(cantidadActual)
                             }
-                            break;
-                        case '-':
-                            if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
-
-                                const cantidad = $('#cantidad-scan').val()
-                                const cantidadActual = parseInt(cantidad) - 1
-                                if (cantidadActual > 0) {
-                                    $('#cantidad-scan').val(cantidadActual)
-                                }
+                        }
+                        break;
+                    case '-':
+                        if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
+                            const cantidad = $('#cantidad-scan').val()
+                            const cantidadActual = parseInt(cantidad) - 1
+                            if (cantidadActual >= 1) {
+                                $('#cantidad-scan').val(cantidadActual)
                             }
-                            break;
-                        case '-':
-                            if ($('#result-escaner').find('.btn-add-to-car').length > 0) {
-                                const cantidad = $('#cantidad-scan').val()
-                                const cantidadActual = parseInt(cantidad) - 1
-                                if (cantidadActual >= 1) {
-                                    $('#cantidad-scan').val(cantidadActual)
-                                }
-                            }
-                            break;
+                        }
+                        break;
 
 
-                    }
-                } else if (key === 'escape') {
-                    closeModalButton.click();
                 }
-
-                if (swalPersonalizado) {
-                    const select = document.getElementById('metodoPago');
-                    const btnVender = document.getElementById('btnVender');
-
-                    const opciones = {
-                        '1': 'option1',
-                        '2': 'option7',
-                        '3': 'option6',
-                        '4': 'option4',
-                        '5': 'option2',
-                        '6': 'option3',
-                        '7': 'option5',
-                    };
-
-                    if (opciones[key]) {
-                        select.value = opciones[key];
-                        select.dispatchEvent(new Event('change'));
-                    }
-
-                    if (key === 'enter') {
-                        btnVender?.click();
-                    }
-                }
+            } else if (key === 'escape') {
+                closeModalButton.click();
             }
 
-            document.addEventListener('keyup', function(event) {
-                const key = event.key.toLowerCase();
+            if (swalPersonalizado) {
+                const select = document.getElementById('metodoPago');
+                const btnVender = document.getElementById('btnVender');
 
-                const allowedKeys = ['+', '-', 'b', 'v', 'c', 'escape', 'enter', '1', '2', '3', '4', '5', '6', '7'];
+                const opciones = {
+                    '1': 'option1',
+                    '2': 'option7',
+                    '3': 'option6',
+                    '4': 'option4',
+                    '5': 'option2',
+                    '6': 'option3',
+                    '7': 'option5',
+                };
 
-                if (!allowedKeys.includes(key)) return; // Ignorar teclas no relevantes
-
-                if (key === lastKey) {
-                    // Reinicia el timeout si es la misma tecla
-                    clearTimeout(actionTimeout);
-                    actionTimeout = setTimeout(() => {
-                        ejecutarAccion(key);
-                        lastKey = null;
-                    }, 100);
-                } else {
-                    // Tecla distinta: cancelar cualquier acción pendiente
-                    clearTimeout(actionTimeout);
-                    lastKey = key;
-                    actionTimeout = setTimeout(() => {
-                        ejecutarAccion(key);
-                        lastKey = null;
-                    }, 100);
-                }
-            });
-            // Control de funciones desde el teclado
-
-
-
-            function agregarNombreSucursal(sucursal_n) {
-                const navbar = document.querySelector('ul.navbar-right');
-                if (!navbar) {
-                    console.warn("No se encontró el elemento 'ul.navbar-right'");
-                    return;
+                if (opciones[key]) {
+                    select.value = opciones[key];
+                    select.dispatchEvent(new Event('change'));
                 }
 
-                const div = document.getElementById('sucursal_nombre');
-                const element = (nv == 1 ? 'a' : 'span');
+                if (key === 'enter') {
+                    btnVender?.click();
+                }
+            }
+        }
 
-                const a = document.createElement(element);
-                a.href = (nv == 1 ? 'seleccion_sucursal.php' : '');
-                a.textContent = sucursal_n;
+        document.addEventListener('keyup', function(event) {
+            const key = event.key.toLowerCase();
 
-                div.appendChild(a);
+            const allowedKeys = ['+', '-', 'b', 'v', 'c', 'escape', 'enter', '1', '2', '3', '4', '5', '6', '7'];
+
+            if (!allowedKeys.includes(key)) return; // Ignorar teclas no relevantes
+
+            if (key === lastKey) {
+                // Reinicia el timeout si es la misma tecla
+                clearTimeout(actionTimeout);
+                actionTimeout = setTimeout(() => {
+                    ejecutarAccion(key);
+                    lastKey = null;
+                }, 100);
+            } else {
+                // Tecla distinta: cancelar cualquier acción pendiente
+                clearTimeout(actionTimeout);
+                lastKey = key;
+                actionTimeout = setTimeout(() => {
+                    ejecutarAccion(key);
+                    lastKey = null;
+                }, 100);
+            }
+        });
+        // Control de funciones desde el teclado
+
+
+
+        function agregarNombreSucursal(sucursal_n) {
+            const navbar = document.querySelector('ul.navbar-right');
+            if (!navbar) {
+                console.warn("No se encontró el elemento 'ul.navbar-right'");
+                return;
             }
 
-            const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
+            const div = document.getElementById('sucursal_nombre');
+            const element = (nv == 1 ? 'a' : 'span');
 
-            agregarNombreSucursal(sucursal_n)
-        </script>
+            const a = document.createElement(element);
+            a.href = (nv == 1 ? 'seleccion_sucursal.php' : '');
+            a.textContent = sucursal_n;
+
+            div.appendChild(a);
+        }
+
+        const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
+
+        agregarNombreSucursal(sucursal_n)
+    </script>
 </body>
 
 </html>

@@ -670,3 +670,85 @@ textarea:disabled {
     z-index: 99;
     margin: 0 15px 15px 0;
 }
+
+
+
+
+
+/* Contenedor nav básico */
+.nav {
+    display: flex;
+    flex-wrap: wrap;
+    padding-left: 0;
+    margin-bottom: 0;
+    list-style: none;
+
+}
+
+/* Tabs estilo Bootstrap */
+.nav-tabs {
+    border-bottom: none;
+}
+
+.nav-tabs .nav-item {
+    margin-bottom: -1px;
+}
+
+.nav-tabs .nav-link {
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+    background: none;
+    color: #17a2b8;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.nav-tabs .nav-link:hover {
+    text-decoration: none;
+    outline: none;
+
+}
+
+.nav-tabs .nav-link.active {
+    color: #495057 !important;
+    background-color: #17a2b8 !important;
+    border-color: #dee2e6 #dee2e6 #fff !important;
+    color: white !important;
+    outline: none;
+}
+
+/* Tab content */
+.tab-content {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    padding: 1rem;
+    background-color: #fff;
+}
+
+/* Animación de fade */
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.fade {
+    opacity: 0;
+    transition: opacity 0.15s linear;
+}
+
+.fade.show {
+    opacity: 1;
+}
+
+.list-none {
+    padding: 0;
+    list-style: none;
+}
+
+.list-none>li {
+    padding-left: 0;
+}
