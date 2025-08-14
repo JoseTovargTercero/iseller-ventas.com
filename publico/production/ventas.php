@@ -2157,11 +2157,11 @@ echo '</pre>';
 
                     // Hay conexión
                     // quitarAviso();
-                    document.getElementById('alert-internet').classList.remove('hide');
+                    document.getElementById('alert-internet').classList.add('hide');
                     callback(true);
                 } catch (e) {
                     // No hay conexión
-                    document.getElementById('alert-internet').classList.add('hide');
+                    document.getElementById('alert-internet').classList.remove('hide');
 
                     callback(false);
                     setTimeout(verificar, 20000); // Reintentar en 20 segundos
