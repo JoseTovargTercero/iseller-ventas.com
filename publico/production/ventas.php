@@ -1105,7 +1105,9 @@ echo '</pre>';
 
 
         function calcularVuelto() {
-            if (total_dolares == 0) return;
+            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                return false;
+            }
 
             total_pesos = String(total_pesos).replace(',', '');
 
@@ -2237,9 +2239,6 @@ echo '</pre>';
         });
 
         function confirm(id) {
-            if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
-                return false;
-            }
             Swal.fire({
                 title: 'Esta seguro?',
                 html: 'Se eliminara la venta ¿desea continuar?',
