@@ -48,7 +48,7 @@ $sql = "SELECT
             p.cantidad_unidades,
             p.origen,
             p.precio_compra,
-            p.porcentaje,
+            s.porcentaje,
             p.nombre,
             p.precio_compra,
             p.cantidad_unidades,
