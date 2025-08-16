@@ -1621,9 +1621,22 @@ echo '</pre>';
                 telefono: ""
             };
 
-            const valorFinalVenta = total_dolares;
-            const valorFinalBs = total_bolivares;
-            const valorFinalCop = total_pesos;
+            let valorFinalBs = 0;
+            let valorFinalCop = 0;
+            let valorFinalVenta = 0;
+
+            for (let k in carritoActivo) {
+                if (carritoActivo.hasOwnProperty(k)) {
+                    let prod = carritoActivo[k];
+                    console.log('PRODU' + prod)
+                    // aquí asumo que quieres precio * cantidad
+                    valorFinalVenta += prod.price * (prod.qty ?? 1);
+                    valorFinalBs += prod.priceBolivar * (prod.qty ?? 1);
+                    valorFinalCop += prod.pricePeso * (prod.qty ?? 1);
+                }
+            }
+            console.log("ValorFinalVenta:", valorFinalBs);
+            console.log("ValorFinalVenta:", valorFinalCop);
 
 
             let nuevoPedido = {
@@ -1741,6 +1754,7 @@ echo '</pre>';
             total_dolares = 0;
             total_bolivares = 0;
             total_pesos = 0;
+
 
 
             comprobarConexion(async function(hayInternet) {
@@ -1952,34 +1966,6 @@ echo '</pre>';
 
 
 
-        /*  async function retomarCarrito(carritoId) {
-              try {
-                  carritoData = await getFromIndexedDB('carritosReservados', carritoId);
-                  console.log(carritoData)
-
-                  if (carritoData) {
-                      carritoActivo = carritoData.productos;
-
-                      // Eliminar de memoria y de IndexedDB
-                      await deleteFromIndexedDB('carritosReservados', carritoId);
-
-                      //await db.carritoActivo.put(carritoActivo[idPedido]);
-                      await db.carritoActivo.put(carritoActivo);
-
-                      // Actualizar UI
-                      actualizarCarritoJs();
-                      actualizarProductosReservados();
-                      Alerta.toast('success', 'Carrito retomado correctamente');
-                      document.getElementById('home-tab').click();
-                  } else {
-                      Alerta.toast('error', 'Carrito reservado no encontrado');
-                  }
-              } catch (error) {
-                  console.error("Error al retomar carrito:", error);
-                  Alerta.toast('error', 'Error al retomar carrito.');
-              }
-          }*/
-        // RETOMAR CARRITO RESERVADO
 
 
         // ELIMINAR CARRITO RESERVADO
@@ -2078,71 +2064,6 @@ echo '</pre>';
         // MOSTRAR PRODUCTOS SIN ENVIAR
 
 
-        /*
-                function procesarPedido2(metodoPago, despacho, nombreC = null) {
-                    const valorFinalVenta = total_dolares;
-                    const valorFinalBs = total_bolivares;
-                    const valorFinalCop = total_pesos;
-                    const pagoTipo = metodoPago.replace('option', '');
-                    const action = despacho;
-                    const compraTipo = 1;
-
-                    // pendiente al nombre del cliente nombreC // placeOrderCredito
-
-                    let tipoDespacho
-                    if (despacho == 'placeOrderCredito') {
-                        tipoDespacho = 2;
-                    } else {
-                        tipoDespacho = 1;
-                    }
-
-                    $.ajax({
-                            url: base_url + 'accion_carta.php',
-                            type: 'GET',
-                            data: {
-                                valorFinalVenta: valorFinalVenta,
-                                valorFinalBs: valorFinalBs,
-                                valorFinalCop: valorFinalCop,
-                                pagoTipo: pagoTipo,
-                                action: action,
-                                compraTipo: compraTipo,
-                                nombreC: nombreC,
-                                tipoV: tipoDespacho
-                            },
-                            dataType: 'html'
-                        })
-                        .done(function(result) {
-                            const response = JSON.parse(result)
-                            if (response.status) {
-                                total_pesos = 0
-                                total_dolares = 0
-                                total_bolivares = 0
-                                Alerta.toast('success', response.data)
-                                actualizar_carrito()
-                                cargarUltimasOrdenes()
-                            } else {
-                                Alerta.toast('error', 'No se pudo realizar la acción')
-                            }
-
-                        });
-
-                }
-
-
-
-        */
-
-
-
-
-
-
-
-
-
-
-
-
         // Verificar la conexion
         function comprobarConexion(callback) {
 
@@ -2160,7 +2081,7 @@ echo '</pre>';
                     // Hay conexión
                     // quitarAviso();
                     document.getElementById('alert-internet').classList.add('hide');
-                    callback(false);
+                    callback(true);
                 } catch (e) {
                     // No hay conexión
                     document.getElementById('alert-internet').classList.remove('hide');
