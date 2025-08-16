@@ -1523,6 +1523,7 @@ echo '</pre>';
                     let subtotalPeso = element.pricePeso * element.qty;
                     let subtotalBolivar = element.priceBolivar * element.qty;
                     let subtotalDolar = element.price * element.qty;
+                    subtotalPeso = Math.round(subtotalPeso);
 
                     $("#tabla-carrito tbody").append(`
                         <tr>
@@ -1543,6 +1544,8 @@ echo '</pre>';
                     total_dolares += subtotalDolar;
                     total_bolivares += subtotalBolivar;
                 });
+                // elimina los decimales de total_pesos
+                total_pesos = Math.round(total_pesos);
 
                 $("#tabla-carrito tfoot").html(`
                     <tr>
@@ -2157,7 +2160,7 @@ echo '</pre>';
                     // Hay conexión
                     // quitarAviso();
                     document.getElementById('alert-internet').classList.add('hide');
-                    callback(true);
+                    callback(false);
                 } catch (e) {
                     // No hay conexión
                     document.getElementById('alert-internet').classList.remove('hide');

@@ -96,6 +96,8 @@ function procesarCarritos()
         if (!$respuesta['status']) {
             $errores[$idPedido] = $respuesta['data'];
         }
+
+        $cart->destroy();
     }
     if (empty($errores)) {
         echo json_encode(['status' => true, 'data' => 'Todos las vetnas se procesaron correctamente.']);
@@ -108,7 +110,7 @@ function procesarCarritos()
 
 function agregarAlCarrito($cart, $producto)
 {
-    $mayor = $producto['mayor'] = 'undefined' ? '0' : ($producto['mayor'] ?? 0);
+    $mayor = $producto['mayor'] == 'undefined' ? '0' : ($producto['mayor'] ?? 0);
 
     $itemData = [
         'id' => $producto['id'],
@@ -243,7 +245,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                 INSERT INTO creditos (order_id, total_price, negocio, tipoCompra, bss_id, sucursal_id)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
-            $stmtC->bind_param("dsssii", $orderID, $valorFinalVenta, $nombreC, $compraTipo, $bss_id, $id_sucursal);
+            $stmtC->bind_param("idssii", $orderID, $valorFinalVenta, $nombreC, $compraTipo, $bss_id, $id_sucursal);
             $stmtC->execute();
             $stmtC->close();
         }
