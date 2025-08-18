@@ -6,7 +6,7 @@ require_once("session.php");
 $input = json_decode(file_get_contents("php://input"), true);
 
 $id = $input['order_id'] ?? null;
-$pagoTipo = $input['pagoTipo'] ?? null;
+$pagoTipo = $input['pagoTipo'] ?? 1;
 $tipo = 1;
 $precioPesoVenta = $input['precioPesoVenta'] ?? 0;
 $precioBsVenta = $input['precioBsVenta'] ?? 0;
@@ -46,9 +46,6 @@ try {
     // Consulta de tipo para ventas al mayor
 
 
-
-
-
     $conexion->begin_transaction();
 
     // Verificar existencia del crédito
@@ -62,6 +59,17 @@ try {
         echo json_encode(["success" => false, "message" => "Crédito no encontrado."]);
         exit();
     }
+    // saca el nombre del cliente
+    $cliente = null;
+    while ($row = $result->fetch_assoc()) {
+        $cliente = $row['negocio'];
+    }
+    if ($cliente === null) {
+        $conexion->rollback();
+        echo json_encode(["success" => false, "message" => "Cliente no encontrado."]);
+        # code...
+    }
+
     $stmt->close();
 
     // Actualizar crédito
@@ -92,7 +100,34 @@ try {
     $stmt->close();
 
     // Confirmar cambios
+    $msg = "Crédito y orden actualizados correctamente.";
+
+
+
+
+
+
+    $stmt = $conexion->prepare("SELECT * FROM creditos WHERE negocio = ? AND estado != '1'");
+    $stmt->bind_param("s", $cliente);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 0) {
+
+        $stmtd = $conexion->prepare("DELETE FROM abonos WHERE cliente = ?");
+        $stmtd->bind_param("s", $cliente);
+        $stmtd->execute();
+        $stmtd->close();
+        $msg = "finalizado";
+    }
+    $stmt->close();
+
+
+
+
+
     $conexion->commit();
+
 
     echo json_encode(["success" => true, "message" => "Crédito y orden actualizados correctamente."]);
 } catch (Exception $e) {

@@ -9,8 +9,7 @@ $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, 
 //header('Content-Type: application/json; charset=utf-8');
 
 // Validar cliente
-//$cliente = $_POST['cliente'] ?? null;
-$cliente = 'Kaleis'; // Para pruebas, usar un cliente específico
+$cliente = $_POST['cliente'] ?? null;
 if (!$cliente) {
     http_response_code(401);
     echo json_encode(['error' => 'No autorizado']);
@@ -19,10 +18,27 @@ if (!$cliente) {
 
 // Decodificar arreglo de abonos si existe
 //$abonos = [];
-$abonos = [
-    ['monto' => 6600, 'moneda' => 'cop'],
-    ['monto' => 100, 'moneda' => 'bs']
-];
+
+
+$abonos = [];
+$stmt = $conexion->prepare("SELECT * FROM abonos WHERE cliente = ?");
+$stmt->bind_param("s", $cliente);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $abonos[] = [
+        "id"  => $row["id"],
+        "monto"  => $row["monto"],
+        "moneda" => $row["moneda"],
+        "fecha"  => $row["fecha"]
+    ];
+}
+
+$stmt->close();
+
+
+
 /*if (!empty($_POST['abonos'])) {
     $json = $_POST['abonos'];
     $abonos = json_decode($json, true);
@@ -110,6 +126,7 @@ function getProductos($orderId)
     $productos = [];
     while ($row = $res->fetch_assoc()) {
         $datos = datosProductos($row['product_id']);
+        $datos['cantidad'] =    (float)$row['quantity']; // Agregar cantidad al array de datos 
         if (empty($datos)) continue;
 
         $productos[] = [
@@ -258,9 +275,10 @@ usort($productosGlobales, function ($a, $b) {
 // Aplicar abonos si hay
 [$productosAjustados, $deudaRestante] = aplicarAbonos($productosGlobales, $abonos);
 
-echo '<pre>';
+//echo '<pre>';
 // Respuesta final
 echo json_encode([
     'deuda_restante' => $deudaRestante,
     'productos'      => $productosAjustados,
+    'abonos'         => $abonos, // Muestra los abonos aplicados
 ], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT);
