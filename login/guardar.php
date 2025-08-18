@@ -29,15 +29,22 @@ if ($result->num_rows === 1) {
     if (password_verify($contrasena, $usuario['contrasena'])) {
         // Regenerar ID de sesión por seguridad
         if (session_status() === PHP_SESSION_NONE) {
+            $duracion = 10800;
 
             session_set_cookie_params([
-                'lifetime' => 0, // Hasta que se cierre el navegador
+                'lifetime' => $duracion, // Hasta que se cierre el navegador
                 'path' => '/',
                 'domain' => '',
                 'secure' => true,       // Solo con HTTPS
                 'httponly' => true,     // No accesible desde JS
                 'samesite' => 'Strict'  // Previene CSRF
             ]);
+            // Duración en segundos (3 horas = 10800)
+
+            // Ajustar parámetros de la sesión
+            ini_set('session.gc_maxlifetime', $duracion);
+            ini_set('session.cookie_lifetime', $duracion);
+            session_set_cookie_params($duracion);
 
 
             session_start();
