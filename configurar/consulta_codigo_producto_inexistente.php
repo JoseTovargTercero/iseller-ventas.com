@@ -27,7 +27,7 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
 
     $stmt = $conexion->prepare($query);
     $like = "%$q%";
-    $stmt->bind_param("isI", $sucursal, $like, $bss_id);
+    $stmt->bind_param("isi", $sucursal, $like, $bss_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
