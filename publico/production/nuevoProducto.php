@@ -56,13 +56,79 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             // Ejecutar actualización cada segundo
 
 
+
                             $(document).ready(function() {
                                 ['precioMonedaOrigen', 'cantidad', 'porcentaje'].forEach(element => {
-                                    document.getElementById(element).addEventListener('keyup', () => realizarCalculos())
+                                    document.getElementById(element).addEventListener('keyup', () => calcularPrecioVenta())
                                 });
 
-                                document.getElementById('origenProducto').addEventListener('change', () => realizarCalculos())
+                                document.getElementById('origenProducto').addEventListener('change', () => calcularPrecioVenta())
                             })
+
+
+
+
+
+
+                            const base_url = '../../configurar/';
+
+
+
+                            function calcularPrecioVenta() {
+                                const precio = parseFloat(document.getElementById('precioMonedaOrigen').value) || 0;
+                                const origen = document.getElementById('origenProducto').value || 'v';
+                                const cantidad = parseInt(document.getElementById('cantidad').value) || 1;
+                                const porcentaje = parseFloat(document.getElementById('porcentaje').value) || 0;
+                                const precioCompra = (precio == 0 ? 0 : precio / cantidad);
+
+                                $.ajax({
+                                        url: base_url + 'consultar_precio.php',
+                                        type: 'POST',
+                                        data: {
+                                            precio: precio,
+                                            origen: origen,
+                                            cantidad: cantidad,
+                                            porcentaje: porcentaje
+                                        },
+                                        dataType: 'html'
+                                    })
+                                    .done(function(result) {
+                                        try {
+                                            const data = JSON.parse(result);
+                                            if (data.status === 'ok') {
+                                                document.getElementById('resultado').value = `$ ${precioCompra}`;
+                                                document.getElementById('resultado2').value = `$ ${data.data.dolar}`;
+                                                document.getElementById('resultado3').value = `${formatNumber(data.data.peso)} COP`;
+                                                document.getElementById('resultado4').value = `${formatNumber(recortarADosDecimales(data.data.bs))} BS`;
+                                            } else {
+                                                document.getElementById('resultado').value = `$ 0`;
+                                                document.getElementById('resultado2').value = `$ 0`;
+                                                document.getElementById('resultado3').value = `${formatNumber(0)} COP`;
+                                                document.getElementById('resultado4').value = `${formatNumber(0)} BS`;
+                                            }
+                                        } catch (e) {
+                                            console.error('Error al procesar la respuesta:', e);
+                                            alert('Error al procesar los datos del servidor.');
+                                        }
+
+                                    })
+                                    .fail(function(xhr, status, error) {
+                                        console.error('Error al cargar el ticket:', error);
+                                        $('#cargando').hide();
+                                        alert('Hubo un error al generar el ticket. Intente nuevamente.');
+                                    });
+                            }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

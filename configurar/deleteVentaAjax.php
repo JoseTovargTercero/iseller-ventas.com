@@ -51,8 +51,21 @@ try {
     $stmtDeleteArticulos->execute();
     $stmtDeleteArticulos->close();
 
+
+
+    $stmtDeleteCredito = $conexion->prepare("DELETE FROM creditos WHERE order_id = ?");
+    $stmtDeleteCredito->bind_param("i", $orderId);
+    $stmtDeleteCredito->execute();
+    $stmtDeleteCredito->close();
+    // verifica si existe un credito asociado y lo borras
+
+
+
     // Confirmar transacción
     $conexion->commit();
+
+
+
 
     // Redirigir
     define('PAGINA_INICIO', '../publico/production/ventas.php');

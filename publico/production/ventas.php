@@ -952,7 +952,7 @@ echo '</pre>';
                               <body>
                                 <div class="ticket" id="ticket">
                                     <p class="centrado">
- <img src="images/sucursal_logo/${sucursal_i}.png" height="50px" onerror="this.parentNode.removeChild(this)">
+                        <img src="images/sucursal_logo/${sucursal_i}.png" height="50px" onerror="this.parentNode.removeChild(this)">
                                     <br>
                                     <br>
                                         ${sucursal_n}
@@ -2364,6 +2364,11 @@ echo '</pre>';
         const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
 
         agregarNombreSucursal(sucursal_n)
+
+
+        setInterval(() => {
+            fetch("mantener_sesion.php");
+        }, 5 * 60 * 1000); // cada 5 minutos
     </script>
 </body>
 

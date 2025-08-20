@@ -390,7 +390,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                         </div>
 
-                        <div class='col-lg-12'>
+                        <div class='col-lg-12 hide'>
                             <div class='x_panel tile '>
                                 <div class='x_title' style="border-bottom: none">
                                     <h5 style="font-weight: 400;">Ventas de las ultimas semanas</h5>
