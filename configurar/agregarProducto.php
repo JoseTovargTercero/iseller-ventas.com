@@ -5,13 +5,12 @@ header('Content-Type: application/json');
 
 // Sanitizar y preparar los datos
 $nombre = strtoupper($_POST['nombre']) ?? '';
-$precio = $_POST['precio'];
+$precio = $_POST['precioMonedaOrigen'];
 $cantidad = $_POST['cantidad'];
 $porcentaje = $_POST['porcentaje'] ?? 0;
 $codigo = $_POST['codigo'] ?? 'ND';
 $categoria = $_POST['categoria'] ?? '';
 $moneda = $_POST['moneda'] ?? '';
-$precioMonedaOrigen = $_POST['precioMonedaOrigen'] ?? 0;
 $c_barras = $_POST['c_barras'] ?? '';
 $origenProducto = $_POST['origenProducto'] ?? '';
 $proveedor = $_POST['proveedor'] ?? '';
@@ -27,11 +26,41 @@ if (empty($nombre)) {
 
 $conexion->begin_transaction();
 
-try {
-
-  if ($precio == '' || $cantidad == '' || $origenProducto == '' || $proveedor == '' || $nombre == '') {
-    throw new Exception('Faltan datos.');
+function validarInput($data, $campo)
+{
+  if ($data === null || $data === '') {
+    return [
+      'status' => false,
+      'campo' => $campo
+    ];
   }
+  return [
+    'status' => true
+  ];
+}
+
+try {
+  // Validar campos requeridos
+
+  $status = true;
+  $camposFaltantes = [];
+  $validaciones = [
+    validarInput($nombre, 'nombre'),
+    validarInput($precio, 'precio'),
+    validarInput($cantidad, 'cantidad'),
+    validarInput($origenProducto, 'origenProducto'),
+    validarInput($proveedor, 'proveedor')
+  ];
+  foreach ($validaciones as $validacion) {
+    if (!$validacion['status']) {
+      $status = false;
+      $camposFaltantes[] = $validacion['campo'];
+    }
+  }
+  if (!$status) {
+    throw new Exception('Faltan datos: ' . implode(', ', $camposFaltantes));
+  }
+
   // Insertar en productos
   $query = "INSERT INTO productos (
       nombre, precio_compra, cantidad_unidades, porcentaje, codigo_barras, origen, proveedor, bss_id
