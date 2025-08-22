@@ -38,3 +38,49 @@
 <script src="js/menu.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons+Round">
 <script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+<style>
+    @view-transition {
+        navigation: auto;
+    }
+
+    /* Grupo principal para transiciones */
+    ::view-transition-group(*) {
+        animation-duration: 0.6s;
+        animation-timing-function: ease-in-out;
+    }
+
+    /* Animación solo para el contenedor .right_col */
+    ::view-transition-old(.right_col) {
+        animation: fade-slide-out-left 0.6s forwards;
+    }
+
+    ::view-transition-new(.right_col) {
+        animation: fade-slide-in-right 0.6s forwards;
+    }
+
+    /* Keyframes */
+    @keyframes fade-slide-out-left {
+        0% {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: translateX(-30%) scale(0.95);
+            opacity: 0;
+        }
+    }
+
+    @keyframes fade-slide-in-right {
+        0% {
+            transform: translateX(30%) scale(1.05);
+            opacity: 0;
+        }
+
+        100% {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+        }
+    }
+</style>
