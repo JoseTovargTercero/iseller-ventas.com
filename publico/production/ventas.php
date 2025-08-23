@@ -1445,6 +1445,14 @@ echo '</pre>';
             const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
             let cant = inputCantidad ? parseFloat(inputCantidad.value) : 1;
 
+
+            // verifica que cantidad_scann sea un numero
+            if (isNaN(cant) || cant <= 0) {
+                Alerta.toast('error', 'Cantidad inválida. Debe ser un número mayor a 0.');
+                return;
+            }
+
+
             if (cantidad_scann != null) cant = parseFloat(cantidad_scann);
 
             if (!productos_por_id[id]) {
