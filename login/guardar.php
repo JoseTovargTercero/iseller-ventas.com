@@ -69,6 +69,20 @@ if ($result->num_rows === 1) {
 
         $id = $usuario['id'];
 
+
+
+        $subdirectorios = [
+            '11' => [
+                'creditos_cliente.php'
+            ],
+            '8' => [
+                'ficha.php'
+            ]
+        ];
+
+
+
+
         if ($usuario['nivel'] != 1) {
             $permisos = [];
 
@@ -81,6 +95,12 @@ if ($result->num_rows === 1) {
             if ($result->num_rows > 0) {
                 while ($row_p = $result->fetch_assoc()) {
                     $permisos[$row_p['id_item_menu']] = $row_p['dir'];
+
+                    if (isset($subdirectorios[$row_p['id_item_menu']])) {
+                        foreach ($subdirectorios[$row_p['id_item_menu']] as $sub) {
+                            $permisos[] = $sub;
+                        }
+                    }
                 }
             }
             $stmt_2->close();

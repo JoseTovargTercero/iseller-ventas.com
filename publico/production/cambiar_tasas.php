@@ -1,13 +1,6 @@
 <?php
 require_once('includes/requires.php');
 
-if ($_SESSION['nivel'] != '1') {
-    define('PAGINA_INICIO', '../../index.php');
-    header('Location: ' . PAGINA_INICIO);
-}
-
-
-
 
 $topnav = topnav();
 $nivelUsuario = $_SESSION['nivel'];
