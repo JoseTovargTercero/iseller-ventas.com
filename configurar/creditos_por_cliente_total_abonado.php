@@ -242,9 +242,15 @@ $productosGlobales = [];
 while ($row = $res->fetch_assoc()) {
     $productos = getProductos($row['order_id']);
 
+    // cuenta los registros en $productos
+    if (count($productos) === 0) continue;
+
+
+
     foreach ($productos as $p) {
-        $cantidad = $p['cantidad'];
         $datos = $p['datos'];
+        if (!isset($datos['precio_dolar_visible'])) continue;
+        $cantidad = $p['cantidad'];
 
         $totalUSD = $datos['precio_dolar_visible'] * $cantidad;
         $totalCOP = $datos['precio_peso_visible'] * $cantidad;

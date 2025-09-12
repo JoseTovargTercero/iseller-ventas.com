@@ -439,9 +439,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           tbody.innerHTML = '';
 
 
-
-
-
           const abonos_div = document.querySelector('#abonos-list');
           const abonos = data.abonos || [];
           abonos_div.innerHTML = ``;
