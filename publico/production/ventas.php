@@ -1777,16 +1777,25 @@ echo '</pre>';
                         },
                         body: new URLSearchParams({
                             action: 'enviarPedidos',
-                            pedidos: JSON.stringify(pedidosIndexedDB)
-                        })
+                            pedidos: JSON.stringify(pedidosIndexedDB),
+                        }),
                     })
-                    .then(response => response.json())
-                    .then(async (response) => {
+                    .then((res) => res.text()) // obtener siempre como texto
+                    .then(async (text) => {
+                        console.log('Respuesta cruda:', text);
 
-                        // limpiar carrito activo LÓGICA
+                        let response;
+                        try {
+                            response = JSON.parse(text); // intentar parsear a JSON
+                        } catch (e) {
+                            console.error('Error al parsear JSON:', e);
+                            Alerta.toast('error', 'Respuesta no válida del servidor.');
+                            return;
+                        }
+
+                        // Lógica principal
                         if (response.status) {
-                            Alerta.toast('success', 'Informacion enviada correctamente.');
-                            // Limpiar IndexedDB
+                            Alerta.toast('success', 'Información enviada correctamente.');
                             await db.carritosVenta.clear();
                         } else {
                             Alerta.toast('error', response.data || 'Error en la respuesta del servidor.');
@@ -1794,9 +1803,10 @@ echo '</pre>';
                     })
                     .catch((error) => {
                         actualizarProductosSinEnviar();
-                        console.error(error);
+                        console.error('Error en fetch:', error);
                         Alerta.toast('error', 'Error al enviar los pedidos. Intente nuevamente.');
                     });
+
 
 
 
