@@ -41,7 +41,7 @@ if ($result->num_rows === 1) {
             ]);
             // Duración en segundos (3 horas = 10800)
 
-            // Ajustar parámetros de la sesión
+
             ini_set('session.gc_maxlifetime', $duracion);
             ini_set('session.cookie_lifetime', $duracion);
             session_set_cookie_params($duracion);

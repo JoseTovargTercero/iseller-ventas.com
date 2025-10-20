@@ -20,9 +20,6 @@ if ($_SESSION["nivel"] == 2) {
             $archivo = false;
         }
     }
-
-    // print_r($_SESSION["permisos"]);
-
     if ($coincidencia == false) {
         header("Location: ../../login/salir.php");
         exit;

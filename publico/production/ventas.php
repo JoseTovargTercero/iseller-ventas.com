@@ -81,7 +81,7 @@ if ($result->num_rows > 0) {
         // Formatear nombre
         /* PRODUCTOS PARA LA BUSQUEDA */
 
-        $valorUnidad = $row['precio_compra'] / $row['cantidad_unidades'];
+        $valorUnidad = (float) $row['precio_compra'] / (float) $row['cantidad_unidades'];
         $mayor = floatval($row['mayor']);
 
 
@@ -1794,7 +1794,7 @@ echo '</pre>';
                     })
                     .catch((error) => {
                         actualizarProductosSinEnviar();
-                        console.error('Error al enviar los pedidos:', error);
+                        console.error(error);
                         Alerta.toast('error', 'Error al enviar los pedidos. Intente nuevamente.');
                     });
 
