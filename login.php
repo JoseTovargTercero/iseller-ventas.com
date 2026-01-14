@@ -103,7 +103,7 @@
     setInterval(createSnowflake, 100);
   }
 
-  generateSnow();
+  //generateSnow();
 </script>
 
 
