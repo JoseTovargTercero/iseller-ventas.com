@@ -493,14 +493,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     data.data.forEach(row => {
                                         productos[row.id] = row
 
-                                        if (row.nombre == 'SPEED MAX BEBIDA ENERGETICA 269ml') {
-                                            console.log(row.nombre)
-                                            console.log(row.id)
-                                        }
-
                                         const rest = (row.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : row.stock)
-
-
 
                                         tabla.row.add([
                                             contador++,

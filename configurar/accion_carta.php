@@ -279,7 +279,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
     // Preparar consultas para stock
     $stmtStock  = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
     // para obtener la cantidad actual
-    $updateStmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+    $updateStmt =      $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
     $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
     // para actualizar la cantidad actual
     $stmtStockParaMayor  = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
@@ -318,7 +318,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
             $stmtStockParaMayor->bind_param("iii", $id_stock, $id_sucursal, $bss_id);
             $stmtStockParaMayor->execute();
             $result = $stmtStockParaMayor->get_result()->fetch_assoc();
-            $stock = max(0, $result['stock'] - ($item['qty'] * $item['cantidadPaca']));
+            $stock = max(0, (float)$result['stock'] - ((float)$item['qty'] * (float)$item['cantidadPaca']));
             // se debe multiplicar por la cantidad
 
 
@@ -332,7 +332,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
             $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
             $stmtStock->execute();
             $result = $stmtStock->get_result()->fetch_assoc();
-            $stock = max(0, $result['stock'] - $item['qty']);
+            $stock = max(0, (float)$result['stock'] - (float)$item['qty']);
 
 
             $updateStmt->bind_param("iiii", $stock, $item['id'], $id_sucursal, $bss_id);

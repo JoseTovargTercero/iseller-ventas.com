@@ -1254,7 +1254,9 @@ echo '</pre>';
                             data-codigo="${datos.codigo}"
                             data-P_D="${datos.precio_dolar_visible}"
                             data-P_P="${datos.precio_peso_visible}"
-                            data-P_B="${datos.precio_bs_visible}">
+                            data-P_B="${datos.precio_bs_visible}"
+                            data-mayor="${datos.mayor}"
+                            data-cantidad_por_mayor="${datos.cantidadPaca}">
                             <i class="bx bx-cart-add"></i>
                         </button>
 
@@ -1314,7 +1316,9 @@ echo '</pre>';
                                     data-codigo="${item.codigo || ''}"
                                     data-P_D="${item.precio_dolar_visible}"
                                     data-P_P="${item.precio_peso_visible}"
-                                    data-P_B="${item.precio_bs_visible}">
+                                    data-P_B="${item.precio_bs_visible}"
+                                    data-mayor="${item.mayor}"
+                                    data-cantidad_por_mayor="${item.cantidadPaca}">
                                     <i class="fa fa-shopping-cart"></i>
                                 </button>
                             </td>
@@ -1438,7 +1442,7 @@ echo '</pre>';
 
 
         // REVISADO
-        async function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null) {
+        async function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_por_mayor, cantidad_scann = null) {
             const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
             let cant = inputCantidad ? parseFloat(inputCantidad.value) : 1;
 
@@ -1474,7 +1478,7 @@ echo '</pre>';
                     priceBolivar: parseFloat(bolivarventa_p),
                     qty: cant,
                     mayor: mayor,
-                    cantidadPaca: 1
+                    cantidadPaca: cantidad_por_mayor
                 };
             }
 
@@ -1768,6 +1772,7 @@ echo '</pre>';
                     actualizarProductosSinEnviar();
                     return;
                 }
+
 
 
                 fetch(base_url + 'accion_carta.php', {
@@ -2121,6 +2126,8 @@ echo '</pre>';
                 let dolarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_D')
                 let pesoventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_P')
                 let bolivarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_B')
+                let mayor = event.target.closest('.btn-add-to-car').getAttribute('data-mayor')
+                let cantidad_por_mayor = event.target.closest('.btn-add-to-car').getAttribute('data-cantidad_por_mayor')
                 let cantidad_scan = $('#cantidad-scan').val()
 
                 $('#result-escaner').html('')
@@ -2128,7 +2135,7 @@ echo '</pre>';
                 $('.section-scanner').addClass('hide')
 
 
-                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, null, cantidad_scan);
+                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_por_mayor, cantidad_scan);
 
                 // ocultar footer del modal
                 const modal_footer = document.getElementById('modal-footer')
