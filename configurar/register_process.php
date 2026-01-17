@@ -10,6 +10,7 @@ try {
     // 1. Recibir y validar datos
     $tipo_negocio = $_POST['tipo_negocio'] ?? '';
     $otro_tipo = $_POST['otro_tipo'] ?? '';
+    $plan = $_POST['plan'] ?? null;
     if ($tipo_negocio === 'otro' && !empty($otro_tipo)) {
         $tipo_negocio = $otro_tipo;
     }
@@ -45,10 +46,10 @@ try {
     $proxima_facturacion = date('Y-m-d', strtotime('+3 months'));
     $estado = 'activo';
 
-    $stmtNegocio = $conexion->prepare("INSERT INTO negocio (tipo, nombre, fecha_regitro, proxima_facturacion, estado) VALUES (?, ?, ?, ?, ?)");
+    $stmtNegocio = $conexion->prepare("INSERT INTO negocio (tipo, nombre, fecha_regitro, proxima_facturacion, estado, plan) VALUES (?, ?, ?, ?, ?, ?)");
     if (!$stmtNegocio) throw new Exception("Error preparando negocio: " . $conexion->error);
     
-    $stmtNegocio->bind_param("sssss", $tipo_negocio, $nombre_negocio, $fecha_registro, $proxima_facturacion, $estado);
+    $stmtNegocio->bind_param("ssssss", $tipo_negocio, $nombre_negocio, $fecha_registro, $proxima_facturacion, $estado, $plan);
     
     if (!$stmtNegocio->execute()) {
         throw new Exception("Error al registrar negocio: " . $stmtNegocio->error);

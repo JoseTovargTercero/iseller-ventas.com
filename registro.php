@@ -1,8 +1,11 @@
+<?php
+
+$plan = '';
+if (isset($_GET['plan'])) {
+    $plan = $_GET['plan'];
+}
+?>
 <!DOCTYPE html>
-<!--
-	Moon by GetTemplates.co
-	URL: https://gettemplates.co
--->
 <html lang="en">
 
 <head>
@@ -25,7 +28,6 @@
   <!-- CSS -->
   <link rel="stylesheet" href="web/css/style.min.css">
   <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
-  <link href="https://file.myfontastic.com/7vRKgqrN3iFEnLHuqYhYuL/icons.css" rel="stylesheet">
 
   <!-- Modernizr JS for IE8 support of HTML5 elements and media queries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.js"></script>
@@ -155,14 +157,6 @@
       </div>
     </footer>
   </div>
-
-
-  Despues del registro- redirigir a login
-  
-
-
-
-
   </div>
   <!-- External JS -->
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.js"></script>
@@ -178,12 +172,9 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Login JS (para auto-login seguro) -->
-  <script src="publico/build/js/login.js"></script>
-
   <!-- Main JS -->
-  <script src="js/app.min.js "></script>
   <script>
+    const plan = "<?php echo $plan; ?>";
     // Manejo de Pasos
     function nextStep(step) {
         // Validaciones paso 1
@@ -251,6 +242,7 @@
 
       // Preparar datos
       const formData = new FormData(this);
+      formData.append('plan', plan);
       
       // Enviar datos al servidor
       fetch('configurar/register_process.php', {
@@ -263,21 +255,12 @@
             Swal.fire({
                 icon: 'success',
                 title: 'Registro exitoso',
-                text: 'Iniciando sesión automáticamente...',
+                text: 'Inicia sesión para continuar...',
                 timer: 1500,
-                showConfirmButton: false
+                showConfirmButton: true
             }).then(() => {
-                // Auto-login seguro usando login.js
-                // Llenamos el formulario oculto y disparamos el evento submit
-                document.getElementById('login').value = email;
-                document.getElementById('hidden_password').value = password;
-                
-                const loginForm = document.querySelector("form[name='data_form']");
-                const event = new Event('submit', {
-                    'bubbles': true,
-                    'cancelable': true
-                });
-                loginForm.dispatchEvent(event);
+              // then confirm redirect to login
+              window.location.href = 'login.php';
             });
 
           } else {

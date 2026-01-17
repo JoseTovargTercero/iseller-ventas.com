@@ -545,7 +545,7 @@
                                             <li>Soporte por correo</li>
                                         </ul>
                                         <br>
-                                        <a href="#" class="btn btn-block btn-outline-success btn-primary mt-4">Comenzar</a>
+                                        <a href="registro.php?plan=mensual" class="btn btn-block btn-outline-success btn-primary mt-4">Comenzar</a>
                                     </div>
                                 </div>
 
@@ -567,7 +567,7 @@
                                             <li>Soporte por correo</li>
                                         </ul>
                                         <br>
-                                        <a href="#" class="btn btn-block btn-outline-success btn-primary mt-4">Comenzar</a>
+                                        <a href="registro.php?plan=anual" class="btn btn-block btn-outline-success btn-primary mt-4">Comenzar</a>
                                     </div>
                                 </div>
 
