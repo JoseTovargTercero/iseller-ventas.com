@@ -25,9 +25,7 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="web/css/style.min.css">
-  <link rel="stylesheet" href="publico/build/css/loader.css">
   <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
-  <link href="https://file.myfontastic.com/7vRKgqrN3iFEnLHuqYhYuL/icons.css" rel="stylesheet">
 
   <!-- Modernizr JS for IE8 support of HTML5 elements and media queries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.js"></script>
@@ -180,7 +178,7 @@
 
   </div>
   <!-- External JS -->
-  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="publico/build/js/login.js"></script>
   <script src="web/vendor/bootstrap/popper.min.js"></script>
   <script src="web/vendor/bootstrap/bootstrap.min.js"></script>
