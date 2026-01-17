@@ -619,7 +619,7 @@
 
     </div>
     <!-- External JS -->
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="web/vendor/bootstrap/popper.min.js"></script>
     <script src="web/vendor/bootstrap/bootstrap.min.js"></script>
     <script src="web/vendor/select2/select2.min.js "></script>
