@@ -9,8 +9,8 @@
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Moon - Multipurpose Bootstrap 4 Template by GetTemplates.co</title>
-  <meta name="description" content="Core HTML Project">
+  <title>iSeller - Registro</title>
+  <meta name="description" content="Regístrate en iSeller">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
   <!-- External CSS -->
@@ -29,6 +29,19 @@
 
   <!-- Modernizr JS for IE8 support of HTML5 elements and media queries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.js"></script>
+  <style>
+      .step-section {
+          display: none;
+      }
+      .step-section.active {
+          display: block;
+          animation: fadeIn 0.5s;
+      }
+      @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+      }
+  </style>
 
 </head>
 
@@ -60,36 +73,70 @@
           <div class="title-wrap">
             <h2 class="section-title">¡Empieza hoy, sin pagar nada!</h2>
             <p class="section-sub-title">
-              Regístrate y aprovecha todas las herramientas del sistema <b class="text-success">gratis durante el primer año</b>.
+              Regístrate y aprovecha todas las herramientas del sistema <b class="text-success">gratis durante los primeros 3 meses</b>.
             </p>
           </div>
           <div class="row">
             <div class="col-md-8 offset-md-2 contact-form-holder mt-4">
               <form id="formRegistro" method="post">
-                <div class="row">
-                  <div class="col-md-12 form-input mb-3">
-                    <input type="text" class="form-control" id="nombres" name="nombres" disabled placeholder="Nombre completo" required>
-                  </div>
-                  <div class="col-md-12 form-input mb-3">
-                    <input type="email" class="form-control" id="email" name="email" disabled placeholder="Correo electrónico" required>
-                  </div>
-                  <div class="col-md-12 form-input mb-3">
-                    <input type="password" class="form-control" id="password" name="password" disabled placeholder="Contraseña" required>
-                  </div>
-                  <div class="col-md-12 form-input mb-3">
-                    <input type="password" class="form-control" id="confirmar_password" name="confirmar_password" disabled placeholder="Repetir contraseña" required>
-                  </div>
-                  <div class="col-md-12 form-btn text-center">
-                    <button class="btn btn-block btn-secondary btn-red" disabled type="submit">Registrar</button>
-                  </div>
-                  <p class="text-center w-100 text-danger mt-3">
-                    <strong>Importante:</strong> No disponible. El registro de nuevos usuarios está deshabilitado temporalmente. Si tienes alguna duda, por favor contacta a nuestro soporte técnico.
-                  </p>
+                
+                <!-- Step 1: Datos del Negocio -->
+                <div id="step-1" class="step-section active">
+                    <h4 class="mb-4">Paso 1: Datos del Negocio</h4>
+                    <div class="row">
+                        <div class="col-md-12 form-input mb-3">
+                            <label for="tipo_negocio">Tipo de Negocio</label>
+                            <select id="tipo_negocio" name="tipo_negocio" class="form-control" required>
+                                <option value="" disabled selected>Selecciona un tipo</option>
+                                <option value="minimarket">Minimarket</option>
+                                <option value="farmacia">Farmacia</option>
+                                <option value="restaurante">Restaurante</option>
+                                <option value="ferreteria">Ferretería</option>
+                                <option value="tienda_ropa">Tienda de Ropa</option>
+                                <option value="tecnologia">Tecnología</option>
+                                <option value="otro">Otro (Especificar)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 form-input mb-3" id="otro_tipo_container" style="display: none;">
+                            <input type="text" class="form-control" id="otro_tipo" name="otro_tipo" placeholder="Especificar tipo de negocio">
+                        </div>
+                        <div class="col-md-12 form-input mb-3">
+                            <label for="nombre_negocio">Nombre del Negocio</label>
+                            <input type="text" class="form-control" id="nombre_negocio" name="nombre_negocio" placeholder="Ej: Mi Tienda C.A." required>
+                        </div>
+                        <div class="col-md-12 form-btn text-right">
+                            <button type="button" class="btn btn-primary" onclick="nextStep(2)">Siguiente</button>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Step 2: Datos del Usuario -->
+                <div id="step-2" class="step-section">
+                    <h4 class="mb-4">Paso 2: Datos de Usuario</h4>
+                    <div class="row">
+                        <div class="col-md-12 form-input mb-3">
+                            <input type="text" class="form-control" id="nombres" name="nombres" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="col-md-12 form-input mb-3">
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Correo electrónico" required>
+                        </div>
+                        <div class="col-md-12 form-input mb-3">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
+                        </div>
+                        <div class="col-md-12 form-input mb-3">
+                            <input type="password" class="form-control" id="confirmar_password" name="confirmar_password" placeholder="Repetir contraseña" required>
+                        </div>
+                        <div class="col-md-12 form-btn text-center d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-secondary" onclick="prevStep(1)">Atrás</button>
+                            <button class="btn btn-secondary btn-red" type="submit">Registrar</button>
+                        </div>
+                    </div>
+                </div>
+
               </form>
               <div id="form-message-warning" class="text-danger mt-3"></div>
               <div id="form-message-success" class="text-success mt-3" style="display: none;">
-                Registro exitoso. Revisa tu correo.
+                Registro exitoso. Redirigiendo...
               </div>
             </div>
           </div>
@@ -102,18 +149,23 @@
       <div class="inner container">
         <div class="row">
           <div class="col-md-6 d-flex align-items-center justify-content-md-start justify-content-center">
-            <p class="mb-0">&copy; 2025 iSeller</p>
+            <p class="mb-0">&copy; 2026 iSeller</p>
           </div>
-
-
         </div>
       </div>
     </footer>
   </div>
 
+
+  Despues del registro- redirigir a login
+  Verificar que el correo no este en uso
+
+
+
+
   </div>
   <!-- External JS -->
-  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.js"></script>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.js"></script>
   <script src="web/vendor/bootstrap/popper.min.js"></script>
   <script src="web/vendor/bootstrap/bootstrap.min.js"></script>
   <script src="web/vendor/select2/select2.min.js "></script>
@@ -122,73 +174,129 @@
   <script src="web/vendor/lightcase/lightcase.js"></script>
   <script src="web/vendor/waypoints/waypoint.min.js"></script>
   <script src="web/vendor/countTo/jquery.countTo.js"></script>
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Login JS (para auto-login seguro) -->
+  <script src="publico/build/js/login.js"></script>
 
   <!-- Main JS -->
   <script src="js/app.min.js "></script>
-  <script src="//localhost:35729/livereload.js"></script>
   <script>
+    // Manejo de Pasos
+    function nextStep(step) {
+        // Validaciones paso 1
+        if (step === 2) {
+            const tipo = document.getElementById('tipo_negocio').value;
+            const nombreNegocio = document.getElementById('nombre_negocio').value.trim();
+            const otroTipo = document.getElementById('otro_tipo').value.trim();
+            
+            if (!tipo) {
+                Swal.fire('Error', 'Por favor selecciona un tipo de negocio.', 'warning');
+                return;
+            }
+            if (tipo === 'otro' && !otroTipo) {
+                Swal.fire('Error', 'Por favor especifica el tipo de negocio.', 'warning');
+                return;
+            }
+            if (!nombreNegocio) {
+                Swal.fire('Error', 'Por favor ingresa el nombre del negocio.', 'warning');
+                return;
+            }
+        }
+
+        document.querySelectorAll('.step-section').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${step}`).classList.add('active');
+    }
+
+    function prevStep(step) {
+        document.querySelectorAll('.step-section').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${step}`).classList.add('active');
+    }
+
+    // Toggle tipo personalizado
+    document.getElementById('tipo_negocio').addEventListener('change', function() {
+        if (this.value === 'otro') {
+            document.getElementById('otro_tipo_container').style.display = 'block';
+        } else {
+            document.getElementById('otro_tipo_container').style.display = 'none';
+        }
+    });
+
+    // Envío del formulario
     document.getElementById('formRegistro').addEventListener('submit', function(e) {
       e.preventDefault();
 
-      return
-      const nombres = document.getElementById('nombres').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const confirmar = document.getElementById('confirmar_password').value;
       const warning = document.getElementById('form-message-warning');
       const success = document.getElementById('form-message-success');
+      
+      const password = document.getElementById('password').value;
+      const confirmar = document.getElementById('confirmar_password').value;
+      const email = document.getElementById('email').value.trim();
 
-      warning.innerHTML = '';
-      success.style.display = 'none';
+      warning.innerText = '';
+      warning.style.display = 'none';
 
-      // Validaciones básicas
-      if (!nombres || !email || !password || !confirmar) {
-        warning.innerText = 'Todos los campos son obligatorios.';
-        return;
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        warning.innerText = 'Correo electrónico inválido.';
-        return;
-      }
-
-      if (password.length < 8) {
-        warning.innerText = 'La contraseña debe tener al menos 8 caracteres.';
+      // Validaciones finales
+      if (password.length < 5) {
+        Swal.fire('Error', 'La contraseña debe tener al menos 5 caracteres.', 'warning');
         return;
       }
 
       if (password !== confirmar) {
-        warning.innerText = 'Las contraseñas no coinciden.';
+        Swal.fire('Error', 'Las contraseñas no coinciden.', 'warning');
         return;
       }
 
+      // Preparar datos
+      const formData = new FormData(this);
+      
       // Enviar datos al servidor
-      fetch('back/registro.php', {
+      fetch('configurar/register_process.php', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            nombres,
-            email,
-            password
-          })
+          body: formData
         })
         .then(response => response.json())
         .then(data => {
-          if (data.success) {
-            success.style.display = 'block';
-            document.getElementById('formRegistro').reset();
+          if (data.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Registro exitoso',
+                text: 'Iniciando sesión automáticamente...',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                // Auto-login seguro usando login.js
+                // Llenamos el formulario oculto y disparamos el evento submit
+                document.getElementById('login').value = email;
+                document.getElementById('hidden_password').value = password;
+                
+                const loginForm = document.querySelector("form[name='data_form']");
+                const event = new Event('submit', {
+                    'bubbles': true,
+                    'cancelable': true
+                });
+                loginForm.dispatchEvent(event);
+            });
+
           } else {
-            warning.innerText = data.message || 'Error en el registro.';
+            Swal.fire('Error', data.message || 'Error en el registro.', 'error');
           }
         })
-        .catch(() => {
-          warning.innerText = 'Error al conectar con el servidor.';
+        .catch(err => {
+          console.error(err);
+          Swal.fire('Error', 'Error al conectar con el servidor.', 'error');
         });
     });
   </script>
+  
+  <!-- Formulario oculto para login.js -->
+  <form name="data_form" style="display: none;">
+      <input type="text" id="login" name="login">
+      <input type="password" id="hidden_password" name="password"> 
+      <!-- Usamos hidden_password para no conflicto de ID con el form de registro -->
+  </form>
 
 </body>
 

@@ -1,23 +1,32 @@
-<?php
-// redirecciona a login.php
-header("Location: login.php");
-exit;
-?>
 
 <!DOCTYPE html>
-<!--
-	Moon by GetTemplates.co
-	URL: https://gettemplates.co
--->
+
 <html lang="es">
 
 <head>
 
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Iseller App</title>
-    <meta name="description" content="Core HTML Project">
+    <title>iSeller - Control de Inventario y Ventas Multisucursal en Tiempo Real</title>
+    <meta name="description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller. La plataforma más completa para el control total de tu negocio con soporte multidivisa.">
+    <meta name="keywords" content="inventario, ventas, multisucursal, punto de venta, POS, gestión de negocio, iSeller, control de stock, reporte de ventas">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="canonical" href="https://iseller-tiendas.com/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://iseller-tiendas.com/">
+    <meta property="og:title" content="iSeller - Control de Inventario y Ventas Multisucursal">
+    <meta property="og:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller. Optimiza tu negocio hoy mismo.">
+    <meta property="og:image" content="https://iseller-tiendas.com/web/img/logo.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://iseller-tiendas.com/">
+    <meta property="twitter:title" content="iSeller - Control de Inventario y Ventas Multisucursal">
+    <meta property="twitter:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller. Optimiza tu negocio hoy mismo.">
+    <meta property="twitter:image" content="https://iseller-tiendas.com/web/img/logo.png">
+
     <link rel='icon' href='publico/production/images/favicon.ico' type='image/ico' />
 
     <!-- External CSS -->
@@ -79,17 +88,18 @@ exit;
             </div>
 
         </nav>
-        <div class="jumbotron d-flex align-items-center" style="background-image: url(img/hero-2.png)">
+        <header class="jumbotron d-flex align-items-center" style="background-image: url(img/hero-2.png)">
             <div class="container text-center mt-5">
                 <h1 class="display-2 mb-4">Control total de tu inventario en tiempo real!</h1>
                 <p>
                     Gestiona múltiples sucursales, <b>tasas de cambio personalizadas</b>, usuarios ilimitados <br> y
                     obtén seguimiento detallado de ventas y ganancias, todo desde un solo panel.
                 </p>
-                <a href="registro.php" class="btn btn-success mt-3">Comenzar ahora, gratis!</a>
+                <a href="registro.php" class="btn btn-success mt-3" aria-label="Comenzar ahora gratis con iSeller">Comenzar ahora, gratis!</a>
             </div>
-        </div>
-        <section id="funcionalidades" class="bg-white">
+        </header>
+        <main>
+            <section id="funcionalidades" class="bg-white">
             <div class="container">
                 <div class="section-content">
                     <div class="title-wrap">
@@ -103,14 +113,14 @@ exit;
 
 
                         <div class="col-md-4 col-sm-6">
-                            <img class="rounded-circle" src="web/icons/animat-checkmark.gif" alt="Gestión Multidivisa"
-                                width="140" height="140">
+                            <img class="rounded-circle" src="web/icons/animat-checkmark.gif" alt="Icono de verificación de gestión multisucursal"
+                                width="140" height="140" loading="lazy">
                             <h5 class="mb-4">Gestión Multisucursal</h5>
                             <p>Administra tu inventario, productos y listas de precios en múltiples sucursales. </p>
                         </div>
                         <div class="col-md-4 col-sm-6">
-                            <img class="rounded-circle" src="web/icons/animat-customize.gif" alt="Configuración de tasas"
-                                width="140" height="140">
+                            <img class="rounded-circle" src="web/icons/animat-customize.gif" alt="Icono de personalización de tasas de cambio"
+                                width="140" height="140" loading="lazy">
                             <h5 class="mb-4">Tasas de Cambio Personalizables</h5>
                             <p>Configura tus tasas de cambio según tus necesidades y asigna productos específicos a cada
                                 una. Así, podrás adaptar tu estrategia de precios ante los cambios del mercado.</p>
@@ -121,7 +131,7 @@ exit;
                         <!-- /.col-md-4 col-sm-6  -->
                         <div class="col-md-4 col-sm-6 ">
                             <img class="rounded-circle" src="web/icons/animat-responsive.gif"
-                                alt="Generic placeholder image" width="140" height="140">
+                                alt="Icono de reportes en dispositivos móviles" width="140" height="140" loading="lazy">
                             <h5 class="mb-4">Ventas y Ganancias desde cualquier dispositivo</h5>
                             <p>Visualiza datos de ventas al instante y obtén reportes de rentabilidad por producto,
                                 categoría o sucursal. </p> b
@@ -135,32 +145,17 @@ exit;
         <section id="gtco-counter" class="overlay bg-fixed">
             <div class="container">
                 <div class="section-content">
-                    <div class="row">
+                    <div class="row justify-content-center">
                         <!-- Counter Item -->
                         <div class="col-md-3 col-sm-6 counter-item">
                             <i class="lnr lnr-users"></i>
-                            <span class="number" data-from="0" data-to="34" data-refresh-interval="100">14</span>
+                            <span class="number" data-from="0" data-to="34" data-refresh-interval="100" id="sucursales">0</span>
                             <h4>Sucursales activas</h4>
                         </div>
-                        <!-- End of Counter Item -->
-                        <!-- Counter Item -->
-                        <div class="col-md-3 col-sm-6 counter-item">
-                            <i class="lnr lnr-briefcase"></i>
-                            <span class="number" data-from="0" data-to="23418" data-refresh-interval="100">23418</span>
-                            <h4>Ventas este mes</h4>
-                        </div>
-                        <!-- End of Counter Item -->
-                        <!-- Counter Item -->
-                        <div class="col-md-3 col-sm-6 counter-item">
-                            <i class="lnr lnr-heart"></i>
-                            <span class="number" data-from="0" data-to="38" data-refresh-interval="100">44168</span>
-                            <h4>Usuarios registrados</h4>
-                        </div>
-                        <!-- End of Counter Item -->
-                        <!-- Counter Item -->
+
                         <div class="col-md-3 col-sm-6 counter-item">
                             <i class="lnr lnr-rocket"></i>
-                            <span class="number" data-from="0" data-to="29" data-refresh-interval="100">29</span>
+                            <span class="number" data-from="0" data-to="29" data-refresh-interval="100" id="transacciones">0</span>
                             <h4>Transacciones</h4>
                         </div>
                         <!-- End of Counter Item -->
@@ -287,7 +282,7 @@ exit;
                                             stock y controla entradas y salidas con precisión.</p>
                                     </div>
                                     <div class="col-md-4 offset-md-right-2 col-sm-6">
-                                        <img class="my-5" src="web/img/app-profile-mockup.png" alt="Inventario Mockup">
+                                        <img class="my-5" src="web/img/app-profile-mockup.png" alt="Vista previa del perfil de usuario en la aplicación iSeller" loading="lazy">
                                     </div>
                                 </div>
                             </div>
@@ -295,7 +290,7 @@ exit;
                             <div class="featurettes-wrap text-left">
                                 <div class="row featurettes-item">
                                     <div class="col-md-4 offset-md-2 col-sm-6">
-                                        <img class="my-4" src="web/img/app-chat-mockup.png" alt="Ventas Mockup">
+                                        <img class="my-4" src="web/img/app-chat-mockup.png" alt="Vista previa del chat y soporte en la plataforma iSeller" loading="lazy">
                                     </div>
                                     <div class="col-md-4 offset-md-right-2 col-sm-6 mb-5">
                                         <div class="my-4">
@@ -317,9 +312,9 @@ exit;
                                     </div>
                                     <div class="col-md-4 offset-md-right-2 col-sm-6 text-center">
                                         <a href="#0"><img class="btn-img my-4" src="web/img/appstore-btn.png"
-                                                alt="App Store"></a>
+                                                alt="Descarga iSeller en el App Store" loading="lazy"></a>
                                         <a href="#0"><img class="btn-img" src="web/img/playstore-btn.png"
-                                                alt="Play Store"></a>
+                                                alt="Descarga iSeller en el Play Store" loading="lazy"></a>
                                     </div>
                                 </div>
                             </div>
@@ -360,7 +355,7 @@ exit;
                                 <!-- Portfolio Item -->
                                 <div class="grid-item minimalism">
                                     <div class="grid-item-wrapper">
-                                        <img src="web/img/photo-1.jpg" alt="portfolio-img" class="portfolio-item">
+                                        <img src="web/img/photo-1.jpg" alt="Ejemplo de uso de iSeller - Gestión de productos" class="portfolio-item" loading="lazy">
                                         <div class="grid-info">
                                             <div class="grid-link d-flex justify-content-center">
                                                 <a class="img-pop" data-rel="lightcase" href="web/img/photo-1.jpg"
@@ -382,7 +377,7 @@ exit;
                                 <!-- Portfolio Item -->
                                 <div class="grid-item vintage">
                                     <div class="grid-item-wrapper">
-                                        <img src="web/img/photo-6.jpg" alt="portfolio-img" class="portfolio-item">
+                                        <img src="web/img/photo-6.jpg" alt="Ejemplo de uso de iSeller - Seguimiento de ventas" class="portfolio-item" loading="lazy">
                                         <div class="grid-info">
                                             <div class="grid-link d-flex justify-content-center">
                                                 <a class="img-pop" data-rel="lightcase" href="web/img/photo-6.jpg"
@@ -404,7 +399,7 @@ exit;
                                 <!-- Portfolio Item -->
                                 <div class="grid-item creative grid-item-height">
                                     <div class="grid-item-wrapper">
-                                        <img src="web/img/photo-2.jpg" alt="portfolio-img" class="portfolio-item">
+                                        <img src="web/img/photo-2.jpg" alt="Ejemplo de uso de iSeller - Análisis de datos" class="portfolio-item" loading="lazy">
                                         <div class="grid-info">
                                             <div class="grid-link d-flex justify-content-center">
                                                 <a class="img-pop" data-rel="lightcase" href="web/img/photo-2.jpg"
@@ -426,7 +421,7 @@ exit;
                                 <!-- Portfolio Item -->
                                 <div class="grid-item creative">
                                     <div class="grid-item-wrapper">
-                                        <img src="web/img/photo-7.jpg" alt="portfolio-img" class="portfolio-item">
+                                        <img src="web/img/photo-7.jpg" alt="Ejemplo de uso de iSeller - Interfaz de usuario" class="portfolio-item" loading="lazy">
                                         <div class="grid-info">
                                             <div class="grid-link d-flex justify-content-center">
                                                 <a class="img-pop" data-rel="lightcase" href="web/img/photo-7.jpg"
@@ -469,7 +464,7 @@ exit;
                                 <!-- Portfolio Item -->
                                 <div class="grid-item vintage">
                                     <div class="grid-item-wrapper">
-                                        <img src="web/img/photo-4.jpg" alt="portfolio-img" class="portfolio-item">
+                                        <img src="web/img/photo-4.jpg" alt="Ejemplo de uso de iSeller - Control de stock" class="portfolio-item" loading="lazy">
                                         <div class="grid-info">
                                             <div class="grid-link d-flex justify-content-center">
                                                 <a class="img-pop" data-rel="lightcase" href="web/img/photo-4.jpg"
@@ -491,7 +486,7 @@ exit;
                                 <!-- Portfolio Item -->
                                 <div class="grid-item creative">
                                     <div class="grid-item-wrapper">
-                                        <img src="web/img/photo-9.jpg" alt="portfolio-img" class="portfolio-item">
+                                        <img src="web/img/photo-9.jpg" alt="Ejemplo de uso de iSeller - Reportes avanzados" class="portfolio-item" loading="lazy">
                                         <div class="grid-info">
                                             <div class="grid-link d-flex justify-content-center">
                                                 <a class="img-pop" data-rel="lightcase" href="web/img/photo-9.jpg"
@@ -525,7 +520,7 @@ exit;
                     <!-- Section Title -->
                     <div class="title-wrap">
                         <h2 class="section-title">Elige</h2>
-                        <p class="section-sub-title">Disfruta del primer año completamente GRATIS. Sin restricciones, sin compromisos.</p>
+                        <p class="section-sub-title">Disfruta de los primeros 3 meses completamente GRATIS. Sin restricciones, sin compromisos.</p>
                     </div>
                     <!-- End of Section Title -->
                     <div class="card-deck mb-3 text-center">
@@ -538,9 +533,9 @@ exit;
                                     <div class="card-header p-4">
                                         <h6 class="mb-0 text-muted font-weight-bold">PLAN MENSUAL</h6>
                                         <h3 class="display-4 p-2 pb-0 mb-0 font-weight-bold text-success">Gratis</h3>
-                                        <h6 class="text-success mt-0 pt-0" style=" margin-top: -8px !important;"> por un año</h6>
+                                        <h6 class="text-success mt-0 pt-0" style=" margin-top: -8px !important;"> por 3 meses</h6>
 
-                                        <p class="mb-0">$9 / por mes</p>
+                                        <p class="mb-0">$5 / por mes</p>
                                     </div>
                                     <div class="card-body p-4">
                                         <ul class="price-box-list list-unstyled mt-3 mb-4">
@@ -560,9 +555,9 @@ exit;
                                     <div class="card-header p-4">
                                         <h6 class="mb-0 text-muted font-weight-bold">PLAN ANUAL</h6>
                                         <h3 class="display-4 p-2 pb-0 mb-0 font-weight-bold text-success">Gratis</h3>
-                                        <h6 class="text-success mt-0 pt-0" style=" margin-top: -8px !important;"> por un año</h6>
+                                        <h6 class="text-success mt-0 pt-0" style=" margin-top: -8px !important;"> por 3 meses</h6>
 
-                                        <p class="mb-0">$90 / por año</p>
+                                        <p class="mb-0">$30 / por año</p>
                                     </div>
                                     <div class="card-body p-4">
                                         <ul class="price-box-list list-unstyled mt-3 mb-4">
@@ -584,6 +579,7 @@ exit;
                 </div>
             </div>
         </section>
+        </main>
 
 
         <!-- End of Client Section -->
@@ -591,8 +587,7 @@ exit;
             <div class="inner container">
                 <div class="row">
                     <div class="col-md-6 d-flex align-items-center justify-content-md-start justify-content-center">
-                        <p class="mb-0">&copy; 2019 Moon. All Right Reserved. Design by <a
-                                href="https://gettemplates.co" target="_blank">GetTemplates.co</a>.</p>
+                        <p class="mb-0">&copy; 2026 iSeller. Todos los derechos reservados.</p>
                     </div>
 
                     <div class="col-md-6">
@@ -637,7 +632,45 @@ exit;
 
     <!-- Main JS -->
     <script src="js/app.min.js "></script>
-    <script src="//localhost:35729/livereload.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $.ajax({
+                url: 'configurar/get_order_count.php',
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        const count = response.count;
+                        const count_sucursales = response.count_sucursales;
+                        const $transacciones = $('#transacciones');
+                        const $sucursales = $('#sucursales');
+                        $transacciones.attr('data-to', count);
+                        $transacciones.text(count);
+                        $sucursales.attr('data-to', count_sucursales);
+                        $sucursales.text(count_sucursales);
+                        if ($.fn.countTo) {
+                            $transacciones.countTo({
+                                from: 0,
+                                to: count,
+                                speed: 1000,
+                                refreshInterval: 50
+                            });
+                            $sucursales.countTo({
+                                from: 0,
+                                to: count_sucursales,
+                                speed: 1000,
+                                refreshInterval: 50
+                            });
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al obtener la cantidad de ordenes:', error);
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

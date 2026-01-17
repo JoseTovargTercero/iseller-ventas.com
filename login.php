@@ -194,7 +194,6 @@
 
   <!-- Main JS -->
   <script src="web/js/app.min.js "></script>
-
 </body>
 
 </html>
