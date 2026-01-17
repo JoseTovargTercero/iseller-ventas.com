@@ -158,7 +158,7 @@
 
 
   Despues del registro- redirigir a login
-  Verificar que el correo no este en uso
+  
 
 
 

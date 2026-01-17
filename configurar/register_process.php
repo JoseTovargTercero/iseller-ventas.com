@@ -23,6 +23,20 @@ try {
         throw new Exception("Todos los campos son obligatorios");
     }
 
+    // 1.5 Verificar si el email ya existe
+    $stmtCheck = $conexion->prepare("SELECT id FROM usuarios WHERE usuario = ? LIMIT 1");
+    if (!$stmtCheck) throw new Exception("Error al verificar disponibilidad de email");
+    
+    $stmtCheck->bind_param("s", $email);
+    $stmtCheck->execute();
+    $stmtCheck->store_result();
+    
+    if ($stmtCheck->num_rows > 0) {
+        $stmtCheck->close();
+        throw new Exception("El correo electrónico ya se encuentra registrado");
+    }
+    $stmtCheck->close();
+
     // 2. Iniciar transacción
     $conexion->begin_transaction();
 

@@ -41,7 +41,6 @@
     <!-- CSS -->
     <link rel="stylesheet" href="web/css/style.min.css">
     <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
-    <link href="https://file.myfontastic.com/7vRKgqrN3iFEnLHuqYhYuL/icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Modernizr JS for IE8 support of HTML5 elements and media queries -->
@@ -88,7 +87,7 @@
             </div>
 
         </nav>
-        <header class="jumbotron d-flex align-items-center" style="background-image: url(img/hero-2.png)">
+        <header class="jumbotron d-flex align-items-center">
             <div class="container text-center mt-5">
                 <h1 class="display-2 mb-4">Control total de tu inventario en tiempo real!</h1>
                 <p>
@@ -631,7 +630,7 @@
     <script src="web/vendor/countTo/jquery.countTo.js"></script>
 
     <!-- Main JS -->
-    <script src="js/app.min.js "></script>
+    <script src="web/js/app.min.js "></script>
 
     <script>
         $(document).ready(function() {
