@@ -106,7 +106,8 @@ function procesarCarritos()
             $metodoPago,
             $valorFinalBs,
             $valorFinalCop,
-            $cliente
+            $cliente,
+            $idPedido
         );
         if (!$respuesta['status']) {
             $errores[$idPedido] = $respuesta['data'];
@@ -175,7 +176,7 @@ function es_venta_mayor($cart)
  * @param float $precioCop Precio en pesos colombianos.
  */
 
-function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = [])
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = [], $idPedido = null)
 {
     global $id_sucursal, $bss_id;
 
@@ -218,8 +219,8 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         INSERT INTO orden (
             status, customer_id, total_price, created, modified, fecha,
             semana, ano, total_price_bs, total_price_cop, tipoPago,
-            dia, id_sucursal, bss_id
-        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            dia, id_sucursal, bss_id, id_pedido
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
         if (!$stmt) {
@@ -227,7 +228,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         }
 
         $stmt->bind_param(
-            "iisssssddsiii",
+            "iisssssddsiiis",
             $tipoVenta,
             $_SESSION['id'],
             $valorFinalVenta,
@@ -240,10 +241,18 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             $pagoTipo,
             $dia,
             $id_sucursal,
-            $bss_id
+            $bss_id,
+            $idPedido
         );
 
         if (!$stmt->execute()) {
+            if ($conexion->errno == 1062) {
+                // Error de clave duplicada
+                $stmt->close();
+                // Retornamos éxito para que el cliente piense que se procesó, 
+                // ya que en realidad YA SE había procesado.
+                return ['status' => true];
+            }
             $error = $stmt->error;
             $stmt->close();
             throw new Exception("Error al ejecutar la inserción en orden: " . $error);
