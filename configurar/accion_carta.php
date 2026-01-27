@@ -58,8 +58,23 @@ function procesarCarritos()
 
     $errores = [];
 
+
+    // Inicializar array de órdenes procesadas en sesión si no existe
+    if (!isset($_SESSION['processed_orders'])) {
+        $_SESSION['processed_orders'] = [];
+    }
+
     foreach ($pedidos as $pedido) {
+        $idPedido = $pedido['id'];
+
+        // Verificar si el pedido ya fue procesado
+        if (in_array($idPedido, $_SESSION['processed_orders'])) {
+            // Ya fue procesado, se ignora pero no se reporta como error para que el cliente limpie la cola
+            continue; 
+        }
+
         $metodoPago = str_replace('option', '', $pedido['metodoPago']);
+
         $valorFinalBs = $pedido['valorFinalBs'];
         $valorFinalCop = $pedido['valorFinalCop'];
         $despacho = $pedido['despacho'];
@@ -95,6 +110,14 @@ function procesarCarritos()
         );
         if (!$respuesta['status']) {
             $errores[$idPedido] = $respuesta['data'];
+        } else {
+            // Marcar como procesado exitosamente
+            $_SESSION['processed_orders'][] = $idPedido;
+            
+            // Limitar el tamaño del historial para ahorrar memoria (últimos 50)
+            if (count($_SESSION['processed_orders']) > 50) {
+                array_shift($_SESSION['processed_orders']);
+            }
         }
 
         $cart->destroy();

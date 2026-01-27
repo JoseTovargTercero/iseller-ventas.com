@@ -1623,7 +1623,7 @@ echo '</pre>';
                 return false;
             }
 
-            const idPedido = String(Date.now());;
+            const idPedido = String(Date.now()) + '-' + Math.floor(Math.random() * 10000);
             const datosCliente = {
                 nombre: nombreC || "",
                 cedula: "",
@@ -1717,7 +1717,7 @@ echo '</pre>';
                 if (!result.isConfirmed) return;
 
                 const cliente = result.value;
-                const idPedido = String(Date.now());;
+                const idPedido = String(Date.now()) + '-' + Math.floor(Math.random() * 10000);
 
                 let nuevoPedidoReservado = {
                     cliente,
