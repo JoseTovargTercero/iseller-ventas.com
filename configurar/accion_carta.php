@@ -274,10 +274,10 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             $nombreC = $cliente['nombre'] ?? '';
 
             $stmtC = $conexion->prepare("
-                INSERT INTO creditos (order_id, total_price, negocio, tipoCompra, bss_id, sucursal_id)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO creditos (order_id, total_price, total_price_bs, total_price_cop, negocio, tipoCompra, bss_id, sucursal_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmtC->bind_param("idssii", $orderID, $valorFinalVenta, $nombreC, $compraTipo, $bss_id, $id_sucursal);
+            $stmtC->bind_param("idssssii", $orderID, $valorFinalVenta, $precioBs, $precioCop, $nombreC, $compraTipo, $bss_id, $id_sucursal);
             $stmtC->execute();
             $stmtC->close();
         }

@@ -226,7 +226,7 @@ function aplicarAbonos($productos, $abonos)
 }
 
 // ───── Obtener productos de créditos activos ─────
-$sql = "SELECT creditos.order_id
+$sql = "SELECT creditos.order_id, creditos.total_price as total_inicial_dolares, creditos.total_price_bs as total_inicial_bs, creditos.total_price_cop as total_inicial_cop
           FROM creditos
     LEFT JOIN orden ON orden.id = creditos.order_id
          WHERE estado = '2' AND negocio = ?
@@ -269,6 +269,9 @@ while ($row = $res->fetch_assoc()) {
             'total_usd'    => $totalUSD,
             'total_cop'    => $totalCOP,
             'total_bs'     => $totalBS,
+            'total_inicial_dolares' => $row['total_inicial_dolares'],
+            'total_inicial_bs' => $row['total_inicial_bs'],
+            'total_inicial_cop' => $row['total_inicial_cop'],
         ];
     }
 }

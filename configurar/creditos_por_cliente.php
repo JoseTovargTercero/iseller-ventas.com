@@ -88,7 +88,10 @@ $sql = "SELECT creditos.tipoCompra,
                creditos.id            AS id_credito,
                creditos.order_id,
                orden.created,
-               orden.total_price
+               orden.total_price,
+               creditos.total_price as total_inicial_dolares,
+               creditos.total_price_bs as total_inicial_bs,
+               creditos.total_price_cop as total_inicial_cop
           FROM creditos
      LEFT JOIN orden ON orden.id = creditos.order_id
          WHERE estado = '2' AND negocio = ?
@@ -101,7 +104,14 @@ $res = $stmt->get_result();
 
 $payload = [
     'ordenes'         => [],
-    'totales_global'  => ['usd' => 0, 'cop' => 0, 'bs' => 0],
+    'totales_global'  => [
+        'usd' => 0,
+        'cop' => 0,
+        'bs' => 0,
+        'total_inicial_dolares' => 0,
+        'total_inicial_cop' => 0,
+        'total_inicial_bs' => 0
+    ],
 ];
 
 while ($row = $res->fetch_assoc()) {
@@ -117,6 +127,10 @@ while ($row = $res->fetch_assoc()) {
     $payload['totales_global']['usd'] += $totales['usd'];
     $payload['totales_global']['cop'] += $totales['cop'];
     $payload['totales_global']['bs']  += $totales['bs'];
+    $payload['totales_global']['total_inicial_dolares'] += $row['total_inicial_dolares'];
+    $payload['totales_global']['total_inicial_cop'] += $row['total_inicial_cop'];
+    $payload['totales_global']['total_inicial_bs'] += $row['total_inicial_bs'];
+    
 
     $payload['ordenes'][] = [
         'id'          => $row['order_id'],
@@ -126,6 +140,11 @@ while ($row = $res->fetch_assoc()) {
         'total'       => (float)$row['total_price'],
         'totales'     => $totales,
         'productos'   => $productos,
+        'totales_iniciales' => [
+            'usd' => $row['total_inicial_dolares'],
+            'cop' => $row['total_inicial_cop'],
+            'bs'  => $row['total_inicial_bs'],
+        ]
     ];
 }
 

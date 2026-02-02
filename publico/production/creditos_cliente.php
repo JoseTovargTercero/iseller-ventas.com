@@ -72,6 +72,52 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         display: grid;
         position: fixed;
       }
+      .form-check {
+  display: block;
+  min-height: 1.5rem;
+  padding-left: 2.5em;
+  margin-bottom: 0.125rem;
+}
+
+.form-check-input {
+  width: 2em;
+  height: 1em;
+  margin-left: -2.5em;
+  vertical-align: top;
+  background-color: #e9ecef;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3E%3Ccircle r='3' fill='%236c757d'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: contain;
+  border-radius: 2em;
+  appearance: none;
+  border: 1px solid rgba(0,0,0,.25);
+  transition: background-position .15s ease-in-out,
+              background-color .15s ease-in-out,
+              border-color .15s ease-in-out,
+              box-shadow .15s ease-in-out;
+  cursor: pointer;
+}
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  background-position: right center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3E%3Ccircle r='3' fill='white'/%3E%3C/svg%3E");
+}
+.form-check-input:focus {
+  outline: 0;
+  box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
+}
+.form-check-label {
+  cursor: pointer;
+}
+.form-switch {
+  padding-left: 2.5em;
+}
+
+.form-switch .form-check-input {
+  width: 2em;
+}
     </style>
   </head>
 
@@ -120,7 +166,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                   <div class="tab-pane fade   show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
                     <div class="x_panel  fadeInUp animated">
                       <div class="x_title">
-                        <h2>Creditos otorgados</h2>
+                        <div class="d-flex justify-content-between">
+                          <h2>Creditos otorgados</h2>
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="mostrarValorInicial" >
+                            <label class="form-check-label" for="mostrarValorInicial">Mostrar valor inicial</label>
+                          </div>
+                        </div>
 
                         <div class="clearfix"></div>
                       </div>
@@ -283,6 +335,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           if (data.ordenes.length === 0) {
             window.location.href = 'creditos.php';
           }
+          console.log(data)
 
 
           // Recorre cada orden
@@ -316,13 +369,28 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             // 2. Fila totales por orden
             const ts = ord.totales;
+            const ts_inicial = ord.totales_iniciales;
             tbody.insertAdjacentHTML('beforeend', `
         <tr style="background-color: rgba(0,0,0,.05);">
           <td>COMPRA: <b>${ord.id}</b></td>
           <td>Fecha: ${ord.fecha}</td>
-          <td class="text-center"><b>TOTAL: ${ts.usd.toFixed(2)}<small></small></b></td>
-          <td class="text-center"><b>TOTAL: ${ts.cop.toLocaleString('es-CO')}<small></small></b></td>
-          <td class="text-center"><b>TOTAL: ${ts.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}<small></small></b>
+          <td class="text-center"><b>TOTAL: 
+          
+          <span class="total_final">${ts.usd.toFixed(2)}</span>
+          <span class="total_inicial hide">${ts_inicial.usd.toFixed(2)}</span>
+          <small>$</small></b></td>
+          <td class="text-center"><b>TOTAL: 
+          
+          <span class="total_final">${ts.cop.toLocaleString('es-CO')}</span>
+          <span class="total_inicial hide">${ts_inicial.cop.toLocaleString('es-CO')}</span>
+          
+          <small>Cop</small></b></td>
+          <td class="text-center"><b>TOTAL: 
+          
+          <span class="total_final">${ts.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+          <span class="total_inicial hide">${ts_inicial.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+          
+          <small>Bs</small></b>
               <button
               data-tipoCompra="${ord.tipoCompra}"
               data-precioPesoVenta="${ts.cop}"
@@ -342,9 +410,24 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           tbody.insertAdjacentHTML('beforeend', `
           <tr style="background-color: rgba(0,0,0,.2);">
             <td colspan="2">DEUDA TOTAL:</td>
-            <td class="text-center"><b>${tg.usd.toFixed(2)} <small>$</small></b></td>
-            <td class="text-center"><b>${tg.cop.toLocaleString('es-CO')} <small>Cop</small></b></td>
-            <td class="text-center"><b>${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></b></td>
+            <td class="text-center"><b>
+            
+            <span class="total_final">${tg.usd.toFixed(2)}</span>
+            <span class="total_inicial hide">${tg.total_inicial_dolares.toFixed(2)}</span>
+            
+            <small>$</small></b></td>
+            <td class="text-center"><b>
+            
+            <span class="total_final">${tg.cop.toLocaleString('es-CO')}</span>
+            <span class="total_inicial hide">${tg.total_inicial_cop.toLocaleString('es-CO')}</span>
+            
+            <small>Cop</small></b></td>
+            <td class="text-center"><b>
+            
+            <span class="total_final">${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+            <span class="total_inicial hide">${tg.total_inicial_bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+            
+            <small>Bs</small></b></td>
           </tr>
         `);
 
@@ -355,6 +438,29 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         `;
         }
       }
+
+      document.getElementById("mostrarValorInicial").addEventListener("change", function() {
+        const mostrarValorInicial = this.checked;
+        
+        const totalFinal = document.querySelectorAll('.total_final');
+        const totalInicial = document.querySelectorAll('.total_inicial');
+
+        totalFinal.forEach(span => {
+          if (mostrarValorInicial) {
+            span.classList.add('hide');
+          } else {
+            span.classList.remove('hide');
+          }
+        });
+
+        totalInicial.forEach(span => {
+          if (mostrarValorInicial) {
+            span.classList.remove('hide');
+          } else {
+            span.classList.add('hide');
+          }
+        });
+      });
 
       function clickearBotones() {
         document.querySelectorAll('.btn-pagar').forEach(boton => {
