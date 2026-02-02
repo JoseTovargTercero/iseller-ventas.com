@@ -335,7 +335,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           if (data.ordenes.length === 0) {
             window.location.href = 'creditos.php';
           }
-          console.log(data)
 
 
           // Recorre cada orden
@@ -370,6 +369,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             // 2. Fila totales por orden
             const ts = ord.totales;
             const ts_inicial = ord.totales_iniciales;
+            const ts_inicial_u =  ts_inicial.usd.toFixed(2)
+            const ts_inicial_c =  (ts_inicial.cop > 0) ? ts_inicial.cop.toLocaleString('es-CO') : '0,00'
+            const ts_inicial_b =  (ts_inicial.bs > 0) ? ts_inicial.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 }) : '0,00'
+
+            
             tbody.insertAdjacentHTML('beforeend', `
         <tr style="background-color: rgba(0,0,0,.05);">
           <td>COMPRA: <b>${ord.id}</b></td>
@@ -377,18 +381,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           <td class="text-center"><b>TOTAL: 
           
           <span class="total_final">${ts.usd.toFixed(2)}</span>
-          <span class="total_inicial hide">${ts_inicial.usd.toFixed(2)}</span>
+          <span class="total_inicial hide">${ts_inicial_u}</span>
           <small>$</small></b></td>
           <td class="text-center"><b>TOTAL: 
           
           <span class="total_final">${ts.cop.toLocaleString('es-CO')}</span>
-          <span class="total_inicial hide">${ts_inicial.cop.toLocaleString('es-CO')}</span>
+          <span class="total_inicial hide">${ts_inicial_c}</span>
           
           <small>Cop</small></b></td>
           <td class="text-center"><b>TOTAL: 
           
           <span class="total_final">${ts.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
-          <span class="total_inicial hide">${ts_inicial.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+          <span class="total_inicial hide">${ts_inicial_b}</span>
           
           <small>Bs</small></b>
               <button
@@ -407,25 +411,29 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
           // 3. Fila totales globales
           const tg = data.totales_global;
+          const tg_inicial = data.totales_global;
+          const tg_inicial_u =  tg_inicial.total_inicial_dolares.toFixed(2)
+          const tg_inicial_c =  (tg_inicial.total_inicial_cop > 0) ? tg_inicial.total_inicial_cop.toLocaleString('es-CO') : '0,00'
+          const tg_inicial_b =  (tg_inicial.total_inicial_bs > 0) ? tg_inicial.total_inicial_bs.toLocaleString('es-VE', { minimumFractionDigits: 2 }) : '0,00'
           tbody.insertAdjacentHTML('beforeend', `
           <tr style="background-color: rgba(0,0,0,.2);">
             <td colspan="2">DEUDA TOTAL:</td>
             <td class="text-center"><b>
             
             <span class="total_final">${tg.usd.toFixed(2)}</span>
-            <span class="total_inicial hide">${tg.total_inicial_dolares.toFixed(2)}</span>
+            <span class="total_inicial hide">${tg_inicial_u}</span>
             
             <small>$</small></b></td>
             <td class="text-center"><b>
             
             <span class="total_final">${tg.cop.toLocaleString('es-CO')}</span>
-            <span class="total_inicial hide">${tg.total_inicial_cop.toLocaleString('es-CO')}</span>
+            <span class="total_inicial hide">${tg_inicial_c}</span>
             
             <small>Cop</small></b></td>
             <td class="text-center"><b>
             
             <span class="total_final">${tg.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
-            <span class="total_inicial hide">${tg.total_inicial_bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+            <span class="total_inicial hide">${tg_inicial_b}</span>
             
             <small>Bs</small></b></td>
           </tr>
