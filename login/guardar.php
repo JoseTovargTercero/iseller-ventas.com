@@ -18,7 +18,7 @@ if (empty($doc) || empty($contrasena)) {
 }
 
 // Consulta segura
-$stmt = mysqli_prepare($conexion, "SELECT id, nombre, bss_id, nivel, contrasena, id_sucursal, darkMode FROM usuarios WHERE usuario = ? AND status = 0");
+$stmt = mysqli_prepare($conexion, "SELECT id, status, nombre, bss_id, nivel, contrasena, id_sucursal, darkMode FROM usuarios WHERE usuario = ?");
 $stmt->bind_param("s", $doc);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -26,6 +26,10 @@ $result = $stmt->get_result();
 if ($result->num_rows === 1) {
     $usuario = $result->fetch_assoc();
 
+    if ($usuario['status'] == 1) {
+        echo json_encode(['status' => false, 'msg' => 'Usuario inactivo por incumplimiento de pago']);
+        exit();
+    }
     if (password_verify($contrasena, $usuario['contrasena'])) {
         // Regenerar ID de sesión por seguridad
         if (session_status() === PHP_SESSION_NONE) {
