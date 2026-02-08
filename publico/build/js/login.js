@@ -40,6 +40,16 @@ document
         if (data.status === true) {
           window.location.href = "publico/production/ventas.php";
         } else {
+          if (data.msg === "Usuario inactivo por incumplimiento de pago") {
+            Swal.fire({
+              icon: "error",
+              title: "Incumplimiento de pago",
+              text: "Usuario inactivo por incumplimiento de pago.",
+            });
+            return;
+          }
+
+
           Swal.fire({
             icon: "error",
             title: "Error de autenticación",
