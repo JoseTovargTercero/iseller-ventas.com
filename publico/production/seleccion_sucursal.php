@@ -132,6 +132,7 @@ if ($_SESSION['nivel'] == 1) {
                     if (!res.ok) throw new Error('Error al obtener datos');
                     const data = await res.json();
 
+                    console.log(data)
                     Alerta.toast((data.success ? 'success' : 'error'), data.success)
                     if (data.success) {
                         location.href = 'ventas.php'
