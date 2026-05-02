@@ -5,6 +5,9 @@ require_once('../../configurar/_tasas_cambio.php');
 require_once('includes/header.php');
 require_once('includes/menu.php');
 
+// recupera el nombre de la pagina actual
+$nombrePagina = basename($_SERVER['PHP_SELF']);
+
 
 
 if ($_SESSION["nivel"] == 2) {
@@ -20,7 +23,7 @@ if ($_SESSION["nivel"] == 2) {
             $archivo = false;
         }
     }
-    if ($coincidencia == false) {
+    if ($coincidencia == false && $nombrePagina != 'detallesVenta.php' ) {
         header("Location: ../../login/salir.php");
         exit;
     }

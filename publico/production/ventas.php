@@ -149,12 +149,73 @@ echo '</pre>';
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/4.2.0/dexie.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 
 
 <style>
+    .modal-cierre-seccion {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 18px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-card {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.section-card.cash {
+    border-left: 4px solid #28a745;
+}
+
+.section-card.digital {
+    border-left: 4px solid #007bff;
+}
+
+.section-card.fondo {
+    border-left: 4px solid #ff9800;
+    background: #fffaf2;
+}
+
+.cierre-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 3px;
+    letter-spacing: 0.3px;
+}
+
+.input-group-text {
+    min-width: 52px;
+    justify-content: center;
+    font-weight: 600;
+    background: #f8f9fa;
+}
+
+.form-control {
+    border-radius: 6px;
+}
+
+.form-control:focus {
+    box-shadow: none;
+    border-color: #32d7c0;
+}
+
+.scroll-area {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 6px;
+}
     .form-control {
         background-color: #fff !important;
     }
@@ -603,8 +664,11 @@ echo '</pre>';
                                     <span><b>SUCURSAL: </b><span id="sucursal_nombre">
                                         </span></span>
                                 </div>
-                                <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal"> (B) BÚSQUEDA</button>
-                            </div>
+                                <div class="d-flex flex-column">
+                                     <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal"> (B) BÚSQUEDA</button>
+                                <button class="btn btn-sm d-none btn-danger" style="height: min-content" id="btn-cerrar-caja"> CERRAR CAJA</button>
+                                </div>
+                                 </div>
                             <div class="x_content cart">
                                 <div>
                                     <div class="table-container" style="overflow: auto">
@@ -757,6 +821,293 @@ echo '</pre>';
     <script src="../build/js/modal.js"></script>
     <!-- FastClick -->
     <script>
+
+
+
+                // Verificar Apertura de caja
+   
+        $(document).ready(function() {
+            //aperturaCaja()
+           document.getElementById("cargando").style.display = "none";
+        });
+
+        function aperturaCaja() {
+            $.ajax({
+                url: 'consulta_apertura.php',
+                type: 'GET',
+                dataType: 'json'
+                })
+                .done(function(response) {
+                    if (response.status === 'success' && !response.abierta) {
+                        // Bloquear la página y pedir apertura
+                        Swal.fire({
+                            title: 'Apertura de Caja Obligatoria',
+                            html: `
+                                <div class="text-start">
+                                    <div class="mb-3">
+                                        <label class="form-label">Efectivo Bs en fondo</label>
+                                        <input type="number" id="efectivo_bs_fondo" class="form-control" placeholder="0.00" step="0.01">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Efectivo USD en fondo</label>
+                                        <input type="number" id="efectivo_usd_fondo" class="form-control" placeholder="0.00" step="0.01">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Pesos en fondo</label>
+                                        <input type="number" id="pesos_fondo" class="form-control" placeholder="0" step="1">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Observaciones</label>
+                                        <textarea id="observaciones_apertura" class="form-control" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            `,
+                            icon: 'warning',
+                            confirmButtonText: 'Realizar Apertura',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            preConfirm: () => {
+                                const bs = Swal.getPopup().querySelector('#efectivo_bs_fondo').value;
+                                const usd = Swal.getPopup().querySelector('#efectivo_usd_fondo').value;
+                                const pesos = Swal.getPopup().querySelector('#pesos_fondo').value;
+                                const obs = Swal.getPopup().querySelector('#observaciones_apertura').value;
+
+                                if (!bs && !usd && !pesos) {
+                                    Swal.showValidationMessage(`Por favor ingrese al menos un monto de fondo`);
+                                }
+                                return { efectivo_bs_fondo: bs, efectivo_usd_fondo: usd, pesos_fondo: pesos, observaciones: obs }
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                $.ajax({
+                                    url: 'registro_apertura.php',
+                                    type: 'POST',
+                                    data: result.value,
+                                    dataType: 'json',
+                                    success: function(res) {
+                                        if (res.status == 'success') {
+                                            Swal.fire('¡Éxito!', res.message, 'success');
+                                            document.getElementById('btn-cerrar-caja').classList.remove('d-none');
+                                        } else {
+                                            Swal.fire('Error', res.message || 'No se pudo realizar la apertura', 'error')
+                                            .then(() => {
+                                                aperturaCaja(); // Reintentar
+                                            });
+                                        }
+                                    },
+                                    error: function(xhr, status, error) {
+                                        Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+                                        console.log(error);
+                                    }
+                                });
+                            }
+                        });
+                    }else{
+                        document.getElementById('btn-cerrar-caja').classList.remove('d-none');
+                    }
+                })
+                .fail(function(xhr, status, error) {
+                    console.log(error)
+                    Swal.fire('Error', 'No se pudo conectar con el servidor: ' + error, 'error').then(() => {
+                        aperturaCaja(); // Reintentar
+                    });
+                });
+        }
+
+
+
+        // cerrar caja
+        document.getElementById('btn-cerrar-caja').addEventListener('click', function() {
+            Swal.fire({
+                title: '¿Está seguro de cerrar la caja?',
+                text: 'No podrá revertir esta acción',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, cerrar caja',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    cerrarCaja();
+                }
+            });             
+        });
+
+        function cerrarCaja(){
+            Swal.fire({
+                title: 'Cierre de Caja',
+                html: `
+              
+
+<div class="text-start scroll-area">
+
+    <!-- EFECTIVO -->
+    <div class="modal-cierre-seccion">
+        Dinero en Contado
+    </div>
+
+    <div class="section-card cash">
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <label class="cierre-label">Bolívares en Efectivo</label>
+                <div class="input-group input-group-sm">
+                    <input type="number" id="efectivo_bs_contado" class="form-control" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-2">
+                <label class="cierre-label">Dólares</label>
+                <div class="input-group input-group-sm">
+                    <input type="number" id="efectivo_usd_contado" class="form-control" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-2">
+                <label class="cierre-label">Pesos</label>
+                <div class="input-group input-group-sm">
+                    <input type="number" id="pesos_contado" class="form-control" placeholder="0">
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="section-card digital">
+        <div class="row">
+            <div class="col-md-6 mb-2">
+                <label class="cierre-label">Punto de Venta</label>
+                <input type="number" id="punto_contado" class="form-control form-control-sm">
+            </div>
+
+            <div class="col-md-6 mb-2">
+                <label class="cierre-label">BioPago</label>
+                <input type="number" id="biopago_contado" class="form-control form-control-sm">
+            </div>
+
+            <div class="col-md-6 mb-2">
+                <label class="cierre-label">Pago Móvil</label>
+                <input type="number" id="pago_movil_contado" class="form-control form-control-sm">
+            </div>
+
+            <div class="col-md-6 mb-2">
+                <label class="cierre-label">Transferencia</label>
+                <input type="number" id="transferencia_contado" class="form-control form-control-sm">
+            </div>
+        </div>
+    </div>
+
+    <!-- FONDO -->
+    <div class="modal-cierre-seccion">
+       Fondo de Caja
+    </div>
+
+    <div class="section-card fondo">
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <label class="cierre-label">Bs</label>
+                <input type="number" id="efectivo_bs_fondo" class="form-control form-control-sm">
+            </div>
+
+            <div class="col-md-4 mb-2">
+                <label class="cierre-label">USD</label>
+                <input type="number" id="efectivo_usd_fondo" class="form-control form-control-sm">
+            </div>
+
+            <div class="col-md-4 mb-2">
+                <label class="cierre-label">Pesos</label>
+                <input type="number" id="pesos_fondo" class="form-control form-control-sm">
+            </div>
+        </div>
+    </div>
+
+    <!-- OBSERVACIONES -->
+    <div class="modal-cierre-seccion">
+       Observaciones
+    </div>
+
+    <textarea id="observaciones_cierre" class="form-control" rows="2" placeholder="Opcional..."></textarea>
+
+</div>
+                `,
+                confirmButtonText: 'Realizar Cierre',
+                cancelButtonText: 'Cancelar',
+                showCancelButton: true,
+                allowOutsideClick: false,
+                width: '600px',
+                preConfirm: () => {
+                    return {
+                        efectivo_bs_contado: Swal.getPopup().querySelector('#efectivo_bs_contado').value,
+                        efectivo_usd_contado: Swal.getPopup().querySelector('#efectivo_usd_contado').value,
+                        pesos_contado: Swal.getPopup().querySelector('#pesos_contado').value,
+                        punto_contado: Swal.getPopup().querySelector('#punto_contado').value,
+                        biopago_contado: Swal.getPopup().querySelector('#biopago_contado').value,
+                        pago_movil_contado: Swal.getPopup().querySelector('#pago_movil_contado').value,
+                        transferencia_contado: Swal.getPopup().querySelector('#transferencia_contado').value,
+                        efectivo_bs_fondo: Swal.getPopup().querySelector('#efectivo_bs_fondo').value,
+                        efectivo_usd_fondo: Swal.getPopup().querySelector('#efectivo_usd_fondo').value,
+                        pesos_fondo: Swal.getPopup().querySelector('#pesos_fondo').value,
+                        observaciones: Swal.getPopup().querySelector('#observaciones_cierre').value
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: 'registro_cierre.php',
+                        type: 'POST',
+                        data: result.value,
+                        dataType: 'json',
+                        success: function(res) {
+                            if (res.status == 'success') {
+                                Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                                    // Opcional: redirigir o recargar la página para bloquear las ventas
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message || 'No se pudo realizar el cierre', 'error').then(() => {
+                                    cerrarCaja(); // Reintentar
+                                });
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+                            console.log(error);
+                        }
+                    });
+                }
+            });
+        }
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         var productos = <?php echo json_encode($data); ?>;
         var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
         var codigos = []
@@ -1802,6 +2153,7 @@ echo '</pre>';
                         if (response.status) {
                             Alerta.toast('success', 'Información enviada correctamente.');
                             await db.carritosVenta.clear();
+                            cargarUltimasOrdenes()
                         } else {
                             Alerta.toast('error', response.data || 'Error en la respuesta del servidor.');
                         }
@@ -2179,9 +2531,7 @@ echo '</pre>';
         });
 
 
-        $(document).ready(function() {
-            document.getElementById("cargando").style.display = "none";
-        });
+
 
         function confirm(id) {
             Swal.fire({
@@ -2231,30 +2581,7 @@ echo '</pre>';
                 showCancelButton: true,
             }).then((result) => {
                 if (result.isConfirmed) {
-
                     procesarPedido('0', 3);
-
-                    /*  $.ajax({
-                          url: base_url + 'accion_carta.php',
-                          type: 'GET',
-                          data: {
-                              statusV: 3,
-                              action: 'placeOrder'
-                          }, // Pasar el parámetro id en la solicitud
-                          success: function(response) {
-                              const respuesta = JSON.parse(response)
-                              if (respuesta.status) {
-                                  Alerta.toast('info', 'Se descontaron productos del inventario')
-                                  actualizar_carrito()
-                              }
-                          },
-                          error: function(xhr, status, error) {
-                              // Manejar cualquier error
-                              console.error('Error al eliminar la venta:', error);
-                          }
-                      });
-
-                      */
                 }
             })
         }

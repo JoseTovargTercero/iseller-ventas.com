@@ -34,7 +34,7 @@ if ($_SESSION["nivel"] == 1) {
             echo json_encode(['error' => 'Registro no encontrado.']);
         }
     } catch (Exception $e) {
-        echo json_encode(['error' => "Error: " . $e->getMessage()]);
+    echo json_encode(['error' => "Error: " . $e->getMessage()]);
     }
 } */
 

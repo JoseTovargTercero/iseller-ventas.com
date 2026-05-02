@@ -383,7 +383,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                 <h6 class='d-flex mb-0 align-items-center'>
                                                                     <span>
                                                                         <p class='m-0' >{$item['titulo']}</p>
-                                                                        <small class='text-muted' id='{$item['subtitulo']}'></small>
+                                                                        <small class='text-muted d-none' id='{$item['subtitulo']}'></small>
                                                                     </span>
                                                                 </h6>
                                                             </div>
