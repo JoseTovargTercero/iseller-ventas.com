@@ -11,6 +11,104 @@ header('Content-Type: application/json');
 // Obtener datos del payload
 $input = json_decode(file_get_contents("php://input"), true);
 
+// ===================================================================
+// ACTION: totales_por_usuario
+// ===================================================================
+if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
+    $filtro_fecha_u = $input['fechaSolic'] ?? $_GET['fechaSolic'] ?? date('Y-m-d');
+    if (empty($filtro_fecha_u)) $filtro_fecha_u = date('Y-m-d');
+    
+    $sucursal_u = ($_SESSION["nivel"] == 1) ? ($input['sucursal'] ?? $_GET['sucursal'] ?? null) : $_SESSION["sucursal"];
+    $extraCond_u = $sucursal_u ? " AND c.sucursal_id=" . (int)$sucursal_u : '';
+
+    // Obtener todos los cortes de caja del día (apertura y cierre), con el nombre del usuario
+    $sqlCortes = "
+        SELECT c.*, u.nombre as nombre_usuario
+        FROM cortes_de_caja c
+        LEFT JOIN usuarios u ON c.usuario_id = u.id
+        WHERE c.fecha = '$filtro_fecha_u'
+          AND c.bss_id = '$bss_id'
+          $extraCond_u
+        ORDER BY c.creado_en ASC, c.id ASC
+    ";
+    
+    $resCortes = $conexion->query($sqlCortes);
+    $usuarios_cortes = [];
+    
+    if ($resCortes) {
+        while ($row = $resCortes->fetch_assoc()) {
+            $uid = $row['usuario_id'];
+            if (!isset($usuarios_cortes[$uid])) {
+                $usuarios_cortes[$uid] = [
+                    'usuario_id' => $uid,
+                    'nombre'     => $row['nombre_usuario'] ?? "Usuario #{$uid}",
+                    'apertura'   => null,
+                    'cierre'     => null,
+                    'sort_time'  => $row['creado_en'] ?? $row['id']
+                ];
+            }
+            
+            if ($row['tipo_corte'] === 'apertura') {
+                $usuarios_cortes[$uid]['apertura'] = [
+                    'efectivo_bs' => (float)$row['efectivo_bs_fondo'],
+                    'dolares'     => (float)$row['efectivo_usd_fondo'],
+                    'pesos'       => (float)$row['pesos_fondo'],
+                    'observaciones' => $row['observaciones'],
+                    'hora_apertura' => date('H:i:s', strtotime($row['creado_en']))
+                ];
+            } elseif ($row['tipo_corte'] === 'cierre') {
+                $usuarios_cortes[$uid]['cierre'] = [
+                    'contado' => [
+                        'efectivo_bs'   => (float)$row['efectivo_bs_contado'],
+                        'dolares'       => (float)$row['efectivo_usd_contado'],
+                        'pesos'         => (float)$row['pesos_contado'],
+                        'punto'         => (float)$row['punto_contado'],
+                        'biopago'       => (float)$row['biopago_contado'],
+                        'pago_movil'    => (float)$row['pago_movil_contado'],
+                        'transferencia' => (float)$row['transferencia_contado']
+                    ],
+                    'sistema' => [
+                        'efectivo_bs'   => (float)$row['efectivo_bs_sistema'],
+                        'dolares'       => (float)$row['efectivo_usd_sistema'],
+                        'pesos'         => (float)$row['pesos_sistema'],
+                        'punto'         => (float)$row['punto_sistema'],
+                        'biopago'       => (float)$row['biopago_sistema'],
+                        'pago_movil'    => (float)$row['pago_movil_sistema'],
+                        'transferencia' => (float)$row['transferencia_sistema']
+                    ],
+                    'diferencia' => [
+                        'efectivo_bs'   => (float)$row['diferencia_efectivo_bs'],
+                        'dolares'       => (float)$row['diferencia_efectivo_usd'],
+                        'pesos'         => (float)$row['diferencia_pesos'],
+                        'punto'         => (float)$row['diferencia_punto'],
+                        'biopago'       => (float)$row['diferencia_biopago'],
+                        'pago_movil'    => (float)$row['diferencia_pago_movil'],
+                        'transferencia' => (float)$row['diferencia_transferencia']
+                    ],
+                    'fondo_dejado' => [
+                        'efectivo_bs' => (float)$row['efectivo_bs_fondo'],
+                        'dolares'     => (float)$row['efectivo_usd_fondo'],
+                        'pesos'       => (float)$row['pesos_fondo']
+                    ],
+                    'observaciones' => $row['observaciones']
+                ];
+            }
+        }
+    }
+
+    // Ordenar por hora de apertura (sort_time)
+    $cortes = array_values($usuarios_cortes);
+    usort($cortes, function($a, $b) {
+        return $a['sort_time'] <=> $b['sort_time'];
+    });
+
+    echo json_encode([
+        'status' => 'success',
+        'cortes' => $cortes
+    ]);
+    exit;
+}
+
 // Determinar la sucursal según el nivel del usuario
 $sucursal = ($_SESSION["nivel"] == 1) ? ($input['sucursal'] ?? null) : $_SESSION["sucursal"];
 

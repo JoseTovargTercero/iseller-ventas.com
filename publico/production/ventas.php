@@ -827,7 +827,7 @@ echo '</pre>';
                 // Verificar Apertura de caja
    
         $(document).ready(function() {
-            //aperturaCaja()
+            aperturaCaja()
            document.getElementById("cargando").style.display = "none";
         });
 
@@ -942,7 +942,7 @@ echo '</pre>';
 
     <!-- EFECTIVO -->
     <div class="modal-cierre-seccion">
-        Dinero en Contado
+        Dinero Contado
     </div>
 
     <div class="section-card cash">

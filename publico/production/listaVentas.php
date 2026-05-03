@@ -46,7 +46,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <link rel="stylesheet" href="theme.css">
 
     </head>
-
+<style>
+  .table-warning, .table-warning>td, .table-warning>th {
+    background-color: #ffeeba00 !important;
+}
+.table-info, .table-info>td, .table-info>th {
+    background-color: #bee5eb0f !important;
+}
+</style>
 
     <!-- Modal -->
     <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
@@ -124,6 +131,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         </div>
                         <div class='clearfix'></div>
 
+                        <!-- NAV TABS -->
+                        <ul class="nav nav-tabs mb-3" id="ventasTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="tab-resumen" data-toggle="tab" href="#pane-resumen" role="tab">Resumen del día</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="tab-usuarios" onclick="cargarTotalesUsuarios()" data-toggle="tab" href="#pane-usuarios" role="tab">Totales por Usuario</a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                        <!-- TAB 1: RESUMEN -->
+                        <div class="tab-pane fade show active" id="pane-resumen" role="tabpanel">
                         <div class='row   fadeInUp animated'>
 
                             <div class='col-lg-12'>
@@ -406,6 +426,45 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </div>
                             </div>
                         </div>
+                        </div><!-- /tab-pane resumen -->
+
+                        <!-- TAB 2: TOTALES POR USUARIO -->
+                        <div class="tab-pane fade" id="pane-usuarios" role="tabpanel">
+                            <div class="x_panel">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="m-0">Totales por Usuario vs Corte de Caja</h5>
+                                    <span id="estado-corte-badge"></span>
+                                </div>
+
+                                <!-- Tabla usuarios -->
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm" id="tabla-usuarios-totales">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Usuario</th>
+                                                <th>Hora de inicio</th>
+                                                <th>Concepto</th>
+                                                <th class="text-end">Efect. Bs</th>
+                                                <th class="text-end">USD</th>
+                                                <th class="text-end">Pesos</th>
+                                                <th class="text-end">Punto</th>
+                                                <th class="text-end">P.Móvil</th>
+                                                <th class="text-end">Transfer.</th>
+                                                <th class="text-end">Biopago</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-usuarios">
+                                            <tr><td colspan="9" class="text-center text-muted">Cargando...</td></tr>
+                                        </tbody>
+                                        <tfoot id="tfoot-usuarios"></tfoot>
+                                    </table>
+                                </div>
+                                
+                                <div id="seccion-corte" class="mt-4" style="display:none;"></div>
+                            </div>
+                        </div><!-- /tab-pane usuarios -->
+
+                        </div><!-- /tab-content -->
                         <!-- /page content -->
 
 
@@ -435,6 +494,126 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 </script>
 
                 <script src='../build/js/info_ventas.js'></script>
+                <script>
+                let _totalesUsuariosCargado = false;
+
+                // Cargar datos cuando se muestra el tab
+              
+                function cargarTotalesUsuarios(force) {
+                    if (_totalesUsuariosCargado && !force) return;
+                    _totalesUsuariosCargado = true;
+
+                    const fecha = document.getElementById('fechaSolic').value || '';
+                    const sucursal = document.getElementById('sucursal_selector')?.value || '';
+
+                    fetch('../../configurar/listaVentas_back.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'totales_por_usuario', fechaSolic: fecha, sucursal: sucursal })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status !== 'success') return console.error('Error cargando totales usuario:', data);
+
+                        const tbody = document.getElementById('tbody-usuarios');
+                        const tfoot = document.getElementById('tfoot-usuarios');
+                        tbody.innerHTML = '';
+                        tfoot.innerHTML = '';
+
+                        if (!data.cortes || data.cortes.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No hay cortes de caja registrados para este día.</td></tr>';
+                            return;
+                        }
+
+                        const fmt = (n, dec=2) => Number(n).toLocaleString('es-VE', {minimumFractionDigits:dec, maximumFractionDigits:dec});
+                        const colorDif = val => val < 0 ? 'text-success' : (val > 0 ? 'text-danger' : '');
+
+                        data.cortes.forEach(u => {
+                            let obs = '';
+                            if (u.apertura?.observaciones) obs += `<small class="text-muted d-block"><b>Ape:</b> ${u.apertura.observaciones}</small>`;
+                            if (u.cierre?.observaciones) obs += `<small class="text-muted d-block"><b>Cie:</b> ${u.cierre.observaciones}</small>`;
+                            
+                            const ape = u.apertura || { efectivo_bs: 0, dolares: 0, pesos: 0 };
+                            const cie = u.cierre || {
+                                contado: { efectivo_bs:0, dolares:0, pesos:0, punto:0, pago_movil:0, transferencia:0, biopago:0 },
+                                sistema: { efectivo_bs:0, dolares:0, pesos:0, punto:0, pago_movil:0, transferencia:0, biopago:0 },
+                                diferencia: { efectivo_bs:0, dolares:0, pesos:0, punto:0, pago_movil:0, transferencia:0, biopago:0 },
+                                fondo_dejado: { efectivo_bs:0, dolares:0, pesos:0 }
+                            };
+
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td rowspan="5" class="align-middle text-center" style="border-bottom: 2px solid #dee2e6;">
+                                        <strong>${u.nombre}</strong><br>${obs}
+                                    </td>
+                                    <td rowspan="5" class="align-middle text-center" style="border-bottom: 2px solid #dee2e6;">
+                                        <strong>${u.apertura.hora_apertura}</strong>
+                                    </td>
+
+
+                                    <td class=""><strong>Apertura (Fondo Recibido)</strong></td>
+                                    <td class="text-end">${fmt(ape.efectivo_bs)} Bs</td>
+                                    <td class="text-end">${fmt(ape.dolares)} $</td>
+                                    <td class="text-end">${fmt(ape.pesos,0)} COP</td>
+                                    <td class="text-end text-muted">-</td>
+                                    <td class="text-end text-muted">-</td>
+                                    <td class="text-end text-muted">-</td>
+                                    <td class="text-end text-muted">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="table-info"><strong>Cierre (Contado)</strong></td>
+                                    <td class="text-end table-info">${fmt(cie.contado.efectivo_bs)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.contado.dolares)} $</td>
+                                    <td class="text-end table-info">${fmt(cie.contado.pesos,0)} COP</td>
+                                    <td class="text-end table-info">${fmt(cie.contado.punto)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.contado.pago_movil)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.contado.transferencia)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.contado.biopago)} Bs</td>
+                                </tr>
+                                <tr>
+                                    <td class="table-info">Sistema</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.efectivo_bs)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.dolares)} $</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.pesos,0)} COP</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.punto)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.pago_movil)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.transferencia)} Bs</td>
+                                    <td class="text-end table-info">${fmt(cie.sistema.biopago)} Bs</td>
+                                </tr>
+                                <tr>
+                                    <td class="table-info"><strong>Diferencia</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.efectivo_bs)}"><strong>${fmt(cie.diferencia.efectivo_bs)} Bs</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.dolares)}"><strong>${fmt(cie.diferencia.dolares)} $</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.pesos)}"><strong>${fmt(cie.diferencia.pesos,0)} COP</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.punto)}"><strong>${fmt(cie.diferencia.punto)} Bs</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.pago_movil)}"><strong>${fmt(cie.diferencia.pago_movil)} Bs</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.transferencia)}"><strong>${fmt(cie.diferencia.transferencia)} Bs</strong></td>
+                                    <td class="text-end table-info ${colorDif(cie.diferencia.biopago)}"><strong>${fmt(cie.diferencia.biopago)} Bs</strong></td>
+                                </tr>
+                                <tr style="border-bottom: 2px solid #dee2e6;">
+                                    <td class="table-warning"><strong>Fondo Dejado (Cierre)</strong></td>
+                                    <td class="text-end table-warning">${fmt(cie.fondo_dejado.efectivo_bs)} Bs</td>
+                                    <td class="text-end table-warning">${fmt(cie.fondo_dejado.dolares)} $</td>
+                                    <td class="text-end table-warning">${fmt(cie.fondo_dejado.pesos,0)} COP</td>
+                                    <td class="text-end table-warning text-muted">-</td>
+                                    <td class="text-end table-warning text-muted">-</td>
+                                    <td class="text-end table-warning text-muted">-</td>
+                                    <td class="text-end table-warning text-muted">-</td>
+                                </tr>
+                            `;
+                        });
+                    })
+                    .catch(err => console.error('Error cargando totales usuario:', err));
+                }
+
+                // Si se cambia la fecha, resetear caché del tab usuarios
+                document.getElementById('fechaSolic').addEventListener('change', function() {
+                    _totalesUsuariosCargado = false;
+                    if (document.getElementById('pane-usuarios').classList.contains('show')) {
+                        cargarTotalesUsuarios(true);
+                    }
+                });
+                </script>
                 <script>
                     document.getElementById('sucursal_selector').addEventListener('change', function() {
                         const sucursalId = this.value;
