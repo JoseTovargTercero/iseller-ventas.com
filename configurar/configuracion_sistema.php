@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SESSION["nivel"] == 1) {
       'only_bs' => [
         'columna' => 'bs_ticket'
       ],
+      'cortes_caja' => [
+        'columna' => 'cortes_caja'
+      ]
     ];
 
     $columna = $configs[$name]['columna'];

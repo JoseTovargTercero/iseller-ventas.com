@@ -1,5 +1,6 @@
 <?php
-require_once('includes/requires.php');
+require_once("configuracion.php");
+require_once('session.php');
 
 $usuario_id = $_SESSION['id'];
 $efectivo_bs_fondo = $_POST['efectivo_bs_fondo'] ?? 0;

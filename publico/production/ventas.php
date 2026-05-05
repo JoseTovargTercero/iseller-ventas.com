@@ -12,6 +12,22 @@ $bss_id = $_SESSION['bss_id'];
 $sucursal = $_SESSION['sucursal'];
 $sucursal_nombre = '';
 
+
+
+
+$query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
+$search = $conexion->query($query);
+if ($search->num_rows > 0) {
+    while ($rowT = $search->fetch_assoc()) {
+        $tickets = $rowT['tickets'];
+        $ticketsFijo = $rowT['bs_ticket'];
+        $cortes_caja = $rowT['cortes_caja'];
+    }
+}
+
+
+
+
 $sql = "SELECT UPPER(nombre) AS nombre FROM sucursales WHERE id = ? AND bss_id = ?";
 
 if ($stmt = $conexion->prepare($sql)) {
@@ -823,49 +839,83 @@ echo '</pre>';
     <script>
 
 
+        const base_url = '../../configurar/';
+        const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
+        const sucursal_i = <?php echo json_encode($sucursal) ?>;
 
-                // Verificar Apertura de caja
-   
+
+        const configuraciones =  {
+            tickets: <?php echo json_encode($tickets) ?>,
+            ticketsFijo: <?php echo json_encode($ticketsFijo) ?>,
+            cortes_caja: <?php echo json_encode($cortes_caja) ?>
+        }
+
+
+        // Verificar Apertura de caja
         $(document).ready(function() {
+            if(configuraciones.cortes_caja == 1){
             aperturaCaja()
+            }
            document.getElementById("cargando").style.display = "none";
         });
 
         function aperturaCaja() {
             $.ajax({
-                url: 'consulta_apertura.php',
+                url: base_url + 'consulta_apertura.php',
                 type: 'GET',
                 dataType: 'json'
                 })
                 .done(function(response) {
+               /// console.log(response)
                     if (response.status === 'success' && !response.abierta) {
                         // Bloquear la página y pedir apertura
                         Swal.fire({
-                            title: 'Apertura de Caja Obligatoria',
+                            title: '<h4 class="mb-0 fw-bold">Apertura de Caja Obligatoria</h4>',
                             html: `
-                                <div class="text-start">
-                                    <div class="mb-3">
-                                        <label class="form-label">Efectivo Bs en fondo</label>
-                                        <input type="number" id="efectivo_bs_fondo" class="form-control" placeholder="0.00" step="0.01">
+                                <div class="text-start scroll-area">
+                                    <div class="modal-cierre-seccion">
+                                        <ion-icon name="wallet-outline"></ion-icon> Fondo de Caja Inicial
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Efectivo USD en fondo</label>
-                                        <input type="number" id="efectivo_usd_fondo" class="form-control" placeholder="0.00" step="0.01">
+                                    <div class="section-card fondo">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="cierre-label">Bolívares (Bs)</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" id="efectivo_bs_fondo" class="form-control" placeholder="0.00" step="0.01">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="cierre-label">Dólares (USD)</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" id="efectivo_usd_fondo" class="form-control" placeholder="0.00" step="0.01">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="cierre-label">Pesos (COP)</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" id="pesos_fondo" class="form-control" placeholder="0" step="1">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Pesos en fondo</label>
-                                        <input type="number" id="pesos_fondo" class="form-control" placeholder="0" step="1">
+                                    
+                                    <div class="modal-cierre-seccion">
+                                        <ion-icon name="chatbubble-ellipses-outline"></ion-icon> Observaciones
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Observaciones</label>
-                                        <textarea id="observaciones_apertura" class="form-control" rows="2"></textarea>
+                                    <div class="section-card">
+                                        <textarea id="observaciones_apertura" class="form-control" rows="2" placeholder="Notas adicionales sobre la apertura..."></textarea>
                                     </div>
                                 </div>
                             `,
-                            icon: 'warning',
+                            icon: 'info',
                             confirmButtonText: 'Realizar Apertura',
+                            confirmButtonColor: '#32d7c0',
                             allowOutsideClick: false,
                             allowEscapeKey: false,
+                            customClass: {
+                                popup: 'swal-metodo-pago'
+                            },
+                            width: '600px',
                             preConfirm: () => {
                                 const bs = Swal.getPopup().querySelector('#efectivo_bs_fondo').value;
                                 const usd = Swal.getPopup().querySelector('#efectivo_usd_fondo').value;
@@ -880,7 +930,7 @@ echo '</pre>';
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 $.ajax({
-                                    url: 'registro_apertura.php',
+                                    url: base_url + 'registro_apertura.php',
                                     type: 'POST',
                                     data: result.value,
                                     dataType: 'json',
@@ -913,7 +963,6 @@ echo '</pre>';
                     });
                 });
         }
-
 
 
         // cerrar caja
@@ -1051,7 +1100,7 @@ echo '</pre>';
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: 'registro_cierre.php',
+                        url: base_url + 'registro_cierre.php',
                         type: 'POST',
                         data: result.value,
                         dataType: 'json',
@@ -1113,10 +1162,6 @@ echo '</pre>';
         var codigos = []
 
 
-
-        const base_url = '../../configurar/';
-        const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
-        const sucursal_i = <?php echo json_encode($sucursal) ?>;
 
 
         /* buscador de productos */

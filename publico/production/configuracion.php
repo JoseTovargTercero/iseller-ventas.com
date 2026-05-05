@@ -15,6 +15,7 @@ if ($search->num_rows > 0) {
     while ($rowT = $search->fetch_assoc()) {
         $tickets = $rowT['tickets'];
         $ticketsFijo = $rowT['bs_ticket'];
+        $cortes_caja = $rowT['cortes_caja'];
     }
 }
 
@@ -97,6 +98,17 @@ if ($search->num_rows > 0) {
                                         <div>
                                             <h6 class="m-0">Imprimir solo en Bolívares</h6>
                                             <small class="text-muted">Si está desactivado, los tickets se imprimirán en la moneda con la que pague el cliente.</small>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <!-- Opción: Cortes de caja -->
+                                    <div class="d-flex gap-1">
+                                        <div>
+                                            <?= renderCheckbox('cortes_caja', $cortes_caja == 1); ?>
+                                        </div>
+                                        <div>
+                                            <h6 class="m-0">Cortes de caja</h6>
+                                            <small class="text-muted">Si está desactivado, no se permitirá el corte de caja.</small>
                                         </div>
                                     </div>
                                 </div>
