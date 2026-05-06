@@ -13,7 +13,7 @@
     LEFT JOIN stock as s ON s.id_producto = p.id
      WHERE s.bss_id='$bss_id' AND s.id_sucursal='12' AND p.id NOT IN (
         3803, 4956, 1684, 5440, 1651, 3804, 4097, 3805, 1657, 5291, 5289,5290, 5397
-     )");
+     ) AND s.stock > 0");
     if ($query6 && $query6->num_rows > 0) {
         while ($row6 = $query6->fetch_assoc()) {
             $id  = $row6['id'];
