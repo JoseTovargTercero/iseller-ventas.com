@@ -5,7 +5,7 @@
         exit;
     }
 
-    $query6 = $conexion->query("SELECT * FROM compras ORDER BY id DESC LIMIT 150");
+    $query6 = $conexion->query("SELECT * FROM compras WHERE bss_id='{$_SESSION['bss_id']}' ORDER BY id DESC LIMIT 150");
 
     if ($query6 && $query6->num_rows > 0) {
         $tabla6 = '';
