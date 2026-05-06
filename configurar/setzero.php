@@ -16,12 +16,10 @@
 
           //  $updateStmt->bind_param("i", $id);
           //  if ($updateStmt->execute()) {
-                echo "Se puso a 0 el stock de:  " . $row6['id'] . $row6['nombre'] . " - " . $row6['stock'] . "<br>";
+               // echo "Se puso a 0 el stock de:  " . $row6['id'] . $row6['nombre'] . " - " . $row6['stock'] . "<br>";
             //}else{
             //    echo "Error al poner a 0 el stock de: " . $row6['nombre'] . " - " . $row6['stock'] . "<br>";
           //  }
-            
-           
 
         }
     }
