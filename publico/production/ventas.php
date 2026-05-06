@@ -158,7 +158,7 @@ echo '</pre>';
 
 <head>
 
-    <title>Ventas </title>
+    <title>Ventas</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
@@ -171,6 +171,47 @@ echo '</pre>';
 
 
 <style>
+
+    /* Contenedor principal del mensaje */
+.caja-cerrada-container {
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    margin: 20px auto;
+    border: 1px solid #e1e4e8;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Título */
+.caja-cerrada-container h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+/* Botón Primary */
+.btn-primary {
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
     .modal-cierre-seccion {
     font-size: 0.95rem;
     font-weight: 700;
@@ -182,8 +223,7 @@ echo '</pre>';
 }
 
 .section-card {
-    background: #ffffff;
-    border: 1px solid #e9ecef;
+    border: 1px solid #dde5eeff;
     border-radius: 10px;
     padding: 15px;
     margin-bottom: 12px;
@@ -854,7 +894,8 @@ echo '</pre>';
         // Verificar Apertura de caja
         $(document).ready(function() {
             if(configuraciones.cortes_caja == 1){
-            aperturaCaja()
+                aperturaCaja()
+                consulaCierre()
             }
            document.getElementById("cargando").style.display = "none";
         });
@@ -863,11 +904,12 @@ echo '</pre>';
             $.ajax({
                 url: base_url + 'consulta_apertura.php',
                 type: 'GET',
+                data: {tipo_corte: 'apertura'},
                 dataType: 'json'
                 })
                 .done(function(response) {
-               /// console.log(response)
-                    if (response.status === 'success' && !response.abierta) {
+                    /// console.log(response)
+                    if (response.status === 'success' && !response.corte) {
                         // Bloquear la página y pedir apertura
                         Swal.fire({
                             title: '<h4 class="mb-0 fw-bold">Apertura de Caja Obligatoria</h4>',
@@ -964,6 +1006,75 @@ echo '</pre>';
                 });
         }
 
+        function consulaCierre(){
+            $.ajax({
+                url: base_url + 'consulta_apertura.php',
+                type: 'GET',
+                data: {tipo_corte: 'cierre'},
+                dataType: 'json'
+                })
+                .done(function(response) {
+                    if (response.corte) {
+                        document.getElementById('btn-cerrar-caja').classList.add('d-none');
+                        // .x_panel
+                        const xpanel = document.querySelector('.x_panel');
+                        // rellena el contenido de xpanel con un mensaje que diga: 
+                        xpanel.innerHTML = xpanel.innerHTML = `
+    <div class="caja-cerrada-container">
+        <h2>Caja cerrada</h2>
+        <button class="btn-primary" onclick="reabrirCaja()">
+            Reabrir
+        </button>
+    </div>
+`;
+
+                        
+                        
+                    }
+                })
+                .fail(function(xhr, status, error) {
+                    console.log(error)
+                   consulaCierre()
+                });
+        }
+
+        function reabrirCaja() {
+            Swal.fire({
+                title: '¿Reabrir caja?',
+                text: 'Se eliminará el último registro de cierre de hoy y podrá realizar ventas nuevamente.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, reabrir',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: base_url + 'reabrir_caja.php',
+                        type: 'POST',
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire(
+                                    '¡Reabierta!',
+                                    'La caja ha sido reabierta exitosamente.',
+                                    'success'
+                                ).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
 
         // cerrar caja
         document.getElementById('btn-cerrar-caja').addEventListener('click', function() {
@@ -987,95 +1098,95 @@ echo '</pre>';
                 html: `
               
 
-<div class="text-start scroll-area">
+        <div class="text-start scroll-area">
 
-    <!-- EFECTIVO -->
-    <div class="modal-cierre-seccion">
-        Dinero Contado
-    </div>
+            <!-- EFECTIVO -->
+            <div class="modal-cierre-seccion">
+                Dinero Contado
+            </div>
 
-    <div class="section-card cash">
-        <div class="row">
-            <div class="col-md-4 mb-2">
-                <label class="cierre-label">Bolívares en Efectivo</label>
-                <div class="input-group input-group-sm">
-                    <input type="number" id="efectivo_bs_contado" class="form-control" placeholder="0.00">
+            <div class="section-card cash">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label class="cierre-label">Bolívares en Efectivo</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" id="efectivo_bs_contado" class="form-control" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-2">
+                        <label class="cierre-label">Dólares</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" id="efectivo_usd_contado" class="form-control" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-2">
+                        <label class="cierre-label">Pesos</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" id="pesos_contado" class="form-control" placeholder="0">
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-4 mb-2">
-                <label class="cierre-label">Dólares</label>
-                <div class="input-group input-group-sm">
-                    <input type="number" id="efectivo_usd_contado" class="form-control" placeholder="0.00">
+
+            <div class="section-card digital">
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="cierre-label">Punto de Venta</label>
+                        <input type="number" id="punto_contado" class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="cierre-label">BioPago</label>
+                        <input type="number" id="biopago_contado" class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="cierre-label">Pago Móvil</label>
+                        <input type="number" id="pago_movil_contado" class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="cierre-label">Transferencia</label>
+                        <input type="number" id="transferencia_contado" class="form-control form-control-sm">
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-4 mb-2">
-                <label class="cierre-label">Pesos</label>
-                <div class="input-group input-group-sm">
-                    <input type="number" id="pesos_contado" class="form-control" placeholder="0">
+            <!-- FONDO -->
+            <div class="modal-cierre-seccion">
+            Fondo de Caja
+            </div>
+
+            <div class="section-card fondo">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label class="cierre-label">Bs</label>
+                        <input type="number" id="efectivo_bs_fondo" class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-4 mb-2">
+                        <label class="cierre-label">USD</label>
+                        <input type="number" id="efectivo_usd_fondo" class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-4 mb-2">
+                        <label class="cierre-label">Pesos</label>
+                        <input type="number" id="pesos_fondo" class="form-control form-control-sm">
+                    </div>
                 </div>
             </div>
+
+            <!-- OBSERVACIONES -->
+            <div class="modal-cierre-seccion">
+            Observaciones
+            </div>
+
+            <textarea id="observaciones_cierre" class="form-control" rows="2" placeholder="Opcional..."></textarea>
+
         </div>
-    </div>
-
-
-    <div class="section-card digital">
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <label class="cierre-label">Punto de Venta</label>
-                <input type="number" id="punto_contado" class="form-control form-control-sm">
-            </div>
-
-            <div class="col-md-6 mb-2">
-                <label class="cierre-label">BioPago</label>
-                <input type="number" id="biopago_contado" class="form-control form-control-sm">
-            </div>
-
-            <div class="col-md-6 mb-2">
-                <label class="cierre-label">Pago Móvil</label>
-                <input type="number" id="pago_movil_contado" class="form-control form-control-sm">
-            </div>
-
-            <div class="col-md-6 mb-2">
-                <label class="cierre-label">Transferencia</label>
-                <input type="number" id="transferencia_contado" class="form-control form-control-sm">
-            </div>
-        </div>
-    </div>
-
-    <!-- FONDO -->
-    <div class="modal-cierre-seccion">
-       Fondo de Caja
-    </div>
-
-    <div class="section-card fondo">
-        <div class="row">
-            <div class="col-md-4 mb-2">
-                <label class="cierre-label">Bs</label>
-                <input type="number" id="efectivo_bs_fondo" class="form-control form-control-sm">
-            </div>
-
-            <div class="col-md-4 mb-2">
-                <label class="cierre-label">USD</label>
-                <input type="number" id="efectivo_usd_fondo" class="form-control form-control-sm">
-            </div>
-
-            <div class="col-md-4 mb-2">
-                <label class="cierre-label">Pesos</label>
-                <input type="number" id="pesos_fondo" class="form-control form-control-sm">
-            </div>
-        </div>
-    </div>
-
-    <!-- OBSERVACIONES -->
-    <div class="modal-cierre-seccion">
-       Observaciones
-    </div>
-
-    <textarea id="observaciones_cierre" class="form-control" rows="2" placeholder="Opcional..."></textarea>
-
-</div>
                 `,
                 confirmButtonText: 'Realizar Cierre',
                 cancelButtonText: 'Cancelar',
