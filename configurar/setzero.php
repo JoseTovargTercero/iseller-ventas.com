@@ -3,15 +3,12 @@
     include 'configuracion.php';
     require_once('session.php');
 
-    $bss_id = $_SESSION['bss_id'];
-
-
     $updateStmt = $conexion->prepare("UPDATE stock SET stock = 0 WHERE id = ? AND id_sucursal='12'");
 
     //Obtener todos los productos
     $query6 = $conexion->query("SELECT s.id, p.nombre, s.stock FROM productos as p
     LEFT JOIN stock as s ON s.id_producto = p.id
-     WHERE s.bss_id='$bss_id' AND s.id_sucursal='12'");
+     WHERE s.id_sucursal='12'");
     if ($query6 && $query6->num_rows > 0) {
         while ($row6 = $query6->fetch_assoc()) {
             $id  = $row6['id'];
