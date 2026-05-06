@@ -5,7 +5,6 @@
 
     $bss_id = $_SESSION['bss_id'];
 
-    $productos_ignorar = [3803, 4956, 1684, 5440, 1651, 3804, 4097, 3805, 1657, 5291, 5289,5290, 5397];
 
     $updateStmt = $conexion->prepare("UPDATE stock SET stock = 0 WHERE id = ?");
 
