@@ -356,7 +356,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
 
 
 
-            $updateStmtMayor->bind_param("iiii", $stock, $id_stock, $id_sucursal, $bss_id);
+            $updateStmtMayor->bind_param("siii", $stock, $id_stock, $id_sucursal, $bss_id);
             $updateStmtMayor->execute();
         } else {
 
@@ -367,7 +367,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
             $stock = max(0, (float)$result['stock'] - (float)$item['qty']);
 
 
-            $updateStmt->bind_param("iiii", $stock, $item['id'], $id_sucursal, $bss_id);
+            $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);
             $updateStmt->execute();
         }
     }
