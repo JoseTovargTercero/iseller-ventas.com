@@ -593,7 +593,7 @@ $buscarAlumnos77 = $conexion->query($query77);
 if ($buscarAlumnos77->num_rows > 0) {
     $contador = 1;
     while ($filaAlumnos77 = $buscarAlumnos77->fetch_assoc()) {
-        $users = $filaAlumnos77['customer_id'];
+        $users = $filaAlumnos77['usuario'];
         $orderid = $filaAlumnos77['id'];
 
         $query999999999 = "SELECT * FROM usuarios WHERE id='$users'";

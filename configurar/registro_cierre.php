@@ -36,7 +36,7 @@ $fecha = date('Y-m-d');
 $sqlTotalesPago = "
     SELECT o.tipoPago, SUM(o.total_price) as sum_usd, SUM(o.total_price_bs) as sum_bs, SUM(o.total_price_cop) as sum_cop
     FROM orden o
-    WHERE o.modified = '$fecha' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' AND customer_id = '$usuario_id'
+    WHERE o.modified = '$fecha' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' AND usuario = '$usuario_id'
     GROUP BY o.tipoPago
 ";
 

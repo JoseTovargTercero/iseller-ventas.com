@@ -16,10 +16,11 @@ $input = json_decode(file_get_contents("php://input"), true);
 // ===================================================================
 if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
     $filtro_fecha_u = $input['fechaSolic'] ?? $_GET['fechaSolic'] ?? date('Y-m-d');
-    if (empty($filtro_fecha_u)) $filtro_fecha_u = date('Y-m-d');
-    
+    if (empty($filtro_fecha_u))
+        $filtro_fecha_u = date('Y-m-d');
+
     $sucursal_u = ($_SESSION["nivel"] == 1) ? ($input['sucursal'] ?? $_GET['sucursal'] ?? null) : $_SESSION["sucursal"];
-    $extraCond_u = $sucursal_u ? " AND c.sucursal_id=" . (int)$sucursal_u : '';
+    $extraCond_u = $sucursal_u ? " AND c.sucursal_id=" . (int) $sucursal_u : '';
 
     // Obtener todos los cortes de caja del día (apertura y cierre), con el nombre del usuario
     $sqlCortes = "
@@ -31,64 +32,64 @@ if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
           $extraCond_u
         ORDER BY c.creado_en ASC, c.id ASC
     ";
-    
+
     $resCortes = $conexion->query($sqlCortes);
     $usuarios_cortes = [];
-    
+
     if ($resCortes) {
         while ($row = $resCortes->fetch_assoc()) {
             $uid = $row['usuario_id'];
             if (!isset($usuarios_cortes[$uid])) {
                 $usuarios_cortes[$uid] = [
                     'usuario_id' => $uid,
-                    'nombre'     => $row['nombre_usuario'] ?? "Usuario #{$uid}",
-                    'apertura'   => null,
-                    'cierre'     => null,
-                    'sort_time'  => $row['creado_en'] ?? $row['id']
+                    'nombre' => $row['nombre_usuario'] ?? "Usuario #{$uid}",
+                    'apertura' => null,
+                    'cierre' => null,
+                    'sort_time' => $row['creado_en'] ?? $row['id']
                 ];
             }
-            
+
             if ($row['tipo_corte'] === 'apertura') {
                 $usuarios_cortes[$uid]['apertura'] = [
-                    'efectivo_bs' => (float)$row['efectivo_bs_fondo'],
-                    'dolares'     => (float)$row['efectivo_usd_fondo'],
-                    'pesos'       => (float)$row['pesos_fondo'],
+                    'efectivo_bs' => (float) $row['efectivo_bs_fondo'],
+                    'dolares' => (float) $row['efectivo_usd_fondo'],
+                    'pesos' => (float) $row['pesos_fondo'],
                     'observaciones' => $row['observaciones'],
                     'hora_apertura' => date('H:i:s', strtotime($row['creado_en']))
                 ];
             } elseif ($row['tipo_corte'] === 'cierre') {
                 $usuarios_cortes[$uid]['cierre'] = [
                     'contado' => [
-                        'efectivo_bs'   => (float)$row['efectivo_bs_contado'],
-                        'dolares'       => (float)$row['efectivo_usd_contado'],
-                        'pesos'         => (float)$row['pesos_contado'],
-                        'punto'         => (float)$row['punto_contado'],
-                        'biopago'       => (float)$row['biopago_contado'],
-                        'pago_movil'    => (float)$row['pago_movil_contado'],
-                        'transferencia' => (float)$row['transferencia_contado']
+                        'efectivo_bs' => (float) $row['efectivo_bs_contado'],
+                        'dolares' => (float) $row['efectivo_usd_contado'],
+                        'pesos' => (float) $row['pesos_contado'],
+                        'punto' => (float) $row['punto_contado'],
+                        'biopago' => (float) $row['biopago_contado'],
+                        'pago_movil' => (float) $row['pago_movil_contado'],
+                        'transferencia' => (float) $row['transferencia_contado']
                     ],
                     'sistema' => [
-                        'efectivo_bs'   => (float)$row['efectivo_bs_sistema'],
-                        'dolares'       => (float)$row['efectivo_usd_sistema'],
-                        'pesos'         => (float)$row['pesos_sistema'],
-                        'punto'         => (float)$row['punto_sistema'],
-                        'biopago'       => (float)$row['biopago_sistema'],
-                        'pago_movil'    => (float)$row['pago_movil_sistema'],
-                        'transferencia' => (float)$row['transferencia_sistema']
+                        'efectivo_bs' => (float) $row['efectivo_bs_sistema'],
+                        'dolares' => (float) $row['efectivo_usd_sistema'],
+                        'pesos' => (float) $row['pesos_sistema'],
+                        'punto' => (float) $row['punto_sistema'],
+                        'biopago' => (float) $row['biopago_sistema'],
+                        'pago_movil' => (float) $row['pago_movil_sistema'],
+                        'transferencia' => (float) $row['transferencia_sistema']
                     ],
                     'diferencia' => [
-                        'efectivo_bs'   => (float)$row['diferencia_efectivo_bs'],
-                        'dolares'       => (float)$row['diferencia_efectivo_usd'],
-                        'pesos'         => (float)$row['diferencia_pesos'],
-                        'punto'         => (float)$row['diferencia_punto'],
-                        'biopago'       => (float)$row['diferencia_biopago'],
-                        'pago_movil'    => (float)$row['diferencia_pago_movil'],
-                        'transferencia' => (float)$row['diferencia_transferencia']
+                        'efectivo_bs' => (float) $row['diferencia_efectivo_bs'],
+                        'dolares' => (float) $row['diferencia_efectivo_usd'],
+                        'pesos' => (float) $row['diferencia_pesos'],
+                        'punto' => (float) $row['diferencia_punto'],
+                        'biopago' => (float) $row['diferencia_biopago'],
+                        'pago_movil' => (float) $row['diferencia_pago_movil'],
+                        'transferencia' => (float) $row['diferencia_transferencia']
                     ],
                     'fondo_dejado' => [
-                        'efectivo_bs' => (float)$row['efectivo_bs_fondo'],
-                        'dolares'     => (float)$row['efectivo_usd_fondo'],
-                        'pesos'       => (float)$row['pesos_fondo']
+                        'efectivo_bs' => (float) $row['efectivo_bs_fondo'],
+                        'dolares' => (float) $row['efectivo_usd_fondo'],
+                        'pesos' => (float) $row['pesos_fondo']
                     ],
                     'observaciones' => $row['observaciones']
                 ];
@@ -98,7 +99,7 @@ if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
 
     // Ordenar por hora de apertura (sort_time)
     $cortes = array_values($usuarios_cortes);
-    usort($cortes, function($a, $b) {
+    usort($cortes, function ($a, $b) {
         return $a['sort_time'] <=> $b['sort_time'];
     });
 
@@ -117,19 +118,19 @@ $periodo_tiempo = $input["periodo"] ?? '';
 $filtro_fecha = $input['fechaSolic'] ?? '';
 
 // Construir condiciones adicionales (usamos alias 'o' para todas las consultas a la tabla orden)
-$extraCond = $sucursal ? " AND o.id_sucursal=" . (int)$sucursal : '';
+$extraCond = $sucursal ? " AND o.id_sucursal=" . (int) $sucursal : '';
 
 $user_cond = "";
 if ($extraCond != '' && isset($input['usuario']) && $input['usuario'] != 'todos') {
-    $usuario = (int)$input['usuario'];
-    $user_cond = " AND o.customer_id = $usuario";
+    $usuario = (int) $input['usuario'];
+    $user_cond = " AND o.usuario = $usuario";
 }
 
 // Determinar periodo de tiempo y columna a filtrar
 switch ($periodo_tiempo) {
     case 'dia':
         $today = empty($filtro_fecha) ? date('Y-m-d') : $filtro_fecha;
-        $tipoFiltroColumna = 'modified'; 
+        $tipoFiltroColumna = 'modified';
         break;
     case 'semana':
         $today = empty($filtro_fecha) ? date('Y-Y') : date('Y') . '-' . $filtro_fecha;
@@ -148,8 +149,13 @@ switch ($periodo_tiempo) {
 // 1. OBTENER TOTALES POR TIPO DE PAGO
 // -------------------------------------------------------------------
 $totalesPago = [
-    'Punto' => 0, 'Pmovil' => 0, 'Transferencia' => 0, 'Efectivo' => 0, 
-    'Dolares' => 0, 'Pesos' => 0, 'Biopago' => 0
+    'Punto' => 0,
+    'Pmovil' => 0,
+    'Transferencia' => 0,
+    'Efectivo' => 0,
+    'Dolares' => 0,
+    'Pesos' => 0,
+    'Biopago' => 0
 ];
 
 $sqlTotalesPago = "
@@ -162,13 +168,27 @@ $resultTotales = $conexion->query($sqlTotalesPago);
 if ($resultTotales) {
     while ($row = $resultTotales->fetch_assoc()) {
         switch ($row['tipoPago']) {
-            case 1: $totalesPago['Punto'] += $row['sum_bs']; break;
-            case 2: $totalesPago['Pmovil'] += $row['sum_bs']; break;
-            case 3: $totalesPago['Transferencia'] += $row['sum_bs']; break;
-            case 4: $totalesPago['Efectivo'] += $row['sum_bs']; break;
-            case 5: $totalesPago['Dolares'] += $row['sum_usd']; break;
-            case 6: $totalesPago['Pesos'] += $row['sum_cop']; break;
-            case 7: $totalesPago['Biopago'] += $row['sum_bs']; break;
+            case 1:
+                $totalesPago['Punto'] += $row['sum_bs'];
+                break;
+            case 2:
+                $totalesPago['Pmovil'] += $row['sum_bs'];
+                break;
+            case 3:
+                $totalesPago['Transferencia'] += $row['sum_bs'];
+                break;
+            case 4:
+                $totalesPago['Efectivo'] += $row['sum_bs'];
+                break;
+            case 5:
+                $totalesPago['Dolares'] += $row['sum_usd'];
+                break;
+            case 6:
+                $totalesPago['Pesos'] += $row['sum_cop'];
+                break;
+            case 7:
+                $totalesPago['Biopago'] += $row['sum_bs'];
+                break;
         }
     }
 }
@@ -199,7 +219,8 @@ if ($resultVentasStatus) {
 // -------------------------------------------------------------------
 // 3. CALCULAR GANANCIAS POR TIPO DE VENTA (Detal y Mayor)
 // -------------------------------------------------------------------
-function obtenerGananciasPorTipoVenta($conexion, $tipo, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond) {
+function obtenerGananciasPorTipoVenta($conexion, $tipo, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond)
+{
     $sql = "
         SELECT SUM(
             (oa.precio_venta_dolar * oa.quantity * CASE WHEN o.status = '4' THEN (1 - COALESCE(o.descontado, 0) / 100) ELSE 1 END) 
@@ -211,7 +232,7 @@ function obtenerGananciasPorTipoVenta($conexion, $tipo, $today, $tipoFiltroColum
     ";
     $res = $conexion->query($sql);
     $row = $res ? $res->fetch_assoc() : ['ganancia' => 0];
-    return $row['ganancia'] ? (float)$row['ganancia'] : 0;
+    return $row['ganancia'] ? (float) $row['ganancia'] : 0;
 }
 
 $ganancia_detal = obtenerGananciasPorTipoVenta($conexion, '1', $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond);
@@ -220,7 +241,8 @@ $ganancia_mayor = obtenerGananciasPorTipoVenta($conexion, '4', $today, $tipoFilt
 // -------------------------------------------------------------------
 // 4. CALCULAR GANANCIAS POR MONEDA
 // -------------------------------------------------------------------
-function obtenerGananciasPorMoneda($conexion, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond) {
+function obtenerGananciasPorMoneda($conexion, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond)
+{
     // Calculamos las ventas y costos en una sola consulta para todas las monedas
     $sql = "
         SELECT o.tipoPago, o.total_price_bs, o.total_price_cop, o.total_price,
@@ -230,10 +252,10 @@ function obtenerGananciasPorMoneda($conexion, $today, $tipoFiltroColumna, $bss_i
         FROM orden o
         WHERE o.$tipoFiltroColumna = '$today' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
     ";
-    
+
     $res = $conexion->query($sql);
     $ganancias = ['Bolivar' => 0, 'Peso' => 0, 'Dolar' => 0];
-    
+
     if ($res) {
         while ($row = $res->fetch_assoc()) {
             $tipoPago = $row['tipoPago'];
@@ -266,7 +288,7 @@ $queryTabla = "
             JOIN productos p ON oa.product_id = p.id 
             WHERE oa.order_id = o.id) as productosTexto
     FROM orden o
-    LEFT JOIN usuarios u ON o.customer_id = u.id
+    LEFT JOIN usuarios u ON o.usuario = u.id
     WHERE (o.status = '1' OR o.status = '2' OR o.status = '4') 
       AND o.$tipoFiltroColumna = '$today'
       AND o.bss_id = '$bss_id' 
@@ -305,7 +327,8 @@ if ($resultTabla) {
             'total_price' => number_format($row['total_price'], 2, ',', '.'),
             'total_price_cop' => number_format($row['total_price_cop'], 0, ',', '.'),
             'total_price_bs' => number_format($row['total_price_bs'], 2, ',', '.'),
-            'detallesLink' => "detallesVenta.php?id={$orderId}",
+            'id' => $orderId,
+            'cliente' => $row['cliente'],
             'productosTexto' => $productosTexto
         ];
     }
@@ -317,25 +340,25 @@ if ($resultTabla) {
 echo json_encode([
     // SECTION RIGHT 
     'ganacias_Bolivares' => number_format($gananciasMoneda['Bolivar'], 2, '.', ',') . ' - Ganancias',
-    'valor_Bolivares'    => number_format($totalesPago['Punto'] + $totalesPago['Pmovil'] + $totalesPago['Transferencia'] + $totalesPago['Efectivo'] + $totalesPago['Biopago'], 2, '.', ','),
-    'ganacias_Dolares'   => number_format($gananciasMoneda['Dolar'], 2, '.', ',') . ' - Ganancias',
-    'valor_Dolares'      => number_format($totalesPago['Dolares'], 2, '.', ','),
-    'ganacias_Pesos'     => number_format($gananciasMoneda['Peso'], 2, '.', ',') . ' - Ganancias',
-    'valor_Pesos'        => number_format($totalesPago['Pesos'], 2, '.', ','),
-    'ganacias_Mayor'     => '$' . number_format($ganancia_mayor, 2, '.', ',') . ' Ganancias.',
-    'valor_Mayor'        => number_format($total_mayor, 2, '.', ','),
-    'ganacias_Detal'     => '$' . number_format($ganancia_detal, 2, '.', ',') . ' Ganancias.',
-    'valor_Detal'        => number_format($total_detal, 2, '.', ','),
-    
+    'valor_Bolivares' => number_format($totalesPago['Punto'] + $totalesPago['Pmovil'] + $totalesPago['Transferencia'] + $totalesPago['Efectivo'] + $totalesPago['Biopago'], 2, '.', ','),
+    'ganacias_Dolares' => number_format($gananciasMoneda['Dolar'], 2, '.', ',') . ' - Ganancias',
+    'valor_Dolares' => number_format($totalesPago['Dolares'], 2, '.', ','),
+    'ganacias_Pesos' => number_format($gananciasMoneda['Peso'], 2, '.', ',') . ' - Ganancias',
+    'valor_Pesos' => number_format($totalesPago['Pesos'], 2, '.', ','),
+    'ganacias_Mayor' => '$' . number_format($ganancia_mayor, 2, '.', ',') . ' Ganancias.',
+    'valor_Mayor' => number_format($total_mayor, 2, '.', ','),
+    'ganacias_Detal' => '$' . number_format($ganancia_detal, 2, '.', ',') . ' Ganancias.',
+    'valor_Detal' => number_format($total_detal, 2, '.', ','),
+
     // SECTION LEFT
-    'total_Pmovil'        => number_format($totalesPago['Pmovil'], 2, '.', ','),
+    'total_Pmovil' => number_format($totalesPago['Pmovil'], 2, '.', ','),
     'total_Transferencia' => number_format($totalesPago['Transferencia'], 2, '.', ','),
-    'total_Biopago'       => number_format($totalesPago['Biopago'], 2, '.', ','),
-    'total_Efectivo'      => number_format($totalesPago['Efectivo'], 2, '.', ','),
-    'total_Dolares'       => number_format($totalesPago['Dolares'], 2, '.', ','),
-    'total_pesos'         => number_format($totalesPago['Pesos'], 0, '.', ','),
-    'total_Punto'         => number_format($totalesPago['Punto'], 2, '.', ','),
-    
+    'total_Biopago' => number_format($totalesPago['Biopago'], 2, '.', ','),
+    'total_Efectivo' => number_format($totalesPago['Efectivo'], 2, '.', ','),
+    'total_Dolares' => number_format($totalesPago['Dolares'], 2, '.', ','),
+    'total_pesos' => number_format($totalesPago['Pesos'], 0, '.', ','),
+    'total_Punto' => number_format($totalesPago['Punto'], 2, '.', ','),
+
     // SECTION TABLE
     'tabla' => $tabla
 ]);

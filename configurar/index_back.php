@@ -14,7 +14,7 @@ $user_cond = "";
 if ($extraCond != '' && isset($data['usuario'])) {
   if ($data['usuario'] != 'todos') {
     $usuario = (int)$data['usuario'];
-    $user_cond = " AND customer_id  = $usuario";
+    $user_cond = " AND usuario  = $usuario";
   }
 }
 

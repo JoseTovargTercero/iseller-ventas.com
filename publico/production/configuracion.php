@@ -16,6 +16,7 @@ if ($search->num_rows > 0) {
         $tickets = $rowT['tickets'];
         $ticketsFijo = $rowT['bs_ticket'];
         $cortes_caja = $rowT['cortes_caja'];
+        $registro_clientes = $rowT['registro_clientes'];
     }
 }
 
@@ -111,8 +112,18 @@ if ($search->num_rows > 0) {
                                             <small class="text-muted">Si está desactivado, no se permitirá el corte de caja.</small>
                                         </div>
                                     </div>
+                                    <hr>
+                                    <!-- Opción: Registro de clientes al vender -->
+                                    <div class="d-flex gap-1">
+                                        <div>
+                                            <?= renderCheckbox('registro_clientes', $registro_clientes == 1); ?>
+                                        </div>
+                                        <div>
+                                            <h6 class="m-0">Registro de clientes al vender</h6>
+                                            <small class="text-muted">Si está activado, se solicitaran los datos del cliente al momento de realizar una venta.</small>
+                                        </div>
+                                    </div>
                                 </div>
-
                             </div>
                         </div>
 

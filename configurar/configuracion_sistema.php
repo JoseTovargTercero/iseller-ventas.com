@@ -18,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SESSION["nivel"] == 1) {
       ],
       'cortes_caja' => [
         'columna' => 'cortes_caja'
+      ],
+      'registro_clientes' => [
+        'columna' => 'registro_clientes'
       ]
     ];
 

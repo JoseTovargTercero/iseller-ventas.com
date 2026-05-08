@@ -3,7 +3,28 @@ require_once('configuracion.php');
 require_once('session.php');
 
 $orderId = $_POST['id'];
-$id_sucursal = $_SESSION["sucursal"];
+
+
+
+// Obtener los datos de la venta antes de eliminarla
+$stmtArticulos = $conexion->prepare("SELECT * FROM orden WHERE id = ? AND bss_id = ?");
+$stmtArticulos->bind_param("ii", $orderId, $bss_id);
+$stmtArticulos->execute();
+$resultArticulos = $stmtArticulos->get_result();
+if ($resultArticulos->num_rows > 0) {
+    while ($rowArticulo = $resultArticulos->fetch_assoc()) {
+        if ($_SESSION['nivel'] == 2 && $_SESSION['sucursal'] != $rowArticulo['id_sucursal']) {
+            echo json_encode(['status' => false, 'msg' => 'Usted no tiene permisos para realizar esta accion']);
+            exit;
+        }
+    }
+} else {
+    echo json_encode(['status' => false, 'msg' => 'Usted no tiene permisos para realizar esta accion']);
+    exit;
+}
+
+
+
 try {
     // Iniciar transacción
     $conexion->begin_transaction();
@@ -15,7 +36,7 @@ try {
     $stmtDeleteOrden->close();
 
     // Obtener productos de la orden
-    $stmtArticulos = $conexion->prepare("SELECT product_id, quantity FROM orden_articulos WHERE order_id = ?");
+    $stmtArticulos = $conexion->prepare("SELECT product_id, quantity, id_sucursal  FROM orden_articulos WHERE order_id = ?");
     $stmtArticulos->bind_param("i", $orderId);
     $stmtArticulos->execute();
     $resultArticulos = $stmtArticulos->get_result();
@@ -23,6 +44,7 @@ try {
     while ($rowArticulo = $resultArticulos->fetch_assoc()) {
         $productId = $rowArticulo['product_id'];
         $cantidad = $rowArticulo['quantity'];
+        $id_sucursal = $rowArticulo["id_sucursal"];
 
         // Obtener stock actual?
         $stmtProducto = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ?");
@@ -60,16 +82,12 @@ try {
     // verifica si existe un credito asociado y lo borras
 
 
+    echo json_encode(['status' => true, 'msg' => '']);
 
     // Confirmar transacción
     $conexion->commit();
 
 
-
-
-    // Redirigir
-    define('PAGINA_INICIO', '../publico/production/ventas.php');
-    header('Location: ' . PAGINA_INICIO);
     exit;
 } catch (Exception $e) {
     // Revertir en caso de error
