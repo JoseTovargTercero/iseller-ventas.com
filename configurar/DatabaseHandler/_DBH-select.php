@@ -10,7 +10,9 @@ $data = json_decode(file_get_contents("php://input"), true);
 
 $tabla = $data['table'];
 $configFunction = $data['config'] ?? '_default';
-$bss_id = $_SESSION["bss_id"];
+if (!isset($_SESSION['bss_id'])) {
+    exit;
+}
 
 // Verificar que la función de configuración existe y es callable
 if (!function_exists($configFunction)) {
@@ -38,8 +40,8 @@ try {
 
 
 /*
-    * Configuraciones:
-*/
+ * Configuraciones:
+ */
 
 function _default($tabla)
 {

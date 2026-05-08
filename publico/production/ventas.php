@@ -1,7 +1,7 @@
 <?php
 require_once('includes/requires.php');
 
-if (empty($_SESSION['sucursal'])) {
+if (empty($_SESSION['sucursal']) || $_SESSION['sucursal'] == null) {
     define('PAGINA_INICIO', 'seleccion_sucursal.php');
     header('Location: ' . PAGINA_INICIO);
     exit;
@@ -162,7 +162,9 @@ echo '</pre>';
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/4.2.0/dexie.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -171,107 +173,107 @@ echo '</pre>';
 
 
 <style>
-
     /* Contenedor principal del mensaje */
-.caja-cerrada-container {
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
-    margin: 20px auto;
-    border: 1px solid #e1e4e8;
-    font-family: 'Segoe UI', Roboto, sans-serif;
-}
+    .caja-cerrada-container {
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        margin: 20px auto;
+        border: 1px solid #e1e4e8;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+    }
 
-/* Título */
-.caja-cerrada-container h2 {
-    margin-bottom: 1.5rem;
-    font-size: 1.8rem;
-    font-weight: 600;
-}
+    /* Título */
+    .caja-cerrada-container h2 {
+        margin-bottom: 1.5rem;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
 
-/* Botón Primary */
-.btn-primary {
-    color: white;
-    border: none;
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    font-weight: 500;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.1s ease;
-    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
-}
+    /* Botón Primary */
+    .btn-primary {
+        color: white;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+        box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+    }
 
-.btn-primary:hover {
-    background-color: #0056b3;
-}
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
 
-.btn-primary:active {
-    transform: scale(0.98);
-}
+    .btn-primary:active {
+        transform: scale(0.98);
+    }
 
     .modal-cierre-seccion {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin: 18px 0 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 18px 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-.section-card {
-    border: 1px solid #dde5eeff;
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-}
+    .section-card {
+        border: 1px solid #dde5eeff;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
 
-.section-card.cash {
-    border-left: 4px solid #28a745;
-}
+    .section-card.cash {
+        border-left: 4px solid #28a745;
+    }
 
-.section-card.digital {
-    border-left: 4px solid #007bff;
-}
+    .section-card.digital {
+        border-left: 4px solid #007bff;
+    }
 
-.section-card.fondo {
-    border-left: 4px solid #ff9800;
-    background: #fffaf2;
-}
+    .section-card.fondo {
+        border-left: 4px solid #ff9800;
+        background: #fffaf2;
+    }
 
-.cierre-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6c757d;
-    margin-bottom: 3px;
-    letter-spacing: 0.3px;
-}
+    .cierre-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 3px;
+        letter-spacing: 0.3px;
+    }
 
-.input-group-text {
-    min-width: 52px;
-    justify-content: center;
-    font-weight: 600;
-    background: #f8f9fa;
-}
+    .input-group-text {
+        min-width: 52px;
+        justify-content: center;
+        font-weight: 600;
+        background: #f8f9fa;
+    }
 
-.form-control {
-    border-radius: 6px;
-}
+    .form-control {
+        border-radius: 6px;
+    }
 
-.form-control:focus {
-    box-shadow: none;
-    border-color: #32d7c0;
-}
+    .form-control:focus {
+        box-shadow: none;
+        border-color: #32d7c0;
+    }
 
-.scroll-area {
-    max-height: 70vh;
-    overflow-y: auto;
-    padding-right: 6px;
-}
+    .scroll-area {
+        max-height: 70vh;
+        overflow-y: auto;
+        padding-right: 6px;
+    }
+
     .form-control {
         background-color: #fff !important;
     }
@@ -592,7 +594,7 @@ echo '</pre>';
             document.getElementById('result-escaner').innerHTML = ''; // Limpiar el contenido del escáner
         }
         // al precionar la tecla escape se cierra el scanner
-        document.addEventListener('keydown', function(event) {
+        document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 cerrarScanner();
             }
@@ -621,13 +623,19 @@ echo '</pre>';
 
                         <ul class="nav nav-tabs" id="myTab" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">Carrito activo</button>
+                                <button class="nav-link active" id="home-tab" data-bs-toggle="tab"
+                                    data-bs-target="#home" type="button" role="tab" aria-controls="home"
+                                    aria-selected="true">Carrito activo</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="false">No guardados <span id="cantidad-no-enviada"></span> </button>
+                                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile"
+                                    type="button" role="tab" aria-controls="profile" aria-selected="false">No guardados
+                                    <span id="cantidad-no-enviada"></span> </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">Reservados <span id="cantidad-reservados"></span></button>
+                                <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact"
+                                    type="button" role="tab" aria-controls="contact" aria-selected="false">Reservados
+                                    <span id="cantidad-reservados"></span></button>
                             </li>
                         </ul>
 
@@ -712,7 +720,8 @@ echo '</pre>';
 
 
                 <div class="row" id="myTabContent">
-                    <div class="tab-pane fade col-lg-12  show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                    <div class="tab-pane fade col-lg-12  show active" id="home" role="tabpanel"
+                        aria-labelledby="home-tab">
                         <div class="x_panel" style="min-height: 80vh">
                             <div class="x_title d-flex justify-content-between">
                                 <div style="display: grid">
@@ -721,10 +730,12 @@ echo '</pre>';
                                         </span></span>
                                 </div>
                                 <div class="d-flex flex-column">
-                                     <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal"> (B) BÚSQUEDA</button>
-                                <button class="btn btn-sm d-none btn-danger" style="height: min-content" id="btn-cerrar-caja"> CERRAR CAJA</button>
+                                    <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal">
+                                        (B) BÚSQUEDA</button>
+                                    <button class="btn btn-sm d-none btn-danger" style="height: min-content"
+                                        id="btn-cerrar-caja"> CERRAR CAJA</button>
                                 </div>
-                                 </div>
+                            </div>
                             <div class="x_content cart">
                                 <div>
                                     <div class="table-container" style="overflow: auto">
@@ -752,7 +763,8 @@ echo '</pre>';
 
 
 
-                                    <div style=" bottom: 0; flex-wrap: wrap-reverse;" class="pt-3 botones-container hide w-100" id="botones_acciones">
+                                    <div style=" bottom: 0; flex-wrap: wrap-reverse;"
+                                        class="pt-3 botones-container hide w-100" id="botones_acciones">
 
 
                                         <?php
@@ -771,17 +783,22 @@ echo '</pre>';
 
                                         <button class="btn btn-dark" id="btn-reservar">RESERVAR CARRITO</button>
                                         <button class="btn btn-dark" id="calcularVuelto">(C) CALCULAR CAMBIO</button>
-                                        <button id="btn-vender" class="btn btn-dark" style="color:white;">(V) VENDER</button>
-                                        <a onclick="vaciarCarritoJs()" class="btn btn-danger " style="color:white; cursor: pointer">DESTRUIR CARRITO</a>
+                                        <button id="btn-vender" class="btn btn-dark" style="color:white;">(V)
+                                            VENDER</button>
+                                        <a onclick="vaciarCarritoJs()" class="btn btn-danger "
+                                            style="color:white; cursor: pointer">DESTRUIR CARRITO</a>
 
 
 
                                         <div class="error-internet">
 
-                                            <div class="alert alert-danger hide" id="alert-internet" role="alert" style="display: flex;gap: 5px;">
+                                            <div class="alert alert-danger hide" id="alert-internet" role="alert"
+                                                style="display: flex;gap: 5px;">
                                                 <ion-icon style="font-size: 20px ;" name="warning-outline"></ion-icon>
                                                 <span>
-                                                    En estos momentos no tiene conexion a internet, las ventas se guardaran en su dispositivo y se enviarán cuando vuelva a tener conexión.
+                                                    En estos momentos no tiene conexion a internet, las ventas se
+                                                    guardaran en su dispositivo y se enviarán cuando vuelva a tener
+                                                    conexión.
 
                                                 </span>
 
@@ -845,8 +862,10 @@ echo '</pre>';
                                                 <th class='column-title'>Fecha</th>
                                                 <th class='column-title'>Monto</th>
                                                 <th class='column-title'>Detalles</th>
-                                                <th style="padding: 10px !important; text-align: center" class='column-title'>Ticket</th>
-                                                <th style="width: 7%; padding: 10px !important" class='column-title'>Eliminar</th>
+                                                <th style="padding: 10px !important; text-align: center"
+                                                    class='column-title'>Ticket</th>
+                                                <th style="width: 7%; padding: 10px !important" class='column-title'>
+                                                    Eliminar</th>
                                             </tr>
                                         </thead>
                                         <tbody id='tabla_ventas'>
@@ -884,30 +903,31 @@ echo '</pre>';
         const sucursal_i = <?php echo json_encode($sucursal) ?>;
 
 
-        const configuraciones =  {
+        const configuraciones = {
             tickets: <?php echo json_encode($tickets) ?>,
             ticketsFijo: <?php echo json_encode($ticketsFijo) ?>,
-            cortes_caja: <?php echo json_encode($cortes_caja) ?>
+            cortes_caja: <?php echo json_encode($cortes_caja) ?>,
+            nivel: <?php echo json_encode($_SESSION['nivel']) ?>
         }
 
 
         // Verificar Apertura de caja
-        $(document).ready(function() {
-            if(configuraciones.cortes_caja == 1){
+        $(document).ready(function () {
+            if (configuraciones.cortes_caja == 1 && configuraciones.nivel != 1) {
                 aperturaCaja()
                 consulaCierre()
             }
-           document.getElementById("cargando").style.display = "none";
+            document.getElementById("cargando").style.display = "none";
         });
 
         function aperturaCaja() {
             $.ajax({
                 url: base_url + 'consulta_apertura.php',
                 type: 'GET',
-                data: {tipo_corte: 'apertura'},
+                data: { tipo_corte: 'apertura' },
                 dataType: 'json'
-                })
-                .done(function(response) {
+            })
+                .done(function (response) {
                     /// console.log(response)
                     if (response.status === 'success' && !response.corte) {
                         // Bloquear la página y pedir apertura
@@ -976,29 +996,29 @@ echo '</pre>';
                                     type: 'POST',
                                     data: result.value,
                                     dataType: 'json',
-                                    success: function(res) {
+                                    success: function (res) {
                                         if (res.status == 'success') {
                                             Swal.fire('¡Éxito!', res.message, 'success');
                                             document.getElementById('btn-cerrar-caja').classList.remove('d-none');
                                         } else {
                                             Swal.fire('Error', res.message || 'No se pudo realizar la apertura', 'error')
-                                            .then(() => {
-                                                aperturaCaja(); // Reintentar
-                                            });
+                                                .then(() => {
+                                                    aperturaCaja(); // Reintentar
+                                                });
                                         }
                                     },
-                                    error: function(xhr, status, error) {
+                                    error: function (xhr, status, error) {
                                         Swal.fire('Error', 'Error de conexión con el servidor', 'error');
                                         console.log(error);
                                     }
                                 });
                             }
                         });
-                    }else{
+                    } else {
                         document.getElementById('btn-cerrar-caja').classList.remove('d-none');
                     }
                 })
-                .fail(function(xhr, status, error) {
+                .fail(function (xhr, status, error) {
                     console.log(error)
                     Swal.fire('Error', 'No se pudo conectar con el servidor: ' + error, 'error').then(() => {
                         aperturaCaja(); // Reintentar
@@ -1006,14 +1026,14 @@ echo '</pre>';
                 });
         }
 
-        function consulaCierre(){
+        function consulaCierre() {
             $.ajax({
                 url: base_url + 'consulta_apertura.php',
                 type: 'GET',
-                data: {tipo_corte: 'cierre'},
+                data: { tipo_corte: 'cierre' },
                 dataType: 'json'
-                })
-                .done(function(response) {
+            })
+                .done(function (response) {
                     if (response.corte) {
                         document.getElementById('btn-cerrar-caja').classList.add('d-none');
                         // .x_panel
@@ -1028,13 +1048,13 @@ echo '</pre>';
     </div>
 `;
 
-                        
-                        
+
+
                     }
                 })
-                .fail(function(xhr, status, error) {
+                .fail(function (xhr, status, error) {
                     console.log(error)
-                   consulaCierre()
+                    consulaCierre()
                 });
         }
 
@@ -1054,7 +1074,7 @@ echo '</pre>';
                         url: base_url + 'reabrir_caja.php',
                         type: 'POST',
                         dataType: 'json',
-                        success: function(response) {
+                        success: function (response) {
                             if (response.status === 'success') {
                                 Swal.fire(
                                     '¡Reabierta!',
@@ -1067,7 +1087,7 @@ echo '</pre>';
                                 Swal.fire('Error', response.message, 'error');
                             }
                         },
-                        error: function() {
+                        error: function () {
                             Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
                         }
                     });
@@ -1077,7 +1097,7 @@ echo '</pre>';
 
 
         // cerrar caja
-        document.getElementById('btn-cerrar-caja').addEventListener('click', function() {
+        document.getElementById('btn-cerrar-caja').addEventListener('click', function () {
             Swal.fire({
                 title: '¿Está seguro de cerrar la caja?',
                 text: 'No podrá revertir esta acción',
@@ -1089,10 +1109,10 @@ echo '</pre>';
                 if (result.isConfirmed) {
                     cerrarCaja();
                 }
-            });             
+            });
         });
 
-        function cerrarCaja(){
+        function cerrarCaja() {
             Swal.fire({
                 title: 'Cierre de Caja',
                 html: `
@@ -1215,7 +1235,7 @@ echo '</pre>';
                         type: 'POST',
                         data: result.value,
                         dataType: 'json',
-                        success: function(res) {
+                        success: function (res) {
                             if (res.status == 'success') {
                                 Swal.fire('¡Éxito!', res.message, 'success').then(() => {
                                     // Opcional: redirigir o recargar la página para bloquear las ventas
@@ -1227,7 +1247,7 @@ echo '</pre>';
                                 });
                             }
                         },
-                        error: function(xhr, status, error) {
+                        error: function (xhr, status, error) {
                             Swal.fire('Error', 'Error de conexión con el servidor', 'error');
                             console.log(error);
                         }
@@ -1236,7 +1256,7 @@ echo '</pre>';
             });
         }
 
-        
+
 
 
 
@@ -1378,15 +1398,15 @@ echo '</pre>';
             $('#cargando').show();
 
             $.ajax({
-                    url: base_url + 'contenido_ticket.php',
-                    type: 'POST',
-                    data: {
-                        id: id,
-                        moneda: moneda
-                    },
-                    dataType: 'html'
-                })
-                .done(function(result) {
+                url: base_url + 'contenido_ticket.php',
+                type: 'POST',
+                data: {
+                    id: id,
+                    moneda: moneda
+                },
+                dataType: 'html'
+            })
+                .done(function (result) {
                     const fecha = new Date().toLocaleString('es-VE', {
                         year: 'numeric',
                         month: '2-digit',
@@ -1479,14 +1499,14 @@ echo '</pre>';
                     ventana.document.write(contenido);
                     ventana.document.close();
 
-                    ventana.onload = function() {
+                    ventana.onload = function () {
                         ventana.print();
                         ventana.close();
                     };
 
                     $('#cargando').hide();
                 })
-                .fail(function(xhr, status, error) {
+                .fail(function (xhr, status, error) {
                     console.error('Error al cargar el ticket:', error);
                     $('#cargando').hide();
                     alert('Hubo un error al generar el ticket. Intente nuevamente.');
@@ -1702,7 +1722,7 @@ echo '</pre>';
 
 
 
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                 $('#search').val('')
                 document.getElementById("search").focus();
@@ -1840,7 +1860,7 @@ echo '</pre>';
 
 
         // Enter para escaneo
-        document.addEventListener('keyup', function(event) {
+        document.addEventListener('keyup', function (event) {
             $('button').blur();
             if (modo == 2 && ultimo_escaneado != 0 && event.key == 'Enter') {
                 $('#btn_' + ultimo_escaneado).click();
@@ -1852,7 +1872,7 @@ echo '</pre>';
 
 
 
-        document.addEventListener('keyup', function(event) {
+        document.addEventListener('keyup', function (event) {
             if (event.target.closest('.cantidad-input') && !event.target.closest('.cantidad-scan')) {
                 const input = event.target.closest('.cantidad-input');
 
@@ -1893,7 +1913,7 @@ echo '</pre>';
         })
 
 
-        $(document).on('keyup', '#search', function() {
+        $(document).on('keyup', '#search', function () {
             var nombreProducto = $(this).val();
             if (nombreProducto.length > 2) {
 
@@ -2192,7 +2212,7 @@ echo '</pre>';
 
         }
 
-        document.getElementById('btn-vender').addEventListener('click', function() {
+        document.getElementById('btn-vender').addEventListener('click', function () {
             confirmarVenta('venta');
         });
 
@@ -2250,7 +2270,7 @@ echo '</pre>';
             });
         }
 
-        document.getElementById('btn-reservar').addEventListener('click', function() {
+        document.getElementById('btn-reservar').addEventListener('click', function () {
             reservarCarrito();
         });
 
@@ -2273,7 +2293,7 @@ echo '</pre>';
 
 
 
-            comprobarConexion(async function(hayInternet) {
+            comprobarConexion(async function (hayInternet) {
                 if (!hayInternet) {
                     Alerta.toast('warning', 'No hay conexión a internet. Las ventas se guardarán localmente.');
                     actualizarProductosSinEnviar();
@@ -2283,15 +2303,15 @@ echo '</pre>';
 
 
                 fetch(base_url + 'accion_carta.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: new URLSearchParams({
-                            action: 'enviarPedidos',
-                            pedidos: JSON.stringify(pedidosIndexedDB),
-                        }),
-                    })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'enviarPedidos',
+                        pedidos: JSON.stringify(pedidosIndexedDB),
+                    }),
+                })
                     .then((res) => res.text()) // obtener siempre como texto
                     .then(async (text) => {
                         console.log('Respuesta cruda:', text);
@@ -2627,7 +2647,7 @@ echo '</pre>';
 
 
 
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
                 let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
 
@@ -2655,7 +2675,7 @@ echo '</pre>';
         let barcode = "";
         let lastKeyTime = Date.now();
 
-        document.addEventListener("keydown", function(event) {
+        document.addEventListener("keydown", function (event) {
 
             const currentTime = Date.now();
 
@@ -2708,14 +2728,14 @@ echo '</pre>';
 
         function eliminarVenta(id) {
             $.ajax({
-                    url: base_url + 'deleteVentaAjax.php',
-                    type: 'POST',
-                    dataType: 'html',
-                    data: {
-                        id: id
-                    },
-                })
-                .done(function(resultado1) {
+                url: base_url + 'deleteVentaAjax.php',
+                type: 'POST',
+                dataType: 'html',
+                data: {
+                    id: id
+                },
+            })
+                .done(function (resultado1) {
                     cargarUltimasOrdenes()
                 })
         }
@@ -2821,7 +2841,7 @@ echo '</pre>';
             }
         }
 
-        document.addEventListener('keyup', function(event) {
+        document.addEventListener('keyup', function (event) {
             const key = event.key.toLowerCase();
 
             const allowedKeys = ['+', '-', 'b', 'v', 'c', 'escape', 'enter', '1', '2', '3', '4', '5', '6', '7'];
@@ -2850,6 +2870,18 @@ echo '</pre>';
 
 
         function agregarNombreSucursal(sucursal_n) {
+            if (sucursal_n == '' && configuraciones.nivel == 1) {
+                location.href = 'seleccion_sucursal.php';
+                return;
+            }
+            if (sucursal_n == '' && configuraciones.nivel == 2) {
+                location.href = '../../login/salir.php';
+                return;
+            }
+
+
+
+
             const navbar = document.querySelector('ul.navbar-right');
             if (!navbar) {
                 console.warn("No se encontró el elemento 'ul.navbar-right'");
@@ -2868,7 +2900,7 @@ echo '</pre>';
 
         const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
 
-        agregarNombreSucursal(sucursal_n)
+            agregarNombreSucursal(sucursal_n)
 
 
         setInterval(() => {
