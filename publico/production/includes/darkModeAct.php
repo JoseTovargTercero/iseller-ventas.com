@@ -1,5 +1,10 @@
 <?php
 
+if (!isset($_SESSION['id']) || !isset($_SESSION["darkMode"])) {
+  // rediirigir a la salida
+  header("Location: iseller-tiendas.com/inventario");
+}
+
 // Verifica si la variable de sesión darkMode está definida, si no, consulta la base de datos
 if (isset($_SESSION["darkMode"])) {
   $darkMode = $_SESSION["darkMode"];
