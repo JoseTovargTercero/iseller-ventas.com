@@ -1,6 +1,6 @@
 <?php
 
-if (!isset($_SESSION['id']) || !isset($_SESSION["darkMode"])) {
+if (!isset($_SESSION['id'])) {
   // rediirigir a la salida
   header("Location: iseller-tiendas.com/inventario");
 }
