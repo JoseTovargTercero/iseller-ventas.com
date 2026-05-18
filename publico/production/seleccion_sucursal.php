@@ -4,7 +4,7 @@ require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1) {
 
     $topnav = topnav();
-?>
+    ?>
 
     <!DOCTYPE html>
     <html lang='es'>
@@ -54,6 +54,7 @@ if ($_SESSION['nivel'] == 1) {
                                     <div class="x_content h-60">
                                         <ul class="list-group" id="sucursales">
                                         </ul>
+                                        <p id="control"></p>
                                     </div>
                                 </div>
                             </div>
@@ -84,12 +85,12 @@ if ($_SESSION['nivel'] == 1) {
 
                     loader.cargar('sucursales', '_sucursales').then(data => {
 
-
                         // Verificamos si data es un array y está vacío
                         if (!Array.isArray(data) || data.length === 0) {
                             window.location.href = 'sucursales.php';
                             return;
                         }
+                        $('#control').html('<br><br><br>Datos disponibles para el comercio con ID:  <?php echo $_SESSION['bss_id'] ?>')
 
 
                         if (data) {
@@ -139,7 +140,7 @@ if ($_SESSION['nivel'] == 1) {
                     }
                 }
 
-                document.addEventListener('click', function(event) {
+                document.addEventListener('click', function (event) {
                     if (event.target.closest('.btn-def')) {
                         const id = event.target.closest('.btn-def').getAttribute('data-id');
                         def_s(id)
@@ -175,7 +176,7 @@ if ($_SESSION['nivel'] == 1) {
     </body>
 
     </html>
-<?php
+    <?php
 } else {
     define('PAGINA_INICIO', '../../index.php');
     header('Location: ' . PAGINA_INICIO);
