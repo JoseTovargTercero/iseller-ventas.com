@@ -99,14 +99,14 @@ if ($ordersResult->num_rows > 0) {
     }
 }
 
-// 4. PRODUCTOS VENDIDOS
+// 4. PRODUCTOS MAS VENDIDOS
 $articulosVendidosQuery = "SELECT oa.product_id, oa.quantity, oa.id_sucursal, p.nombre, s.nombre as sucursal FROM orden_articulos as oa 
 INNER JOIN productos as p ON oa.product_id = p.id 
 INNER JOIN sucursales as s ON oa.id_sucursal = s.id
 WHERE order_id IN ('" . implode("','", $ordenes) . "')";
 $articulosVendidosResult = $conexion->query($articulosVendidosQuery);
 
-$articulosVendidosList = [];
+$agrupadosPorSucursal = [];
 if ($articulosVendidosResult->num_rows > 0) {
     while ($articulosVendidos = $articulosVendidosResult->fetch_assoc()) {
         $nombre = $articulosVendidos['nombre'];
@@ -116,14 +116,31 @@ if ($articulosVendidosResult->num_rows > 0) {
         
         $nombre = strtoupper($nombre);
         $nombre = preg_replace('/[^A-Za-z0-9\s]/', '', $nombre);
+        $articulosVendidos['nombre'] = $nombre;
 
-        if (isset($articulosVendidosList[$id][$id_sucursal])) {
-            $articulosVendidosList[$id][$id_sucursal]['quantity'] += $cantidad;
+        if (isset($agrupadosPorSucursal[$id_sucursal][$id])) {
+            $agrupadosPorSucursal[$id_sucursal][$id]['quantity'] += $cantidad;
         } else {
-            $articulosVendidosList[$id][$id_sucursal] = $articulosVendidos;
+            $agrupadosPorSucursal[$id_sucursal][$id] = $articulosVendidos;
         }
     }
 }
+
+$articulosVendidosList = [];
+// Filtrar los 5 más vendidos de cada sucursal
+foreach ($agrupadosPorSucursal as $id_sucursal => $productos) {
+    usort($productos, function($a, $b) {
+        return $b['quantity'] <=> $a['quantity'];
+    });
+    
+    $top5 = array_slice($productos, 0, 5);
+    
+    foreach ($top5 as $prod) {
+        $id = $prod['product_id'];
+        $articulosVendidosList[$id][$id_sucursal] = $prod;
+    }
+}
+
 
 
 
@@ -269,7 +286,7 @@ foreach ($ordersList as $idx => $order) {
 
 $html .= '</tbody></table>
 
-    <p style="text-align:center"><span style="font-size:15px">MOVIMIENTO DEL STOCK</span></p>
+    <p style="text-align:center"><span style="font-size:15px">PRODUCTOS CON MAS MOVIMIENTO DEL STOCK</span></p>
     <table class="table table-striped" border="0.1" cellpadding="5">
         <thead>
             <tr >
