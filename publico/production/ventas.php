@@ -985,7 +985,7 @@ echo '</pre>';
 
         // Verificar Apertura de caja
         $(document).ready(function() {
-            if(configuraciones.cortes_caja == 1){
+            if(configuraciones.cortes_caja == 1 && nivelUsuario == 2){
                 aperturaCaja()
                 consulaCierre()
             }
@@ -3034,6 +3034,12 @@ echo '</pre>';
                 } else if (key === 'escape') {
                     closeModalButton.click();
                     document.getElementById("section-scanner").classList.add('hide');
+                }
+                
+                // No seguir si algun input esta focus
+                const focusedElement = document.activeElement;
+                if (focusedElement.tagName === 'INPUT' || focusedElement.tagName === 'SELECT') {
+                    return;
                 }
 
                 if (modalDespacho.classList.contains('show')) {
