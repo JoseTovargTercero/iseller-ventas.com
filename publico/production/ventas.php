@@ -3035,6 +3035,12 @@ echo '</pre>';
                     closeModalButton.click();
                     document.getElementById("section-scanner").classList.add('hide');
                 }
+                
+                // No seguir si algun input esta focus
+                const focusedElement = document.activeElement;
+                if (focusedElement.tagName === 'INPUT' || focusedElement.tagName === 'SELECT') {
+                    return;
+                }
 
                 if (modalDespacho.classList.contains('show')) {
                     const select = document.getElementById('metodoPago');
