@@ -985,7 +985,7 @@ echo '</pre>';
 
         // Verificar Apertura de caja
         $(document).ready(function() {
-            if(configuraciones.cortes_caja == 1){
+            if(configuraciones.cortes_caja == 1 && nivelUsuario == 2){
                 aperturaCaja()
                 consulaCierre()
             }
