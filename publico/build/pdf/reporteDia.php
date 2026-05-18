@@ -217,7 +217,7 @@ $html = '
         </thead>
         <tbody>';
 
-$userIds = array_unique(array_column($ordersList, 'customer_id'));
+$userIds = array_unique(array_column($ordersList, 'usuario'));
 $userNamesMap = [];
 if (!empty($userIds)) {
     $userIdsStr = implode("','", $userIds);
@@ -244,7 +244,7 @@ if (!empty($orderIds)) {
 
 foreach ($ordersList as $idx => $order) {
     $orderId = $order['id'];
-    $uName = $userNamesMap[$order['customer_id']] ?? 'N/A';
+    $uName = $userNamesMap[$order['usuario']] ?? 'N/A';
     $productsStr = isset($itemsMap[$orderId]) ? implode(", ", $itemsMap[$orderId]) : "";
 
     $tipo = ($order['status'] == 1) ? "V" : (($order['status'] == 2) ? "C" : "M");

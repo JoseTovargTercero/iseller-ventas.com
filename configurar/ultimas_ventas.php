@@ -6,7 +6,7 @@ $user = $_SESSION["id"];
 $sucursal =  $_SESSION['sucursal'];
 
 $ordenesData = [];
-$queryOrden = "SELECT * FROM orden WHERE customer_id = ? AND id_sucursal = ? ORDER BY id DESC LIMIT 6";
+$queryOrden = "SELECT * FROM orden WHERE usuario = ? AND id_sucursal = ? ORDER BY id DESC LIMIT 6";
 $stmtOrden = $conexion->prepare($queryOrden);
 $stmtOrden->bind_param('ii', $user, $sucursal);
 $stmtOrden->execute();

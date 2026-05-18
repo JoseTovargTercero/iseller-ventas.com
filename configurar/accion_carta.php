@@ -7,6 +7,18 @@ require_once('configuracion.php');
 require_once('session.php');
 require("_tasas_cambio.php");
 
+
+$query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
+$search = $conexion->query($query);
+if ($search->num_rows > 0) {
+    while ($rowT = $search->fetch_assoc()) {
+        $registro_clientes = $rowT['registro_clientes'];
+    }
+}
+
+
+
+
 $desscontado = '';
 
 $id_sucursal = $_SESSION["sucursal"];
@@ -58,7 +70,6 @@ function procesarCarritos()
 
     $errores = [];
 
-
     // Inicializar array de órdenes procesadas en sesión si no existe
     if (!isset($_SESSION['processed_orders'])) {
         $_SESSION['processed_orders'] = [];
@@ -70,7 +81,7 @@ function procesarCarritos()
         // Verificar si el pedido ya fue procesado
         if (in_array($idPedido, $_SESSION['processed_orders'])) {
             // Ya fue procesado, se ignora pero no se reporta como error para que el cliente limpie la cola
-            continue; 
+            continue;
         }
 
         $metodoPago = str_replace('option', '', $pedido['metodoPago']);
@@ -114,7 +125,7 @@ function procesarCarritos()
         } else {
             // Marcar como procesado exitosamente
             $_SESSION['processed_orders'][] = $idPedido;
-            
+
             // Limitar el tamaño del historial para ahorrar memoria (últimos 50)
             if (count($_SESSION['processed_orders']) > 50) {
                 array_shift($_SESSION['processed_orders']);
@@ -176,9 +187,9 @@ function es_venta_mayor($cart)
  * @param float $precioCop Precio en pesos colombianos.
  */
 
-function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = [], $idPedido = null)
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = ['nombre' => '', 'cedula' => '', 'telefono' => ''], $idPedido = null)
 {
-    global $id_sucursal, $bss_id;
+    global $id_sucursal, $bss_id, $registro_clientes;
 
     if ($cart->total_items() <= 0 || empty($_SESSION['id'])) {
         echo json_encode(['status' => false, 'data' => 'No hay productos en el carrito']);
@@ -208,6 +219,28 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             }
         }
 
+        $cedula = $cliente['cedula'];
+
+        // Registra los datos del cliente si no existe
+
+        if ($registro_clientes == 1 || $tipo === 'credito') {
+            $query = "SELECT * FROM clientes WHERE cedula = ?";
+            $stmt = $conexion->prepare($query);
+            $stmt->bind_param("s", $cliente['cedula']);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $stmt->close();
+
+            if ($result->num_rows == 0) {
+                // registra el nuevo cliente
+                $query = "INSERT INTO clientes (nombre, cedula, telefono, bss_id, sucursal_id) VALUES (?, ?, ?, ?, ?)";
+                $stmt = $conexion->prepare($query);
+                $stmt->bind_param("ssssi", $cliente['nombre'], $cliente['cedula'], $cliente['telefono'], $bss_id, $id_sucursal);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
 
         $mes = date('Y-m');
         $ano = date('Y');
@@ -217,10 +250,10 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         // Registrar orden
         $stmt = $conexion->prepare("
         INSERT INTO orden (
-            status, customer_id, total_price, created, modified, fecha,
-            semana, ano, total_price_bs, total_price_cop, tipoPago,
-            dia, id_sucursal, bss_id, id_pedido
-        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            status, usuario, total_price, created, modified, fecha,
+            semana, ano, total_price_bs, total_price_cop,  tipoPago,
+            dia, id_sucursal, bss_id, id_pedido, cliente
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
         if (!$stmt) {
@@ -228,7 +261,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         }
 
         $stmt->bind_param(
-            "iisssssddsiiis",
+            "iisssssddsiiiss",
             $tipoVenta,
             $_SESSION['id'],
             $valorFinalVenta,
@@ -242,7 +275,8 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             $dia,
             $id_sucursal,
             $bss_id,
-            $idPedido
+            $idPedido,
+            $cedula
         );
 
         if (!$stmt->execute()) {
@@ -269,15 +303,18 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         // Guardar artículos
         guardarArticulosOrden($conexion, $cart, $orderID);
 
-        // Si es crédito, guardar info
+
+
+        // Si es crédito, guardar info, cedula y telefono
         if ($tipo === 'credito') {
             $nombreC = $cliente['nombre'] ?? '';
+            $cedulaC = $cliente['cedula'] ?? '';
 
             $stmtC = $conexion->prepare("
-                INSERT INTO creditos (order_id, total_price, total_price_bs, total_price_cop, negocio, tipoCompra, bss_id, sucursal_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO creditos (order_id, total_price, total_price_bs, total_price_cop, negocio, tipoCompra, bss_id, sucursal_id, cedula)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmtC->bind_param("idssssii", $orderID, $valorFinalVenta, $precioBs, $precioCop, $nombreC, $compraTipo, $bss_id, $id_sucursal);
+            $stmtC->bind_param("idssssiii", $orderID, $valorFinalVenta, $precioBs, $precioCop, $nombreC, $compraTipo, $bss_id, $id_sucursal, $cedulaC);
             $stmtC->execute();
             $stmtC->close();
         }
@@ -309,12 +346,12 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
     );
 
     // Preparar consultas para stock
-    $stmtStock  = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+    $stmtStock = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
     // para obtener la cantidad actual
-    $updateStmt =      $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+    $updateStmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
     $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
     // para actualizar la cantidad actual
-    $stmtStockParaMayor  = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+    $stmtStockParaMayor = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
 
 
     foreach ($cart->contents() as $item) {
@@ -350,7 +387,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
             $stmtStockParaMayor->bind_param("iii", $id_stock, $id_sucursal, $bss_id);
             $stmtStockParaMayor->execute();
             $result = $stmtStockParaMayor->get_result()->fetch_assoc();
-            $stock = max(0, (float)$result['stock'] - ((float)$item['qty'] * (float)$item['cantidadPaca']));
+            $stock = max(0, (float) $result['stock'] - ((float) $item['qty'] * (float) $item['cantidadPaca']));
             // se debe multiplicar por la cantidad
 
 
@@ -364,7 +401,7 @@ function guardarArticulosOrden($conexion, $cart, $orderID)
             $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
             $stmtStock->execute();
             $result = $stmtStock->get_result()->fetch_assoc();
-            $stock = max(0, (float)$result['stock'] - (float)$item['qty']);
+            $stock = max(0, (float) $result['stock'] - (float) $item['qty']);
 
 
             $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);

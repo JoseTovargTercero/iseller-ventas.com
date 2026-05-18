@@ -20,12 +20,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <div class='container body'>
             <div class='main_container'>
 
-                <?php echo $menu ?>
-
-                <!-- top navigation -->
-                <?php echo $topnav ?>
-                <!-- /top navigation -->
-
                 <!-- page content -->
                 <div class='right_col' role='main'>
 
@@ -128,7 +122,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                     $tipoV = $orden['status'];
                                                                     $orderid = $orden['id'];
                                                                     $tipopago = $orden['tipoPago'];
-                                                                    $userId = $orden['customer_id'];
+                                                                    $userId = $orden['usuario'];
 
                                                                     // Obtener nombre del usuario
                                                                     $stmtUsuario = $conexion->prepare("SELECT nombre FROM usuarios WHERE id = ?");

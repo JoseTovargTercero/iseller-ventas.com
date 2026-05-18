@@ -6347,7 +6347,8 @@ ul.notifications {
     padding: 5px 0 5px;
 }
 
-.divLeft, .divRight {
+.divLeft,
+.divRight {
     background-color: #fff;
     width: 30px;
     height: 30px;
@@ -6480,7 +6481,8 @@ ul.notifications {
     border-radius: 10px;
 }
 
-.nav a, .nav i {
+.nav a,
+.nav i {
     border: none !important;
 }
 
@@ -6661,4 +6663,10 @@ input[type="number"] {
 
 .modal-content {
     background-color: #383838 !important;
+}
+
+
+.swal2-container.swal2-center>.swal2-popup {
+    color: white !important;
+    background: #1e1d22 !important;
 }

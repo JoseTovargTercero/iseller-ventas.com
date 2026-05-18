@@ -33,7 +33,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-?>
+    ?>
     <!DOCTYPE html>
     <html lang='es'>
 
@@ -46,7 +46,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     </head>
 
     <!-- Modal -->
-    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -109,7 +110,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                             <?php if ($_SESSION["nivel"] == 1): ?>
                                 <div style="    align-self: anchor-center;">
-                                    <button type="button" style="height: min-content;" class="btn btn-success btn-sm" data-toggle="modal" data-target="#exampleModalCenter">
+                                    <button type="button" style="height: min-content;" class="btn btn-success btn-sm"
+                                        data-toggle="modal" data-target="#exampleModalCenter">
                                         Aplicar Filtro
                                     </button>
                                 </div>
@@ -125,7 +127,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <div class='d-flex justify-content-between'>
                                         <div style="display: flex; flex-direction: column;">
                                             <h2 class="m-0">Listado de ventas</h2>
-                                            <small class="text-muted">Los créditos otorgados se visualizarán en la lista; <br>sin embargo, no serán considerados en la totalización hasta su cancelación.</small>
+                                            <small class="text-muted">Los créditos otorgados se visualizarán en la lista;
+                                                <br>sin embargo, no serán considerados en la totalización hasta su
+                                                cancelación.</small>
                                         </div>
                                         <div class="p-2">
 
@@ -159,6 +163,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <th>Monto</th>
                                                         <th>COP</th>
                                                         <th>Bs</th>
+                                                        <th>cliente</th>
                                                         <th>Detalles</th>
                                                     </tr>
                                                 </thead>
@@ -180,7 +185,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/PUNTO-DE-VENTA.png" height="60px" alt="PUNTO DE VENTA" class="rounded-circle">
+                                                        <img src="images/PUNTO-DE-VENTA.png" height="60px"
+                                                            alt="PUNTO DE VENTA" class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -200,7 +206,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/PAGO-MOVIL.png" height="60px" alt="PAGO MOVIL" class="rounded-circle">
+                                                        <img src="images/PAGO-MOVIL.png" height="60px" alt="PAGO MOVIL"
+                                                            class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -222,7 +229,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/TRANSFERENCIA.png" height="60px" alt="TRANSFERENCIA" class="rounded-circle">
+                                                        <img src="images/TRANSFERENCIA.png" height="60px"
+                                                            alt="TRANSFERENCIA" class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -243,7 +251,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/BIOPAGO.png" height="60px" alt="BIOPAGO" class="rounded-circle">
+                                                        <img src="images/BIOPAGO.png" height="60px" alt="BIOPAGO"
+                                                            class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -264,7 +273,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/EFECTIVO-BOLIVAR.png" height="60px" alt="EFECTIVO" class="rounded-circle">
+                                                        <img src="images/EFECTIVO-BOLIVAR.png" height="60px" alt="EFECTIVO"
+                                                            class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -285,7 +295,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/EFECTIVO-DOLAR.png" height="60px" alt="DOLARES" class="rounded-circle">
+                                                        <img src="images/EFECTIVO-DOLAR.png" height="60px" alt="DOLARES"
+                                                            class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -306,7 +317,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <div class="py-1">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar avatar-xl me-3">
-                                                        <img src="images/EFECTIVO-PESOS.png" height="60px" alt="PESOS" class="rounded-circle">
+                                                        <img src="images/EFECTIVO-PESOS.png" height="60px" alt="PESOS"
+                                                            class="rounded-circle">
                                                     </div>
                                                     <h6 class="d-flex mb-0 align-items-center">
                                                         <span>
@@ -444,7 +456,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <script src='../build/js/info_ventas.js'></script>
     </body>
     <script>
-        document.getElementById('sucursal_selector').addEventListener('change', function() {
+        document.getElementById('sucursal_selector').addEventListener('change', function () {
             const sucursalId = this.value;
             const usuarioSelect = document.getElementById('usuario');
             usuarioSelect.innerHTML = '<option value="todos">-- Seleccione --</option>'; // Limpiar opciones anteriores
@@ -470,7 +482,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     </script>
 
     </html>
-<?php
+    <?php
 } else {
     define('PAGINA_INICIO', '../../index.php');
     header('Location: ' . PAGINA_INICIO);

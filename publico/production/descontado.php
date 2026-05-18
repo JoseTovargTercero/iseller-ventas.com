@@ -141,7 +141,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                               $query = "
                             SELECT 
                               o.id AS orden_id,
-                              o.customer_id,
+                              o.usuario,
                               o.created,
                               o.total_price,
                               o.total_price_cop,
@@ -150,7 +150,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                               p.nombre AS nombre_producto,
                               oa.quantity
                             FROM orden o
-                            JOIN usuarios u ON u.id = o.customer_id
+                            JOIN usuarios u ON u.id = o.usuario
                             JOIN orden_articulos oa ON oa.order_id = o.id
                             JOIN productos p ON p.id = oa.product_id
                             WHERE o.status = '3'
