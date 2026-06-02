@@ -6670,3 +6670,7 @@ input[type="number"] {
     color: white !important;
     background: #1e1d22 !important;
 }
+
+.form-control {
+    background-color: #222222 !important;
+}

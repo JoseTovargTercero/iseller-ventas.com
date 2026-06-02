@@ -146,12 +146,24 @@ if ($result->num_rows > 0) {
 
 $stmt->close();
 
-/*
 
-echo '<pre>';
-print_r($productos_por_id);
-echo '</pre>';
-*/
+// Obtener clientes
+$clientes = [];
+$sql = "SELECT cedula, nombre, telefono FROM clientes WHERE bss_id = ?";
+$stmt = $conexion->prepare($sql);
+$stmt->bind_param("i", $bss_id);
+
+if ($stmt->execute()) {
+    $result = $stmt->get_result();
+    while ($cliente = $result->fetch_assoc()) {
+        $clientes[$cliente['cedula']] = [
+            $cliente['nombre'],
+            $cliente['telefono']
+        ];
+    }
+}
+$stmt->close();
+
 ?>
 
 
@@ -263,23 +275,12 @@ echo '</pre>';
         background: #f8f9fa;
     }
 
-    .form-control {
-        border-radius: 6px;
-    }
 
-    .form-control:focus {
-        box-shadow: none;
-        border-color: #32d7c0;
-    }
 
     .scroll-area {
         max-height: 70vh;
         overflow-y: auto;
         padding-right: 6px;
-    }
-
-    .form-control {
-        background-color: #fff !important;
     }
 
     .swal2-container {
@@ -598,7 +599,7 @@ echo '</pre>';
             document.getElementById('result-escaner').innerHTML = ''; // Limpiar el contenido del escáner
         }
         // al precionar la tecla escape se cierra el scanner
-        document.addEventListener('keydown', function (event) {
+        document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 cerrarScanner();
             }
@@ -724,7 +725,7 @@ echo '</pre>';
 
 
                 <div class="row" id="myTabContent">
-                    <div class="tab-pane fade col-lg-12  show active" id="home" role="tabpanel"
+                    <div class="tab-pane col-lg-12  show active" id="home" role="tabpanel"
                         aria-labelledby="home-tab">
                         <div class="x_panel" style="min-height: 80vh">
                             <div class="x_title d-flex justify-content-between">
@@ -815,7 +816,7 @@ echo '</pre>';
                         </div>
                     </div>
 
-                    <div class="tab-pane fade col-lg-12 " id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                    <div class="tab-pane  col-lg-12 " id="profile" role="tabpanel" aria-labelledby="profile-tab">
                         <div class="x_panel" style="min-height: 60vh">
                             <div class="x_title d-flex justify-content-between">
                                 <div>
@@ -829,7 +830,7 @@ echo '</pre>';
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade col-lg-12" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+                    <div class="tab-pane  col-lg-12" id="contact" role="tabpanel" aria-labelledby="contact-tab">
 
                         <div class="x_panel" style="min-height: 60vh">
                             <div class="x_title d-flex justify-content-between">
@@ -900,9 +901,40 @@ echo '</pre>';
 
                             <input type="text" id="tipo_despacho" value="1" hidden>
 
+                            <section id="resumenVenta" class="mb-3">
+                                <div class="border-0">
+                                    <div class="card-body p-0">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <p class="fw-semibold mr-2" style="font-size:14px;">Resumen del despacho</p>
+                                            <p class="badge  ml-2" id="resumenTipoDespacho" style="font-size:11px;">VENTA</p>
+                                        </div>
+                                        <div class="row g-1 text-center">
+                                            <div class="col-4">
+                                                <div class="rounded p-2" style="background:#e3f2fd;">
+                                                    <small class="d-block text-muted" style="font-size:10px;line-height:1;">PESOS</small>
+                                                    <span class="fw-bold text-info" id="resumenPesos" style="font-size:15px;">0</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="rounded p-2" style="background:#fce4ec;">
+                                                    <small class="d-block text-muted" style="font-size:10px;line-height:1;">BOLÍVARES</small>
+                                                    <span class="fw-bold text-danger" id="resumenBolivares" style="font-size:15px;">0,00</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="rounded p-2" style="background:#e8f5e9;">
+                                                    <small class="d-block text-muted" style="font-size:10px;line-height:1;">DÓLARES</small>
+                                                    <span class="fw-bold text-success" id="resumenDolares" style="font-size:15px;">$0,00</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
                             <section id="tipoPago">
                                 <div class="mb-3">
-                                    <label for="metodoPago">Metodo de pago</label>
+                                    <label class="pb-0" for="metodoPago">Metodo de pago</label>
                                     <br>
                                     <small class="text-muted">(1) Punto, (2) BioPago, (3) Pesos, (4) Efectivo, (5)
                                         Pago Movil, (6) Transferencia, (7) Dólares.</p>
@@ -919,23 +951,17 @@ echo '</pre>';
                                 </div>
                             </section>
 
-
-
-
                             <section id="datos_cliente">
-
                                 <div class="mb-3">
                                     <label for="cedulaClienteModal">Cedula del cliente</label>
                                     <input type="number" id="cedulaClienteModal" class="form-control"
                                         placeholder="Cedula del cliente">
                                 </div>
-
                                 <div class="mb-3">
                                     <label for="nombreClienteModal">Nombre del cliente</label>
                                     <input type="text" id="nombreClienteModal" class="form-control"
                                         placeholder="Nombre del cliente">
                                 </div>
-
                                 <div class="mb-3">
                                     <label for="telefonoClienteModal">Telefono del cliente</label>
                                     <input type="text" id="telefonoClienteModal" class="form-control"
@@ -943,14 +969,12 @@ echo '</pre>';
                                 </div>
                             </section>
 
-
                             <div class="modal-footer p-0 mt-2">
                                 <button type="button" class="btn btn-secondary"
                                     data-bs-dismiss="modal">Cancelar</button>
                                 <button type="button" class="btn btn-primary"
                                     id="btnConfirmarDespacho">Continuar</button>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -968,7 +992,6 @@ echo '</pre>';
         <script src="../build/js/modal.js"></script>
         <!-- FastClick -->
         <script>
-
             const base_url = '../../configurar/';
             const sucursal_n = <?php echo json_encode($sucursal_nombre) ?>;
             const sucursal_i = <?php echo json_encode($sucursal) ?>;
@@ -976,36 +999,42 @@ echo '</pre>';
             const registro_clientes = <?php echo json_encode($registro_clientes) ?>;
 
 
-        const configuraciones =  {
-            tickets: <?php echo json_encode($tickets) ?>,
-            ticketsFijo: <?php echo json_encode($ticketsFijo) ?>,
-            cortes_caja: <?php echo json_encode($cortes_caja) ?>
-        }
-
-
-        // Verificar Apertura de caja
-        $(document).ready(function() {
-            if(configuraciones.cortes_caja == 1 && nivelUsuario == 2){
-                aperturaCaja()
-                consulaCierre()
+            const configuraciones = {
+                tickets: <?php echo json_encode($tickets) ?>,
+                ticketsFijo: <?php echo json_encode($ticketsFijo) ?>,
+                cortes_caja: <?php echo json_encode($cortes_caja) ?>
             }
-           document.getElementById("cargando").style.display = "none";
-        });
 
-        function aperturaCaja() {
-            $.ajax({
-                url: base_url + 'consulta_apertura.php',
-                type: 'GET',
-                data: {tipo_corte: 'apertura'},
-                dataType: 'json'
-                })
-                .done(function(response) {
-                    /// console.log(response)
-                    if (response.status === 'success' && !response.corte) {
-                        // Bloquear la página y pedir apertura
-                        Swal.fire({
-                            title: '<h4 class="mb-0 fw-bold">Apertura de Caja Obligatoria</h4>',
-                            html: `
+
+            // Obtener clientes
+            const clientes = <?php echo json_encode($clientes, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+
+
+            // Verificar Apertura de caja
+            $(document).ready(function() {
+                if (configuraciones.cortes_caja == 1 && nivelUsuario == 2) {
+                    aperturaCaja()
+                    consulaCierre()
+                }
+                document.getElementById("cargando").style.display = "none";
+            });
+
+            function aperturaCaja() {
+                $.ajax({
+                        url: base_url + 'consulta_apertura.php',
+                        type: 'GET',
+                        data: {
+                            tipo_corte: 'apertura'
+                        },
+                        dataType: 'json'
+                    })
+                    .done(function(response) {
+                        /// console.log(response)
+                        if (response.status === 'success' && !response.corte) {
+                            // Bloquear la página y pedir apertura
+                            Swal.fire({
+                                title: '<h4 class="mb-0 fw-bold">Apertura de Caja Obligatoria</h4>',
+                                html: `
                                 <div class="text-start scroll-area">
                                     <div class="modal-cierre-seccion">
                                         <ion-icon name="wallet-outline"></ion-icon> Fondo de Caja Inicial
@@ -1056,62 +1085,69 @@ echo '</pre>';
                                     const pesos = Swal.getPopup().querySelector('#pesos_fondo').value;
                                     const obs = Swal.getPopup().querySelector('#observaciones_apertura').value;
 
-                                if (!bs && !usd && !pesos) {
-                                    Swal.showValidationMessage(`Por favor ingrese al menos un monto de fondo`);
-                                }
-                                return { efectivo_bs_fondo: bs, efectivo_usd_fondo: usd, pesos_fondo: pesos, observaciones: obs }
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                $.ajax({
-                                    url: base_url + 'registro_apertura.php',
-                                    type: 'POST',
-                                    data: result.value,
-                                    dataType: 'json',
-                                    success: function(res) {
-                                        if (res.status == 'success') {
-                                            Swal.fire('¡Éxito!', res.message, 'success');
-                                            document.getElementById('btn-cerrar-caja').classList.remove('d-none');
-                                        } else {
-                                            Swal.fire('Error', res.message || 'No se pudo realizar la apertura', 'error')
-                                            .then(() => {
-                                                aperturaCaja(); // Reintentar
-                                            });
-                                        }
-                                    },
-                                    error: function(xhr, status, error) {
-                                        Swal.fire('Error', 'Error de conexión con el servidor', 'error');
-                                        console.log(error);
+                                    if (!bs && !usd && !pesos) {
+                                        Swal.showValidationMessage(`Por favor ingrese al menos un monto de fondo`);
                                     }
-                                });
-                            }
+                                    return {
+                                        efectivo_bs_fondo: bs,
+                                        efectivo_usd_fondo: usd,
+                                        pesos_fondo: pesos,
+                                        observaciones: obs
+                                    }
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $.ajax({
+                                        url: base_url + 'registro_apertura.php',
+                                        type: 'POST',
+                                        data: result.value,
+                                        dataType: 'json',
+                                        success: function(res) {
+                                            if (res.status == 'success') {
+                                                Swal.fire('¡Éxito!', res.message, 'success');
+                                                document.getElementById('btn-cerrar-caja').classList.remove('d-none');
+                                            } else {
+                                                Swal.fire('Error', res.message || 'No se pudo realizar la apertura', 'error')
+                                                    .then(() => {
+                                                        aperturaCaja(); // Reintentar
+                                                    });
+                                            }
+                                        },
+                                        error: function(xhr, status, error) {
+                                            Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+                                            console.log(error);
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            document.getElementById('btn-cerrar-caja').classList.remove('d-none');
+                        }
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.log(error)
+                        Swal.fire('Error', 'No se pudo conectar con el servidor: ' + error, 'error').then(() => {
+                            aperturaCaja(); // Reintentar
                         });
-                    }else{
-                        document.getElementById('btn-cerrar-caja').classList.remove('d-none');
-                    }
-                })
-                .fail(function(xhr, status, error) {
-                    console.log(error)
-                    Swal.fire('Error', 'No se pudo conectar con el servidor: ' + error, 'error').then(() => {
-                        aperturaCaja(); // Reintentar
                     });
-                });
-        }
+            }
 
-        function consulaCierre(){
-            $.ajax({
-                url: base_url + 'consulta_apertura.php',
-                type: 'GET',
-                data: {tipo_corte: 'cierre'},
-                dataType: 'json'
-                })
-                .done(function(response) {
-                    if (response.corte) {
-                        document.getElementById('btn-cerrar-caja').classList.add('d-none');
-                        // .x_panel
-                        const xpanel = document.querySelector('.x_panel');
-                        // rellena el contenido de xpanel con un mensaje que diga: 
-                        xpanel.innerHTML = xpanel.innerHTML = `
+            function consulaCierre() {
+                $.ajax({
+                        url: base_url + 'consulta_apertura.php',
+                        type: 'GET',
+                        data: {
+                            tipo_corte: 'cierre'
+                        },
+                        dataType: 'json'
+                    })
+                    .done(function(response) {
+                        if (response.corte) {
+                            document.getElementById('btn-cerrar-caja').classList.add('d-none');
+                            // .x_panel
+                            const xpanel = document.querySelector('.x_panel');
+                            // rellena el contenido de xpanel con un mensaje que diga: 
+                            xpanel.innerHTML = xpanel.innerHTML = `
     <div class="caja-cerrada-container">
         <h2>Caja cerrada</h2>
         <button class="btn-primary" onclick="reabrirCaja()">
@@ -1120,74 +1156,74 @@ echo '</pre>';
     </div>
 `;
 
-                        
-                        
-                    }
-                })
-                .fail(function(xhr, status, error) {
-                    console.log(error)
-                   consulaCierre()
-                });
-        }
 
-        function reabrirCaja() {
-            Swal.fire({
-                title: '¿Reabrir caja?',
-                text: 'Se eliminará el último registro de cierre de hoy y podrá realizar ventas nuevamente.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, reabrir',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: base_url + 'reabrir_caja.php',
-                        type: 'POST',
-                        dataType: 'json',
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                Swal.fire(
-                                    '¡Reabierta!',
-                                    'La caja ha sido reabierta exitosamente.',
-                                    'success'
-                                ).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire('Error', response.message, 'error');
-                            }
-                        },
-                        error: function() {
-                            Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
+
                         }
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.log(error)
+                        consulaCierre()
                     });
-                }
+            }
+
+            function reabrirCaja() {
+                Swal.fire({
+                    title: '¿Reabrir caja?',
+                    text: 'Se eliminará el último registro de cierre de hoy y podrá realizar ventas nuevamente.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, reabrir',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: base_url + 'reabrir_caja.php',
+                            type: 'POST',
+                            dataType: 'json',
+                            success: function(response) {
+                                if (response.status === 'success') {
+                                    Swal.fire(
+                                        '¡Reabierta!',
+                                        'La caja ha sido reabierta exitosamente.',
+                                        'success'
+                                    ).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire('Error', response.message, 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
+                            }
+                        });
+                    }
+                });
+            }
+
+
+            // cerrar caja
+            document.getElementById('btn-cerrar-caja').addEventListener('click', function() {
+                Swal.fire({
+                    title: '¿Está seguro de cerrar la caja?',
+                    text: 'No podrá revertir esta acción',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cerrar caja',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        cerrarCaja();
+                    }
+                });
             });
-        }
 
-
-        // cerrar caja
-        document.getElementById('btn-cerrar-caja').addEventListener('click', function() {
-            Swal.fire({
-                title: '¿Está seguro de cerrar la caja?',
-                text: 'No podrá revertir esta acción',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, cerrar caja',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    cerrarCaja();
-                }
-            });             
-        });
-
-        function cerrarCaja(){
-            Swal.fire({
-                title: 'Cierre de Caja',
-                html: `
+            function cerrarCaja() {
+                Swal.fire({
+                    title: 'Cierre de Caja',
+                    html: `
               
 
         <div class="text-start scroll-area">
@@ -1280,55 +1316,55 @@ echo '</pre>';
 
         </div>
                 `,
-                confirmButtonText: 'Realizar Cierre',
-                cancelButtonText: 'Cancelar',
-                showCancelButton: true,
-                allowOutsideClick: false,
-                width: '600px',
-                preConfirm: () => {
-                    return {
-                        efectivo_bs_contado: Swal.getPopup().querySelector('#efectivo_bs_contado').value,
-                        efectivo_usd_contado: Swal.getPopup().querySelector('#efectivo_usd_contado').value,
-                        pesos_contado: Swal.getPopup().querySelector('#pesos_contado').value,
-                        punto_contado: Swal.getPopup().querySelector('#punto_contado').value,
-                        biopago_contado: Swal.getPopup().querySelector('#biopago_contado').value,
-                        pago_movil_contado: Swal.getPopup().querySelector('#pago_movil_contado').value,
-                        transferencia_contado: Swal.getPopup().querySelector('#transferencia_contado').value,
-                        efectivo_bs_fondo: Swal.getPopup().querySelector('#efectivo_bs_fondo').value,
-                        efectivo_usd_fondo: Swal.getPopup().querySelector('#efectivo_usd_fondo').value,
-                        pesos_fondo: Swal.getPopup().querySelector('#pesos_fondo').value,
-                        observaciones: Swal.getPopup().querySelector('#observaciones_cierre').value
-                    }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: base_url + 'registro_cierre.php',
-                        type: 'POST',
-                        data: result.value,
-                        dataType: 'json',
-                        success: function(res) {
-                            if (res.status == 'success') {
-                                Swal.fire('¡Éxito!', res.message, 'success').then(() => {
-                                    // Opcional: redirigir o recargar la página para bloquear las ventas
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire('Error', res.message || 'No se pudo realizar el cierre', 'error').then(() => {
-                                    cerrarCaja(); // Reintentar
-                                });
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            Swal.fire('Error', 'Error de conexión con el servidor', 'error');
-                            console.log(error);
+                    confirmButtonText: 'Realizar Cierre',
+                    cancelButtonText: 'Cancelar',
+                    showCancelButton: true,
+                    allowOutsideClick: false,
+                    width: '600px',
+                    preConfirm: () => {
+                        return {
+                            efectivo_bs_contado: Swal.getPopup().querySelector('#efectivo_bs_contado').value,
+                            efectivo_usd_contado: Swal.getPopup().querySelector('#efectivo_usd_contado').value,
+                            pesos_contado: Swal.getPopup().querySelector('#pesos_contado').value,
+                            punto_contado: Swal.getPopup().querySelector('#punto_contado').value,
+                            biopago_contado: Swal.getPopup().querySelector('#biopago_contado').value,
+                            pago_movil_contado: Swal.getPopup().querySelector('#pago_movil_contado').value,
+                            transferencia_contado: Swal.getPopup().querySelector('#transferencia_contado').value,
+                            efectivo_bs_fondo: Swal.getPopup().querySelector('#efectivo_bs_fondo').value,
+                            efectivo_usd_fondo: Swal.getPopup().querySelector('#efectivo_usd_fondo').value,
+                            pesos_fondo: Swal.getPopup().querySelector('#pesos_fondo').value,
+                            observaciones: Swal.getPopup().querySelector('#observaciones_cierre').value
                         }
-                    });
-                }
-            });
-        }
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: base_url + 'registro_cierre.php',
+                            type: 'POST',
+                            data: result.value,
+                            dataType: 'json',
+                            success: function(res) {
+                                if (res.status == 'success') {
+                                    Swal.fire('¡Éxito!', res.message, 'success').then(() => {
+                                        // Opcional: redirigir o recargar la página para bloquear las ventas
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire('Error', res.message || 'No se pudo realizar el cierre', 'error').then(() => {
+                                        cerrarCaja(); // Reintentar
+                                    });
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+                                console.log(error);
+                            }
+                        });
+                    }
+                });
+            }
 
-        
+
 
 
 
@@ -1466,24 +1502,24 @@ echo '</pre>';
             function print(id, moneda = 'default') {
                 $('#cargando').show();
 
-            $.ajax({
-                    url: base_url + 'contenido_ticket.php',
-                    type: 'POST',
-                    data: {
-                        id: id,
-                        moneda: moneda
-                    },
-                    dataType: 'html'
-                })
-                .done(function(result) {
-                    const fecha = new Date().toLocaleString('es-VE', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true
-                    });
+                $.ajax({
+                        url: base_url + 'contenido_ticket.php',
+                        type: 'POST',
+                        data: {
+                            id: id,
+                            moneda: moneda
+                        },
+                        dataType: 'html'
+                    })
+                    .done(function(result) {
+                        const fecha = new Date().toLocaleString('es-VE', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        });
 
                         const contenido = `
                             <html>
@@ -1568,19 +1604,19 @@ echo '</pre>';
                         ventana.document.write(contenido);
                         ventana.document.close();
 
-                    ventana.onload = function() {
-                        ventana.print();
-                        ventana.close();
-                    };
+                        ventana.onload = function() {
+                            ventana.print();
+                            ventana.close();
+                        };
 
-                    $('#cargando').hide();
-                })
-                .fail(function(xhr, status, error) {
-                    console.error('Error al cargar el ticket:', error);
-                    $('#cargando').hide();
-                    alert('Hubo un error al generar el ticket. Intente nuevamente.');
-                });
-        }
+                        $('#cargando').hide();
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('Error al cargar el ticket:', error);
+                        $('#cargando').hide();
+                        alert('Hubo un error al generar el ticket. Intente nuevamente.');
+                    });
+            }
 
 
 
@@ -1673,6 +1709,12 @@ echo '</pre>';
                 }
 
 
+                document.getElementById('resumenPesos').textContent = formatearMiles(total_pesos);
+                document.getElementById('resumenBolivares').textContent = formatNumber(total_bolivares) + ' Bs';
+                document.getElementById('resumenDolares').textContent = '$' + formatNumber(total_dolares);
+                document.getElementById('resumenTipoDespacho').textContent = esCredito ? 'CRÉDITO' : 'VENTA';
+                document.getElementById('resumenTipoDespacho').className = 'badge ms-auto ' + (esCredito ? 'bg-warning text-dark' : 'bg-success');
+
                 modalDespacho.show();
 
             }
@@ -1691,7 +1733,6 @@ echo '</pre>';
 
 
             document.addEventListener('DOMContentLoaded', () => {
-                //TODO: Aqui se escucha el boton confirmar credito
 
                 const btnConfirmarDespacho = document.getElementById('btnConfirmarDespacho');
                 const tipo_despacho = document.getElementById('tipo_despacho');
@@ -1718,7 +1759,7 @@ echo '</pre>';
                         const despacho = tipo_despacho.value
                         despacho == '2' ? validarCredito() : validarVenta();
                     });
-                } // TODO: Aqui se escucha el boton confirmar credito
+                }
 
 
 
@@ -1745,7 +1786,11 @@ echo '</pre>';
                     // Verificas los datos
 
                     if (modalDespacho) modalDespacho.hide(); // Ocultas el modal
-                    procesarPedido('0', 2, { nombre: nombre, cedula: cedula, telefono: telefo }); // envias el pedido
+                    procesarPedido('0', 2, {
+                        nombre: nombre,
+                        cedula: cedula,
+                        telefono: telefo
+                    }); // envias el pedido
                 } // Valida los datos del credito
 
 
@@ -1781,7 +1826,11 @@ echo '</pre>';
                     }
 
                     if (modalDespacho) modalDespacho.hide();
-                    procesarPedido(selectPago.value, 1, { nombre: nombre, cedula: cedula, telefono: telefo });
+                    procesarPedido(selectPago.value, 1, {
+                        nombre: nombre,
+                        cedula: cedula,
+                        telefono: telefo
+                    });
                 } // Valida los datos de la venta
 
 
@@ -1791,26 +1840,14 @@ echo '</pre>';
                 const inputTelefono = document.getElementById('telefonoClienteModal');
 
                 if (inputCedula) {
-                    inputCedula.addEventListener('change', function () {
+                    inputCedula.addEventListener('keyup', function() {
                         const cedula = this.value.trim();
                         if (cedula.length >= 6) {
-                            console.log(cedula)
-                            $.ajax({
-                                url: base_url + 'consulta_datoscliente.php',
-                                type: 'POST',
-                                data: { rep_codigo3: cedula },
-                                dataType: 'json',
-                                success: function (response) {
-                                    console.log(response)
-                                    if (response.status === 'success') {
-                                        nombreClienteModal.value = response.data.nombre;
-                                        inputTelefono.value = response.data.telefono;
-                                    }
-                                },
-                                error: function (xhr, status, error) {
-                                    console.log(xhr.responseText);
-                                }
-                            });
+
+                            if (clientes[cedula]) {
+                                nombreClienteModal.value = clientes[cedula][0];
+                                inputTelefono.value = clientes[cedula][1];
+                            }
                         }
                     });
 
@@ -1943,12 +1980,12 @@ echo '</pre>';
 
 
 
-        document.addEventListener('click', function(event) {
-            if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
-                $('#search').val('')
-                document.getElementById("search").focus();
-                modo = 2
-            }
+            document.addEventListener('click', function(event) {
+                if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
+                    $('#search').val('')
+                    document.getElementById("search").focus();
+                    modo = 2
+                }
 
 
                 if (event.target.closest('.delete-scan')) {
@@ -2080,22 +2117,22 @@ echo '</pre>';
 
 
 
-        // Enter para escaneo
-        document.addEventListener('keyup', function(event) {
-            $('button').blur();
-            if (modo == 2 && ultimo_escaneado != 0 && event.key == 'Enter') {
-                $('#btn_' + ultimo_escaneado).click();
-            }
-        });
-        // Enter para escaneo
+            // Enter para escaneo
+            document.addEventListener('keyup', function(event) {
+                $('button').blur();
+                if (modo == 2 && ultimo_escaneado != 0 && event.key == 'Enter') {
+                    $('#btn_' + ultimo_escaneado).click();
+                }
+            });
+            // Enter para escaneo
 
 
 
 
 
-        document.addEventListener('keyup', function(event) {
-            if (event.target.closest('.cantidad-input') && !event.target.closest('.cantidad-scan')) {
-                const input = event.target.closest('.cantidad-input');
+            document.addEventListener('keyup', function(event) {
+                if (event.target.closest('.cantidad-input') && !event.target.closest('.cantidad-scan')) {
+                    const input = event.target.closest('.cantidad-input');
 
                     const cantidad = input.value;
                     const nombre = input.getAttribute('data-nombre');
@@ -2134,9 +2171,9 @@ echo '</pre>';
             })
 
 
-        $(document).on('keyup', '#search', function() {
-            var nombreProducto = $(this).val();
-            if (nombreProducto.length > 2) {
+            $(document).on('keyup', '#search', function() {
+                var nombreProducto = $(this).val();
+                if (nombreProducto.length > 2) {
 
                     let resultados = buscarConFuse(nombreProducto)
                     representarResultado(resultados)
@@ -2365,7 +2402,11 @@ echo '</pre>';
             // ======================
             // PROCESAR PEDIDO (VENTA)
             // ======================
-            async function procesarPedido(metodoPago, despacho, cliente = { nombre: '', cedula: '', telefono: '' }) {
+            async function procesarPedido(metodoPago, despacho, cliente = {
+                nombre: '',
+                cedula: '',
+                telefono: ''
+            }) {
                 if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
                     console.warn("No hay carrito activo para procesar.");
                     return false;
@@ -2433,9 +2474,9 @@ echo '</pre>';
 
             }
 
-        document.getElementById('btn-vender').addEventListener('click', function() {
-            confirmarVenta('venta');
-        });
+            document.getElementById('btn-vender').addEventListener('click', function() {
+                confirmarVenta('venta');
+            });
 
 
             // ======================
@@ -2491,9 +2532,9 @@ echo '</pre>';
                 });
             }
 
-        document.getElementById('btn-reservar').addEventListener('click', function() {
-            reservarCarrito();
-        });
+            document.getElementById('btn-reservar').addEventListener('click', function() {
+                reservarCarrito();
+            });
 
             // ======================
             // ENVIAR PEDIDOS PROCESADOS
@@ -2514,28 +2555,28 @@ echo '</pre>';
 
 
 
-            comprobarConexion(async function(hayInternet) {
-                if (!hayInternet) {
-                    Alerta.toast('warning', 'No hay conexión a internet. Las ventas se guardarán localmente.');
-                    actualizarProductosSinEnviar();
-                    return;
-                }
+                comprobarConexion(async function(hayInternet) {
+                    if (!hayInternet) {
+                        Alerta.toast('warning', 'No hay conexión a internet. Las ventas se guardarán localmente.');
+                        actualizarProductosSinEnviar();
+                        return;
+                    }
 
 
 
-                fetch(base_url + 'accion_carta.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: new URLSearchParams({
-                            action: 'enviarPedidos',
-                            pedidos: JSON.stringify(pedidosIndexedDB),
-                        }),
-                    })
-                    .then((res) => res.text()) // obtener siempre como texto
-                    .then(async (text) => {
-                        console.log('Respuesta cruda:', text);
+                    fetch(base_url + 'accion_carta.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: new URLSearchParams({
+                                action: 'enviarPedidos',
+                                pedidos: JSON.stringify(pedidosIndexedDB),
+                            }),
+                        })
+                        .then((res) => res.text()) // obtener siempre como texto
+                        .then(async (text) => {
+                            console.log('Respuesta cruda:', text);
 
                             let response;
                             try {
@@ -2868,9 +2909,9 @@ echo '</pre>';
 
 
 
-        document.addEventListener('click', function(event) {
-            if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
-                let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
+            document.addEventListener('click', function(event) {
+                if (event.target.closest('.btn-add-to-car') && !event.target.closest('.no-send')) {
+                    let id_p = event.target.closest('.btn-add-to-car').getAttribute('data-add-id');
 
                     let dolarventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_D')
                     let pesoventa_p = event.target.closest('.btn-add-to-car').getAttribute('data-P_P')
@@ -2896,7 +2937,7 @@ echo '</pre>';
             let barcode = "";
             let lastKeyTime = Date.now();
 
-        document.addEventListener("keydown", function(event) {
+            document.addEventListener("keydown", function(event) {
 
                 const currentTime = Date.now();
 
@@ -2947,18 +2988,18 @@ echo '</pre>';
             }
 
 
-        function eliminarVenta(id) {
-            $.ajax({
-                    url: base_url + 'deleteVentaAjax.php',
-                    type: 'POST',
-                    dataType: 'html',
-                    data: {
-                        id: id
-                    },
-                })
-                .done(function(resultado1) {
-                    cargarUltimasOrdenes()
-                })
+            function eliminarVenta(id) {
+                $.ajax({
+                        url: base_url + 'deleteVentaAjax.php',
+                        type: 'POST',
+                        dataType: 'html',
+                        data: {
+                            id: id
+                        },
+                    })
+                    .done(function(resultado1) {
+                        cargarUltimasOrdenes()
+                    })
             }
 
 
@@ -3035,7 +3076,7 @@ echo '</pre>';
                     closeModalButton.click();
                     document.getElementById("section-scanner").classList.add('hide');
                 }
-                
+
                 // No seguir si algun input esta focus
                 const focusedElement = document.activeElement;
                 if (focusedElement.tagName === 'INPUT' || focusedElement.tagName === 'SELECT') {
@@ -3070,8 +3111,8 @@ echo '</pre>';
                 }
             }
 
-        document.addEventListener('keyup', function(event) {
-            const key = event.key.toLowerCase();
+            document.addEventListener('keyup', function(event) {
+                const key = event.key.toLowerCase();
 
                 const allowedKeys = ['+', '-', 'b', 'v', 'c', 'escape', 'enter', '1', '2', '3', '4', '5', '6', '7'];
 
@@ -3100,12 +3141,12 @@ echo '</pre>';
 
 
 
-        function agregarNombreSucursal(sucursal_n) {
-            const navbar = document.querySelector('ul.navbar-right');
-            if (!navbar) {
-                console.warn("No se encontró el elemento 'ul.navbar-right'");
-                return;
-            }
+            function agregarNombreSucursal(sucursal_n) {
+                const navbar = document.querySelector('ul.navbar-right');
+                if (!navbar) {
+                    console.warn("No se encontró el elemento 'ul.navbar-right'");
+                    return;
+                }
 
                 const div = document.getElementById('sucursal_nombre');
                 const element = (nv == 1 ? 'a' : 'span');
@@ -3119,7 +3160,7 @@ echo '</pre>';
 
             const nv = <?php echo json_encode($_SESSION["nivel"]) ?>
 
-        agregarNombreSucursal(sucursal_n)
+            agregarNombreSucursal(sucursal_n)
 
 
             setInterval(() => {
