@@ -301,7 +301,96 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
 
 
         // Guardar artículos
-        guardarArticulosOrden($conexion, $cart, $orderID);
+
+
+        // Preparar consulta de inserción para orden_articulos
+        $insertStmt = $conexion->prepare(
+            "INSERT INTO orden_articulos (
+            order_id, product_id, quantity, precio, bolivar, peso,
+            precio_venta_dolar, precio_venta_bs, precio_venta_cop, id_sucursal, bss_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        // Preparar consultas para stock
+        $stmtStock = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+        // para obtener la cantidad actual
+        $updateStmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+        $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
+        // para actualizar la cantidad actual
+        $stmtStockParaMayor = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+
+
+        foreach ($cart->contents() as $item) {
+
+            // Ejecutar inserción del artículo de la orden
+            $insertStmt->bind_param(
+                "iiddddddddi",
+                $orderID,
+                $item['id'],
+                $item['qty'],
+                $item['price_C'],
+                $item['price_C_Bs'],
+                $item['price_C_Cop'],
+                $item['price'],
+                $item['priceBolivar'],
+                $item['pricePeso'],
+                $id_sucursal,
+                $bss_id
+            );
+            // VALIDACIÓN AQUÍ:
+            if (!$insertStmt->execute()) {
+                throw new Exception("Error al insertar artículo de la orden: " . $insertStmt->error);
+            }
+
+            if ($item['mayor'] == '1') {
+
+                $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
+                if (!$stmtStock->execute()) {
+                    throw new Exception("Error al consultar stock mayor: " . $stmtStock->error);
+                }
+                $result = $stmtStock->get_result()->fetch_assoc();
+                $id_stock = $result['id_stock'];
+
+
+
+                $stmtStockParaMayor->bind_param("iii", $id_stock, $id_sucursal, $bss_id);
+                if (!$stmtStockParaMayor->execute()) {
+                    throw new Exception("Error al consultar stock real mayor: " . $stmtStockParaMayor->error);
+                }
+                $result = $stmtStockParaMayor->get_result()->fetch_assoc();
+                $stock = max(0, (float) $result['stock'] - ((float) $item['qty'] * (float) $item['cantidadPaca']));
+                // se debe multiplicar por la cantidad
+
+
+                $updateStmtMayor->bind_param("siii", $stock, $id_stock, $id_sucursal, $bss_id);
+                if (!$updateStmtMayor->execute()) {
+                    throw new Exception("Error al actualizar stock de mayor: " . $updateStmtMayor->error);
+                }
+            } else {
+
+                // Actualizar stock
+                $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
+                if (!$stmtStock->execute()) {
+                    throw new Exception("Error al consultar stock detal: " . $stmtStock->error);
+                }
+                $result = $stmtStock->get_result()->fetch_assoc();
+                $stock = max(0, (float) $result['stock'] - (float) $item['qty']);
+
+
+                $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);
+                if (!$updateStmt->execute()) {
+                    throw new Exception("Error al actualizar stock detal: " . $updateStmt->error);
+                }
+            }
+        }
+
+        // Cerrar todas las sentencias
+        $insertStmt->close();
+        $stmtStock->close();
+        $updateStmt->close();
+        $updateStmtMayor->close();
+
+        // Guardar artículos
 
 
 
@@ -329,89 +418,4 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         $conexion->rollback();
         return ['status' => false, 'data' => 'Error al procesar la orden: ' . $e->getMessage()];
     }
-}
-
-
-
-function guardarArticulosOrden($conexion, $cart, $orderID)
-{
-    global $dolarBolivar, $pesoDolar, $id_sucursal, $bss_id;
-
-    // Preparar consulta de inserción para orden_articulos
-    $insertStmt = $conexion->prepare(
-        "INSERT INTO orden_articulos (
-            order_id, product_id, quantity, precio, bolivar, peso,
-            precio_venta_dolar, precio_venta_bs, precio_venta_cop, id_sucursal, bss_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-
-    // Preparar consultas para stock
-    $stmtStock = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
-    // para obtener la cantidad actual
-    $updateStmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
-    $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
-    // para actualizar la cantidad actual
-    $stmtStockParaMayor = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
-
-
-    foreach ($cart->contents() as $item) {
-
-        // Ejecutar inserción del artículo de la orden
-        $insertStmt->bind_param(
-            "iiddddddddi",
-            $orderID,
-            $item['id'],
-            $item['qty'],
-            $item['price_C'],
-            $item['price_C_Bs'],
-            $item['price_C_Cop'],
-            $item['price'],
-            $item['priceBolivar'],
-            $item['pricePeso'],
-            $id_sucursal,
-            $bss_id
-        );
-        $insertStmt->execute();
-
-
-
-        if ($item['mayor'] == '1') {
-
-            $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
-            $stmtStock->execute();
-            $result = $stmtStock->get_result()->fetch_assoc();
-            $id_stock = $result['id_stock'];
-
-
-
-            $stmtStockParaMayor->bind_param("iii", $id_stock, $id_sucursal, $bss_id);
-            $stmtStockParaMayor->execute();
-            $result = $stmtStockParaMayor->get_result()->fetch_assoc();
-            $stock = max(0, (float) $result['stock'] - ((float) $item['qty'] * (float) $item['cantidadPaca']));
-            // se debe multiplicar por la cantidad
-
-
-
-
-            $updateStmtMayor->bind_param("siii", $stock, $id_stock, $id_sucursal, $bss_id);
-            $updateStmtMayor->execute();
-        } else {
-
-            // Actualizar stock
-            $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
-            $stmtStock->execute();
-            $result = $stmtStock->get_result()->fetch_assoc();
-            $stock = max(0, (float) $result['stock'] - (float) $item['qty']);
-
-
-            $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);
-            $updateStmt->execute();
-        }
-    }
-
-    // Cerrar todas las sentencias
-    $insertStmt->close();
-    $stmtStock->close();
-    $updateStmt->close();
-    $updateStmtMayor->close();
 }

@@ -804,9 +804,7 @@ $stmt->close();
                                                     En estos momentos no tiene conexion a internet, las ventas se
                                                     guardaran en su dispositivo y se enviarán cuando vuelva a tener
                                                     conexión.
-
                                                 </span>
-
                                             </div>
                                         </div>
                                     </div>
@@ -2540,20 +2538,12 @@ $stmt->close();
             // ENVIAR PEDIDOS PROCESADOS
             // ======================
             async function enviarPedidosProcesados() {
-                // Leer pedidos de IndexedDB primero
-
                 let pedidosIndexedDB = await db.carritosVenta.toArray();
 
                 if (pedidosIndexedDB.length === 0) {
                     console.warn("No hay pedidos procesados para enviar.");
                     return;
                 }
-
-                total_dolares = 0;
-                total_bolivares = 0;
-                total_pesos = 0;
-
-
 
                 comprobarConexion(async function(hayInternet) {
                     if (!hayInternet) {
@@ -2562,50 +2552,62 @@ $stmt->close();
                         return;
                     }
 
+                    let exitos = 0;
+                    let fallos = 0;
 
+                    // Usamos for...of para poder usar await secuencialmente
+                    for (let pedido of pedidosIndexedDB) {
+                        try {
+                            // Modificamos el envío para mandar SOLO un pedido a la vez
+                            let response = await enviarUnPedido(pedido);
 
-                    fetch(base_url + 'accion_carta.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: new URLSearchParams({
-                                action: 'enviarPedidos',
-                                pedidos: JSON.stringify(pedidosIndexedDB),
-                            }),
-                        })
-                        .then((res) => res.text()) // obtener siempre como texto
-                        .then(async (text) => {
-                            console.log('Respuesta cruda:', text);
-
-                            let response;
-                            try {
-                                response = JSON.parse(text); // intentar parsear a JSON
-                            } catch (e) {
-                                console.error('Error al parsear JSON:', e);
-                                Alerta.toast('error', 'Respuesta no válida del servidor.');
-                                return;
-                            }
-
-                            // Lógica principal
                             if (response.status) {
-                                Alerta.toast('success', 'Información enviada correctamente.');
-                                await db.carritosVenta.clear();
-                                cargarUltimasOrdenes()
+                                // Si el backend lo procesó con éxito, lo borramos de IndexedDB inmediatamente
+                                await db.carritosVenta.delete(pedido.id);
+                                exitos++;
                             } else {
-                                Alerta.toast('error', response.data || 'Error en la respuesta del servidor.');
+                                // El backend rechazó este pedido específico
+                                console.error(`Error en pedido ID ${pedido.id}:`, response.data);
+                                Alerta.toast('error', `Error en pedido ${pedido.id}: ${response.data}`);
+                                fallos++;
+                                // Opcional: break; // Detener la sincronización completa si prefieres revisar qué pasa
                             }
-                        })
-                        .catch((error) => {
-                            actualizarProductosSinEnviar();
-                            console.error('Error en fetch:', error);
-                            Alerta.toast('error', 'Error al enviar los pedidos. Intente nuevamente.');
-                        });
+                        } catch (error) {
+                            console.error(`Error de red/servidor en pedido ${pedido.id}:`, error);
+                            fallos++;
+                            // Si hay un error de red intermitente en medio del bucle, frenamos el envío
+                            break;
+                        }
+                    }
 
+                    // Resumen final al usuario
+                    if (exitos > 0 && fallos === 0) {
+                        Alerta.toast('success', 'Todos los pedidos se sincronizaron correctamente.');
+                    } else if (exitos > 0 && fallos > 0) {
+                        Alerta.toast('warning', `Sincronización parcial: ${exitos} enviados, ${fallos} retenidos por errores.`);
+                    }
 
-
-
+                    cargarUltimasOrdenes();
                 });
+            }
+
+            // Función auxiliar para aislar la petición fetch de un solo pedido
+            async function enviarUnPedido(pedido) {
+                // Nota: Ahora mandamos el objeto pedido directamente en un array, 
+                // así no tienes que cambiar drásticamente tu PHP, seguirá recibiendo un array de 1 elemento.
+                let respuesta = await fetch(base_url + 'accion_carta.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: 'enviarPedidos',
+                        pedidos: JSON.stringify([pedido]), // Lo envolvemos en un array [ ]
+                    }),
+                });
+
+                let texto = await respuesta.text();
+                return JSON.parse(texto);
             }
 
             // ======================
@@ -3034,8 +3036,11 @@ $stmt->close();
                 const modal = document.querySelector('#modal-container');
                 const modalDespacho = document.querySelector('#modalDespacho');
                 const btnConfirmarDesp = document.getElementById('btnConfirmarDespacho');
+                // obten el swal fire con clase swal-metodo-pago
+                const swalFire = document.querySelector('.swal-metodo-pago');
 
-                if (!modal.classList.contains('active') && !modalDespacho.classList.contains('show')) {
+
+                if (!modal.classList.contains('active') && !modalDespacho.classList.contains('show') && !swalFire) {
                     switch (key) {
                         case 'b':
                             document.getElementById('home-tab')?.click();
