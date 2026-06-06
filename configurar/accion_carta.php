@@ -224,7 +224,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         // Registra los datos del cliente si no existe
 
         if ($registro_clientes == 1 || $tipo === 'credito') {
-            $query = "SELECT * FROM clientes WHERE cedula = ?";
+            $query = "SELECT * FROM clientes WHERE cedula = ? AND bss_id = ?";
             $stmt = $conexion->prepare($query);
             $stmt->bind_param("s", $cliente['cedula']);
             $stmt->execute();
