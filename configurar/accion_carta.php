@@ -46,6 +46,10 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
             procesarCarritos();
             break;
 
+        case 'logErrorVenta':
+            logErrorVenta();
+            break;
+
         default:
             echo json_encode(['status' => false, 'data' => 'No se ha especificado una acción']);
     }
@@ -56,6 +60,25 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
 // -----------------------------------------------------------
 // FUNCIONES
 // -----------------------------------------------------------
+
+function logErrorVenta()
+{
+    global $conexion;
+    $pedido = $_REQUEST['pedido'] ?? '';
+    $errorMsg = $_REQUEST['error'] ?? '';
+    $bss_id = $_SESSION["bss_id"];
+    $sucursal_id = $_SESSION["sucursal"];
+
+
+    $stmt = $conexion->prepare("INSERT INTO errores_ventas (venta, error_msg, bss_id, sucursal_id) VALUES (?, ?, ?, ?)");
+    if ($stmt) {
+        $stmt->bind_param("ssii", $pedido, $errorMsg, $bss_id, $sucursal_id);
+        $stmt->execute();
+        echo json_encode(['status' => true]);
+    } else {
+        echo json_encode(['status' => false, 'error' => $conexion->error]);
+    }
+}
 
 function procesarCarritos()
 {

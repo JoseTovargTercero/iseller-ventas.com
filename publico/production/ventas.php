@@ -2569,6 +2569,22 @@ $stmt->close();
                                 // El backend rechazó este pedido específico
                                 console.error(`Error en pedido ID ${pedido.id}:`, response.data);
                                 Alerta.toast('error', `Error en pedido ${pedido.id}: ${response.data}`);
+                                
+                                // Enviar el error a la base de datos
+                                await fetch(base_url + 'accion_carta.php', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: new URLSearchParams({
+                                        action: 'logErrorVenta',
+                                        pedido: JSON.stringify(pedido),
+                                        error: typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
+                                    }),
+                                });
+                                // Eliminar de IndexedDB para evitar duplicados como se solicitó
+                                await db.carritosVenta.delete(pedido.id);
+                                
                                 fallos++;
                                 // Opcional: break; // Detener la sincronización completa si prefieres revisar qué pasa
                             }
