@@ -283,37 +283,17 @@ $credit = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' $user_cond
 $cantidadCritica = contar2("SELECT COUNT(*) FROM productos WHERE stock <= $stockCritico AND activo = 0 AND ##COND##");
 
 $despachados = 0;
-
-$res = $conexion->query("
-SELECT SUM(oa.quantity) total
-FROM orden_articulos oa
-INNER JOIN orden o ON oa.order_id = o.id
-WHERE o.modified = '$hoy'
-AND o.status NOT IN ('5','5.2')
-AND o.bss_id = $bss_id
-$extraCond
-$user_cond
-");
-
-if ($res && $row = $res->fetch_assoc()) {
-  $despachados = (int)($row['total'] ?? 0);
+$res = $conexion->query("SELECT id FROM orden WHERE modified = '$hoy' AND status NOT IN ('5','5.2') AND bss_id = $bss_id $extraCond $user_cond");
+while ($row = $res->fetch_assoc()) {
+  $arts = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id = {$row['id']}");
+  while ($a = $arts->fetch_assoc()) $despachados += $a['quantity'];
 }
 
 $despachados22 = 0;
-
-$res = $conexion->query("
-SELECT SUM(oa.quantity) total
-FROM orden_articulos oa
-INNER JOIN orden o ON oa.order_id = o.id
-WHERE o.fecha = '$mes'
-AND o.status = '3'
-AND o.bss_id = $bss_id
-$extraCond
-$user_cond
-");
-
-if ($res && $row = $res->fetch_assoc()) {
-  $despachados22 = (int)($row['total'] ?? 0);
+$res = $conexion->query("SELECT id FROM orden WHERE fecha = '$mes' AND status = '3' AND bss_id = $bss_id $extraCond $user_cond");
+while ($row = $res->fetch_assoc()) {
+  $arts = $conexion->query("SELECT quantity FROM orden_articulos WHERE order_id = {$row['id']}");
+  while ($a = $arts->fetch_assoc()) $despachados22 += $a['quantity'];
 }
 
 //$totalVentasMesDejado = obtenerVentas('fecha', $mes, [3]);
