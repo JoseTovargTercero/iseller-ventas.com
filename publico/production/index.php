@@ -460,6 +460,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         color: var(--dash-text-muted);
                         font-size: 13px;
                     }
+
                 </style>
                 <!-- top navigation -->
                 <?php echo $topnav ?>
@@ -699,8 +700,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                         </div>
 
-                        <div class="col-lg-4 mb-3">
-                            <div class="dash-panel">
+                        <div class="col-lg-4 mb-3 d-flex">
+                            <div class="dash-panel w-100 d-flex flex-column">
                                 <div class="panel-header">
                                     <h6><ion-icon name="trophy-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Top compradores</h6>
                                     <div class="chart-controls">
@@ -710,15 +711,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="panel-body p-0" id="topClientesContainer" style="min-height:340px;max-height:380px;overflow-y:auto;">
+                                <div class="panel-body p-0 flex-fill" id="topClientesContainer" style="max-height:380px;overflow-y:auto;">
                                     <div style="padding:30px 22px;text-align:center;color:var(--dash-text-muted);font-size:13px;">Cargando...</div>
                                 </div>
                             </div>
                         </div>
 
 
-                        <div class="col-lg-4 mb-3">
-                            <div class="dash-panel">
+                        <div class="col-lg-4 mb-3 d-flex">
+                            <div class="dash-panel w-100 d-flex flex-column">
                                 <div class="panel-header">
                                     <h6><ion-icon name="pie-chart-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Ventas por sucursal</h6>
                                     <div class="chart-controls">
@@ -729,16 +730,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="panel-body p-0" id="apex_chart_ventas_sucursal" style="min-height:340px;">
+                                <div class="panel-body p-0" id="apex_chart_ventas_sucursal" style="min-height:160px;">
                                 </div>
 
-                                <div class="panel-body p-0" id="resumenSucursalContainer">
+                                <div class="panel-body p-0 flex-fill" id="resumenSucursalContainer">
                                     <div style="padding:30px 22px;text-align:center;color:var(--dash-text-muted);font-size:13px;">Cargando...</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 mb-3">
-                            <div class="dash-panel">
+                        <div class="col-lg-4 mb-3 d-flex">
+                            <div class="dash-panel w-100 d-flex flex-column">
                                 <div class="panel-header">
                                     <h6><ion-icon name="flame-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Top 5 productos más vendidos</h6>
                                     <div class="chart-controls">
@@ -748,7 +749,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </span>
                                     </div>
                                 </div>
-                                <div class="panel-body p-0" id="topProductosContainer" style="min-height:320px;max-height:380px;overflow-y:auto;">
+                                <div class="panel-body p-0 flex-fill" id="topProductosContainer" style="max-height:380px;overflow-y:auto;">
                                     <div style="padding:30px 22px;text-align:center;color:var(--dash-text-muted);font-size:13px;">Cargando...</div>
                                 </div>
                             </div>
