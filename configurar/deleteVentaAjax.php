@@ -29,12 +29,6 @@ try {
     // Iniciar transacción
     $conexion->begin_transaction();
 
-    // Eliminar la orden
-    $stmtDeleteOrden = $conexion->prepare("DELETE FROM orden WHERE id = ?");
-    $stmtDeleteOrden->bind_param("i", $orderId);
-    $stmtDeleteOrden->execute();
-    $stmtDeleteOrden->close();
-
     // Obtener productos de la orden
     $stmtArticulos = $conexion->prepare("SELECT product_id, quantity, id_sucursal  FROM orden_articulos WHERE order_id = ?");
     $stmtArticulos->bind_param("i", $orderId);
@@ -67,11 +61,13 @@ try {
 
     $stmtArticulos->close();
 
-    // Eliminar artículos de la orden
-    $stmtDeleteArticulos = $conexion->prepare("DELETE FROM orden_articulos WHERE order_id = ?");
-    $stmtDeleteArticulos->bind_param("i", $orderId);
-    $stmtDeleteArticulos->execute();
-    $stmtDeleteArticulos->close();
+
+    // Eliminar la orden
+    $stmtDeleteOrden = $conexion->prepare("DELETE FROM orden WHERE id = ?");
+    $stmtDeleteOrden->bind_param("i", $orderId);
+    $stmtDeleteOrden->execute();
+    $stmtDeleteOrden->close();
+
 
 
 

@@ -2410,6 +2410,8 @@ $stmt->close();
                     return false;
                 }
 
+                // proceso extra de verificar que no existan duplicados
+
                 const idPedido = String(Date.now()) + '-' + Math.floor(Math.random() * 10000);
                 const datosCliente = {
                     nombre: cliente.nombre || "",
