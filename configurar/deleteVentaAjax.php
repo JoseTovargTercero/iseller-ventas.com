@@ -70,14 +70,6 @@ try {
 
 
 
-
-    $stmtDeleteCredito = $conexion->prepare("DELETE FROM creditos WHERE order_id = ?");
-    $stmtDeleteCredito->bind_param("i", $orderId);
-    $stmtDeleteCredito->execute();
-    $stmtDeleteCredito->close();
-    // verifica si existe un credito asociado y lo borras
-
-
     echo json_encode(['status' => true, 'msg' => '']);
 
     // Confirmar transacción
