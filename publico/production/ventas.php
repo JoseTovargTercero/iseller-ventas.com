@@ -1685,15 +1685,15 @@ $stmt->close();
 
                 // 3. Comenzar a armar el HTML de la tabla
                 let resultHtml = `
-        <table>
-            <thead>
-              <tr>
-                <th style='font-size: 11px; width: 15%; word-wrap: break-word;'>#</th>
-                <th style='font-size: 11px; width: 60%; word-wrap: break-word;'>Producto</th>
-                <th style='font-size: 11px; width: 25%;'>${monedaTexto}</th>
-              </tr>
-            </thead>
-            <tbody>`;
+                <table>
+                    <thead>
+                    <tr>
+                        <th style='font-size: 11px; width: 15%; word-wrap: break-word;'>#</th>
+                        <th style='font-size: 11px; width: 60%; word-wrap: break-word;'>Producto</th>
+                        <th style='font-size: 11px; width: 25%;'>${monedaTexto}</th>
+                    </tr>
+                    </thead>
+                    <tbody>`;
 
                 let totalPrice = 0;
 
@@ -1746,11 +1746,11 @@ $stmt->close();
                     }).format(precio);
 
                     resultHtml += `
-            <tr>
-                <td style='font-size: 11px; width: 15%; word-wrap: break-word;'>${cantidad}</td>
-                <td style='font-size: 11px; width: 60%; word-wrap: break-word;'>${articulo.name}</td>
-                <td style='font-size: 11px; width: 25%;'>${precioFormateado}</td>
-            </tr>`;
+                <tr>
+                    <td style='font-size: 11px; width: 15%; word-wrap: break-word;'>${cantidad}</td>
+                    <td style='font-size: 11px; width: 60%; word-wrap: break-word;'>${articulo.name}</td>
+                    <td style='font-size: 11px; width: 25%;'>${precioFormateado}</td>
+                </tr>`;
                 });
 
                 let totalFormateado = new Intl.NumberFormat('es-VE', {
@@ -1824,7 +1824,17 @@ $stmt->close();
 
                 ventana.onload = function() {
                     ventana.print();
-                    ventana.close();
+                    if (ventana.matchMedia) {
+                        const mediaQuery = ventana.matchMedia('print');
+                        mediaQuery.addEventListener('change', function mqListener(evt) {
+                            if (!evt.matches) {
+                                mediaQuery.removeEventListener('change', mqListener);
+                                ventana.close();
+                            }
+                        });
+                    } else {
+                        setTimeout(() => ventana.close(), 1000);
+                    }
                 };
             }
 
