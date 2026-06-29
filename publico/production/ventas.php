@@ -1364,36 +1364,6 @@ $stmt->close();
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             var productos = <?php echo json_encode($data); ?>;
             var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
             var codigos = []
@@ -1438,12 +1408,6 @@ $stmt->close();
                 'option6': 'Pesos',
                 'option7': 'BioPago'
             };
-
-
-
-
-
-
 
 
             // lista de ventas
@@ -1616,23 +1580,72 @@ $stmt->close();
                     });
             }
 
-
             function confirmar_e_imprimir(nuevoPedido, moneda = 'default') {
-                Swal.fire({
-                    title: '¿Deseas imprimir el ticket?',
-                    text: `Se generará la nota de entrega para el pedido #${nuevoPedido.id}`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sí, imprimir',
-                    cancelButtonText: 'No, cancelar'
-                }).then((confirmacion) => {
-                    // Usamos .then() para manejar la respuesta de Swal de forma síncrona/tradicional
-                    if (confirmacion.isConfirmed) {
-                        // Si acepta, se dispara la impresión normal
-                        imprimir_desde_front(nuevoPedido, moneda);
-                    }
+                // 1. Limpiar si existía algún modal nativo previo abierto por error
+                $('#modal-impresion-nativo').remove();
+
+                // 2. Crear la estructura del modal nativo con estilos en línea (estilo SweetAlert)
+                const modalHTML = `
+        <dialog id="modal-impresion-nativo" style="
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+            padding: 24px;
+            width: 90%;
+            max-width: 420px;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            text-align: center;
+            background: #fff;
+        ">
+            <div style="
+                width: 5rem;
+                height: 5rem;
+                border: .25rem solid #facea8;
+                border-radius: 50%;
+                color: #87adbd;
+                font-size: 3.75rem;
+                line-height: 5rem;
+                margin: 1.25rem auto;
+                text-align: center;
+                user-select: none;
+            ">?</div>
+
+            <h2 style="color: #595959; font-size: 1.875rem; margin: 0 0 0.5rem 0; font-weight: 600;">¿Deseas imprimir el ticket?</h2>
+            <p style="color: #545454; font-size: 1.125rem; margin: 0 0 1.5rem 0;">Se generará la nota de entrega para el pedido #${nuevoPedido.id}</p>
+            
+            <div style="display: flex; justify-content: center; gap: 10px;">
+                <button id="btn-cancelar-nativo" style="
+                    background-color: #d33; color: white; border: none; 
+                    padding: 10px 24px; font-size: 1.0625rem; border-radius: .25rem; 
+                    cursor: pointer; font-weight: 500;
+                ">No, cancelar</button>
+                
+                <button id="btn-confirmar-nativo" style="
+                    background-color: #3085d6; color: white; border: none; 
+                    padding: 10px 24px; font-size: 1.0625rem; border-radius: .25rem; 
+                    cursor: pointer; font-weight: 500;
+                ">Sí, imprimir</button>
+            </div>
+        </dialog>
+    `;
+
+                // 3. Inyectar en el body
+                $('body').append(modalHTML);
+                const dialog = document.getElementById('modal-impresion-nativo');
+
+                // 4. Mostrar el modal nativo (showModal bloquea la interacción con el fondo)
+                dialog.showModal();
+
+                // 5. Asignar eventos a los botones usando jQuery
+                $('#btn-confirmar-nativo').on('click', function() {
+                    imprimir_desde_front(nuevoPedido, moneda);
+                    dialog.close();
+                    $('#modal-impresion-nativo').remove(); // Limpieza del DOM
+                });
+
+                $('#btn-cancelar-nativo').on('click', function() {
+                    dialog.close();
+                    $('#modal-impresion-nativo').remove(); // Limpieza del DOM
                 });
             }
 
@@ -2648,6 +2661,18 @@ $stmt->close();
                     productos: carritoActivo
                 };
 
+                // =========================================================================
+                // 2. ¡AQUÍ LO LLAMAS! - VALIDACIÓN ANTES DE GUARDAR
+                // =========================================================================
+                const verificacion = validarEstructuraVenta(nuevoPedido);
+                if (!verificacion.valido) {
+                    console.error("Pedido rechazado por estructura inválida:", verificacion.error);
+                    Alerta.toast('error', `Error al armar venta: ${verificacion.error}`);
+                    return false; // Frenamos por completo y no limpiamos el carrito de la pantalla
+                }
+
+
+
                 // Guardar en IndexedDB
                 try {
                     await db.carritosVenta.put(nuevoPedido);
@@ -2741,6 +2766,134 @@ $stmt->close();
             // ======================
             // ENVIAR PEDIDOS PROCESADOS
             // ======================
+            /**
+             * Valida de forma estricta que el pedido cumpla con la estructura exacta
+             * y tipos de datos que el backend PHP espera recibir.
+             * * @param {Object} pedido - El objeto del carrito/pedido a validar.
+             * @returns {Object} { valido: boolean, error: string|null }
+             */
+            function validarEstructuraVenta(pedido) {
+                if (!pedido || typeof pedido !== 'object') {
+                    return {
+                        valido: false,
+                        error: "El formato del pedido no es un objeto válido."
+                    };
+                }
+
+                // 1. VALIDACIÓN DE CAMPOS DE LA ORDEN PRINCIPAL
+                if (!pedido.id) {
+                    return {
+                        valido: false,
+                        error: "Falta el ID único del pedido (id)."
+                    };
+                }
+                if (!pedido.metodoPago || typeof pedido.metodoPago !== 'string') {
+                    return {
+                        valido: false,
+                        error: `Pedido [ID: ${pedido.id}]: El 'metodoPago' es obligatorio y debe ser texto.`
+                    };
+                }
+                if (!pedido.despacho) {
+                    return {
+                        valido: false,
+                        error: `Pedido [ID: ${pedido.id}]: El campo 'despacho' es obligatorio.`
+                    };
+                }
+
+                // Validar que los montos finales existan y sean numéricos
+                if (pedido.valorFinalBs === undefined || pedido.valorFinalBs === null || isNaN(Number(pedido.valorFinalBs))) {
+                    return {
+                        valido: false,
+                        error: `Pedido [ID: ${pedido.id}]: 'valorFinalBs' es inválido o no numérico.`
+                    };
+                }
+                if (pedido.valorFinalCop === undefined || pedido.valorFinalCop === null || isNaN(Number(pedido.valorFinalCop))) {
+                    return {
+                        valido: false,
+                        error: `Pedido [ID: ${pedido.id}]: 'valorFinalCop' es inválido o no numérico.`
+                    };
+                }
+
+                // 2. VALIDACIÓN ESTRICTA DE PRODUCTOS
+                // Convierte el objeto indexado (carritoActivo) o un array a una lista iterable
+                const listaProductos = Array.isArray(pedido.productos) ?
+                    pedido.productos :
+                    Object.values(pedido.productos || {});
+
+                if (listaProductos.length === 0) {
+                    return {
+                        valido: false,
+                        error: `Pedido [ID: ${pedido.id}]: El listado de 'productos' está vacío o no es válido.`
+                    };
+                }
+
+                for (let i = 0; i < listaProductos.length; i++) {
+                    const prod = listaProductos[i];
+                    const path = `Pedido [ID: ${pedido.id}] -> Producto [Index: ${i}]`;
+
+                    if (!prod.id) return {
+                        valido: false,
+                        error: `${path}: Falta el 'id' del producto.`
+                    };
+                    if (!prod.name) return {
+                        valido: false,
+                        error: `${path}: Falta el 'name' (nombre) del producto.`
+                    };
+
+                    // Validar cantidad
+                    if (prod.qty === undefined || prod.qty === null || isNaN(Number(prod.qty)) || Number(prod.qty) <= 0) {
+                        return {
+                            valido: false,
+                            error: `${path}: La cantidad 'qty' debe ser un número mayor a cero.`
+                        };
+                    }
+
+                    // Mapeo de los precios requeridos por la función agregarAlCarrito() en el backend
+                    const preciosRequeridos = ['price_C', 'price_C_Bs', 'price_C_Cop', 'price', 'pricePeso', 'priceBolivar'];
+
+                    for (let precio of preciosRequeridos) {
+                        if (prod[precio] === undefined || prod[precio] === null || isNaN(Number(prod[precio]))) {
+                            return {
+                                valido: false,
+                                error: `${path}: El campo de precio '${precio}' es obligatorio y debe ser numérico.`
+                            };
+                        }
+                    }
+
+                    // Validación especial para ventas al Mayor (El back evalúa si es igual a '1')
+                    if (prod.mayor === '1' || prod.mayor === 1) {
+                        if (prod.cantidadPaca === undefined || prod.cantidadPaca === null || isNaN(Number(prod.cantidadPaca))) {
+                            return {
+                                valido: false,
+                                error: `${path}: Está marcado como venta al mayor, pero 'cantidadPaca' es inválido o no existe.`
+                            };
+                        }
+                    }
+                }
+
+                // 3. VALIDACIÓN DE DATOS DE CLIENTE (Crítico si despacho == '2' (Crédito))
+                const datosCliente = pedido.datosCliente || {};
+
+                if (pedido.despacho === '2' || pedido.despacho === 2) {
+                    if (!datosCliente.cedula || String(datosCliente.cedula).trim() === '') {
+                        return {
+                            valido: false,
+                            error: `Pedido [ID: ${pedido.id}]: La cédula del cliente es obligatoria para ventas a crédito.`
+                        };
+                    }
+                    if (!datosCliente.nombre || String(datosCliente.nombre).trim() === '') {
+                        return {
+                            valido: false,
+                            error: `Pedido [ID: ${pedido.id}]: El nombre del cliente es obligatorio para ventas a crédito.`
+                        };
+                    }
+                }
+
+                return {
+                    valido: true,
+                    error: null
+                };
+            }
             async function enviarPedidosProcesados() {
                 let pedidosIndexedDB = await db.carritosVenta.toArray();
 
@@ -2760,59 +2913,82 @@ $stmt->close();
                     let exitos = 0;
                     let fallos = 0;
 
-                    // Usamos for...of para poder usar await secuencialmente
                     for (let pedido of pedidosIndexedDB) {
                         try {
-                            // Modificamos el envío para mandar SOLO un pedido a la vez
+                            // 1. Intentar registrar el pedido
                             let response = await enviarUnPedido(pedido);
 
                             if (response.status) {
-                                // Si el backend lo procesó con éxito, lo borramos de IndexedDB inmediatamente
-                                await db.carritosVenta.delete(pedido.id);
-                                exitos++;
+                                // 2. Doble verificación (No nos confiamos de la primera respuesta)
+                                let verificadoEnBD = await validacionDeVentasAsincrona(pedido);
+
+                                if (verificadoEnBD) {
+                                    // 3. Si la BD real confirma que existe, se borra de IndexedDB
+                                    await db.carritosVenta.delete(pedido.id);
+                                    exitos++;
+                                } else {
+                                    console.error(`El servidor dijo "éxito" pero el pedido ID ${pedido.id} NO se encontró en la BD.`);
+                                    Alerta.toast('error', `Error de consistencia en pedido ${pedido.id}. Se mantendrá local.`);
+                                    fallos++;
+                                }
                             } else {
-                                // El backend rechazó este pedido específico
+                                // El backend rechazó el pedido por lógica de negocio (ej. falta de stock, datos corruptos)
                                 console.error(`Error en pedido ID ${pedido.id}:`, response.data);
                                 Alerta.toast('error', `Error en pedido ${pedido.id}: ${response.data}`);
-
-                                // Enviar el error a la base de datos
-                                await fetch(base_url + 'accion_carta.php', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded'
-                                    },
-                                    body: new URLSearchParams({
-                                        action: 'logErrorVenta',
-                                        pedido: JSON.stringify(pedido),
-                                        error: typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
-                                    }),
-                                });
-                                // Eliminar de IndexedDB para evitar duplicados como se solicitó
-                                await db.carritosVenta.delete(pedido.id);
-
+                                // [BLOQUE ELIMINADO CON ÉXITO]
                                 fallos++;
-                                // Opcional: break; // Detener la sincronización completa si prefieres revisar qué pasa
                             }
                         } catch (error) {
-                            console.error(`Error de red/servidor en pedido ${pedido.id}:`, error);
+                            console.error(`Error crítico de red/servidor en pedido ${pedido.id}:`, error);
                             fallos++;
-                            // Si hay un error de red intermitente en medio del bucle, frenamos el envío
+                            // Si hay un apagón de red real en medio del bucle, frenamos el envío del resto
                             break;
                         }
-
                     }
 
                     // Resumen final al usuario
                     if (exitos > 0 && fallos === 0) {
-                        Alerta.toast('success', 'Todos los pedidos se sincronizaron correctamente.');
+                        Alerta.toast('success', 'Todos los pedidos se sincronizaron y verificaron correctamente.');
                     } else if (exitos > 0 && fallos > 0) {
-                        Alerta.toast('warning', `Sincronización parcial: ${exitos} enviados, ${fallos} retenidos por errores.`);
+                        Alerta.toast('warning', `Sincronización parcial: ${exitos} verificados, ${fallos} retenidos o fallidos.`);
                     }
-                    btnConfirmarDespacho.disabled = false;
 
+                    btnConfirmarDespacho.disabled = false;
                     cargarUltimasOrdenes();
                 });
             }
+            // NUEVA FUNCIÓN DE VALIDACIÓN ASÍNCRONA
+            async function validacionDeVentasAsincrona(pedido) {
+                try {
+                    const respuesta = await fetch(base_url + 'accion_carta.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            action: 'verificarExistenciaPedido',
+                            pedido_id: pedido.id // Enviamos el ID único que identifica este pedido en tu sistema
+                        })
+                    });
+
+                    if (!respuesta.ok) return false;
+
+                    const resultado = await respuesta.json();
+
+                    // Retorna estrictamente true o false dependiendo de la respuesta real del backend
+                    return resultado.existe === true;
+
+                } catch (error) {
+                    console.error(`Fallo la verificación de seguridad para el pedido ${pedido.id}:`, error);
+                    // Ante cualquier duda o caída de red en este punto, devolvemos false para proteger los datos
+                    return false;
+                }
+            }
+
+
+
+
+
 
             // Función auxiliar para aislar la petición fetch de un solo pedido
             async function enviarUnPedido(pedido) {

@@ -1,4 +1,6 @@
 <?php
+header('Content-Type: application/json; charset=utf-8');
+
 // Inicialización
 include 'la-carta.php';
 $cart = new Cart;
@@ -49,6 +51,9 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
         case 'logErrorVenta':
             logErrorVenta();
             break;
+        case 'verificarExistenciaPedido':
+            verificarExistenciaPedido();
+            break;
 
         default:
             echo json_encode(['status' => false, 'data' => 'No se ha especificado una acción']);
@@ -60,6 +65,40 @@ if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
 // -----------------------------------------------------------
 // FUNCIONES
 // -----------------------------------------------------------
+
+function verificarExistenciaPedido()
+{
+    global $conexion;
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Recibimos el ID único que viene desde IndexedDB
+    $pedido_id = $_REQUEST['pedido_id'] ?? '';
+
+    if (empty($pedido_id)) {
+        echo json_encode(['existe' => false, 'error' => 'ID de pedido no proporcionado']);
+        exit;
+    }
+
+    $stmt = $conexion->prepare("SELECT COUNT(*) AS total FROM orden WHERE id_pedido = ?");
+
+    if ($stmt) {
+        $stmt->bind_param("s", $pedido_id);
+        $stmt->execute();
+        $resultado = $stmt->get_result()->fetch_assoc();
+
+        // Si el conteo es mayor a 0, significa que el pedido ya está seguro en la BD
+        if ($resultado && $resultado['total'] > 0) {
+            echo json_encode(['existe' => true]);
+        } else {
+            echo json_encode(['existe' => false]);
+        }
+        $stmt->close();
+    } else {
+        echo json_encode(['existe' => false, 'error' => $conexion->error]);
+    }
+    exit;
+}
+
 
 function logErrorVenta()
 {
@@ -269,6 +308,53 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         $ano = date('Y');
         $semana = date('Y-W');
         $dia = date('N');
+
+        //TODO: Validar que no exista una venta identica con los mismos montos, el mismo cliente, la misma fechaVenta, el mismo tipo_pago, id_sucursal, bss_id
+
+        //=========================================================================
+        // PROCESADO: Validación preventiva de venta idéntica (Evita doble envío)
+        //=========================================================================
+        $queryCheck = "SELECT id FROM orden 
+                       WHERE total_price = ? 
+                         AND total_price_bs = ? 
+                         AND total_price_cop = ? 
+                         AND cliente = ? 
+                         AND fecha = ? 
+                         AND tipoPago = ? 
+                         AND id_sucursal = ? 
+                         AND bss_id = ? 
+                       LIMIT 1";
+
+        $stmtCheck = $conexion->prepare($queryCheck);
+        if (!$stmtCheck) {
+            throw new Exception("Error al preparar la validación de duplicados: " . $conexion->error);
+        }
+
+        // Mapeo de tipos correlativos al bind_param de inserción original
+        $stmtCheck->bind_param(
+            "sddsssii",
+            $valorFinalVenta,
+            $precioBs,
+            $precioCop,
+            $cedula,
+            $fechaVenta,
+            $pagoTipo,
+            $id_sucursal,
+            $bss_id
+        );
+
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->get_result();
+        $stmtCheck->close();
+
+        if ($resCheck->num_rows > 0) {
+            // Si la venta idéntica ya existe, revertimos la transacción actual
+            $conexion->rollback();
+            $cart->destroy(); // Limpiamos el carrito local para dar por cerrado el flujo
+            return ['status' => true];
+        }
+        //=========================================================================
+
 
         // Registrar orden
         $stmt = $conexion->prepare("
