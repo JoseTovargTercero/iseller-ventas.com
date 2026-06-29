@@ -1617,6 +1617,205 @@ $stmt->close();
             }
 
 
+            function confirmar_e_imprimir(nuevoPedido, moneda = 'default') {
+                Swal.fire({
+                    title: '¿Deseas imprimir el ticket?',
+                    text: `Se generará la nota de entrega para el pedido #${nuevoPedido.id}`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, imprimir',
+                    cancelButtonText: 'No, cancelar'
+                }).then((confirmacion) => {
+                    // Usamos .then() para manejar la respuesta de Swal de forma síncrona/tradicional
+                    if (confirmacion.isConfirmed) {
+                        // Si acepta, se dispara la impresión normal
+                        imprimir_desde_front(nuevoPedido, moneda);
+                    }
+                });
+            }
+
+
+
+
+            function imprimir_desde_front(nuevoPedido, moneda = 'default') {
+                // 1. Replicar la función de redondeo de centenas de PHP
+                function redondearCentena(numero) {
+                    let resto = numero % 100;
+                    if (resto > 50) {
+                        return Math.ceil(numero / 100) * 100;
+                    } else {
+                        return Math.floor(numero / 100) * 100;
+                    }
+                }
+
+                // 2. Determinar la moneda de texto inicial según el tipo de pago (metodoPago)
+                let monedaTexto = '';
+                let tipopago = String(nuevoPedido.metodoPago);
+
+                if (moneda === 'default') {
+                    switch (tipopago) {
+                        case '5':
+                            monedaTexto = 'USD';
+                            break;
+                        case '6':
+                            monedaTexto = 'COP';
+                            break;
+                        default:
+                            monedaTexto = 'BS';
+                            break;
+                    }
+                } else {
+                    monedaTexto = moneda;
+                }
+
+                // 3. Comenzar a armar el HTML de la tabla
+                let resultHtml = `
+        <table>
+            <thead>
+              <tr>
+                <th style='font-size: 11px; width: 15%; word-wrap: break-word;'>#</th>
+                <th style='font-size: 11px; width: 60%; word-wrap: break-word;'>Producto</th>
+                <th style='font-size: 11px; width: 25%;'>${monedaTexto}</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+                let totalPrice = 0;
+
+                // 4. Recorrer los productos del carrito (nuevoPedido.productos)
+                const productosArray = Object.values(nuevoPedido.productos);
+
+                productosArray.forEach(articulo => {
+                    let cantidad = articulo.qty;
+                    let precio = 0;
+                    let etiquetaMoneda = '';
+
+                    if (moneda === 'default') {
+                        switch (tipopago) {
+                            case '5':
+                                precio = articulo.price * cantidad; // price es dolarventa_p
+                                etiquetaMoneda = '<small>$</small>';
+                                break;
+                            case '6':
+                                precio = redondearCentena(articulo.pricePeso * cantidad); // pricePeso es pesoventa_p
+                                etiquetaMoneda = '<small>COP</small>';
+                                break;
+                            default:
+                                precio = articulo.priceBolivar * cantidad; // priceBolivar es bolivarventa_p
+                                etiquetaMoneda = '<small>BS</small>';
+                                break;
+                        }
+                    } else {
+                        switch (moneda) {
+                            case 'USD':
+                                precio = articulo.price * cantidad;
+                                etiquetaMoneda = '<small>$</small>';
+                                break;
+                            case 'COP':
+                                precio = redondearCentena(articulo.pricePeso * cantidad);
+                                etiquetaMoneda = '<small>COP</small>';
+                                break;
+                            default:
+                                precio = articulo.priceBolivar * cantidad;
+                                etiquetaMoneda = '<small>BS</small>';
+                                break;
+                        }
+                    }
+
+                    totalPrice += precio;
+
+                    // Formatear número al estilo es-VE o es-CL para usar '.' en miles y ',' en decimales
+                    let precioFormateado = new Intl.NumberFormat('es-VE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(precio);
+
+                    resultHtml += `
+            <tr>
+                <td style='font-size: 11px; width: 15%; word-wrap: break-word;'>${cantidad}</td>
+                <td style='font-size: 11px; width: 60%; word-wrap: break-word;'>${articulo.name}</td>
+                <td style='font-size: 11px; width: 25%;'>${precioFormateado}</td>
+            </tr>`;
+                });
+
+                let totalFormateado = new Intl.NumberFormat('es-VE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(totalPrice);
+
+                resultHtml += `</tbody></table>`;
+                resultHtml += `<br><div>Total: ${totalFormateado} ${monedaTexto === 'USD' ? '<small>$</small>' : monedaTexto === 'COP' ? '<small>COP</small>' : '<small>BS</small>'}</div>`;
+
+                // 5. Estructurar e Inyectar en la nueva ventana para proceder a la impresión física
+                const fecha = new Date().toLocaleString('es-VE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                // Nota: Las variables sucursal_i y sucursal_n deben ser globales o estar accesibles en tu script
+                const contenido = `
+                <html>
+                <head>
+                    <title>Ticket</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body {
+                            font-family: Arial, sans-serif;
+                            font-size: 11px !important;
+                            margin: 0; padding: 0;
+                            max-width: 44mm;
+                        }
+                        .centrado { text-align: center; }
+                        @media print {
+                            @page { size: 44mm auto; margin: 0; }
+                            body, html { margin: 0; padding: 0; }
+                            #ticket { page-break-after: avoid; }
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            table-layout: fixed;
+                        }
+                        th, td { text-align: left; padding: 2px 0; }
+                        .line { border-top: 1px dashed #000; margin: 5px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="ticket" id="ticket">
+                        <p class="centrado">
+                            <img src="images/sucursal_logo/${typeof sucursal_i !== 'undefined' ? sucursal_i : 1}.png" height="50px" onerror="this.parentNode.removeChild(this)">
+                            <br><br>
+                            ${typeof sucursal_n !== 'undefined' ? sucursal_n : 'MI TIENDA'}
+                            <br>
+                            ${fecha}<br>
+                            <small>* Nota de entrega</small>
+                        </p>
+                        ${resultHtml}
+                        <div class="line"></div>
+                        <p class="centrado" style="font-size: 10px;">¡GRACIAS POR SU COMPRA!</p>
+                        <div class="line"></div>
+                    </div>
+                </body>
+                </html>`;
+
+                const ventana = window.open('', '_blank', 'width=600,height=600');
+                ventana.document.open();
+                ventana.document.write(contenido);
+                ventana.document.close();
+
+                ventana.onload = function() {
+                    ventana.print();
+                    ventana.close();
+                };
+            }
+
+
 
 
 
@@ -1754,6 +1953,7 @@ $stmt->close();
 
                 if (btnConfirmarDespacho) {
                     btnConfirmarDespacho.addEventListener('click', () => {
+                        btnConfirmarDespacho.disabled = true;
                         const despacho = tipo_despacho.value
                         despacho == '2' ? validarCredito() : validarVenta();
                     });
@@ -2461,9 +2661,11 @@ $stmt->close();
                     $("#tabla-carrito tbody").html('');
                     $("#tabla-carrito tfoot").html('');
 
+                    // SOlicitar impresion
+                    confirmar_e_imprimir(nuevoPedido, 'BS')
+
                     // Llamar función de envío (puede sincronizar cuando haya internet)
                     enviarPedidosProcesados();
-                    // Ocultar modales usando Bootstrap API para que el backdrop desaparezca correctamente
                     return true;
 
 
@@ -2550,6 +2752,7 @@ $stmt->close();
                 comprobarConexion(async function(hayInternet) {
                     if (!hayInternet) {
                         Alerta.toast('warning', 'No hay conexión a internet. Las ventas se guardarán localmente.');
+                        btnConfirmarDespacho.disabled = false;
                         actualizarProductosSinEnviar();
                         return;
                     }
@@ -2571,7 +2774,7 @@ $stmt->close();
                                 // El backend rechazó este pedido específico
                                 console.error(`Error en pedido ID ${pedido.id}:`, response.data);
                                 Alerta.toast('error', `Error en pedido ${pedido.id}: ${response.data}`);
-                                
+
                                 // Enviar el error a la base de datos
                                 await fetch(base_url + 'accion_carta.php', {
                                     method: 'POST',
@@ -2586,7 +2789,7 @@ $stmt->close();
                                 });
                                 // Eliminar de IndexedDB para evitar duplicados como se solicitó
                                 await db.carritosVenta.delete(pedido.id);
-                                
+
                                 fallos++;
                                 // Opcional: break; // Detener la sincronización completa si prefieres revisar qué pasa
                             }
@@ -2596,6 +2799,7 @@ $stmt->close();
                             // Si hay un error de red intermitente en medio del bucle, frenamos el envío
                             break;
                         }
+
                     }
 
                     // Resumen final al usuario
@@ -2604,6 +2808,7 @@ $stmt->close();
                     } else if (exitos > 0 && fallos > 0) {
                         Alerta.toast('warning', `Sincronización parcial: ${exitos} enviados, ${fallos} retenidos por errores.`);
                     }
+                    btnConfirmarDespacho.disabled = false;
 
                     cargarUltimasOrdenes();
                 });
