@@ -1446,10 +1446,10 @@ html {
 }
 
 .nav_menu {
-    border-bottom: 2px solid #343434;
+    border-bottom: 2px solid #232931;
     float: left;
     padding: 5px;
-    background: #343434;
+    background: #232931;
     width: 100%;
     position: relative;
     height: 65px;
@@ -2370,7 +2370,7 @@ h2 {
     margin-bottom: 10px;
     padding: 10px 17px;
     display: inline-block;
-    background: #343434;
+    background: #232931;
     border-radius: 7px;
     -webkit-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
     -moz-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
@@ -2392,7 +2392,6 @@ h2 {
 
 .x_title {
     padding: 1px 5px 6px;
-    margin-bottom: 10px
 }
 
 .x_title .filter {
@@ -2418,12 +2417,10 @@ h2 {
 }
 
 .x_content {
-    padding: 0 3px 6px;
     position: relative;
     width: 100%;
     float: left;
     clear: both;
-    margin-top: 5px
 }
 
 .x_content h4 {
@@ -3338,7 +3335,7 @@ h4.graph_title {
     -moz-background-clip: padding;
     border-radius: 7px;
     background-clip: padding-box;
-    background: #343434;
+    background: #232931;
     transition: all 300ms ease-in-out -webkit-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
     -moz-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
     -ms-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
@@ -6553,7 +6550,7 @@ input[type="number"] {
 
 /* Estilizar el modal */
 .details-modal {
-    background: #343434;
+    background: #232931;
     border-radius: 0.5em;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     width: 80%;
@@ -6657,7 +6654,7 @@ input[type="number"] {
 
 #navbar {
 
-    background-color: #343434;
+    background-color: #232931;
 
 }
 

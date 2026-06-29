@@ -189,81 +189,180 @@ $stmt->close();
 
 
 <style>
-    /* Contenedor principal del mensaje */
+    :root {
+        --dash-bg: #1a1e24;
+        --dash-card: #232931;
+        --dash-border: #2e353e;
+        --dash-mint: #2dd4a0;
+        --dash-mint-dim: rgba(45, 212, 160, 0.12);
+        --dash-text: #e8edf2;
+        --dash-text-muted: #8892a0;
+        --dash-danger: #ef5a6f;
+        --dash-info: #5b9cf5;
+    }
+
+    .right_col {
+        background: var(--dash-bg);
+        min-height: 100vh;
+        padding: 24px 28px !important;
+    }
+
+    .x_panel {
+        background: var(--dash-card) !important;
+        border: 1px solid var(--dash-border) !important;
+        border-radius: 14px !important;
+        padding: 20px 22px !important;
+    }
+
+    .x_title {
+        border-bottom: 1px solid var(--dash-border) !important;
+        padding-bottom: 14px !important;
+    }
+
+    .x_title h2 {
+        color: var(--dash-text) !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+    }
+
+    .x_title .text-danger {
+        color: var(--dash-danger) !important;
+    }
+
     .caja-cerrada-container {
         border-radius: 12px;
         padding: 2rem;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         max-width: 400px;
         margin: 20px auto;
-        border: 1px solid #e1e4e8;
+        border: 1px solid var(--dash-border);
+        background: var(--dash-card);
         font-family: 'Segoe UI', Roboto, sans-serif;
     }
 
-    /* Título */
     .caja-cerrada-container h2 {
+        color: var(--dash-text);
         margin-bottom: 1.5rem;
         font-size: 1.8rem;
         font-weight: 600;
     }
 
-    /* Botón Primary */
     .btn-primary {
+        background: linear-gradient(135deg, #2dd4a0, #25b88a);
         color: white;
         border: none;
         padding: 0.8rem 1.5rem;
         font-size: 1rem;
-        font-weight: 500;
-        border-radius: 6px;
+        font-weight: 600;
+        border-radius: 8px;
         cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.1s ease;
-        box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+        transition: all 0.2s ease;
+        box-shadow: 0 3px 12px rgba(45, 212, 160, 0.25);
     }
 
     .btn-primary:hover {
-        background-color: #0056b3;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(45, 212, 160, 0.35);
+        background: linear-gradient(135deg, #2dd4a0, #25b88a);
+        color: white;
     }
 
     .btn-primary:active {
         transform: scale(0.98);
     }
 
+    .btn-secondary {
+        color: var(--dash-text-muted) !important;
+        background-color: var(--dash-border) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 7px 18px !important;
+        font-size: 13px !important;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #2dd4a0, #25b88a) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        padding: 7px 16px !important;
+        box-shadow: 0 2px 8px rgba(45, 212, 160, 0.2) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-success:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 14px rgba(45, 212, 160, 0.35) !important;
+    }
+
+    .btn-dark {
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid var(--dash-border) !important;
+        border-radius: 8px !important;
+        color: var(--dash-text) !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        padding: 8px 16px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-dark:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-color: var(--dash-mint) !important;
+        color: var(--dash-mint) !important;
+    }
+
+    .btn-danger {
+        background: rgba(239, 90, 111, 0.15) !important;
+        border: 1px solid rgba(239, 90, 111, 0.3) !important;
+        border-radius: 8px !important;
+        color: var(--dash-danger) !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-danger:hover {
+        background: rgba(239, 90, 111, 0.25) !important;
+    }
+
     .modal-cierre-seccion {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         font-weight: 700;
-        color: #2c3e50;
-        margin: 18px 0 10px;
+        color: var(--dash-text);
+        margin: 16px 0 8px;
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
     .section-card {
-        border: 1px solid #dde5eeff;
+        border: 1px solid var(--dash-border);
         border-radius: 10px;
         padding: 15px;
         margin-bottom: 12px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        background: var(--dash-bg);
     }
 
     .section-card.cash {
-        border-left: 4px solid #28a745;
+        border-left: 4px solid var(--dash-mint);
     }
 
     .section-card.digital {
-        border-left: 4px solid #007bff;
+        border-left: 4px solid var(--dash-info);
     }
 
     .section-card.fondo {
-        border-left: 4px solid #ff9800;
-        background: #fffaf2;
+        border-left: 4px solid #f5b45b;
+        background: rgba(245, 180, 91, 0.06);
     }
 
     .cierre-label {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 600;
-        color: #6c757d;
+        color: var(--dash-text-muted);
         margin-bottom: 3px;
         letter-spacing: 0.3px;
     }
@@ -272,10 +371,33 @@ $stmt->close();
         min-width: 52px;
         justify-content: center;
         font-weight: 600;
-        background: #f8f9fa;
+        background: var(--dash-bg);
+        color: var(--dash-text-muted);
+        border-color: var(--dash-border);
     }
 
+    .form-control {
+        background: var(--dash-bg) !important;
+        border: 1px solid var(--dash-border) !important;
+        color: var(--dash-text) !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+    }
 
+    .form-control:focus {
+        border-color: var(--dash-mint) !important;
+        box-shadow: 0 0 0 2px rgba(45, 212, 160, 0.15) !important;
+    }
+
+    select.form-control {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238892a0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.75rem center !important;
+        background-size: 16px 12px !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+    }
 
     .scroll-area {
         max-height: 70vh;
@@ -293,7 +415,7 @@ $stmt->close();
 
     .item {
         padding: 5px;
-        border-bottom: 1px solid #f9f9f9;
+        border-bottom: 1px solid var(--dash-border);
     }
 
     .hide {
@@ -349,12 +471,6 @@ $stmt->close();
         place-items: center;
     }
 
-    .btn-secondary {
-        color: #909090 !important;
-        background-color: lightgray !important;
-        border-color: lightgray !important;
-    }
-
     .responsi {
         height: 80%;
         overflow-y: auto;
@@ -363,20 +479,39 @@ $stmt->close();
     .responsi::-webkit-scrollbar {
         height: 7px;
         width: 7px;
-        background: #FFF;
+        background: transparent;
         margin-bottom: 15px;
     }
 
     .responsi::-webkit-scrollbar-thumb {
-        background: -webkit-repeating-linear-gradient(top left, #52d3aa 0%, #3f95ea 600%);
+        background: var(--dash-mint);
         border-radius: 5px;
     }
 
-
-
     .table thead th {
         vertical-align: bottom;
-        border-bottom: none !important;
+        border-bottom: 1px solid var(--dash-border) !important;
+        color: var(--dash-text-muted);
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .table td,
+    .table th {
+        padding: 8px 6px !important;
+        vertical-align: middle;
+        color: var(--dash-text);
+        border-color: var(--dash-border) !important;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    .table-striped tbody tr:hover {
+        background: rgba(45, 212, 160, 0.04) !important;
     }
 
     .input-td {
@@ -384,16 +519,10 @@ $stmt->close();
         border-radius: 5px;
         max-width: 50px;
         min-height: 25px;
-        border: 1px solid #909090 !important;
-        color: #909090 !important;
+        background: var(--dash-bg) !important;
+        color: var(--dash-text) !important;
+        border: 1px solid var(--dash-border) !important;
     }
-
-    .table td,
-    .table th {
-        padding: 5px 2px !important;
-        vertical-align: middle;
-    }
-
 
     #result-escaner {
         width: -webkit-fill-available;
@@ -404,11 +533,25 @@ $stmt->close();
         place-items: center;
     }
 
-
-
     .text-total {
         font-size: 1rem;
         font-weight: bold;
+    }
+
+    .text-muted {
+        color: var(--dash-text-muted) !important;
+    }
+
+    .text-danger {
+        color: var(--dash-danger) !important;
+    }
+
+    .text-success {
+        color: var(--dash-mint) !important;
+    }
+
+    .text-info {
+        color: var(--dash-info) !important;
     }
 
     .cart {
@@ -416,17 +559,244 @@ $stmt->close();
         display: flex;
         flex-direction: column;
         place-content: space-between;
-
     }
 
     .btn-group-sm>.btn,
     .btn-sm {
         font-size: 0.64rem !important;
-        padding: .20rem .34rem
+        padding: .20rem .34rem;
     }
 
     .totales-pendiente {
         gap: 5px;
+    }
+
+    /* Modal dark theme */
+    .modal-content {
+        background: var(--dash-card) !important;
+        border: 1px solid var(--dash-border) !important;
+        border-radius: 14px !important;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--dash-border) !important;
+    }
+
+    .modal-header .modal-title {
+        color: var(--dash-text) !important;
+        font-weight: 600 !important;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(0.7);
+    }
+
+    .modal-body {
+        color: var(--dash-text);
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--dash-border) !important;
+    }
+
+    .modal-body label {
+        color: var(--dash-text-muted);
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .modal-body small.text-muted,
+    .modal-body .text-muted {
+        color: var(--dash-text-muted) !important;
+    }
+
+    /* Dashboard-style filter buttons (replaces old btn-dark buttons in botones-container) */
+    .botones-container .btn-dark {
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid var(--dash-border) !important;
+        border-radius: 8px !important;
+        color: var(--dash-text) !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        padding: 10px 12px !important;
+        transition: all 0.2s ease !important;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .botones-container .btn-dark:hover {
+        background: rgba(45, 212, 160, 0.1) !important;
+        border-color: var(--dash-mint) !important;
+        color: var(--dash-mint) !important;
+    }
+
+    .botones-container .btn-danger {
+        background: rgba(239, 90, 111, 0.12) !important;
+        border: 1px solid rgba(239, 90, 111, 0.25) !important;
+        border-radius: 8px !important;
+        color: var(--dash-danger) !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        padding: 10px 12px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        transition: all 0.2s ease !important;
+    }
+
+    .botones-container .btn-danger:hover {
+        background: rgba(239, 90, 111, 0.2) !important;
+    }
+
+    #btn-vender {
+        background: linear-gradient(135deg, var(--dash-mint), #25b88a) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        color: #fff !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        padding: 10px 16px !important;
+        box-shadow: 0 3px 12px rgba(45, 212, 160, 0.25) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease !important;
+    }
+
+    #btn-vender:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(45, 212, 160, 0.4) !important;
+    }
+
+    /* Nav tabs dark theme */
+    .nav-tabs {
+        border-bottom: 1px solid var(--dash-border) !important;
+    }
+
+    .nav-tabs .nav-link {
+        color: var(--dash-text-muted) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        padding: 10px 16px !important;
+        transition: all 0.2s ease !important;
+        position: relative;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: var(--dash-text) !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--dash-mint) !important;
+        background: transparent !important;
+        border-bottom: 2px solid var(--dash-mint) !important;
+    }
+
+    /* Links in dark mode */
+    a {
+        transition: color 0.2s ease;
+    }
+
+    a:hover {
+        color: var(--dash-mint) !important;
+    }
+
+    /* Dropdown menu dark */
+    .dropdown-menu {
+        background: var(--dash-card) !important;
+        border: 1px solid var(--dash-border) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .dropdown-item {
+        color: var(--dash-text) !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .dropdown-item:hover {
+        background: rgba(45, 212, 160, 0.08) !important;
+        color: var(--dash-mint) !important;
+    }
+
+    /* Card / dash-panel pattern */
+    .dash-panel {
+        background: var(--dash-card) !important;
+        border: 1px solid var(--dash-border) !important;
+        border-radius: 14px !important;
+    }
+
+    .dash-panel .dash-panel-header {
+        border-bottom: 1px solid var(--dash-border) !important;
+        padding-bottom: 14px !important;
+        margin-bottom: 18px !important;
+    }
+
+    /* Badge dark */
+    .badge {
+        background: rgba(255, 255, 255, 0.06) !important;
+        color: var(--dash-text-muted) !important;
+        font-weight: 600 !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+    }
+
+    /* Badge info / success / danger overrides */
+    .badge.bg-info {
+        background: rgba(91, 156, 245, 0.15) !important;
+        color: var(--dash-info) !important;
+    }
+
+    .badge.bg-success {
+        background: rgba(45, 212, 160, 0.15) !important;
+        color: var(--dash-mint) !important;
+    }
+
+    .badge.bg-danger {
+        background: rgba(239, 90, 111, 0.15) !important;
+        color: var(--dash-danger) !important;
+    }
+
+    .badge.bg-warning {
+        background: rgba(245, 180, 91, 0.15) !important;
+        color: #f5b45b !important;
+    }
+
+    .table .btn.btn-sm.btn-success {
+        padding: 4px 10px !important;
+        font-size: 11px !important;
+    }
+
+    .badge-subtle-success {
+        background: rgba(45, 212, 160, 0.12) !important;
+        color: var(--dash-mint) !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+        font-size: 11px !important;
+    }
+
+    /* Button group fix: join buttons as a single visual unit */
+    .btn-group .btn-success {
+        border: none !important;
+        border-radius: 0 !important;
+    }
+    .btn-group > .btn-success:first-child {
+        border-radius: 8px 0 0 8px !important;
+    }
+    .btn-group > .btn-group:last-child > .btn-success:first-child {
+        border-radius: 0 8px 8px 0 !important;
+    }
+    .btn-group > .btn-group:first-child > .btn-success:first-child {
+        border-radius: 8px 0 0 8px !important;
+    }
+    /* Divider line between grouped buttons */
+    .btn-group > .btn-success + .btn-success,
+    .btn-group > .btn-success + .btn-group > .btn-success:first-child,
+    .btn-group > .btn-group + .btn-success {
+        border-left: 1px solid rgba(0,0,0,0.2) !important;
     }
 </style>
 <div class="contenedor-loader" id="cargando">
@@ -439,7 +809,6 @@ $stmt->close();
         .section-scanner {
             position: fixed;
             inset: 0;
-            /* Equivalente a top:0; right:0; bottom:0; left:0 */
             z-index: 999;
             background-color: rgba(0, 0, 0, 0.55);
             display: flex;
@@ -456,35 +825,33 @@ $stmt->close();
 
         #result-escaner {
             position: relative;
-            background: #1c1c1c;
+            background: var(--dash-card, #232931);
             padding: 20px;
             border-radius: 12px;
             min-width: 300px;
             max-width: 50%;
             min-height: 150px;
             box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4);
-            color: white;
+            color: var(--dash-text, #e8edf2);
             animation: modalFadeIn 0.3s ease;
         }
 
-        /* Botón de cerrar */
         #result-escaner .btn-close {
             position: absolute;
             top: 10px;
             right: 10px;
             background: none;
             border: none;
-            color: #ccc;
+            color: var(--dash-text-muted, #8892a0);
             font-size: 20px;
             cursor: pointer;
             transition: color 0.2s ease;
         }
 
         #result-escaner .btn-close:hover {
-            color: #fff;
+            color: var(--dash-text, #e8edf2);
         }
 
-        /* Animación */
         @keyframes modalFadeIn {
             from {
                 transform: translateY(-20px);
@@ -497,17 +864,15 @@ $stmt->close();
             }
         }
 
-        /* Contenedor principal del producto escaneado */
         .scan-product {
             display: flex;
             flex-direction: column;
             gap: 12px;
             padding: 15px;
             border-radius: 10px;
-            color: #fff;
+            color: var(--dash-text, #e8edf2);
         }
 
-        /* Encabezado con nombre y stock */
         .scan-product-header {
             display: flex;
             justify-content: space-between;
@@ -518,10 +883,9 @@ $stmt->close();
 
         .scan-stock {
             font-size: 0.9rem;
-            color: #bbb;
+            color: var(--dash-text-muted, #8892a0);
         }
 
-        /* Sección de precios */
         .scan-prices {
             display: flex;
             gap: 15px;
@@ -530,18 +894,17 @@ $stmt->close();
         }
 
         .scan-price-usd {
-            color: #4caf50;
+            color: var(--dash-mint, #2dd4a0);
         }
 
         .scan-price-cop {
-            color: #00bcd4;
+            color: var(--dash-info, #5b9cf5);
         }
 
         .scan-price-bs {
-            color: #f44336;
+            color: var(--dash-danger, #ef5a6f);
         }
 
-        /* Controles (cantidad + botones) */
         .scan-controls {
             display: flex;
             gap: 10px;
@@ -549,43 +912,48 @@ $stmt->close();
         }
 
         .scan-quantity {
-            max-width: 80px;
+            width: 70px;
             text-align: center;
             border-radius: 6px;
-            border: none;
-            padding: 5px;
+            border: 1px solid var(--dash-border, #2e353e);
+            padding: 6px 8px;
             font-size: 1rem;
+            background: var(--dash-bg, #1a1e24);
+            color: var(--dash-text, #e8edf2);
         }
 
-        /* Botones */
         .scan-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 8px 14px;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
             font-size: 1.2rem;
-            transition: background 0.2s ease;
+            font-weight: 600;
+            transition: all 0.2s ease;
         }
 
         .scan-btn.add {
-            background: #4caf50;
+            background: linear-gradient(135deg, var(--dash-mint, #2dd4a0), #25b88a);
             color: white;
+            box-shadow: 0 2px 8px rgba(45, 212, 160, 0.2);
         }
 
         .scan-btn.add:hover {
-            background: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(45, 212, 160, 0.35);
         }
 
         .scan-btn.remove {
-            background: #f44336;
-            color: white;
+            background: rgba(239, 90, 111, 0.15);
+            color: var(--dash-danger, #ef5a6f);
+            border: 1px solid rgba(239, 90, 111, 0.3);
         }
 
         .scan-btn.remove:hover {
-            background: #e53935;
+            background: rgba(239, 90, 111, 0.25);
         }
     </style>
 
@@ -619,9 +987,9 @@ $stmt->close();
 
 
                 <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0 text-danger">Ventas</h4>
-                        <p>Caja de despacho</p>
+                    <div class="mb-2">
+                        <h3 class="mb-0" style="color: var(--dash-text); font-weight: 700; letter-spacing: -0.3px;">Ventas</h3>
+                        <p style="color: var(--dash-text-muted); margin-bottom: 0;">Caja de despacho</p>
                     </div>
                     <div class="pt-1">
 
@@ -653,24 +1021,24 @@ $stmt->close();
 
                 <style>
                     .text-dark {
-                        color: #5a5a5a !important;
+                        color: var(--dash-text) !important;
                     }
 
                     .item-reservado {
-                        background-color: #22222217;
-                        border: 1px solid #00000045;
-                        border-radius: 5px;
-                        border-style: dashed;
+                        background-color: rgba(255, 255, 255, 0.04);
+                        border: 1px dashed var(--dash-border);
+                        border-radius: 8px;
                     }
 
                     .avatar {
-                        background: #8b8b8b14;
+                        background: rgba(255, 255, 255, 0.06);
                         padding: 7px;
                         font-size: 25px;
                         width: 45px;
                         height: 45px;
                         text-align: center;
                         border-radius: 50%;
+                        color: var(--dash-text-muted);
                     }
 
                     .item-reservado-header {
@@ -685,9 +1053,7 @@ $stmt->close();
                     .botones-container {
                         display: grid;
                         gap: 10px;
-                        /* Espacio entre botones */
                         grid-template-columns: repeat(3, 1fr);
-                        /* 4 columnas */
                     }
 
                     .botones-container .error-internet {
@@ -695,19 +1061,20 @@ $stmt->close();
                     }
 
                     .btn-info {
-                        background-color: #40909d !important;
+                        background: rgba(91, 156, 245, 0.15) !important;
+                        border: 1px solid rgba(91, 156, 245, 0.3) !important;
+                        border-radius: 8px !important;
+                        color: var(--dash-info) !important;
+                        font-weight: 600 !important;
+                        font-size: 13px !important;
                     }
 
-                    /* Para pantallas medianas (2 columnas) */
                     @media (max-width: 992px) {
                         .botones-container {
                             grid-template-columns: repeat(2, 1fr);
                         }
                     }
 
-
-
-                    /* Para pantallas pequeñas (1 columna) */
                     @media (max-width: 576px) {
                         .botones-container {
                             grid-template-columns: 1fr;
@@ -715,9 +1082,9 @@ $stmt->close();
                     }
 
                     .alert-danger {
-                        color: #721c24;
-                        background-color: #f8d7da;
-                        border-color: #f5c6cb;
+                        color: var(--dash-danger);
+                        background-color: rgba(239, 90, 111, 0.1);
+                        border-color: rgba(239, 90, 111, 0.2);
                     }
                 </style>
 
@@ -859,7 +1226,7 @@ $stmt->close();
                             </div>
                             <div class="x_content ">
                                 <div class="">
-                                    <table class="table table-responsive table-striped">
+                                    <table class="table table-striped w-100">
                                         <thead style="font-size: medium;">
                                             <tr>
                                                 <th class='column-title'>Fecha</th>
@@ -908,21 +1275,21 @@ $stmt->close();
                                         </div>
                                         <div class="row g-1 text-center">
                                             <div class="col-4">
-                                                <div class="rounded p-2" style="background:#e3f2fd;">
+                                                <div class="rounded p-2" style="background:rgba(91,156,245,0.12);">
                                                     <small class="d-block text-muted" style="font-size:10px;line-height:1;">PESOS</small>
-                                                    <span class="fw-bold text-info" id="resumenPesos" style="font-size:15px;">0</span>
+                                                    <span class="fw-bold" style="color:var(--dash-info);font-size:15px;" id="resumenPesos">0</span>
                                                 </div>
                                             </div>
                                             <div class="col-4">
-                                                <div class="rounded p-2" style="background:#fce4ec;">
+                                                <div class="rounded p-2" style="background:rgba(239,90,111,0.12);">
                                                     <small class="d-block text-muted" style="font-size:10px;line-height:1;">BOLÍVARES</small>
-                                                    <span class="fw-bold text-danger" id="resumenBolivares" style="font-size:15px;">0,00</span>
+                                                    <span class="fw-bold" style="color:var(--dash-danger);font-size:15px;" id="resumenBolivares">0,00</span>
                                                 </div>
                                             </div>
                                             <div class="col-4">
-                                                <div class="rounded p-2" style="background:#e8f5e9;">
+                                                <div class="rounded p-2" style="background:rgba(45,212,160,0.12);">
                                                     <small class="d-block text-muted" style="font-size:10px;line-height:1;">DÓLARES</small>
-                                                    <span class="fw-bold text-success" id="resumenDolares" style="font-size:15px;">$0,00</span>
+                                                    <span class="fw-bold" style="color:var(--dash-mint);font-size:15px;" id="resumenDolares">$0,00</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1587,22 +1954,23 @@ $stmt->close();
                 // 2. Crear la estructura del modal nativo con estilos en línea (estilo SweetAlert)
                 const modalHTML = `
         <dialog id="modal-impresion-nativo" style="
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+            border: 1px solid var(--dash-border, #2e353e);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
             padding: 24px;
             width: 90%;
             max-width: 420px;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             text-align: center;
-            background: #fff;
+            background: var(--dash-card, #232931);
+            color: var(--dash-text, #e8edf2);
         ">
             <div style="
                 width: 5rem;
                 height: 5rem;
-                border: .25rem solid #facea8;
+                border: .25rem solid rgba(45, 212, 160, 0.3);
                 border-radius: 50%;
-                color: #87adbd;
+                color: var(--dash-mint, #2dd4a0);
                 font-size: 3.75rem;
                 line-height: 5rem;
                 margin: 1.25rem auto;
@@ -1610,20 +1978,20 @@ $stmt->close();
                 user-select: none;
             ">?</div>
 
-            <h2 style="color: #595959; font-size: 1.875rem; margin: 0 0 0.5rem 0; font-weight: 600;">¿Deseas imprimir el ticket?</h2>
-            <p style="color: #545454; font-size: 1.125rem; margin: 0 0 1.5rem 0;">Se generará la nota de entrega para el pedido #${nuevoPedido.id}</p>
+            <h2 style="color: var(--dash-text, #e8edf2); font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600;">¿Deseas imprimir el ticket?</h2>
+            <p style="color: var(--dash-text-muted, #8892a0); font-size: 1.125rem; margin: 0 0 1.5rem 0;">Se generará la nota de entrega para el pedido #${nuevoPedido.id}</p>
             
             <div style="display: flex; justify-content: center; gap: 10px;">
                 <button id="btn-cancelar-nativo" style="
-                    background-color: #d33; color: white; border: none; 
-                    padding: 10px 24px; font-size: 1.0625rem; border-radius: .25rem; 
-                    cursor: pointer; font-weight: 500;
+                    background: rgba(239, 90, 111, 0.15); color: var(--dash-danger, #ef5a6f); border: 1px solid rgba(239, 90, 111, 0.3); 
+                    padding: 10px 24px; font-size: 1rem; border-radius: 8px; 
+                    cursor: pointer; font-weight: 600;
                 ">No, cancelar</button>
                 
                 <button id="btn-confirmar-nativo" style="
-                    background-color: #3085d6; color: white; border: none; 
-                    padding: 10px 24px; font-size: 1.0625rem; border-radius: .25rem; 
-                    cursor: pointer; font-weight: 500;
+                    background: linear-gradient(135deg, var(--dash-mint, #2dd4a0), #25b88a); color: white; border: none; 
+                    padding: 10px 24px; font-size: 1rem; border-radius: 8px; 
+                    cursor: pointer; font-weight: 600; box-shadow: 0 2px 8px rgba(45, 212, 160, 0.25);
                 ">Sí, imprimir</button>
             </div>
         </dialog>
@@ -1933,7 +2301,7 @@ $stmt->close();
                 document.getElementById('resumenBolivares').textContent = formatNumber(total_bolivares) + ' Bs';
                 document.getElementById('resumenDolares').textContent = '$' + formatNumber(total_dolares);
                 document.getElementById('resumenTipoDespacho').textContent = esCredito ? 'CRÉDITO' : 'VENTA';
-                document.getElementById('resumenTipoDespacho').className = 'badge ms-auto ' + (esCredito ? 'bg-warning text-dark' : 'bg-success');
+                document.getElementById('resumenTipoDespacho').className = 'badge ms-auto ' + (esCredito ? 'bg-warning' : 'bg-success');
 
                 modalDespacho.show();
 
@@ -2311,7 +2679,7 @@ $stmt->close();
                                     data-nombre='${item.nombre}' 
                                     data-precios='${item.precio_peso_visible}/${item.precio_dolar_visible}/${item.precio_bs_visible}' 
                                     type="number" 
-                                    style="color: black !important; width: 70px; text-align: center; border: 1px solid gray;" 
+                                    style="width: 70px; text-align: center;" 
                                     class="form-control-sm cantidad-input" 
                                     data-cantidad-id="${item.id}" 
                                     value="1">
@@ -3031,7 +3399,7 @@ $stmt->close();
                 items = items.reverse();
 
                 if (items.length > 0) {
-                    document.getElementById('cantidad-reservados').innerHTML = `<span class="badge text-dark bg-warning">${items.length}</span>`;
+                    document.getElementById('cantidad-reservados').innerHTML = `<span class="badge bg-warning">${items.length}</span>`;
                     items.forEach(element => {
                         const fecha = new Date(parseInt(element.id));
                         const fechaEspañol = fecha.toLocaleDateString('es-VE', {
@@ -3050,7 +3418,7 @@ $stmt->close();
                         let totalDolares = 0;
                         let totalBolivares = 0;
                         Object.values(element.productos).forEach(prod => {
-                            productosHTML += `<span class="badge bg-light text-dark">${prod.name} (x${prod.qty})</span> `;
+                            productosHTML += `<span class="badge" style="background:rgba(45,212,160,0.12);color:var(--dash-mint);">${prod.name} (x${prod.qty})</span> `;
                             totalPesos += prod.pricePeso * prod.qty;
                             totalDolares += prod.price * prod.qty;
                             totalBolivares += prod.priceBolivar * prod.qty;
@@ -3240,7 +3608,7 @@ $stmt->close();
                             totalBolivares = 0;
 
                         Object.values(element.productos).forEach(prod => {
-                            productosHTML += `<span class="badge bg-light text-dark">${prod.name} (x${prod.qty})</span> `;
+                            productosHTML += `<span class="badge" style="background:rgba(45,212,160,0.12);color:var(--dash-mint);">${prod.name} (x${prod.qty})</span> `;
                             totalPesos += prod.pricePeso * prod.qty;
                             totalDolares += prod.price * prod.qty;
                             totalBolivares += prod.priceBolivar * prod.qty;
@@ -3273,7 +3641,7 @@ $stmt->close();
                         </div>
                         <div class="hide btn-list-item text-center d-flex pr-4 col-lg-3 text-end">
                             <button class="btn btn-success">Modificar</button>
-                            <button class="btn btn-secondary text-dark">Cancelar envío</button>
+                            <button class="btn btn-secondary">Cancelar envío</button>
                         </div>
                     </div>
                 </li>

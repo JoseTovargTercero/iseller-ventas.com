@@ -20,6 +20,8 @@ if ($extraCond != '' && isset($data['usuario'])) {
 
 
 $bss_id = $_SESSION['bss_id'] ?? 1;
+$periodo = $data['periodo'] ?? 'mes';
+$periodoPie = $data['periodoPie'] ?? 'mes';
 $stockCritico = 10;
 
 $hoy = date('Y-m-d');
@@ -29,6 +31,58 @@ $ano = date('Y');
 $dia_ant = date('Y-m-d', strtotime('-1 day'));
 $semana_ant = date('Y-W', strtotime('-1 week'));
 $mes_ant = date('Y-m', strtotime('first day of -1 month'));
+
+// Periodo filter for client ranking
+$periodCond = '';
+if ($periodo === 'semana') {
+  $periodCond = " AND o.semana = '$semana'";
+} else {
+  $periodCond = " AND o.fecha = '$mes'";
+}
+
+// Top compradores
+$topClientes = [];
+$res = $conexion->query("SELECT o.cliente, c.nombre, SUM(o.total_price) AS total_gastado FROM orden o LEFT JOIN clientes c ON o.cliente = c.cedula AND c.bss_id = $bss_id WHERE o.status IN (1,4) AND o.bss_id = $bss_id AND o.cliente IS NOT NULL AND o.cliente != '' $extraCond $user_cond $periodCond GROUP BY o.cliente ORDER BY total_gastado DESC LIMIT 15");
+while ($row = $res->fetch_assoc()) {
+  $topClientes[] = ['cedula' => $row['cliente'], 'nombre' => $row['nombre'] ?? $row['cliente'], 'total' => (float)$row['total_gastado']];
+}
+
+// Periodo filter for ventas por sucursal pie chart
+$periodCondPie = '';
+if ($periodoPie === 'dia') {
+  $periodCondPie = " AND o.modified = '$hoy'";
+} elseif ($periodoPie === 'semana') {
+  $periodCondPie = " AND o.semana = '$semana'";
+} else {
+  $periodCondPie = " AND o.fecha = '$mes'";
+}
+
+// Ventas por sucursal (pie chart)
+$ventasPorSucursal = [];
+$res = $conexion->query("SELECT s.nombre AS sucursal, SUM(o.total_price) AS total FROM orden o INNER JOIN sucursales s ON o.id_sucursal = s.id WHERE o.status IN (1,4) AND o.bss_id = $bss_id $extraCond $periodCondPie GROUP BY o.id_sucursal ORDER BY total DESC");
+while ($row = $res->fetch_assoc()) {
+  $ventasPorSucursal[] = ['sucursal' => $row['sucursal'], 'total' => (float)$row['total']];
+}
+
+// Ventas promedio por hora (últimos 7 días)
+$ventasPorHora = array_fill(0, 24, 0);
+$res = $conexion->query("SELECT HOUR(o.created) AS hora, SUM(o.total_price) AS total, COUNT(DISTINCT DATE(o.created)) AS dias FROM orden o WHERE o.created >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND o.status IN (1,4) AND o.bss_id = $bss_id $extraCond $user_cond GROUP BY HOUR(o.created) ORDER BY hora");
+while ($row = $res->fetch_assoc()) {
+  $h = (int)$row['hora'];
+  $dias = (int)$row['dias'];
+  $ventasPorHora[$h] = $dias > 0 ? round((float)$row['total'] / $dias, 2) : 0;
+}
+
+// Top 10 productos más vendidos (ingreso = precio_compra * (1 + %/100) * cantidad)
+$topProductos = [];
+$res = $conexion->query("SELECT oa.product_id, COALESCE(p.nombre, 'Producto #' + oa.product_id) AS producto, SUM(oa.quantity) AS total_vendido, precio_venta_dolar AS ingreso_total FROM orden_articulos oa INNER JOIN orden o ON oa.order_id = o.id LEFT JOIN productos p ON oa.product_id = p.id WHERE o.status IN (1,4) AND o.bss_id = $bss_id $extraCond $user_cond GROUP BY oa.product_id ORDER BY total_vendido DESC LIMIT 10");
+while ($row = $res->fetch_assoc()) {
+  $topProductos[] = [
+    'producto' => $row['producto'],
+    'cantidad' => (int)$row['total_vendido'],
+    'ingreso' => (float)$row['ingreso_total']
+  ];
+}
 
 function contar2($sql)
 {
@@ -250,6 +304,13 @@ $res = $conexion->query("SELECT stock.stock FROM stock LEFT JOIN productos AS P 
 while ($row = $res->fetch_assoc()) $almacen += $row['stock'];
 
 // Análisis por semanas
+// Créditos por cliente (estado=2 activos, agrupados por negocio/cedula)
+$creditosPorCliente = [];
+$res = $conexion->query("SELECT negocio AS cliente, SUM(total_price) AS total_credito FROM creditos WHERE estado = '2' AND bss_id = $bss_id GROUP BY negocio ORDER BY total_credito DESC LIMIT 20");
+while ($row = $res->fetch_assoc()) {
+  $creditosPorCliente[] = ['cliente' => $row['cliente'], 'total' => (float)$row['total_credito']];
+}
+
 $arraSemanas = [];
 $res = $conexion->query("SELECT DISTINCT semana FROM orden WHERE bss_id = $bss_id $extraCond  $user_cond ORDER BY semana ASC");
 while ($row = $res->fetch_assoc()) {
@@ -287,5 +348,10 @@ echo json_encode([
   'valorStockSinGanancia' => number_format($valor_stock_sin_ganancia, 2, '.', ','),
   'gananciasEsperadas' => number_format($gananciasEsperadas, 2, '.', ','),
   'ventasSemanas' => $arraSemanas,
-  'ventasSemana' => $arraySemana
+  'ventasSemana' => $arraySemana,
+  'creditosPorCliente' => $creditosPorCliente,
+  'topClientes' => $topClientes,
+  'ventasPorSucursal' => $ventasPorSucursal,
+  'ventasPorHora' => $ventasPorHora,
+  'topProductos' => $topProductos
 ]);
