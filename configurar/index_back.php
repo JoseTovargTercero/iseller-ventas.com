@@ -22,6 +22,7 @@ if ($extraCond != '' && isset($data['usuario'])) {
 $bss_id = $_SESSION['bss_id'] ?? 1;
 $periodo = $data['periodo'] ?? 'mes';
 $periodoPie = $data['periodoPie'] ?? 'mes';
+$periodoProductos = $data['periodoProductos'] ?? 'mes';
 $stockCritico = 10;
 
 $hoy = date('Y-m-d');
@@ -141,6 +142,16 @@ while ($row = $res->fetch_assoc()) {
 
 
 
+// Periodo filter for top productos
+$periodCondProductos = '';
+if ($periodoProductos === 'dia') {
+  $periodCondProductos = " AND o.modified = '$hoy'";
+} elseif ($periodoProductos === 'semana') {
+  $periodCondProductos = " AND o.semana = '$semana'";
+} else {
+  $periodCondProductos = " AND o.fecha = '$mes'";
+}
+
 // Top 5 productos más vendidos optimizado
 $topProductos = [];
 
@@ -159,7 +170,7 @@ $sql = "
         INNER JOIN orden o ON oa.order_id = o.id 
         WHERE o.bss_id = $bss_id 
           AND o.status IN (1,4) 
-          $extraCond $user_cond
+          $extraCond $user_cond $periodCondProductos
         GROUP BY oa.product_id 
         ORDER BY total_vendido DESC 
         LIMIT 5

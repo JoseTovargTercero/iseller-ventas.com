@@ -743,10 +743,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class="panel-header">
                                     <h6><ion-icon name="flame-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Top 5 productos más vendidos</h6>
                                     <div class="chart-controls">
-                                        <span class="date-badge">
-                                            <ion-icon name="cube-outline" style="font-size:12px;margin-right:4px;"></ion-icon>
-                                            Volumen e ingresos
-                                        </span>
+                                        <div class="btn-group btn-group-toggle" role="group" id="periodoProductosToggle">
+                                            <button type="button" class="btn btn-sm period-prod-btn" data-periodo="dia" style="background:rgba(255,255,255,0.06);border:1px solid var(--dash-border);color:var(--dash-text-muted);border-radius:6px 0 0 6px;font-size:11px;font-weight:600;padding:4px 10px;transition:all 0.2s;">Día</button>
+                                            <button type="button" class="btn btn-sm period-prod-btn" data-periodo="semana" style="background:rgba(255,255,255,0.06);border:1px solid var(--dash-border);color:var(--dash-text-muted);border-radius:0;font-size:11px;font-weight:600;padding:4px 10px;transition:all 0.2s;">Semana</button>
+                                            <button type="button" class="btn btn-sm period-prod-btn active" data-periodo="mes" style="background:var(--dash-mint);border:1px solid var(--dash-mint);color:#fff;border-radius:0 6px 6px 0;font-size:11px;font-weight:600;padding:4px 10px;transition:all 0.2s;">Mes</button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="panel-body p-0 flex-fill" id="topProductosContainer" style="max-height:380px;overflow-y:auto;">
@@ -1245,6 +1246,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             // ─── Top clientes ranking ───
             let currentPeriodo = 'mes';
             let currentPeriodoPie = 'mes';
+            let currentPeriodoProductos = 'mes';
 
             function renderTopProductos(data) {
                 const container = document.getElementById('topProductosContainer');
@@ -1330,12 +1332,30 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 refreshChart();
             });
 
+            // Period toggle for top productos ranking
+            document.getElementById('periodoProductosToggle').addEventListener('click', function(e) {
+                const btn = e.target.closest('.period-prod-btn');
+                if (!btn) return;
+                const periodo = btn.dataset.periodo;
+                if (periodo === currentPeriodoProductos) return;
+                currentPeriodoProductos = periodo;
+                this.querySelectorAll('.period-prod-btn').forEach(b => {
+                    b.style.background = 'rgba(255,255,255,0.06)';
+                    b.style.borderColor = 'var(--dash-border)';
+                    b.style.color = 'var(--dash-text-muted)';
+                });
+                btn.style.background = 'var(--dash-mint)';
+                btn.style.borderColor = 'var(--dash-mint)';
+                btn.style.color = '#fff';
+                refreshChart();
+            });
+
             // ─── Sparkline instances ───
             let sparklineDia = null;
             let sparklineSemana = null;
             let sparklineMes = null;
 
-            function cargar_tabla(sucursal = null, usuario = null, periodo = 'mes', periodoPie = 'mes') {
+            function cargar_tabla(sucursal = null, usuario = null, periodo = 'mes', periodoPie = 'mes', periodoProductos = 'mes') {
                 fetch('../../configurar/index_back.php', {
                         method: 'POST',
                         headers: {
@@ -1345,7 +1365,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             sucursal: sucursal,
                             usuario: usuario,
                             periodo: periodo,
-                            periodoPie: periodoPie
+                            periodoPie: periodoPie,
+                            periodoProductos: periodoProductos
                         })
                     })
                     .then(response => response.json())
@@ -1449,7 +1470,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     document.getElementById('sucursal')?.value || null,
                     document.getElementById('usuario')?.value || null,
                     currentPeriodo,
-                    currentPeriodoPie
+                    currentPeriodoPie,
+                    currentPeriodoProductos
                 );
             }
 
@@ -1485,7 +1507,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             cargar_tabla(null, null, 'mes', 'mes');
 
             document.getElementById('sucursal').addEventListener('change', function() {
-                cargar_tabla(this.value, null, currentPeriodo, currentPeriodoPie);
+                cargar_tabla(this.value, null, currentPeriodo, currentPeriodoPie, currentPeriodoProductos);
             });
             document.getElementById('usuario').addEventListener('change', function() {
                 const sucursal = document.getElementById('sucursal').value;
