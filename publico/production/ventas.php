@@ -783,20 +783,24 @@ $stmt->close();
         border: none !important;
         border-radius: 0 !important;
     }
-    .btn-group > .btn-success:first-child {
+
+    .btn-group>.btn-success:first-child {
         border-radius: 8px 0 0 8px !important;
     }
-    .btn-group > .btn-group:last-child > .btn-success:first-child {
+
+    .btn-group>.btn-group:last-child>.btn-success:first-child {
         border-radius: 0 8px 8px 0 !important;
     }
-    .btn-group > .btn-group:first-child > .btn-success:first-child {
+
+    .btn-group>.btn-group:first-child>.btn-success:first-child {
         border-radius: 8px 0 0 8px !important;
     }
+
     /* Divider line between grouped buttons */
-    .btn-group > .btn-success + .btn-success,
-    .btn-group > .btn-success + .btn-group > .btn-success:first-child,
-    .btn-group > .btn-group + .btn-success {
-        border-left: 1px solid rgba(0,0,0,0.2) !important;
+    .btn-group>.btn-success+.btn-success,
+    .btn-group>.btn-success+.btn-group>.btn-success:first-child,
+    .btn-group>.btn-group+.btn-success {
+        border-left: 1px solid rgba(0, 0, 0, 0.2) !important;
     }
 </style>
 <div class="contenedor-loader" id="cargando">
@@ -1114,12 +1118,12 @@ $stmt->close();
                                         <table class="table table-striped table-hover" id="tabla-carrito">
                                             <thead style="min-width:100%; ">
                                                 <tr>
-                                                    <th style="width:5%" class="column-title">Cant.</th>
-                                                    <th style="width:30%" class="column-title">Producto</th>
-                                                    <th style="width:20%" class="column-title">Peso</th>
-                                                    <th style="width:20%" class="column-title">BS</th>
-                                                    <th style="width:10%" class="column-title">Dolares</th>
-                                                    <th style="width:10%" class="column-title">Acciones</th>
+                                                    <th class="column-title">Cant.</th>
+                                                    <th class="column-title">Producto</th>
+                                                    <th class="column-title">Peso</th>
+                                                    <th class="column-title">BS</th>
+                                                    <th class="column-title">Dolares</th>
+                                                    <th class="column-title">Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
