@@ -131,6 +131,7 @@ function procesarCarritos()
     }
 
     $errores = [];
+    $ordenIds = [];
 
     // Inicializar array de órdenes procesadas en sesión si no existe
     if (!isset($_SESSION['processed_orders'])) {
@@ -187,6 +188,9 @@ function procesarCarritos()
         } else {
             // Marcar como procesado exitosamente
             $_SESSION['processed_orders'][] = $idPedido;
+            if (!empty($respuesta['order_id'])) {
+                $ordenIds[] = $respuesta['order_id'];
+            }
 
             // Limitar el tamaño del historial para ahorrar memoria (últimos 50)
             if (count($_SESSION['processed_orders']) > 50) {
@@ -197,7 +201,7 @@ function procesarCarritos()
         $cart->destroy();
     }
     if (empty($errores)) {
-        echo json_encode(['status' => true, 'data' => 'Todos las vetnas se procesaron correctamente.']);
+        echo json_encode(['status' => true, 'data' => 'Venta guardada correctamente.', 'ids' => $ordenIds]);
     } else {
         echo json_encode(['status' => false, 'data' => $errores]);
     }
@@ -521,7 +525,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
 
         $cart->destroy();
 
-        return ['status' => true];
+        return ['status' => true, 'order_id' => $orderID];
         echo json_encode(['status' => true, 'data' => $msg, 'id' => $orderID]);
     } catch (Exception $e) {
         $conexion->rollback();

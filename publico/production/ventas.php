@@ -8,6 +8,7 @@ if (empty($_SESSION['sucursal']) || $_SESSION['sucursal'] == null) {
 }
 $nivelUsuario = $_SESSION['nivel'];
 $nombreUsuario = $_SESSION['nombre'];
+$usuario_id = $_SESSION['id'];
 $bss_id = $_SESSION['bss_id'];
 $sucursal = $_SESSION['sucursal'];
 $sucursal_nombre = '';
@@ -1014,6 +1015,11 @@ $stmt->close();
                                     type="button" role="tab" aria-controls="contact" aria-selected="false">Reservados
                                     <span id="cantidad-reservados"></span></button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="enviados-tab" data-bs-toggle="tab" data-bs-target="#enviados"
+                                    type="button" role="tab" aria-controls="enviados" aria-selected="false">Enviados
+                                    <span id="cantidad-enviados"></span></button>
+                            </li>
                         </ul>
 
 
@@ -1188,9 +1194,7 @@ $stmt->close();
                     <div class="tab-pane  col-lg-12 " id="profile" role="tabpanel" aria-labelledby="profile-tab">
                         <div class="x_panel" style="min-height: 60vh">
                             <div class="x_title d-flex justify-content-between">
-                                <div>
-                                    <h2>No guardados</h2>
-                                </div>
+                                <h2>No guardados</h2>
                             </div>
                             <div class="x_content cart">
                                 <ul class="p-0" id="ul-productos-sin-enviar">
@@ -1198,6 +1202,36 @@ $stmt->close();
                                 </ul>
                             </div>
                         </div>
+                    </div>
+                    <div class="tab-pane  col-lg-12" id="enviados" role="tabpanel" aria-labelledby="enviados-tab">
+
+                        <div class="x_panel" style="min-height: 60vh">
+                            <div class="x_title d-flex justify-content-between">
+                                <h2>Enviados</h2>
+                                <button class="btn btn-sm btn-success" onclick="exportarEnviadosExcel()" style="height:min-content;font-size:11px;"><ion-icon name="download-outline" style="margin-right:4px;font-size:13px;"></ion-icon> Exportar Excel</button>
+                            </div>
+                            <div class="x_content cart">
+
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Id Registro</th>
+                                            <th>Monto</th>
+                                            <th>Moneda</th>
+                                            <th>Tipopago</th>
+                                            <th>Respuesta</th>
+                                            <th>Status</th>
+                                            <th>Usuario</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-productos-enviados">
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+
                     </div>
                     <div class="tab-pane  col-lg-12" id="contact" role="tabpanel" aria-labelledby="contact-tab">
 
@@ -3040,7 +3074,11 @@ $stmt->close();
                     valorFinalBs,
                     valorFinalCop,
                     datosCliente,
-                    productos: carritoActivo
+                    productos: carritoActivo,
+                    status: 'sin enviar',
+                    respuesta: 'ndp',
+                    usuario_id: "<?php echo $usuario_id ?>",
+                    usuario_nombre: "<?php echo $nombreUsuario ?>"
                 };
 
                 // =========================================================================
@@ -3278,9 +3316,9 @@ $stmt->close();
             }
             async function enviarPedidosProcesados() {
                 let pedidosIndexedDB = await db.carritosVenta.toArray();
+                let pendientes = pedidosIndexedDB.filter(p => p.status === 'sin enviar');
 
-                if (pedidosIndexedDB.length === 0) {
-                    console.warn("No hay pedidos procesados para enviar.");
+                if (pendientes.length === 0) {
                     return;
                 }
 
@@ -3295,18 +3333,17 @@ $stmt->close();
                     let exitos = 0;
                     let fallos = 0;
 
-                    for (let pedido of pedidosIndexedDB) {
+                    for (let pedido of pendientes) {
                         try {
-                            // 1. Intentar registrar el pedido
                             let response = await enviarUnPedido(pedido);
 
                             if (response.status) {
-                                // 2. Doble verificación (No nos confiamos de la primera respuesta)
                                 let verificadoEnBD = await validacionDeVentasAsincrona(pedido);
 
                                 if (verificadoEnBD) {
-                                    // 3. Si la BD real confirma que existe, se borra de IndexedDB
-                                    await db.carritosVenta.delete(pedido.id);
+                                    pedido.status = 'enviado';
+                                    pedido.respuesta = JSON.stringify(response);
+                                    await db.carritosVenta.put(pedido);
                                     exitos++;
                                 } else {
                                     console.error(`El servidor dijo "éxito" pero el pedido ID ${pedido.id} NO se encontró en la BD.`);
@@ -3314,27 +3351,25 @@ $stmt->close();
                                     fallos++;
                                 }
                             } else {
-                                // El backend rechazó el pedido por lógica de negocio (ej. falta de stock, datos corruptos)
                                 console.error(`Error en pedido ID ${pedido.id}:`, response.data);
                                 Alerta.toast('error', `Error en pedido ${pedido.id}: ${response.data}`);
-                                // [BLOQUE ELIMINADO CON ÉXITO]
                                 fallos++;
                             }
                         } catch (error) {
                             console.error(`Error crítico de red/servidor en pedido ${pedido.id}:`, error);
                             fallos++;
-                            // Si hay un apagón de red real en medio del bucle, frenamos el envío del resto
                             break;
                         }
                     }
 
-                    // Resumen final al usuario
                     if (exitos > 0 && fallos === 0) {
                         Alerta.toast('success', 'Todos los pedidos se sincronizaron y verificaron correctamente.');
                     } else if (exitos > 0 && fallos > 0) {
                         Alerta.toast('warning', `Sincronización parcial: ${exitos} verificados, ${fallos} retenidos o fallidos.`);
                     }
 
+                    actualizarProductosSinEnviar();
+                    actualizarProductosEnviados();
                     btnConfirmarDespacho.disabled = false;
                     cargarUltimasOrdenes();
                 });
@@ -3461,12 +3496,118 @@ $stmt->close();
                 }
             }
 
+            // ─── Exportar Enviados a Excel ───
+            async function exportarEnviadosExcel() {
+                items = await getAllFromIndexedDB('carritosVenta');
+                const inicioHoy = new Date();
+                inicioHoy.setHours(0, 0, 0, 0);
+                const finHoy = new Date();
+                finHoy.setHours(23, 59, 59, 999);
+                items = items.filter(p => {
+                    if (p.status !== 'enviado') return false;
+                    const ts = parseInt(String(p.id).split('-')[0]);
+                    if (isNaN(ts)) return false;
+                    const fecha = new Date(ts);
+                    return fecha >= inicioHoy && fecha <= finHoy;
+                });
+
+                if (items.length === 0) {
+                    Alerta.toast('warning', 'No hay datos para exportar.');
+                    return;
+                }
+
+                let metodosPago = {
+                    option1: '(1) Punto',
+                    option2: '(5) Pago Movil',
+                    option3: '(6) Transferencia',
+                    option4: '(4) Efectivo',
+                    option5: '(7) Dólares',
+                    option6: '(3) Pesos',
+                    option7: '(2) BioPago'
+                };
+
+                function formatNumber(n) {
+                    return Number(n).toLocaleString('es-VE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+
+                function formatearMiles(n) {
+                    return Number(n).toLocaleString('es-CO', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    });
+                }
+
+                let csv = '\uFEFF';
+                csv += 'Id Registro,Monto,Moneda,Tipopago,Respuesta,Status,Usuario\n';
+
+                items.forEach(element => {
+                    const metodoPago = element.metodoPago;
+                    let totalPesos = 0,
+                        totalDolares = 0,
+                        totalBolivares = 0;
+
+                    Object.values(element.productos || {}).forEach(prod => {
+                        totalPesos += prod.pricePeso * prod.qty;
+                        totalDolares += prod.price * prod.qty;
+                        totalBolivares += prod.priceBolivar * prod.qty;
+                    });
+
+                    let monedas = {
+                        option1: 'Bs',
+                        option2: 'Bs',
+                        option3: 'Bs',
+                        option4: 'Bs',
+                        option5: 'Usd',
+                        option6: 'Cop',
+                        option7: 'Bs'
+                    };
+                    let moneda = monedas[metodoPago] || 'Bs';
+                    let monto;
+                    switch (moneda) {
+                        case 'Bs':
+                            monto = formatNumber(totalBolivares);
+                            break;
+                        case 'Cop':
+                            monto = formatearMiles(totalPesos);
+                            break;
+                        case 'Usd':
+                            monto = '$ ' + formatNumber(totalDolares);
+                            break;
+                    }
+
+                    let respuesta = JSON.parse(element.respuesta || '{}');
+                    let respStr = (respuesta.data || '') + ' - ' + (respuesta.ids || []);
+                    let statusStr = respuesta.status === true ? 'OK' : 'ERROR';
+
+                    let idReg = '#';
+                    let tipoPago = metodosPago[metodoPago] ?? 'PENDIENTE';
+                    let usuario = element.usuario_nombre || '';
+
+                    csv += `${idReg},${monto},${moneda},${tipoPago},"${respStr.replace(/"/g,'""')}",${statusStr},${usuario}\n`;
+                });
+
+                const blob = new Blob([csv], {
+                    type: 'text/csv;charset=utf-8;'
+                });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'enviados_' + new Date().toISOString().slice(0, 10) + '.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            }
+
             // ======================
             // SINCRONIZACIÓN AUTOMÁTICA
             // ======================
 
             // Inicializar al cargar
             actualizarProductosReservados();
+            actualizarProductosEnviados();
             enviarPedidosProcesados();
 
 
@@ -3582,12 +3723,133 @@ $stmt->close();
             // ELIMINAR CARRITO RESERVADO
 
 
+            // MOSTRAR PRODUCTOS ENVIADOS
+            async function actualizarProductosEnviados() {
+                document.getElementById('table-productos-enviados').innerHTML = '';
+                document.getElementById('cantidad-enviados').innerHTML = '';
+
+                items = await getAllFromIndexedDB('carritosVenta');
+                const inicioHoy = new Date();
+                inicioHoy.setHours(0, 0, 0, 0);
+                const finHoy = new Date();
+                finHoy.setHours(23, 59, 59, 999);
+                items = items.filter(p => {
+                    if (p.status !== 'enviado') return false;
+                    const ts = parseInt(String(p.id).split('-')[0]);
+                    if (isNaN(ts)) return false;
+                    const fecha = new Date(ts);
+                    return fecha >= inicioHoy && fecha <= finHoy;
+                });
+                items.reverse();
+                let totalesBs = 0;
+                let totalesCop = 0;
+                let totalesUsd = 0;
+
+                if (items.length > 0) {
+                    document.getElementById('cantidad-enviados').innerHTML = `<span class="badge bg-info">${items.length}</span>`;
+
+                    items.forEach(element => {
+                        const fecha = new Date(parseInt(element.id));
+                        const fechaHoy = new Date();
+                        // comparar fechas antes de proceder
+
+
+
+                        const fechaEspañol = fecha.toLocaleDateString('es-VE', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+
+                        const metodoPago = element.metodoPago;
+                        let productosHTML = '';
+                        let totalPesos = 0,
+                            totalDolares = 0,
+                            totalBolivares = 0;
+
+                        Object.values(element.productos || {}).forEach(prod => {
+                            productosHTML += `<span class="badge" style="background:rgba(45,212,160,0.12);color:var(--dash-mint);">${prod.name} (x${prod.qty})</span> `;
+                            totalPesos += prod.pricePeso * prod.qty;
+                            totalDolares += prod.price * prod.qty;
+                            totalBolivares += prod.priceBolivar * prod.qty;
+                        });
+
+
+                        let tipoVenta = {
+                            1: 'Venta',
+                            2: 'Crédito',
+                            3: 'Descuento'
+                        }
+
+                        let monedas = {
+                            option1: 'Bs',
+                            option2: 'Bs',
+                            option3: 'Bs',
+                            option4: 'Bs',
+                            option5: 'Usd',
+                            option6: 'Cop',
+                            option7: 'Bs'
+                        }
+                        let moneda = monedas[metodoPago];
+                        let monto;
+
+                        switch (moneda) {
+                            case 'Bs':
+                                monto = formatNumber(totalBolivares);
+                                totalesBs += totalBolivares;
+                                break;
+                            case 'Cop':
+                                monto = formatearMiles(totalPesos);
+                                totalesCop += totalPesos;
+                                break;
+                            case 'Usd':
+                                monto = formatNumber(totalDolares);
+                                totalesUsd += totalDolares;
+                                break;
+                        }
+                        let respuesta = JSON.parse(element.respuesta)
+                        let result = respuesta.status == true ? '<span class="badge bg-success">OK</span>' : '<span class="badge bg-danger">ERROR</span>'
+
+                        let html = `
+                        <tr>
+                                <td>ID.BD#${respuesta.ids}</td>
+                                <td>${monto}</td>
+                                <td>${moneda}</td>
+                                <td>${metodosPago[metodoPago] ?? 'PENDIENTE'}</b></td>
+                                <td><small>${respuesta.data}</small></td>
+                                <td>${result}</td>
+                                <td>${element.usuario_nombre}</td>
+                        </tr>
+                        `;
+                        document.getElementById('table-productos-enviados').innerHTML += html;
+                    });
+
+
+                    document.getElementById('table-productos-enviados').innerHTML += `
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>TOTALES:</td>
+                        <td>${formatNumber(totalesBs)} Bs</td>
+                        <td>${formatearMiles(totalesCop)} Cop</b></td>
+                        <td>$ ${formatNumber(totalesUsd)}</td>
+                    </tr>
+                    `;
+
+                } else {
+                    document.getElementById('table-productos-enviados').innerHTML = '<tr><td colspa="5">No hay pedidos enviados aún.</td></tr>';
+                }
+            }
+
             // MOSTRAR PRODUCTOS SIN ENVIAR
             async function actualizarProductosSinEnviar() {
                 document.getElementById('ul-productos-sin-enviar').innerHTML = '';
                 document.getElementById('cantidad-no-enviada').innerHTML = '';
 
                 items = await getAllFromIndexedDB('carritosVenta');
+                items = items.filter(p => p.status === 'sin enviar');
                 items.reverse();
 
                 if (items.length > 0) {
@@ -3611,7 +3873,7 @@ $stmt->close();
                             totalDolares = 0,
                             totalBolivares = 0;
 
-                        Object.values(element.productos).forEach(prod => {
+                        Object.values(element.productos || {}).forEach(prod => {
                             productosHTML += `<span class="badge" style="background:rgba(45,212,160,0.12);color:var(--dash-mint);">${prod.name} (x${prod.qty})</span> `;
                             totalPesos += prod.pricePeso * prod.qty;
                             totalDolares += prod.price * prod.qty;
@@ -3652,6 +3914,8 @@ $stmt->close();
             `;
                         document.getElementById('ul-productos-sin-enviar').innerHTML += html;
                     });
+                } else {
+                    document.getElementById('ul-productos-sin-enviar').innerHTML = '<div class="p-4 text-center" style="color:var(--dash-text-muted);">No hay pedidos pendientes.</div>';
                 }
             }
             // MOSTRAR PRODUCTOS SIN ENVIAR
