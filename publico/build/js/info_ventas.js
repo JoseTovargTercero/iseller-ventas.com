@@ -77,8 +77,17 @@ function cargarInfo() {
                     row.usuario,
                     row.created,
                     monto,
+                    row.total_price_cop || '-',
+                    row.total_price_bs || '-',
                     row.cliente,
-                    `<a href='#' onclick='verDetalles("${row.id}")' title='${row.productosTexto}'>Detalles</a>`,
+                    `<div style="display:flex;gap:6px;justify-content:center;">
+                      <button class="btn-detalles" onclick='verDetalles("${row.id}")' title="${row.productosTexto}">
+                        <ion-icon name="eye-outline"></ion-icon>
+                      </button>
+                      <button class="btn-eliminar" onclick='confirmarEliminar("${row.id}")' title="Eliminar venta">
+                        <ion-icon name="trash-outline"></ion-icon>
+                      </button>
+                    </div>`,
                 ]);
             });
             table.draw();

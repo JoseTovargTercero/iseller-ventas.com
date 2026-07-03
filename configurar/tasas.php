@@ -3,15 +3,22 @@ require_once("configuracion.php");
 require_once('session.php');
 
 $tipoTasa = $_POST['tipoTasa'];
-$margen = $_POST['margen'];
-$redondeo = $_POST['redondeo'];
-$bolivar = $_POST['bolivar'];
+$margen = $_POST['margen'] ?? 0;
+$redondeo = $_POST['redondeo'] ?? 0;
 $peso = $_POST['peso'];
 $bolivarPeso = $_POST['bolivarPeso'];
 $peso_bolivar = $_POST['peso_bolivar'];
 $bss_id = $_SESSION['bss_id'];
 
-if ($tipoTasa == 3) {
+require_once('_tasas_cambio.php');
+$tasasCambio = new TasasCambio($conexion);
+
+if ($tipoTasa == 2) {
+    $bcv = $tasasCambio->obtenerBcv();
+    $bolivar = $bcv;
+} elseif ($tipoTasa == 3) {
+    $bcv = $tasasCambio->obtenerBcv();
+    $bolivar = $bcv;
     if ($margen != 0 && $margen != '') {
         $bolivar += $margen;
     }
@@ -20,9 +27,10 @@ if ($tipoTasa == 3) {
     } elseif ($redondeo == 2) {
         $bolivar = round($bolivar, 0, PHP_ROUND_HALF_DOWN);
     }
+} else {
+    $bolivar = $_POST['bolivar'];
 }
 
-// Preparar la consulta
 $stmt = $conexion->prepare("
     UPDATE cambio 
     SET 
@@ -41,12 +49,9 @@ if ($stmt === false) {
     exit;
 }
 
-// Vincular parámetros (asumiendo que todos son tipo string, cambia según el tipo: 'd' para double, 'i' para entero)
 $stmt->bind_param("dddddddi", $peso, $bolivarPeso, $bolivar, $tipoTasa, $margen, $redondeo, $peso_bolivar, $bss_id);
 
-// Ejecutar la consulta
 if ($stmt->execute()) {
-    // Éxito
 } else {
     echo "Error al actualizar los datos: " . $stmt->error;
 }

@@ -9,189 +9,622 @@
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Inicio de sesion</title>
-  <meta name="description" content="Core HTML Project">
+  <title>Inicio de sesión — iSeller</title>
+  <meta name="description" content="Gestiona tu negocio desde un solo lugar. Ingresa a tu cuenta de iSeller.">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel='icon' href='publico/production/images/favicon.ico' type='image/ico' />
 
   <!-- External CSS -->
   <link rel="stylesheet" href="web/vendor/bootstrap/bootstrap.min.css">
-  <link rel="stylesheet" href="web/vendor/select2/select2.min.css">
-  <link rel="stylesheet" href="web/vendor/owlcarousel/owl.carousel.min.css">
-  <link rel="stylesheet" href="web/vendor/lightcase/lightcase.css">
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css?family=Lato:300,400|Work+Sans:300,400,700" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="web/css/style.min.css">
-  <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
-
-  <!-- Modernizr JS for IE8 support of HTML5 elements and media queries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.js"></script>
+  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Work Sans', 'Lato', sans-serif;
+      background-color: black;
+      /* color original del proyecto */
+      overflow: hidden;
+    }
+
+    /* ─── Snowflake (mantenido del original) ─── */
+    .snowflake {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background-color: white;
+    }
+
+    /* ─────────────────────────────────────────── *
+     *  LAYOUT SIDE BY SIDE                         *
+     * ─────────────────────────────────────────── */
+    .split-layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ── PANEL IZQUIERDO (oscuro) ── */
+    .panel-left {
+      flex: 1 1 55%;
+      background-color: black;
+      /* color original */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 36px 48px 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sutil textura / pattern sobre el fondo */
+    .panel-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .panel-left>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Logo + nombre en la parte superior izquierda */
+    .left-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .left-header .logo-img {
+      height: 36px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .left-header .brand-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    /* Bloque central de texto */
+    .left-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 0;
+    }
+
+    .left-headline {
+      font-size: clamp(28px, 3.5vw, 42px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      color: #ffffff;
+      margin-bottom: 18px;
+      max-width: 480px;
+    }
+
+    .left-subtext {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.55);
+      line-height: 1.6;
+      max-width: 400px;
+      margin-bottom: 36px;
+    }
+
+    /* Mini dashboard card */
+    .stats-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 14px;
+      padding: 20px 24px;
+      max-width: 380px;
+      backdrop-filter: blur(8px);
+    }
+
+    .stats-card .card-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.40);
+      margin-bottom: 16px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .stat-item {}
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 3px;
+    }
+
+    /* Divider entre stats */
+    .stats-divider {
+      width: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 0;
+    }
+
+    /* Notification badge */
+    .notif-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      padding: 6px 14px 6px 6px;
+      margin-top: 16px;
+      width: fit-content;
+    }
+
+    .notif-dot {
+      width: 28px;
+      height: 28px;
+      background: #28a745;
+      /* btn-success color original */
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .notif-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.3;
+    }
+
+    .notif-text strong {
+      display: block;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    /* Footer izquierdo */
+    .left-footer {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .left-footer a {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.35);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .left-footer a:hover {
+      color: rgba(255, 255, 255, 0.70);
+    }
+
+    .left-footer span {
+      color: rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+    }
+
+    /* ── PANEL DERECHO (blanco/claro) ── */
+    .panel-right {
+      flex: 0 0 45%;
+      background: #ffffff;
+      /* bg-white del original */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 56px;
+      border-left: 1px solid rgba(0, 0, 0, 0.06);
+      overflow-y: auto;
+    }
+
+    .form-wrap {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    /* Título del formulario */
+    .form-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+      letter-spacing: -0.4px;
+      margin-bottom: 6px;
+    }
+
+    .form-subtitle {
+      font-size: 13px;
+      color: #6c757d;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    /* Labels */
+    .form-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .label-link {
+      font-size: 12px;
+      color: #6c757d;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .label-link:hover {
+      color: #28a745;
+    }
+
+    /* Input wrapper con icono */
+    .input-group-custom {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .input-group-custom .field-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #adb5bd;
+      font-size: 15px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .input-group-custom input {
+      width: 100%;
+      padding: 11px 42px;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      color: #212529;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .input-group-custom input:focus {
+      border-color: #28a745;
+      /* color original btn-success */
+      box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.12);
+    }
+
+    .input-group-custom input::placeholder {
+      color: #adb5bd;
+    }
+
+    /* Toggle contraseña */
+    .toggle-pass {
+      position: absolute;
+      right: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #adb5bd;
+      font-size: 15px;
+      padding: 2px;
+      z-index: 2;
+      transition: color 0.15s;
+    }
+
+    .toggle-pass:hover {
+      color: #495057;
+    }
+
+    /* Botón submit — btn-success original */
+    .btn-ingresar {
+      width: 100%;
+      padding: 12px;
+      background-color: #28a745;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background-color 0.18s, transform 0.12s;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-ingresar:hover {
+      background-color: #218838;
+      transform: translateY(-1px);
+    }
+
+    .btn-ingresar:active {
+      background-color: #1e7e34;
+      transform: translateY(0);
+    }
+
+    .btn-ingresar:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    /* Nota de registro */
+    .register-note {
+      text-align: center;
+      font-size: 13px;
+      color: #6c757d;
+      margin-top: 24px;
+    }
+
+    .register-note a {
+      color: #28a745;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .register-note a:hover {
+      text-decoration: underline;
+    }
+
+    /* Nota seguridad pie */
+    .security-note {
+      text-align: center;
+      font-size: 11px;
+      color: #adb5bd;
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    /* Mensajes de error/éxito (ids usados por login.js) */
+    #form-message-warning {
+      color: #dc3545;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    #form-message-success {
+      color: #28a745;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) {
+      .panel-left {
+        display: none;
+      }
+
+      .panel-right {
+        flex: 1;
+        border-left: none;
+        padding: 40px 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .panel-right {
+        padding: 32px 20px;
+      }
+    }
+  </style>
 
 </head>
 
-<!--
-<div class="loader-container hide" id="loader">
-  <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
-    <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
-  </svg>
-</div>
--->
+<body>
 
+  <div class="split-layout">
 
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: black;
-    overflow: hidden;
-  }
+    <!-- ════════════════════════════════════ -->
+    <!--  PANEL IZQUIERDO                     -->
+    <!-- ════════════════════════════════════ -->
+    <div class="panel-left">
 
-  .snowflake {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background-color: white;
-  }
-</style>
-
-<script>
-  function createSnowflake() {
-    const snowflake = Object.assign(
-      document.createElement('div'),
-      {
-        className: 'snowflake',
-        style: `
-        left: ${Math.random() * innerWidth}px;
-        top: -5px;
-        opacity: ${Math.random()};
-        transform: scale(${Math.random() * 1.5 + 0.5});`
-      }
-    )
-
-    document.body.appendChild(snowflake);
-
-    let posY = -5;
-    let speed = Math.random() * 2 + 1;
-    let wobble = 0;
-
-    function fall() {
-      posY += speed;
-      wobble += 0.02;
-      snowflake.style.top = posY + 'px';
-      snowflake.style.left =
-        parseFloat(snowflake.style.left) +
-        Math.sin(wobble) * 2 + 'px';
-
-      posY < innerHeight
-        ? requestAnimationFrame(fall)
-        : snowflake.remove();
-    }
-
-    fall();
-  }
-
-  function generateSnow() {
-    setInterval(createSnowflake, 100);
-  }
-
-  //generateSnow();
-</script>
-
-
-<body data-spy="scroll" data-target="#navbar-nav-header" class="static-layout">
-  <div class="boxed-page animate__animated animate__fadeIn" style="max-width: fit-content;margin-left: auto;margin-right: auto;">
-    <nav id="gtco-header-navbar" class="navbar navbar-expand-lg py-4">
-      <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-          <img src="web/img/logo.png" alt="Logo iseller" class="logo">
-        </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-nav-header"
-          aria-controls="navbar-nav-header" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="lnr lnr-menu"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbar-nav-header">
-          <ul class="navbar-nav ml-auto">
-            <li class="nav-item">
-              <a class="btn btn-sm btn-outline-success" href="registro.php">Registrate</a>
-
-
-            </li>
-          </ul>
-        </div>
+      <!-- Logo + nombre arriba a la izquierda -->
+      <div class="left-header">
+        <img src="web/img/logo.png" alt="Logo iSeller" class="logo-img">
+        <span class="brand-name">iSeller</span>
       </div>
 
-    </nav>
+      <!-- Cuerpo central -->
+      <div class="left-body">
+        <h1 class="left-headline">
+          Gestiona tu negocio<br>desde un solo lugar.
+        </h1>
+        <p class="left-subtext">
+          Ventas, inventario, sucursales y reportes en una sola plataforma. Rápido, seguro y siempre disponible.
+        </p>
 
-    <section id="registro-form" class="bg-white ">
-      <div class="container d-flex ">
-        <div class="section-content m-auto" style="max-width: 450px; ">
-          <div class="title-wrap mt-3">
-            <h2 class="section-title">Inicio de sesión </h2>
-            <p class="section-sub-title">
-              Por favor ingresa tu correo electrónico y contraseña para ingresar a tu cuenta <a href="registro.php">aquí</a>.
-            </p>
+        <!-- Mini stats card (decorativa) -->
+        <div class="stats-card">
+          <div class="card-label">Resumen de hoy</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" id="stat-ventas">—</div>
+              <div class="stat-label">Ventas</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-negocios">—</div>
+              <div class="stat-label">Negocios activos</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-sucursales">—</div>
+              <div class="stat-label">Sucursales</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-usuarios">—</div>
+              <div class="stat-label">Usuarios</div>
+            </div>
           </div>
-          <div class="row">
-            <div class="col-md-8 offset-md-2 contact-form-holder mt-4">
-              <form name="data_form">
-                <div class="row">
-                  <div class="col-md-12 form-input mb-3">
-                    <input type="text" class="form-control" id="login" name="login" placeholder="Correo eléctronico" required>
-                  </div>
-                  <div class="col-md-12 form-input mb-3">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
-                  </div>
 
-                  <div class="col-md-12 form-btn text-center">
-                    <button class="btn btn-block btn-success" type="submit">Verificar</button>
-                  </div>
-                  <p class="text-center w-100 mt-4">¿No tienes una cuenta? <a href="registro.php">Registrate</a> </p>
-                </div>
-              </form>
-              <div id="form-message-warning" class="text-danger mt-3"></div>
-              <div id="form-message-success" class="text-success mt-3" style="display: none;">
-                Registro exitoso. Revisa tu correo.
-              </div>
+          <!-- Notificación ejemplo -->
+          <div class="notif-badge">
+            <div class="notif-dot">✓</div>
+            <div class="notif-text">
+              <strong>Sistema operativo</strong>
+              Todos los servicios funcionando
             </div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- End of Contact Form Section -->
-    <footer class="mastfoot mb-3 bg-white py-4 border-top">
-      <div class="inner container">
-        <p class="mb-0">&copy; 2025 iSeller.</p>
+      <!-- Footer izquierdo -->
+      <div class="left-footer">
+        <a href="#">Administrador</a>
+        <span>·</span>
+        <a href="registro.php">Registrarse</a>
+        <span>·</span>
+        <a href="#">Términos</a>
+        <span>·</span>
+        <a href="#">Privacidad</a>
+        <span style="margin-left:auto; color:rgba(255,255,255,0.25); font-size:12px;">
+          © <?php echo date('Y'); ?> iSeller
+        </span>
       </div>
-    </footer>
+
+    </div><!-- /panel-left -->
 
 
+    <!-- ════════════════════════════════════ -->
+    <!--  PANEL DERECHO — FORMULARIO          -->
+    <!-- ════════════════════════════════════ -->
+    <div class="panel-right">
+      <div class="form-wrap">
 
-  </div>
+        <h2 class="form-title">Ingresa a tu cuenta</h2>
+        <p class="form-subtitle">Inicia sesión para administrar tu negocio.</p>
 
-  </div>
+        <form name="data_form" novalidate>
+
+          <!-- Correo -->
+          <div>
+            <label for="login">Correo o usuario</label>
+          </div>
+          <div class="input-group-custom">
+            <span class="field-icon">✉</span>
+            <input
+              type="text"
+              id="login"
+              name="login"
+              placeholder="correo@negocio.com o usuario"
+              autocomplete="username"
+              required>
+          </div>
+
+          <!-- Contraseña -->
+          <div class="form-label-row">
+            <label for="password">Contraseña</label>
+            <a href="#" class="label-link">¿Olvidaste tu contraseña?</a>
+          </div>
+          <div class="input-group-custom">
+            <span class="field-icon">🔒</span>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required>
+            <button type="button" class="toggle-pass" id="togglePass" title="Mostrar contraseña">👁</button>
+          </div>
+
+          <!-- Botón -->
+          <button type="submit" class="btn-ingresar" id="submitBtn">
+            Verificar
+          </button>
+
+        </form>
+
+        <!-- Mensajes (usados por login.js) -->
+        <div id="form-message-warning"></div>
+        <div id="form-message-success">Registro exitoso. Revisa tu correo.</div>
+
+        <!-- Registro -->
+        <p class="register-note">
+          ¿No tienes una cuenta? <a href="registro.php">Regístrate</a>
+        </p>
+
+        <!-- Nota seguridad -->
+        <p class="security-note">
+          🔐 Acceso seguro para negocios registrados
+        </p>
+
+      </div>
+    </div><!-- /panel-right -->
+
+  </div><!-- /split-layout -->
+
+
   <!-- External JS -->
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="publico/build/js/login.js"></script>
   <script src="web/vendor/bootstrap/popper.min.js"></script>
   <script src="web/vendor/bootstrap/bootstrap.min.js"></script>
-  <script src="web/vendor/select2/select2.min.js "></script>
-  <script src="web/vendor/owlcarousel/owl.carousel.min.js"></script>
-  <script src="web/vendor/isotope/isotope.min.js"></script>
-  <script src="web/vendor/lightcase/lightcase.js"></script>
-  <script src="web/vendor/waypoints/waypoint.min.js"></script>
-  <script src="web/vendor/countTo/jquery.countTo.js"></script>
-  <script src="publico/build/js/global-loader.js"></script>
 
-  <!-- Main JS -->
-  <script src="web/js/app.min.js "></script>
+  <script>
+    // Toggle contraseña
+    document.getElementById('togglePass').addEventListener('click', function() {
+      const inp = document.getElementById('password');
+      const isPass = inp.type === 'password';
+      inp.type = isPass ? 'text' : 'password';
+      this.textContent = isPass ? '🙈' : '👁';
+    });
+  </script>
+
 </body>
 
 </html>

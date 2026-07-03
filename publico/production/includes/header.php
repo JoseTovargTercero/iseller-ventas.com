@@ -23,26 +23,9 @@ function topnav()
                 </div>
 
                 <ul class='navbar-right d-flex gap-2' style='text-align: right;'>
-
-
-
-                    <?php
-                    $darkMode = isset($_SESSION["darkMode"]) && $_SESSION["darkMode"] === "SI";
-                    $btnClass = $darkMode ? 'btn-dark text-white' : 'btn-light';
-                    $iconTheme = $darkMode ? 'sunny-outline' : 'moon-outline';
-                    ?>
-
-                    <a class="btn <?= $btnClass ?> item" href="../../configurar/darkMode.php" title="Cambiar modo de tema">
-                        <ion-icon name="<?= $iconTheme ?>"></ion-icon>
-                    </a>
-
-                    <a class="btn <?= $btnClass ?> item <?= $darkMode ? '' : 'text-danger' ?>" href="../../login/salir.php" title="Cerrar sesión">
+                    <a class="btn btn-dark text-white item text-white" href="../../login/salir.php" title="Cerrar sesión">
                         <ion-icon name="log-out-outline"></ion-icon>
                     </a>
-
-
-
-
                 </ul>
             </nav>
         </div>

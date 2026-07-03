@@ -1,11 +1,9 @@
 <?php
 require_once('includes/requires.php');
 
-
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
     $text_vista = 'Ventas de la semana';
-
 
     $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
     $stmt->bind_param('i', $bss_id);
@@ -30,459 +28,889 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
     $stmt->close();
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Lista de Ventas - Semana</title>
+  <?php require_once('includes/headers.php'); ?>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <style>
+    .right_col {
+      background: var(--dash-bg);
+      min-height: 100vh;
+      padding: 24px 28px !important;
+    }
+    .dash-header { margin-bottom: 28px; }
+    .dash-header h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--dash-text);
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+    .dash-header p {
+      color: var(--dash-text-muted);
+      margin: 2px 0 0;
+      font-size: 13px;
+    }
 
+    .btn-dash-action {
+      background: linear-gradient(135deg, #2dd4a0, #25b88a);
+      border: none;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s ease;
+      height: min-content;
+      box-shadow: 0 3px 12px rgba(45,212,160,0.25);
+      cursor: pointer;
+    }
+    .btn-dash-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(45,212,160,0.35);
+      color: #fff;
+    }
+    .btn-dash-action ion-icon { font-size: 16px; }
 
+    .dash-panel {
+      background: var(--dash-card);
+      border: 1px solid var(--dash-border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .dash-panel .panel-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--dash-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .dash-panel .panel-header h6 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--dash-text);
+      margin: 0;
+    }
+    .dash-panel .panel-body { padding: 6px 0; }
+    .dash-panel .panel-body.p-0 { padding: 0 !important; }
 
-    ?>
-    <!DOCTYPE html>
-    <html lang='es'>
+    .nav-tabs.dash-tabs {
+      border-bottom: 1px solid var(--dash-border);
+      gap: 4px;
+    }
+    .nav-tabs.dash-tabs .nav-link {
+      border: none;
+      color: var(--dash-text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 20px;
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s ease;
+      background: transparent;
+    }
+    .nav-tabs.dash-tabs .nav-link:hover {
+      color: var(--dash-text);
+      background: rgba(45,212,160,0.04);
+    }
+    .nav-tabs.dash-tabs .nav-link.active {
+      color: var(--dash-mint);
+      background: transparent;
+      box-shadow: inset 0 -2px 0 var(--dash-mint);
+    }
 
-    <head>
+    .dash-table-wrap { overflow-x: auto; padding: 0 16px 16px; }
+    .dash-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .dash-table thead th {
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--dash-text-muted);
+      border-bottom: 1px solid var(--dash-border);
+      background: transparent;
+    }
+    .dash-table tbody tr {
+      transition: background .15s ease;
+      border-bottom: 1px solid rgba(46,53,62,.4);
+    }
+    .dash-table tbody tr:last-child { border-bottom: none; }
+    .dash-table tbody tr:hover { background: rgba(45,212,160,.03); }
+    .dash-table tbody td {
+      padding: 12px 14px;
+      color: var(--dash-text);
+      vertical-align: middle;
+    }
+    .dash-table .text-center { text-align: center; }
+    .dash-table .text-end { text-align: right; }
 
-        <title>Lista de Ventas</title>
-        <?php require_once('includes/headers.php'); ?>
-        <link rel="stylesheet" href="theme.css">
+    .info-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 22px;
+      border-bottom: 1px solid rgba(46,53,62,.5);
+      transition: background .15s ease, padding-left .2s ease;
+      position: relative;
+    }
+    .info-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      opacity: 0;
+      background: var(--accent, var(--dash-mint));
+      transition: opacity .2s ease;
+    }
+    .info-item:hover::before { opacity: 1; }
+    .info-item:last-child { border-bottom: none; }
+    .info-item:hover {
+      background: rgba(45,212,160,.03);
+      padding-left: 26px;
+    }
+    .info-item-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+    .info-icon {
+      width: 46px; height: 46px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, var(--accent, var(--dash-mint)) 15%, transparent);
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .info-item:hover .info-icon {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px color-mix(in srgb, var(--accent, var(--dash-mint)) 25%, transparent);
+    }
+    .info-icon img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      transition: transform .3s ease;
+    }
+    .info-item:hover .info-icon img { transform: scale(1.08); }
+    .info-icon .avatar-letter {
+      font-size: 18px;
+      font-weight: 700;
+      transition: transform .2s ease;
+    }
+    .info-item:hover .info-icon .avatar-letter { transform: scale(1.1); }
+    .info-text { min-width: 0; }
+    .info-text h6 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dash-text);
+      margin: 0;
+      line-height: 1.3;
+    }
+    .info-text small {
+      font-size: 11px;
+      color: var(--dash-text-muted);
+      display: block;
+    }
+    .info-text p { margin: 0; }
+    .info-value {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--dash-text);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      transition: color .2s ease;
+    }
+    .info-item:hover .info-value { color: var(--dash-mint); }
+    .info-value small {
+      font-size: 11px;
+      color: var(--dash-text-muted);
+      font-weight: 400;
+      margin-left: 2px;
+    }
 
-    </head>
+    .dash-select {
+      background: var(--dash-bg);
+      border: 1px solid var(--dash-border);
+      color: var(--dash-text);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      transition: border-color .2s ease;
+    }
+    .dash-select:focus {
+      border-color: var(--dash-mint);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(45,212,160,.12);
+    }
 
-    <!-- Modal -->
-    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Aplicar filtro</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
+    .modal-dash .modal-content {
+      background: var(--dash-card);
+      border: 1px solid var(--dash-border);
+      border-radius: 14px;
+    }
+    .modal-dash .modal-header {
+      border-bottom: 1px solid var(--dash-border);
+      padding: 16px 22px;
+    }
+    .modal-dash .modal-title {
+      color: var(--dash-text);
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .modal-dash .close {
+      color: var(--dash-text-muted);
+      font-size: 24px;
+      opacity: .7;
+      transition: opacity .2s;
+      background: none;
+      border: none;
+    }
+    .modal-dash .close:hover { opacity: 1; }
+    .modal-dash .modal-body { padding: 20px 22px; }
+    .modal-dash .modal-footer {
+      border-top: 1px solid var(--dash-border);
+      padding: 14px 22px;
+    }
+    .modal-dash .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--dash-text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .modal-dash .form-control {
+      background: var(--dash-bg);
+      border: 1px solid var(--dash-border);
+      color: var(--dash-text);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 13px;
+      width: 100%;
+      transition: border-color .2s ease;
+    }
+    .modal-dash .form-control:focus {
+      border-color: var(--dash-mint);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(45,212,160,.12);
+    }
+    .btn-dash-secondary {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--dash-border);
+      color: var(--dash-text-muted);
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all .2s ease;
+      cursor: pointer;
+    }
+    .btn-dash-secondary:hover {
+      border-color: var(--dash-mint);
+      color: var(--dash-mint);
+    }
 
-                    <div class="mb-3">
-                        <label for="sucursal" class="form-label">Sucursal</label>
-                        <select class="form-control" id="sucursal_selector" name="sucursal_a_editar">
-                            <?php if (count($sucursales) > 1): ?>
-                                <option value="">Todas las sucursales</option>
-                            <?php endif; ?>
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select {
+      background: var(--dash-bg) !important;
+      border: 1px solid var(--dash-border) !important;
+      color: var(--dash-text) !important;
+      border-radius: 8px !important;
+      padding: 6px 12px !important;
+    }
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter label {
+      color: var(--dash-text-muted) !important;
+      font-size: 13px !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+      color: var(--dash-text-muted) !important;
+      border: 1px solid var(--dash-border) !important;
+      border-radius: 6px !important;
+      margin: 0 2px !important;
+      padding: 4px 12px !important;
+      background: transparent !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+      background: var(--dash-mint) !important;
+      border-color: var(--dash-mint) !important;
+      color: #fff !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+      border-color: var(--dash-mint) !important;
+      color: var(--dash-mint) !important;
+    }
 
-                            <?php foreach ($sucursales as $row): ?>
-                                <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($row['nombre']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="usuario" class="form-label">Usuario</label>
-                        <select id="usuario" class="me-2 form-control form-control-sm">
-                            <option value="todos">-- Seleccione --</option>
-                        </select>
-                    </div>
+    .tab-pane.fade {
+      background: transparent;
+    }
+    .tab-pane.fade:not(.show) {
+      display: none;
+    }
 
+    .btn-detalles,
+    .btn-eliminar {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--dash-border);
+      background: transparent;
+      color: var(--dash-text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all .2s ease;
+      padding: 0;
+    }
+    .btn-detalles:hover { border-color: var(--dash-mint); color: var(--dash-mint); }
+    .btn-eliminar:hover { border-color: #ef5a6f; color: #ef5a6f; }
+    .btn-detalles ion-icon,
+    .btn-eliminar ion-icon { font-size: 16px; }
 
-                </div>
-                <div class="modal-footer text-end">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
+    .swal2-popup {
+      background: var(--dash-card) !important;
+      border: 1px solid var(--dash-border) !important;
+      border-radius: 14px !important;
+      padding: 0 !important;
+    }
+    .swal2-modal { font-family: inherit; }
+    .swal2-title {
+      color: var(--dash-text) !important;
+      font-size: 18px !important;
+      font-weight: 600 !important;
+      padding: 20px 22px 10px !important;
+    }
+    .swal2-html-container {
+      color: var(--dash-text-muted) !important;
+      font-size: 13px !important;
+      padding: 0 22px 16px !important;
+      text-align: left !important;
+    }
+    .swal2-html-container h1 { font-size: 16px; color: var(--dash-text); margin-bottom: 12px; }
+    .swal2-html-container h1 i { color: var(--dash-mint); margin-right: 6px; }
+    .swal2-close {
+      color: var(--dash-text-muted) !important;
+      font-size: 28px !important;
+      transition: opacity .2s !important;
+    }
+    .swal2-close:hover { opacity: .8 !important; }
+    .swal2-confirm {
+      background: linear-gradient(135deg, #2dd4a0, #25b88a) !important;
+      border: none !important;
+      border-radius: 8px !important;
+      padding: 9px 24px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      box-shadow: 0 3px 12px rgba(45,212,160,.25) !important;
+      color: #fff !important;
+    }
+    .swal2-deny {
+      border-radius: 8px !important;
+      padding: 9px 24px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+    }
+    .swal2-cancel {
+      background: rgba(255,255,255,.06) !important;
+      border: 1px solid var(--dash-border) !important;
+      color: var(--dash-text-muted) !important;
+      border-radius: 8px !important;
+      padding: 9px 24px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+    }
+    .swal2-icon { margin-top: 16px; }
+    .swal2-actions { padding: 0 22px 20px !important; }
+    .swal2-html-container table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .swal2-html-container table thead th {
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--dash-text-muted);
+      border-bottom: 1px solid var(--dash-border);
+    }
+    .swal2-html-container table tbody td {
+      padding: 10px 12px;
+      color: var(--dash-text);
+      border-bottom: 1px solid rgba(46,53,62,.4);
+    }
+    .swal2-html-container table tbody tr:hover { background: rgba(45,212,160,.03); }
+    .swal2-html-container table tbody tr:last-child td { border-bottom: none; }
+    .swal2-loader { border-color: var(--dash-mint) transparent var(--dash-mint) transparent !important; }
+    .swal2-show { animation: swal2-show-custom .25s ease !important; }
+    @keyframes swal2-show-custom {
+      0% { transform: scale(.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .table-info-cell {
+      background: rgba(45,212,160,.04);
+    }
+    .table-warning-cell {
+      background: rgba(245,180,91,.08);
+    }
+  </style>
+</head>
+<body class="nav-md">
+<div class="container body">
+  <div class="main_container">
+    <?php echo $menu ?>
+    <?php echo $topnav ?>
+
+    <div class="right_col">
+      <div class="d-flex justify-content-between dash-header">
+        <div>
+          <h3>Ventas</h3>
+          <p><?php echo $text_vista ?></p>
         </div>
+        <?php if ($_SESSION["nivel"] == 1): ?>
+        <div style="align-self:anchor-center;">
+          <button type="button" class="btn-dash-action" data-toggle="modal" data-target="#filterModal">
+            <ion-icon name="funnel-outline"></ion-icon> Aplicar Filtro
+          </button>
+        </div>
+        <?php endif; ?>
+      </div>
+
+      <!-- NAV TABS -->
+      <ul class="nav nav-tabs dash-tabs mb-3" id="ventasTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <a class="nav-link active" id="tab-resumen" data-toggle="tab" href="#pane-resumen" role="tab">Resumen del día</a>
+        </li>
+        <li class="nav-item" role="presentation">
+          <a class="nav-link" id="tab-usuarios" onclick="cargarTotalesUsuarios()" data-toggle="tab" href="#pane-usuarios" role="tab">Totales por Usuario</a>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <!-- TAB 1: RESUMEN -->
+        <div class="tab-pane fade show active" id="pane-resumen" role="tabpanel">
+          <div class="row">
+            <div class="col-lg-12 mb-4">
+              <div class="dash-panel">
+                <div class="panel-header">
+                  <div>
+                    <h6><ion-icon name="receipt-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Listado de ventas</h6>
+                    <small style="color:var(--dash-text-muted);font-size:11px;">Los créditos otorgados se visualizarán en la lista; sin embargo, no serán considerados en la totalización hasta su cancelación.</small>
+                  </div>
+                  <?php
+                  $semanaActual = (int) date('W');
+                  $semanaInicial = max($semanaActual - 9, 1);
+                  ?>
+                  <select class="dash-select" name="fechaSolic" id="fechaSolic">
+                    <?php for ($semana = $semanaActual; $semana >= $semanaInicial; $semana--): ?>
+                      <option value="<?= $semana ?>"><?= date('Y') ?> - Semana <?= $semana ?></option>
+                    <?php endfor; ?>
+                  </select>
+                </div>
+                <div class="panel-body p-0">
+                  <div class="dash-table-wrap">
+                    <table id="datatable" class="dash-table" style="width:100%">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>T</th>
+                          <th>Pago por</th>
+                          <th>Usuario</th>
+                          <th>Fecha</th>
+                          <th>Monto</th>
+                          <th>COP</th>
+                          <th>Bs</th>
+                          <th>Cliente</th>
+                          <th>Detalles</th>
+                        </tr>
+                      </thead>
+                      <tbody id="datos-tabla"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+              <div class="dash-panel">
+                <div class="panel-header">
+                  <h6><ion-icon name="card-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Métodos de pago</h6>
+                </div>
+                <div class="panel-body p-0" id="paymentMethodsList">
+                  <div class="info-item" style="--accent:#2dd4a0;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/PUNTO-DE-VENTA.png" alt="PUNTO DE VENTA"></div>
+                      <div class="info-text"><h6>PUNTO DE VENTA</h6><small>Pago con punto</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_Punto"></span> <small>Bs</small></div>
+                  </div>
+                  <div class="info-item" style="--accent:#5b9cf5;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/PAGO-MOVIL.png" alt="PAGO MOVIL"></div>
+                      <div class="info-text"><h6>PAGO MÓVIL</h6><small>Transferencia telefónica</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_Pmovil"></span> <small>Bs</small></div>
+                  </div>
+                  <div class="info-item" style="--accent:#a78bfa;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/TRANSFERENCIA.png" alt="TRANSFERENCIA"></div>
+                      <div class="info-text"><h6>TRANSFERENCIA</h6><small>Pago bancario</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_Transferencia"></span> <small>Bs</small></div>
+                  </div>
+                  <div class="info-item" style="--accent:#f472b6;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/BIOPAGO.png" alt="BIOPAGO"></div>
+                      <div class="info-text"><h6>BIOPAGO</h6><small>Pago biométrico</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_Biopago"></span> <small>Bs</small></div>
+                  </div>
+                  <div class="info-item" style="--accent:#f5b45b;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/EFECTIVO-BOLIVAR.png" alt="EFECTIVO"></div>
+                      <div class="info-text"><h6>EFECTIVO BS</h6><small>Pago en efectivo</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_Efectivo"></span> <small>Bs</small></div>
+                  </div>
+                  <div class="info-item" style="--accent:#34d399;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/EFECTIVO-DOLAR.png" alt="DOLARES"></div>
+                      <div class="info-text"><h6>DÓLARES</h6><small>Pago en USD</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_Dolares"></span> <small>$</small></div>
+                  </div>
+                  <div class="info-item" style="--accent:#f97316;">
+                    <div class="info-item-left">
+                      <div class="info-icon"><img src="images/EFECTIVO-PESOS.png" alt="PESOS"></div>
+                      <div class="info-text"><h6>PESOS</h6><small>Pago en COP</small></div>
+                    </div>
+                    <div class="info-value"><span id="total_pesos"></span> <small>Cop</small></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+              <div class="dash-panel">
+                <div class="panel-header">
+                  <h6><ion-icon name="stats-chart-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Totales por moneda</h6>
+                </div>
+                <div class="panel-body p-0">
+                  <?php
+                  $items = [
+                    ['titulo' => 'Bolivares', 'subtitulo' => 'ganacias_Bolivares', 'valor' => 'valor_Bolivares', 'accent' => '#f5b45b', 'letra' => 'B'],
+                    ['titulo' => 'Dolares',   'subtitulo' => 'ganacias_Dolares',   'valor' => 'valor_Dolares',   'accent' => '#2dd4a0', 'letra' => '$'],
+                    ['titulo' => 'Pesos',     'subtitulo' => 'ganacias_Pesos',     'valor' => 'valor_Pesos',     'accent' => '#8892a0', 'letra' => 'P'],
+                    ['titulo' => 'Mayor',     'subtitulo' => 'ganacias_Mayor',     'valor' => 'valor_Mayor',     'accent' => '#a78bfa', 'letra' => 'M'],
+                    ['titulo' => 'Detal',     'subtitulo' => 'ganacias_Detal',     'valor' => 'valor_Detal',     'accent' => '#f472b6', 'letra' => 'D'],
+                  ];
+                  foreach ($items as $item):
+                  ?>
+                  <div class="info-item" style="--accent:<?= $item['accent'] ?>;">
+                    <div class="info-item-left">
+                      <div class="info-icon" style="--accent:<?= $item['accent'] ?>;">
+                        <span class="avatar-letter" style="color:<?= $item['accent'] ?>;"><?= $item['letra'] ?></span>
+                      </div>
+                      <div class="info-text"><h6><?= $item['titulo'] ?></h6><small class="d-none" id="<?= $item['subtitulo'] ?>"></small></div>
+                    </div>
+                    <div class="info-value"><span id="<?= $item['valor'] ?>"></span></div>
+                  </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: TOTALES POR USUARIO -->
+        <div class="tab-pane fade" id="pane-usuarios" role="tabpanel">
+          <div class="dash-panel">
+            <div class="panel-header">
+              <h6><ion-icon name="people-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Totales por Usuario vs Corte de Caja</h6>
+              <span id="estado-corte-badge"></span>
+            </div>
+            <div class="panel-body p-0">
+              <div class="dash-table-wrap">
+                <table class="dash-table" id="tabla-usuarios-totales">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Hora inicio</th>
+                      <th>Concepto</th>
+                      <th class="text-end">Efect. Bs</th>
+                      <th class="text-end">USD</th>
+                      <th class="text-end">Pesos</th>
+                      <th class="text-end">Punto</th>
+                      <th class="text-end">P.Móvil</th>
+                      <th class="text-end">Transfer.</th>
+                      <th class="text-end">Biopago</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-usuarios">
+                    <tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Cargando...</td></tr>
+                  </tbody>
+                  <tfoot id="tfoot-usuarios"></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <body class='nav-md'>
-        <div class='container body'>
-            <div class='main_container'>
+    <!-- Filter Modal -->
+    <div class="modal fade modal-dash" id="filterModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Aplicar filtro</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" for="sucursal_selector">Sucursal</label>
+              <select class="form-control" id="sucursal_selector" name="sucursal_a_editar">
+                <?php if (count($sucursales) > 1): ?>
+                  <option value="">Todas las sucursales</option>
+                <?php endif; ?>
+                <?php foreach ($sucursales as $row): ?>
+                  <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($row['nombre']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="usuario">Usuario</label>
+              <select id="usuario" class="form-control">
+                <option value="todos">-- Seleccione --</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-dash-secondary" data-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-                <?php echo $menu ?>
-                <!-- top navigation -->
-                <?php echo $topnav ?>
-                <!-- /top navigation -->
+<script src="../vendors/jquery/dist/jquery.min.js"></script>
+<script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="../build/js/custom.js"></script>
+<script src="../build/js/global-loader.js"></script>
 
-                <!-- page content -->
-                <div class='right_col' role='main'>
+<script>
+let table = new DataTable('#datatable');
+const periodo = 'semana';
+</script>
+<script src="../build/js/info_ventas.js"></script>
 
-                    <div class=''>
+<script>
+let _totalesUsuariosCargado = false;
 
+function cargarTotalesUsuarios(force) {
+  if (_totalesUsuariosCargado && !force) return;
+  _totalesUsuariosCargado = true;
 
-                        <div class="d-flex justify-content-between w-100">
-                            <div>
-                                <h4>Ventas</h4>
-                                <p style="margin-top: -10px;"><?php echo $text_vista ?></p>
-                            </div>
-                            <?php if ($_SESSION["nivel"] == 1): ?>
-                                <div style="    align-self: anchor-center;">
-                                    <button type="button" style="height: min-content;" class="btn btn-success btn-sm"
-                                        data-toggle="modal" data-target="#exampleModalCenter">
-                                        Aplicar Filtro
-                                    </button>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class='clearfix'></div>
+  const fecha = document.getElementById('fechaSolic').value || '';
+  const sucursal = document.getElementById('sucursal_selector')?.value || '';
 
-                        <div class='row   fadeInUp animated'>
+  fetch('../../configurar/listaVentas_back.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'totales_por_usuario', fechaSolic: fecha, sucursal: sucursal })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status !== 'success') return console.error('Error cargando totales usuario:', data);
 
-                            <div class='col-lg-12'>
-                                <div class='x_panel'>
+    const tbody = document.getElementById('tbody-usuarios');
+    const tfoot = document.getElementById('tfoot-usuarios');
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
 
-                                    <div class='d-flex justify-content-between'>
-                                        <div style="display: flex; flex-direction: column;">
-                                            <h2 class="m-0">Listado de ventas</h2>
-                                            <small class="text-muted">Los créditos otorgados se visualizarán en la lista;
-                                                <br>sin embargo, no serán considerados en la totalización hasta su
-                                                cancelación.</small>
-                                        </div>
-                                        <div class="p-2">
+    if (!data.cortes || data.cortes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">No hay cortes de caja registrados para este período.</td></tr>';
+      return;
+    }
 
-                                            <?php
-                                            $semanaActual = (int) date('W'); // Convierte la semana actual a entero (quita ceros a la izquierda)
-                                            $semanaInicial = max($semanaActual - 9, 1); // Asegura que no sea menor que 1
-                                            ?>
+    const fmt = (n, dec = 2) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    const colorDif = val => val < 0 ? 'text-success' : (val > 0 ? 'text-danger' : '');
 
-                                            <select class="form-control form-control-sm" name="fechaSolic" id="fechaSolic">
-                                                <?php
-                                                for ($semana = $semanaActual; $semana >= $semanaInicial; $semana--) {
-                                                    echo "<option value='{$semana}'>" . date('Y') . " - Semana {$semana}</option>";
-                                                }
-                                                ?>
-                                            </select>
+    data.cortes.forEach(u => {
+      let obs = '';
+      if (u.apertura?.observaciones) obs += `<small style="color:var(--dash-text-muted);display:block;"><b>Ape:</b> ${u.apertura.observaciones}</small>`;
+      if (u.cierre?.observaciones) obs += `<small style="color:var(--dash-text-muted);display:block;"><b>Cie:</b> ${u.cierre.observaciones}</small>`;
 
+      const ape = u.apertura || { efectivo_bs: 0, dolares: 0, pesos: 0 };
+      const cie = u.cierre || {
+        contado: { efectivo_bs: 0, dolares: 0, pesos: 0, punto: 0, pago_movil: 0, transferencia: 0, biopago: 0 },
+        sistema: { efectivo_bs: 0, dolares: 0, pesos: 0, punto: 0, pago_movil: 0, transferencia: 0, biopago: 0 },
+        diferencia: { efectivo_bs: 0, dolares: 0, pesos: 0, punto: 0, pago_movil: 0, transferencia: 0, biopago: 0 },
+        fondo_dejado: { efectivo_bs: 0, dolares: 0, pesos: 0 }
+      };
 
+      tbody.innerHTML += `
+      <tr>
+        <td rowspan="5" class="align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;">
+          <strong>${u.nombre}</strong><br>${obs}
+        </td>
+        <td rowspan="5" class="align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;">
+          <strong>${u.apertura?.hora_apertura || '-'}</strong>
+        </td>
+        <td><strong>Apertura (Fondo Recibido)</strong></td>
+        <td class="text-end">${fmt(ape.efectivo_bs)} Bs</td>
+        <td class="text-end">${fmt(ape.dolares)} $</td>
+        <td class="text-end">${fmt(ape.pesos, 0)} COP</td>
+        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
+        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
+        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
+        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
+      </tr>
+      <tr>
+        <td class="table-info-cell"><strong>Cierre (Contado)</strong></td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.efectivo_bs)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.dolares)} $</td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.pesos, 0)} COP</td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.punto)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.pago_movil)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.transferencia)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.contado.biopago)} Bs</td>
+      </tr>
+      <tr>
+        <td class="table-info-cell">Sistema</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.efectivo_bs)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.dolares)} $</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.pesos, 0)} COP</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.punto)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.pago_movil)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.transferencia)} Bs</td>
+        <td class="text-end table-info-cell">${fmt(cie.sistema.biopago)} Bs</td>
+      </tr>
+      <tr>
+        <td class="table-info-cell"><strong>Diferencia</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.efectivo_bs)}"><strong>${fmt(cie.diferencia.efectivo_bs)} Bs</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.dolares)}"><strong>${fmt(cie.diferencia.dolares)} $</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.pesos)}"><strong>${fmt(cie.diferencia.pesos, 0)} COP</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.punto)}"><strong>${fmt(cie.diferencia.punto)} Bs</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.pago_movil)}"><strong>${fmt(cie.diferencia.pago_movil)} Bs</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.transferencia)}"><strong>${fmt(cie.diferencia.transferencia)} Bs</strong></td>
+        <td class="text-end table-info-cell ${colorDif(cie.diferencia.biopago)}"><strong>${fmt(cie.diferencia.biopago)} Bs</strong></td>
+      </tr>
+      <tr style="border-bottom:2px solid var(--dash-border);">
+        <td class="table-warning-cell"><strong>Fondo Dejado (Cierre)</strong></td>
+        <td class="text-end table-warning-cell">${fmt(cie.fondo_dejado.efectivo_bs)} Bs</td>
+        <td class="text-end table-warning-cell">${fmt(cie.fondo_dejado.dolares)} $</td>
+        <td class="text-end table-warning-cell">${fmt(cie.fondo_dejado.pesos, 0)} COP</td>
+        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
+        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
+        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
+        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
+      </tr>`;
+    });
+  })
+  .catch(err => console.error('Error cargando totales usuario:', err));
+}
 
-                                        </div>
-                                    </div>
-                                    <div class='x_content '>
-                                        <div class='card-box'>
-                                            <table id="datatable" class="table table-bordered" style="width:100%">
-                                                <thead>
-                                                    <tr class="headings">
-                                                        <th>#</th>
-                                                        <th>T</th>
-                                                        <th>Pago por</th>
-                                                        <th>Usuario</th>
-                                                        <th>Fecha</th>
-                                                        <th>Monto</th>
-                                                        <th>COP</th>
-                                                        <th>Bs</th>
-                                                        <th>cliente</th>
-                                                        <th>Detalles</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="datos-tabla">
-                                                </tbody>
-                                            </table>
+document.getElementById('fechaSolic').addEventListener('change', function() {
+  _totalesUsuariosCargado = false;
+  if (document.getElementById('pane-usuarios').classList.contains('show')) {
+    cargarTotalesUsuarios(true);
+  }
+});
+</script>
 
+<script>
+document.getElementById('sucursal_selector').addEventListener('change', function() {
+  const sucursalId = this.value;
+  const usuarioSelect = document.getElementById('usuario');
+  usuarioSelect.innerHTML = '<option value="todos">-- Seleccione --</option>';
 
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+  if (sucursalId === 'todas') return;
 
-                            <div class="col-lg-6">
-                                <div class="x_panel tile">
-                                    <div class="p-0 card-body">
-                                        <!-- Punto de Venta -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/PUNTO-DE-VENTA.png" height="60px"
-                                                            alt="PUNTO DE VENTA" class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">PUNTO DE VENTA</p>
-                                                            <small class='text-muted'>Pago con punto</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_Punto">
-                                                </span><small> Bs</small>
-                                            </div>
-                                        </div>
-                                        <!-- Pago Móvil -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/PAGO-MOVIL.png" height="60px" alt="PAGO MOVIL"
-                                                            class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">PAGO MÓVIL</p>
-                                                            <small class='text-muted'>Transferencia telefónica</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_Pmovil">
-                                                </span><small> Bs</small>
-                                            </div>
-                                        </div>
+  const usuariosFiltrados = <?php echo json_encode($usuarios); ?>.filter(u => u.id_sucursal == sucursalId);
+  if (usuariosFiltrados.length > 0) {
+    usuariosFiltrados.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = u.nombre;
+      usuarioSelect.appendChild(opt);
+    });
+  } else {
+    usuarioSelect.innerHTML = '<option value="">No hay usuarios disponibles</option>';
+  }
+});
 
+function confirmarEliminar(id) {
+  Swal.fire({
+    title: 'Eliminar Venta',
+    text: '¿Está seguro de eliminar esta venta? Esta acción no se puede deshacer.',
+    icon: 'warning',
+    showCancelButton: true,
+    cancelButtonText: 'Cancelar',
+    confirmButtonText: 'Eliminar',
+    confirmButtonColor: '#ef5a6f',
+  }).then(result => {
+    if (result.isConfirmed) eliminarVenta(id);
+  });
+}
 
-                                        <!-- Transferencia -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/TRANSFERENCIA.png" height="60px"
-                                                            alt="TRANSFERENCIA" class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">TRANSFERENCIA</p>
-                                                            <small class='text-muted'>Pago bancario</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_Transferencia">
-                                                </span><small> Bs</small>
-                                            </div>
-                                        </div>
-
-                                        <!-- Biopago -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/BIOPAGO.png" height="60px" alt="BIOPAGO"
-                                                            class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">BIOPAGO</p>
-                                                            <small class='text-muted'>Pago biométrico</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_Biopago">
-                                                </span><small> Bs</small>
-                                            </div>
-                                        </div>
-
-                                        <!-- Efectivo Bolívares -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/EFECTIVO-BOLIVAR.png" height="60px" alt="EFECTIVO"
-                                                            class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">EFECTIVO BS</p>
-                                                            <small class='text-muted'>Pago en efectivo</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_Efectivo">
-                                                </span><small> Bs</small>
-                                            </div>
-                                        </div>
-
-                                        <!-- Efectivo Dólares -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/EFECTIVO-DOLAR.png" height="60px" alt="DOLARES"
-                                                            class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">DÓLARES</p>
-                                                            <small class='text-muted'>Pago en USD</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_Dolares"></span><small> $ </small>
-                                            </div>
-                                        </div>
-
-
-                                        <!-- Pesos -->
-                                        <div class="d-flex justify-content-between py-2 g-0 border-bottom border-200">
-                                            <div class="py-1">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar avatar-xl me-3">
-                                                        <img src="images/EFECTIVO-PESOS.png" height="60px" alt="PESOS"
-                                                            class="rounded-circle">
-                                                    </div>
-                                                    <h6 class="d-flex mb-0 align-items-center">
-                                                        <span>
-                                                            <p class="m-0">PESOS</p>
-                                                            <small class='text-muted'>Pago en COP</small>
-                                                        </span>
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            <div class="p-2">
-                                                <span class="fs-15 fw-semibold" id="total_pesos"></span>
-                                                <small> Cop</small>
-                                            </div>
-                                        </div>
-
-                                    </div>
-
-
-
-                                </div>
-                            </div>
-                            <div class='col-lg-6'>
-                                <div class='x_panel tile'>
-                                    <div class='x_title'>
-                                        <div class='clearfix'></div>
-                                    </div>
-                                    <div class='x_content'>
-
-                                        <div class="p-0 card-body">
-                                            <?php
-
-                                            $items = [
-                                                [
-                                                    'titulo' => 'Bolivares',
-                                                    'subtitulo' => 'ganacias_Bolivares',
-                                                    'valor' => 'valor_Bolivares',
-                                                    'bg' => 'bg-warning',
-                                                    'text' => 'text-dark'
-                                                ],
-                                                [
-                                                    'titulo' => 'Dolares',
-                                                    'subtitulo' => 'ganacias_Dolares',
-                                                    'valor' => 'valor_Dolares',
-                                                    'bg' => 'bg-success',
-                                                    'text' => 'text-white'
-                                                ],
-                                                [
-                                                    'titulo' => 'Pesos',
-                                                    'subtitulo' => 'ganacias_Pesos',
-                                                    'valor' => 'valor_Pesos',
-                                                    'bg' => 'bg-secondary',
-                                                    'text' => 'text-white'
-                                                ],
-
-                                                [
-                                                    'titulo' => 'Mayor',
-                                                    'subtitulo' => 'ganacias_Mayor',
-                                                    'valor' => 'valor_Mayor',
-                                                    'bg' => 'bg-dark',
-                                                    'text' => 'text-white'
-                                                ],
-                                                [
-                                                    'titulo' => 'Detal',
-                                                    'subtitulo' => 'ganacias_Detal',
-                                                    'valor' => 'valor_Detal',
-                                                    'bg' => 'bg-dark',
-                                                    'text' => 'text-white'
-                                                ],
-                                            ];
-
-
-                                            foreach ($items as $item) {
-                                                echo "
-                                                    <div class='d-flex justify-content-between py-2 g-0 border-bottom border-200'>
-                                                        <div class='py-1'>
-                                                            <div class='d-flex align-items-center'>
-                                                                <div class='avatar avatar-xl me-3'>
-                                                                    <div class='avatar-name rounded-circle {$item['bg']}'>
-                                                                        <span class='fs-9 {$item['text']}'>" . strtoupper($item['titulo'][0]) . "</span>
-                                                                    </div>
-                                                                </div>
-                                                                <h6 class='d-flex mb-0 align-items-center'>
-                                                                    <span>
-                                                                        <p class='m-0' >{$item['titulo']}</p>
-                                                                        <small class='text-muted' id='{$item['subtitulo']}'></small>
-                                                                    </span>
-                                                                </h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class='p-2'>
-                                                            <div class='fs-15 fw-semibold' id='{$item['valor']}'></div>
-                                                        </div>
-                                                    </div>
-                                                    ";
-                                            }
-                                            ?>
-                                        </div>
-
-                                    </div>
-                                </div>
-
-                                <div class='row' style='display: block;'>
-
-
-                                </div>
-                            </div>
-                        </div>
-                        <!-- /page content -->
-
-
-                    </div>
-                </div>
-
-                <!-- jQuery -->
-                <script src='../vendors/jquery/dist/jquery.min.js'></script>
-                <!-- Bootstrap -->
-                <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
-                <!-- DataTables core -->
-                <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-                <!-- Buttons extension -->
-                <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-                <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-                <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-                <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-                <!-- PDF export -->
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-                <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-                <script src='../build/js/custom.js'></script>
-                <script>
-                    let table = new DataTable('#datatable');
-                    const periodo = 'semana';
-                </script>
-
-                <script src='../build/js/info_ventas.js'></script>
-    </body>
-    <script>
-        document.getElementById('sucursal_selector').addEventListener('change', function () {
-            const sucursalId = this.value;
-            const usuarioSelect = document.getElementById('usuario');
-            usuarioSelect.innerHTML = '<option value="todos">-- Seleccione --</option>'; // Limpiar opciones anteriores
-
-            if (sucursalId === 'todas') {
-                return;
-            }
-
-            // Filtrar usuarios por sucursal
-            const usuariosFiltrados = <?php echo json_encode($usuarios); ?>.filter(usuario => usuario.id_sucursal == sucursalId);
-
-            if (usuariosFiltrados.length > 0) {
-                usuariosFiltrados.forEach(usuario => {
-                    const option = document.createElement('option');
-                    option.value = usuario.id;
-                    option.textContent = usuario.nombre;
-                    usuarioSelect.appendChild(option);
-                });
-            } else {
-                usuarioSelect.innerHTML = '<option value="">No hay usuarios disponibles</option>';
-            }
-        });
-    </script>
-
-    </html>
-    <?php
+function eliminarVenta(id) {
+  $.ajax({
+    url: '../../configurar/deleteVentaAjax.php',
+    type: 'POST',
+    dataType: 'html',
+    data: { id: id },
+  })
+  .done(function(resultado) {
+    const respuesta = JSON.parse(resultado);
+    if (respuesta.status == true) {
+      Swal.fire('Eliminado', 'La venta se eliminó correctamente.', 'success');
+      cargarInfo();
+    } else {
+      Swal.fire('Error', respuesta.message || 'No se pudo eliminar la venta.', 'error');
+    }
+  })
+  .fail(function() {
+    Swal.fire('Error', 'No se pudo contactar con el servidor.', 'error');
+  });
+}
+</script>
+</body>
+</html>
+<?php
 } else {
     define('PAGINA_INICIO', '../../index.php');
     header('Location: ' . PAGINA_INICIO);

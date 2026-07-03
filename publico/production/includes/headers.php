@@ -20,7 +20,7 @@
 <!-- Custom Theme Style -->
 <script src='js/jquery.min.js'></script>
 
-<?php require_once('includes/darkModeAct.php'); ?>
+<link href='../build/css/custom.min.dark-mode.css' rel='stylesheet'>
 <link rel="stylesheet" href="../build/css/global-styles.css">
 
 <link rel="stylesheet" href="../../iseller.es/css/animate.css">
