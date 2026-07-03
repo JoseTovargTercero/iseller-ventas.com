@@ -157,6 +157,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     .table-warning-cell { background: rgba(245,180,91,.08); }
     .text-danger { color: #ef5a6f !important; }
     .text-success { color: #2dd4a0 !important; }
+
+    thead .group-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--dash-text-muted);
+      text-align: center;
+      border-bottom: 1px solid var(--dash-border);
+      padding: 8px 14px;
+      background: rgba(255,255,255,.015);
+    }
   </style>
 </head>
 <body class="nav-md">
@@ -199,10 +211,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <table class="dash-table" id="tabla-cortes">
               <thead>
                 <tr>
-                  <th>Usuario</th>
-                  <th>Hora inicio</th>
-                  <th>Concepto</th>
-                  <th class="text-end">Efect. Bs</th>
+                  <th rowspan="2">Usuario</th>
+                  <th rowspan="2">Concepto</th>
+                  <th colspan="3" class="text-center" style="text-align:center;border-bottom:1px solid var(--dash-border);">Efectivo</th>
+                  <th colspan="4" class="text-center" style="text-align:center;border-bottom:1px solid var(--dash-border);">Digital</th>
+                </tr>
+                <tr>
+                  <th class="text-end">Bs</th>
                   <th class="text-end">USD</th>
                   <th class="text-end">Pesos</th>
                   <th class="text-end">Punto</th>
@@ -212,7 +227,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 </tr>
               </thead>
               <tbody id="tbody-cortes">
-                <tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Cargando...</td></tr>
+                <tr><td colspan="9" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Cargando...</td></tr>
               </tbody>
               <tfoot id="tfoot-cortes"></tfoot>
             </table>
@@ -232,7 +247,7 @@ function cargarCortes() {
   const fecha = document.getElementById('fechaFiltro').value;
   const sucursal = document.getElementById('sucursalFiltro')?.value || '';
 
-  document.getElementById('tbody-cortes').innerHTML = '<tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Cargando...</td></tr>';
+  document.getElementById('tbody-cortes').innerHTML = '<tr><td colspan="9" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Cargando...</td></tr>';
   document.getElementById('tfoot-cortes').innerHTML = '';
 
   fetch('../../configurar/listaVentas_back.php', {
@@ -243,7 +258,7 @@ function cargarCortes() {
   .then(r => r.json())
   .then(data => {
     if (data.status !== 'success') {
-      document.getElementById('tbody-cortes').innerHTML = '<tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Error al cargar datos.</td></tr>';
+      document.getElementById('tbody-cortes').innerHTML = '<tr><td colspan="9" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Error al cargar datos.</td></tr>';
       return;
     }
 
@@ -253,7 +268,7 @@ function cargarCortes() {
     tfoot.innerHTML = '';
 
     if (!data.cortes || data.cortes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">No hay cortes de caja registrados para esta fecha.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">No hay cortes de caja registrados para esta fecha.</td></tr>';
       return;
     }
 
@@ -275,11 +290,10 @@ function cargarCortes() {
 
       tbody.innerHTML += `
       <tr>
-        <td rowspan="5" class="align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;">
-          <strong>${u.nombre}</strong><br>${obs}
-        </td>
-        <td rowspan="5" class="align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;">
-          <strong>${u.apertura.hora_apertura}</strong>
+        <td rowspan="5" class="align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;min-width:140px;">
+          <strong>${u.nombre}</strong>
+          <small style="display:block;color:var(--dash-text-muted);font-size:11px;margin-top:2px;">Inicio ${u.apertura.hora_apertura}</small>
+          ${obs}
         </td>
         <td><strong>Apertura (Fondo Recibido)</strong></td>
         <td class="text-end">${fmt(ape.efectivo_bs)} Bs</td>
@@ -334,7 +348,7 @@ function cargarCortes() {
   })
   .catch(err => {
     console.error(err);
-    document.getElementById('tbody-cortes').innerHTML = '<tr><td colspan="10" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Error de conexión.</td></tr>';
+    document.getElementById('tbody-cortes').innerHTML = '<tr><td colspan="9" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Error de conexión.</td></tr>';
   });
 }
 
