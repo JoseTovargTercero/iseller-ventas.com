@@ -45,7 +45,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-    $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ?");
+    $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ? AND status !='1'");
     $stmt->bind_param('s', $bss_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -460,7 +460,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         color: var(--dash-text-muted);
                         font-size: 13px;
                     }
-
                 </style>
                 <!-- top navigation -->
                 <?php echo $topnav ?>
@@ -1372,6 +1371,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     .then(response => response.json())
                     .then(json => {
                         if (!json || json.length === 0) return;
+                        if (json.error) {
+                            console.error('Backend error:', json.error, json.file + ':' + json.line);
+                            document.getElementById('lastUpdatedLabel').innerText = 'Error: ' + json.error;
+                            return;
+                        }
 
                         // Update KPI values
                         document.getElementById('venta_dia').innerText = `$${json.totalVentasDiarias}`;

@@ -30,7 +30,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
     $stmt->close();
 
-    $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ?");
+    $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ? ");
     $stmt->bind_param('s', $bss_id);
     $stmt->execute();
     $result = $stmt->get_result();

@@ -35,7 +35,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-    ?>
+?>
     <!DOCTYPE html>
     <html lang='es'>
 
@@ -536,10 +536,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         const sucursal = document.getElementById('sucursal_selector')?.value || '';
 
                         fetch('../../configurar/listaVentas_back.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'totales_por_usuario', fechaSolic: fecha, sucursal: sucursal })
-                        })
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    action: 'totales_por_usuario',
+                                    fechaSolic: fecha,
+                                    sucursal: sucursal
+                                })
+                            })
                             .then(r => r.json())
                             .then(data => {
                                 if (data.status !== 'success') return console.error('Error cargando totales usuario:', data);
@@ -554,7 +560,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     return;
                                 }
 
-                                const fmt = (n, dec = 2) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+                                const fmt = (n, dec = 2) => Number(n).toLocaleString('es-VE', {
+                                    minimumFractionDigits: dec,
+                                    maximumFractionDigits: dec
+                                });
                                 const colorDif = val => val < 0 ? 'text-success' : (val > 0 ? 'text-danger' : '');
 
                                 data.cortes.forEach(u => {
@@ -562,12 +571,44 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     if (u.apertura?.observaciones) obs += `<small class="text-muted d-block"><b>Ape:</b> ${u.apertura.observaciones}</small>`;
                                     if (u.cierre?.observaciones) obs += `<small class="text-muted d-block"><b>Cie:</b> ${u.cierre.observaciones}</small>`;
 
-                                    const ape = u.apertura || { efectivo_bs: 0, dolares: 0, pesos: 0 };
+                                    const ape = u.apertura || {
+                                        efectivo_bs: 0,
+                                        dolares: 0,
+                                        pesos: 0
+                                    };
                                     const cie = u.cierre || {
-                                        contado: { efectivo_bs: 0, dolares: 0, pesos: 0, punto: 0, pago_movil: 0, transferencia: 0, biopago: 0 },
-                                        sistema: { efectivo_bs: 0, dolares: 0, pesos: 0, punto: 0, pago_movil: 0, transferencia: 0, biopago: 0 },
-                                        diferencia: { efectivo_bs: 0, dolares: 0, pesos: 0, punto: 0, pago_movil: 0, transferencia: 0, biopago: 0 },
-                                        fondo_dejado: { efectivo_bs: 0, dolares: 0, pesos: 0 }
+                                        contado: {
+                                            efectivo_bs: 0,
+                                            dolares: 0,
+                                            pesos: 0,
+                                            punto: 0,
+                                            pago_movil: 0,
+                                            transferencia: 0,
+                                            biopago: 0
+                                        },
+                                        sistema: {
+                                            efectivo_bs: 0,
+                                            dolares: 0,
+                                            pesos: 0,
+                                            punto: 0,
+                                            pago_movil: 0,
+                                            transferencia: 0,
+                                            biopago: 0
+                                        },
+                                        diferencia: {
+                                            efectivo_bs: 0,
+                                            dolares: 0,
+                                            pesos: 0,
+                                            punto: 0,
+                                            pago_movil: 0,
+                                            transferencia: 0,
+                                            biopago: 0
+                                        },
+                                        fondo_dejado: {
+                                            efectivo_bs: 0,
+                                            dolares: 0,
+                                            pesos: 0
+                                        }
                                     };
 
                                     tbody.innerHTML += `
@@ -636,7 +677,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     }
 
                     // Si se cambia la fecha, resetear caché del tab usuarios
-                    document.getElementById('fechaSolic').addEventListener('change', function () {
+                    document.getElementById('fechaSolic').addEventListener('change', function() {
                         _totalesUsuariosCargado = false;
                         if (document.getElementById('pane-usuarios').classList.contains('show')) {
                             cargarTotalesUsuarios(true);
@@ -644,7 +685,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     });
                 </script>
                 <script>
-                    document.getElementById('sucursal_selector').addEventListener('change', function () {
+                    document.getElementById('sucursal_selector').addEventListener('change', function() {
                         const sucursalId = this.value;
                         const usuarioSelect = document.getElementById('usuario');
                         usuarioSelect.innerHTML = '<option value="todos">-- Seleccione --</option>'; // Limpiar opciones anteriores
@@ -671,7 +712,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     </body>
 
     </html>
-    <?php
+<?php
 } else {
     define('PAGINA_INICIO', '../../index.php');
     header('Location: ' . PAGINA_INICIO);

@@ -52,7 +52,7 @@ function verificarPermiso($item, $user)
 if (@$_POST["tabla"]) { // tabla de usuarios
 
     $datos = array();
-    $stmt = mysqli_prepare($conexion, "SELECT * FROM `usuarios` WHERE bss_id = ? AND nivel!='1'");
+    $stmt = mysqli_prepare($conexion, "SELECT * FROM `usuarios` WHERE bss_id = ? AND nivel!='1' AND status !='1'");
     $stmt->bind_param('s', $bss_id);
     $stmt->execute();
     $result = $stmt->get_result();

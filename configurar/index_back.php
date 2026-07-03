@@ -1,9 +1,14 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 require_once('configuracion.php');
 require_once('session.php');
 header('Content-Type: application/json');
 
-$data = json_decode(file_get_contents('php://input'), true);
+try {
+  ob_start();
+  $data = json_decode(file_get_contents('php://input'), true);
 $sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$data["sucursal"] ?? null);
 $sucursal = $sucursal === "todas" || $sucursal == "" || $sucursal == null ? "" : $sucursal; // Permitir que se envíe false para no filtrar por sucursal
 $extraCond = $sucursal !== "" ? ' AND id_sucursal = ' . (int)$sucursal : '';
@@ -57,7 +62,7 @@ SELECT
         WHERE o.bss_id = $bss_id 
           AND o.status IN (1,4) 
           AND o.cliente > '' 
-          $extraCond $user_cond $periodCond 
+          $extraCondO $user_cond $periodCond 
         GROUP BY o.cliente 
         ORDER BY total_gastado DESC 
         LIMIT 15
@@ -99,7 +104,7 @@ INNER JOIN sucursales s ON s.id = o.id_sucursal
 WHERE 
     o.status IN (1,4)
     AND o.bss_id = $bss_id
-    $extraCond
+    $extraCondO
     $periodCondPie
 GROUP BY o.id_sucursal, s.nombre
 ORDER BY total DESC
@@ -129,7 +134,7 @@ $sql = "
     WHERE o.bss_id = $bss_id 
       AND o.created >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
       AND o.status IN (1,4) 
-      $extraCond $user_cond 
+      $extraCondO $user_cond 
     GROUP BY hora
 ";
 
@@ -170,7 +175,7 @@ $sql = "
         INNER JOIN orden o ON oa.order_id = o.id 
         WHERE o.bss_id = $bss_id 
           AND o.status IN (1,4) 
-          $extraCond $user_cond $periodCondProductos
+          $extraCondO $user_cond $periodCondProductos
         GROUP BY oa.product_id 
         ORDER BY total_vendido DESC 
         LIMIT 5
@@ -181,7 +186,7 @@ $sql = "
 
 $res = $conexion->query($sql);
 
-while ($row = $res->fetch_assoc()) {
+while ($res && $row = $res->fetch_assoc()) {
   $topProductos[] = [
     'producto' => $row['producto'],
     'cantidad' => (int)$row['cantidad'],
@@ -218,7 +223,7 @@ while ($row = $res->fetch_assoc()) {
 }
 // OPTIMIZADO
 
-function obtenerVentas($bss_id, $extraCond)
+function obtenerVentas($bss_id, $extraCondO)
 {
   global $hoy, $dia_ant, $semana, $semana_ant, $mes, $mes_ant, $diasSemana, $conexion, $user_cond;
 
@@ -250,7 +255,7 @@ function obtenerVentas($bss_id, $extraCond)
         WHERE (o.fecha = '$mes' OR o.fecha = '$mes_ant') 
           AND o.bss_id = " . (int)$bss_id . " 
           AND o.status IN (1,4) 
-          $extraCond $user_cond
+          $extraCondO $user_cond
         GROUP BY o.id
     ";
 
@@ -305,7 +310,7 @@ function obtenerVentas($bss_id, $extraCond)
 }
 
 // Variables de retorno (sin cambios en tu lógica base)
-$ventasResumen = obtenerVentas($bss_id, $extraCond);
+$ventasResumen = obtenerVentas($bss_id, $extraCondO);
 
 $totalVentasDiarias = $ventasResumen['hoy'];
 $totalVentasSemana = $ventasResumen['semana'];
@@ -325,6 +330,7 @@ $arraySemana = $ventasResumen['por_dia_semana'];
 
 
 // 1. Cálculo de Stock y Valor en una sola consulta
+$stockCond = $sucursal !== "" ? ' AND S.id_sucursal = ' . (int)$sucursal : '';
 $res = $conexion->query("
     SELECT 
         SUM(S.stock * (P.precio_compra / IFNULL(NULLIF(P.cantidad_unidades, 0), 1))) as valor_sin_ganancia,
@@ -332,9 +338,9 @@ $res = $conexion->query("
         SUM(S.stock) as total_almacen
     FROM productos AS P 
     INNER JOIN stock AS S ON S.id_producto = P.id 
-    WHERE P.activo='0' AND P.bss_id = $bss_id $extraCond
+    WHERE P.activo='0' AND P.bss_id = $bss_id $stockCond
 ");
-$row = $res->fetch_assoc();
+$row = $res ? $res->fetch_assoc() : [];
 $valor_stock_sin_ganancia = (float)($row['valor_sin_ganancia'] ?? 0);
 $valor_stock_con_ganancia = (float)($row['valor_con_ganancia'] ?? 0);
 $almacen = (int)($row['total_almacen'] ?? 0);
@@ -344,7 +350,9 @@ $gananciasEsperadas = $valor_stock_con_ganancia - $valor_stock_sin_ganancia;
 // O al menos simplificar las llamadas existentes:
 $ventas = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' $user_cond AND status IN (1,4) AND ##COND##");
 $credit = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' $user_cond AND status = 2 AND ##COND##");
-$cantidadCritica = contar2("SELECT COUNT(*) FROM productos WHERE stock <= $stockCritico AND activo = 0 AND ##COND##");
+$stockCritCond = $sucursal !== "" ? ' AND S.id_sucursal = ' . (int)$sucursal : '';
+$resCrit = $conexion->query("SELECT COUNT(*) AS total FROM stock S INNER JOIN productos P ON S.id_producto = P.id WHERE S.stock <= $stockCritico AND P.activo = 0 AND P.bss_id = $bss_id $stockCritCond");
+$cantidadCritica = $resCrit ? (int)$resCrit->fetch_assoc()['total'] : 0;
 
 // 3. Despachados en una sola consulta (combinando condiciones si es posible)
 $resDespachos = $conexion->query("
@@ -353,29 +361,34 @@ $resDespachos = $conexion->query("
         SUM(CASE WHEN o.status = '3' AND o.fecha = '$mes' THEN oa.quantity ELSE 0 END) as despachados_mes
     FROM orden_articulos oa
     INNER JOIN orden o ON oa.order_id = o.id
-    WHERE o.bss_id = $bss_id $extraCond $user_cond 
+    WHERE o.bss_id = $bss_id $extraCondO $user_cond 
     AND (o.modified = '$hoy' OR o.fecha = '$mes')
 ");
-$rowD = $resDespachos->fetch_assoc();
+$rowD = $resDespachos ? $resDespachos->fetch_assoc() : [];
 $despachados = (int)($rowD['despachados_hoy'] ?? 0);
 $despachados22 = (int)($rowD['despachados_mes'] ?? 0);
 
 // 4. Créditos por cliente (Optimizado: ya estaba bien, pero asegurando tipos)
 $creditosPorCliente = [];
 $res = $conexion->query("SELECT negocio AS cliente, SUM(total_price) AS total_credito FROM creditos WHERE estado = '2' AND bss_id = $bss_id GROUP BY negocio ORDER BY total_credito DESC LIMIT 20");
-while ($row = $res->fetch_assoc()) {
+if ($res) { while ($row = $res->fetch_assoc()) {
   $creditosPorCliente[] = ['cliente' => $row['cliente'], 'total' => (float)$row['total_credito']];
-}
+} }
 
 // 5. Análisis por semanas (Mover lógica a consulta única)
 $arraSemanas = [];
 $res = $conexion->query("SELECT semana FROM orden WHERE bss_id = $bss_id $extraCond $user_cond GROUP BY semana ORDER BY semana ASC");
-while ($row = $res->fetch_assoc()) {
+if ($res) { while ($row = $res->fetch_assoc()) {
   $s = $row['semana'];
   $arraSemanas[$s] = [10, 10, obtenerImportes('gastos', 'semana', $s)]; // Manteniendo tus valores dummy
-}
+} }
 
 
+
+// Variables faltantes
+$gastosSemana = obtenerImportes('gastos', 'semana', $semana);
+$gastosMes = obtenerImportes('gastos', 'fecha', $mes);
+$totalVentasMesDejado = $totalVentasMes;
 
 // Salida JSON
 echo json_encode([
@@ -407,3 +420,8 @@ echo json_encode([
   'ventasPorHora' => $ventasPorHora,
   'topProductos' => $topProductos
 ]);
+  ob_end_flush();
+} catch (Throwable $e) {
+  ob_end_clean();
+  echo json_encode(['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+}
