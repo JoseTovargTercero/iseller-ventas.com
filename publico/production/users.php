@@ -55,7 +55,7 @@ if ($_SESSION['nivel'] == 1) {
 
                                             <label class='col-form-label   label-align'>Nombre de Usuario</label>
                                             <div class='field item form-group'>
-                                                <input class='form-control' name='user' placeholder='' required='required' />
+                                                <input class='form-control' type="mail" name='user' placeholder='Correo electronico' required='required' />
                                             </div>
 
 
