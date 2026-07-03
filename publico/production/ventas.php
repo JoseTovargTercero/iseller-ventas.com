@@ -335,29 +335,34 @@ $stmt->close();
         border-radius: 8px !important;
         color: var(--dash-text-muted) !important;
     }
+
     .btn-outline-secondary:hover {
         border-color: var(--dash-text-muted) !important;
         color: var(--dash-text) !important;
-        background: rgba(255,255,255,0.04) !important;
+        background: rgba(255, 255, 255, 0.04) !important;
     }
+
     .btn-outline-success {
         background: transparent !important;
-        border: 1px solid rgba(45,212,160,0.3) !important;
+        border: 1px solid rgba(45, 212, 160, 0.3) !important;
         border-radius: 8px !important;
         color: var(--dash-mint) !important;
     }
+
     .btn-outline-success:hover {
-        background: rgba(45,212,160,0.1) !important;
+        background: rgba(45, 212, 160, 0.1) !important;
         border-color: var(--dash-mint) !important;
     }
+
     .btn-outline-danger {
         background: transparent !important;
-        border: 1px solid rgba(239,90,111,0.3) !important;
+        border: 1px solid rgba(239, 90, 111, 0.3) !important;
         border-radius: 8px !important;
         color: var(--dash-danger) !important;
     }
+
     .btn-outline-danger:hover {
-        background: rgba(239,90,111,0.1) !important;
+        background: rgba(239, 90, 111, 0.1) !important;
         border-color: var(--dash-danger) !important;
     }
 
@@ -2388,11 +2393,11 @@ $stmt->close();
             }
 
 
+            const btnConfirmarDespacho = document.getElementById('btnConfirmarDespacho');
 
 
             document.addEventListener('DOMContentLoaded', () => {
 
-                const btnConfirmarDespacho = document.getElementById('btnConfirmarDespacho');
                 const tipo_despacho = document.getElementById('tipo_despacho');
                 const selectPago = document.getElementById('metodoPago');
                 const cedulaClienteModal = document.getElementById('cedulaClienteModal');
