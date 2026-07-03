@@ -1370,6 +1370,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     })
                     .then(response => response.json())
                     .then(json => {
+                        console.log(json)
                         if (!json || json.length === 0) return;
                         if (json.error) {
                             console.error('Backend error:', json.error, json.file + ':' + json.line);
@@ -1515,7 +1516,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             });
             document.getElementById('usuario').addEventListener('change', function() {
                 const sucursal = document.getElementById('sucursal').value;
-                cargar_tabla(sucursal, this.value, currentPeriodo, currentPeriodoPie);
+                cargar_tabla(sucursal, this.value, currentPeriodo, currentPeriodoPie, currentPeriodoProductos);
             });
         </script>
 
