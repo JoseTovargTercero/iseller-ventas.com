@@ -28,16 +28,8 @@ date_default_timezone_set('America/Manaus');
             <!-- page content -->
             <div class='right_col' role='main'>
                 <div class=''>
-
-
                     <div class='clearfix'></div>
-                    <div class='row   fadeInUp animated'>
-
-
-                        <div class="col-lg-12">
-                            <h4>Consultas</h4>
-                            <p style="margin-top: -10px;">Reportes y consultas</p>
-                        </div>
+                    <div class='row'>
                         <div class='col-lg-6'>
                             <div class='x_panel alto'>
                                 <div class='x_title'>
@@ -171,6 +163,8 @@ date_default_timezone_set('America/Manaus');
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <!-- Custom Theme Scripts -->
     <script src="../build/js/custom.js"></script>
+    <script src="js/nombre_pagina.js"></script>
+
 </body>
 
 </html>

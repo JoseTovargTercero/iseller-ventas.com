@@ -69,47 +69,40 @@ if ($_SESSION['nivel'] == 1) {
                 <!-- /top navigation -->
                 <!-- page content -->
                 <div class='right_col' role='main'>
-                    <div class=''>
 
 
-                        <h4>Persmisos</h4>
-                        <p style="margin-top: -10px;">Permisos de usuarios</p>
+                    <div class='row'>
 
+                        <div class='col-md-12 col-sm-12'>
+                            <div class='x_panel'>
+                                <div class='x_title'>
+                                    <h2>Permisos</h2>
 
-                        <div class='clearfix'></div>
+                                    <div class='clearfix'></div>
+                                </div>
+                                <div class='x_content altoScroll'>
+                                    <table id="table" class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="w-5"></th>
+                                                <th class="w-20">Usuario</th>
+                                                <th class="w-10">Fecha de creación</th>
+                                                <th class="w-50">Acceso</th>
+                                                <th class="w-10"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
 
-                        <div class='row   fadeInUp animated'>
+                                        </tbody>
 
-                            <div class='col-md-12 col-sm-12'>
-                                <div class='x_panel'>
-                                    <div class='x_title'>
-                                        <h2>Permisos</h2>
-
-                                        <div class='clearfix'></div>
-                                    </div>
-                                    <div class='x_content altoScroll'>
-                                        <table id="table" class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th class="w-5"></th>
-                                                    <th class="w-20">Usuario</th>
-                                                    <th class="w-10">Fecha de creación</th>
-                                                    <th class="w-50">Acceso</th>
-                                                    <th class="w-10"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-
-                                            </tbody>
-
-                                        </table>
-                                    </div>
+                                    </table>
                                 </div>
                             </div>
-
-
                         </div>
+
+
                     </div>
+
                 </div>
 
 
@@ -125,12 +118,9 @@ if ($_SESSION['nivel'] == 1) {
         <script src='../vendors/fastclick/lib/fastclick.js'></script>
         <!-- NProgress -->
         <script src='../vendors/nprogress/nprogress.js'></script>
-        <!-- validator -->
-        <!-- <script src = '../vendors/validator/validator.js'></script> -->
-
-        <!-- Custom Theme Scripts -->
         <script src='../build/js/custom.js'></script>
         <script src="../build/js/modal.js"></script>
+        <script src="js/nombre_pagina.js"></script>
 
         <script>
             // Modificar modal

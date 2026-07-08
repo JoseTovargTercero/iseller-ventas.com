@@ -54,16 +54,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- /top navigation -->
                 <!-- page content -->
                 <div class='right_col' role='main'>
-                    <div class=''>
-
-
-                        <div class="col-lg-12">
-                            <h4>Compras</h4>
-                            <p style="margin-top: -10px;">Nuevas compras realizadas</p>
-
-
-                        </div>
-                        <div class='clearfix'></div>
+                    <div class='row'>
                         <div class="col-lg-6">
                             <form id='demo-form2'>
                                 <div class="x_panel">
@@ -197,6 +188,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
+        <script src="js/nombre_pagina.js"></script>
+
         <script>
             // tasas de cambio
             const tasas = {
@@ -420,7 +413,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             cargarTabla()
 
 
- 
+
             // MODIFICAR EL MODAL
             $(document).ready(function() {
                 const modal_body = document.getElementById('modal-body')

@@ -32,8 +32,8 @@ if ($search->num_rows > 0) {
 
 
 
-
 $sql = "SELECT UPPER(nombre) AS nombre FROM sucursales WHERE id = ? AND bss_id = ?";
+
 
 if ($stmt = $conexion->prepare($sql)) {
     $stmt->bind_param("ii", $sucursal, $bss_id);
@@ -206,13 +206,6 @@ $stmt->close();
         background: var(--dash-bg);
         min-height: 100vh;
         padding: 24px 28px !important;
-    }
-
-    .x_panel {
-        background: var(--dash-card) !important;
-        border: 1px solid var(--dash-border) !important;
-        border-radius: 14px !important;
-        padding: 20px 22px !important;
     }
 
     .x_title {
@@ -758,18 +751,6 @@ $stmt->close();
         color: var(--dash-mint) !important;
     }
 
-    /* Card / dash-panel pattern */
-    .dash-panel {
-        background: var(--dash-card) !important;
-        border: 1px solid var(--dash-border) !important;
-        border-radius: 14px !important;
-    }
-
-    .dash-panel .dash-panel-header {
-        border-bottom: 1px solid var(--dash-border) !important;
-        padding-bottom: 14px !important;
-        margin-bottom: 18px !important;
-    }
 
     /* Badge dark */
     .badge {
@@ -839,6 +820,31 @@ $stmt->close();
     .btn-group>.btn-success+.btn-group>.btn-success:first-child,
     .btn-group>.btn-group+.btn-success {
         border-left: 1px solid rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .cart-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        color: var(--dash-text-muted);
+    }
+    .cart-empty-state ion-icon {
+        font-size: 56px;
+        margin-bottom: 16px;
+        opacity: 0.4;
+    }
+    .cart-empty-state p {
+        margin: 0;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--dash-text-muted);
+    }
+    .cart-empty-state p b {
+        color: var(--dash-mint);
+        font-weight: 700;
     }
 </style>
 <div class="contenedor-loader" id="cargando">
@@ -1028,14 +1034,8 @@ $stmt->close();
 
 
 
-                <div class="d-flex justify-content-between">
-                    <div class="mb-2">
-                        <h3 class="mb-0" style="color: var(--dash-text); font-weight: 700; letter-spacing: -0.3px;">Ventas</h3>
-                        <p style="color: var(--dash-text-muted); margin-bottom: 0;">Caja de despacho</p>
-                    </div>
+                <div class="d-flex mb-3" style="place-self: anchor-center;">
                     <div class="pt-1">
-
-
                         <ul class="nav nav-tabs" id="myTab" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active" id="home-tab" data-bs-toggle="tab"
@@ -1058,9 +1058,6 @@ $stmt->close();
                                     <span id="cantidad-enviados"></span></button>
                             </li>
                         </ul>
-
-
-
 
                     </div>
                 </div>
@@ -1143,10 +1140,9 @@ $stmt->close();
                         aria-labelledby="home-tab">
                         <div class="x_panel" style="min-height: 80vh">
                             <div class="x_title d-flex justify-content-between">
-                                <div style="display: grid">
+                                <div class="d-flex flex-column">
                                     <h2>Carrito del cliente</h2>
                                     <span><b>SUCURSAL: </b><span id="sucursal_nombre">
-                                        </span></span>
                                 </div>
                                 <div class="d-flex flex-column">
                                     <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal">
@@ -1175,6 +1171,11 @@ $stmt->close();
                                             <tfoot></tfoot>
 
                                         </table>
+
+                                        <div class="cart-empty-state" id="cart-empty-state">
+                                            <ion-icon name="cart-outline"></ion-icon>
+                                            <p>Aun no hay productos en el carrito <br> Agrega <b>(b)</b> productos para comenzar</p>
+                                        </div>
 
                                     </div>
 
@@ -1418,9 +1419,6 @@ $stmt->close();
                         </div>
                     </div>
                 </div>
-
-
-
             </div>
         </div>
         <!-- jQuery -->
@@ -1430,6 +1428,7 @@ $stmt->close();
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
+        <script src="js/nombre_pagina.js"></script>
         <!-- FastClick -->
         <script>
             const base_url = '../../configurar/';
@@ -3017,8 +3016,12 @@ $stmt->close();
                     `);
 
                     $('#botones_acciones').removeClass('hide');
+                    $('#tabla-carrito').show();
+                    $('#cart-empty-state').hide();
                 } else {
                     $('#botones_acciones').addClass('hide');
+                    $('#tabla-carrito').hide();
+                    $('#cart-empty-state').show();
                 }
             }
 
@@ -3143,8 +3146,10 @@ $stmt->close();
                     $("#tabla-carrito tbody").html('');
                     $("#tabla-carrito tfoot").html('');
 
-                    // SOlicitar impresion
-                    confirmar_e_imprimir(nuevoPedido, 'BS')
+                    // Solicitar impresion solo si tickets está habilitado
+                    if (configuraciones.tickets == 1) {
+                        confirmar_e_imprimir(nuevoPedido, 'BS')
+                    }
 
                     // Llamar función de envío (puede sincronizar cuando haya internet)
                     enviarPedidosProcesados();
@@ -4229,11 +4234,7 @@ $stmt->close();
 
 
             function agregarNombreSucursal(sucursal_n) {
-                const navbar = document.querySelector('ul.navbar-right');
-                if (!navbar) {
-                    console.warn("No se encontró el elemento 'ul.navbar-right'");
-                    return;
-                }
+
 
                 const div = document.getElementById('sucursal_nombre');
                 const element = (nv == 1 ? 'a' : 'span');

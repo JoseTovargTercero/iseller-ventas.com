@@ -34,29 +34,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       font-size: 13px;
     }
 
-    .dash-panel {
-      background: var(--dash-card);
-      border: 1px solid var(--dash-border);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .dash-panel .panel-header {
-      padding: 18px 22px 14px;
-      border-bottom: 1px solid var(--dash-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .dash-panel .panel-header h6 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--dash-text);
-      margin: 0;
-    }
-    .dash-panel .panel-body { padding: 6px 0; }
-
+    
     .nav-tabs.dash-tabs {
       border-bottom: 1px solid var(--dash-border);
       gap: 4px;

@@ -45,11 +45,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 <!-- page content -->
                 <div class="right_col">
-                    <div class="col-lg-12">
-                        <h4>Productos</h4>
-                        <p style="margin-top: -10px;">Listado de productos</p>
 
-                    </div>
                     <div class="clearfix"></div>
                     <div class="row">
                         <script>
@@ -351,11 +347,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
             <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
             <script src="../build/js/custom.js"></script>
-            <!-- 
-
-
-            <script src="../build/js/global-loader.js"></script>
-                                    -->
+            <script src="js/nombre_pagina.js"></script>
 
 
             <script>

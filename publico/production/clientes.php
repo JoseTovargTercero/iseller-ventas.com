@@ -34,7 +34,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
     $stmt_clientes->close();
 
-    ?>
+?>
     <!DOCTYPE html>
     <html lang='es'>
 
@@ -117,74 +117,60 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- page content -->
                 <div class='right_col' role='main'>
 
-                    <div class=''>
 
+                    <!-- TAB 1: RESUMEN -->
+                    <div class='row'>
 
-                        <div class="d-flex justify-content-between w-100">
-                            <div>
-                                <h4>Clientes</h4>
-                                <p style="margin-top: -10px;"><?php echo $text_vista ?></p>
-                            </div>
+                        <div class='col-lg-12'>
+                            <div class='x_panel'>
 
-
-                        </div>
-                        <div class='clearfix'></div>
-
-
-
-                        <!-- TAB 1: RESUMEN -->
-                        <div class='row   fadeInUp animated'>
-
-                            <div class='col-lg-12'>
-                                <div class='x_panel'>
-
-                                    <div class='d-flex justify-content-between'>
-                                        <div style="display: flex; flex-direction: column;">
-                                            <h2 class="m-0">Listado de clientes</h2>
-                                            <small class="text-muted">Administra los clientes registrados en el sistema.</small>
-                                        </div>
-                                        <div class="p-2">
-                                            <!-- <button class="btn btn-primary btn-sm">Nuevo Cliente</button> -->
-                                        </div>
+                                <div class='d-flex justify-content-between'>
+                                    <div style="display: flex; flex-direction: column;">
+                                        <h2 class="m-0">Listado de clientes</h2>
+                                        <small class="text-muted">Administra los clientes registrados en el sistema.</small>
                                     </div>
-                                    <div class='x_content '>
-                                        <div class='card-box'>
-                                            <table id="datatable" class="table table-bordered" style="width:100%">
-                                                <thead>
-                                                    <tr class="headings">
-                                                        <th>#</th>
-                                                        <th>Cedula</th>
-                                                        <th>Nombre</th>
-                                                        <th>Telefono</th>
-                                                        <th>Acciones</th>
+                                    <div class="p-2">
+                                        <!-- <button class="btn btn-primary btn-sm">Nuevo Cliente</button> -->
+                                    </div>
+                                </div>
+                                <div class='x_content '>
+                                    <div class='card-box'>
+                                        <table id="datatable" class="table table-bordered" style="width:100%">
+                                            <thead>
+                                                <tr class="headings">
+                                                    <th>#</th>
+                                                    <th>Cedula</th>
+                                                    <th>Nombre</th>
+                                                    <th>Telefono</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="datos-tabla">
+                                                <?php
+                                                $count = 1;
+                                                foreach ($clientes as $cliente): ?>
+                                                    <tr>
+                                                        <td><?= $count++ ?></td>
+                                                        <td><?= htmlspecialchars($cliente['cedula'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($cliente['nombre'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($cliente['telefono'] ?? '') ?></td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-info btn-editar-cliente" data-id="<?= $cliente['id'] ?>" data-cedula="<?= htmlspecialchars($cliente['cedula'] ?? '') ?>" data-nombre="<?= htmlspecialchars($cliente['nombre'] ?? '') ?>" data-telefono="<?= htmlspecialchars($cliente['telefono'] ?? '') ?>" title="Editar"><i class="fa fa-pencil"></i></button>
+                                                            <button class="btn btn-sm btn-danger btn-eliminar-cliente" data-id="<?= $cliente['id'] ?>" title="Eliminar"><i class="fa fa-trash"></i></button>
+                                                        </td>
                                                     </tr>
-                                                </thead>
-                                                <tbody id="datos-tabla">
-                                                    <?php 
-                                                    $count = 1;
-                                                    foreach ($clientes as $cliente): ?>
-                                                        <tr>
-                                                            <td><?= $count++ ?></td>
-                                                            <td><?= htmlspecialchars($cliente['cedula'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($cliente['nombre'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($cliente['telefono'] ?? '') ?></td>
-                                                            <td>
-                                                                <button class="btn btn-sm btn-info btn-editar-cliente" data-id="<?= $cliente['id'] ?>" data-cedula="<?= htmlspecialchars($cliente['cedula'] ?? '') ?>" data-nombre="<?= htmlspecialchars($cliente['nombre'] ?? '') ?>" data-telefono="<?= htmlspecialchars($cliente['telefono'] ?? '') ?>" title="Editar"><i class="fa fa-pencil"></i></button>
-                                                                <button class="btn btn-sm btn-danger btn-eliminar-cliente" data-id="<?= $cliente['id'] ?>" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
 
 
-                                        </div>
                                     </div>
                                 </div>
                             </div>
-
                         </div>
+
                     </div>
+
                 </div>
 
                 <!-- jQuery -->
@@ -204,6 +190,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
                 <script src='../build/js/custom.js'></script>
                 <script src='../build/js/global-loader.js'></script>
+                <script src="js/nombre_pagina.js"></script>
+
                 <script>
                     let table = new DataTable('#datatable');
 
@@ -241,7 +229,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     Swal.showValidationMessage('Cédula y Nombre son requeridos');
                                     return false;
                                 }
-                                return { id, cedula: c, nombre: n, telefono: t };
+                                return {
+                                    id,
+                                    cedula: c,
+                                    nombre: n,
+                                    telefono: t
+                                };
                             }
                         }).then((result) => {
                             if (result.isConfirmed) {
@@ -283,7 +276,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 $.ajax({
                                     url: '../../configurar/deleteClienteAjax.php',
                                     method: 'POST',
-                                    data: { id: id },
+                                    data: {
+                                        id: id
+                                    },
                                     dataType: 'json',
                                     success: function(response) {
                                         if (response.status) {
@@ -307,7 +302,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     </body>
 
     </html>
-    <?php
+<?php
 } else {
     define('PAGINA_INICIO', '../../index.php');
     header('Location: ' . PAGINA_INICIO);

@@ -45,28 +45,7 @@ if ($_SESSION["validate"] != "ok") {
             font-size: 13px;
         }
 
-        .dash-panel {
-            background: var(--dash-card);
-            border: 1px solid var(--dash-border);
-            border-radius: 14px;
-            overflow: hidden;
-        }
 
-        .dash-panel .panel-header {
-            padding: 18px 22px 14px;
-            border-bottom: 1px solid var(--dash-border);
-        }
-
-        .dash-panel .panel-header h2 {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--dash-text);
-            margin: 0;
-        }
-
-        .dash-panel .panel-body {
-            padding: 0;
-        }
 
         .rate-block {
             padding: 22px 24px 18px;

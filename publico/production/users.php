@@ -38,34 +38,7 @@ if ($_SESSION['nivel'] == 1) {
                 font-size: 13px;
             }
 
-            .dash-panel {
-                background: var(--dash-card);
-                border: 1px solid var(--dash-border);
-                border-radius: 14px;
-                overflow: hidden;
-            }
-
-            .dash-panel .panel-header {
-                padding: 18px 22px 14px;
-                border-bottom: 1px solid var(--dash-border);
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-
-            .dash-panel .panel-header h2 {
-                font-size: 14px;
-                font-weight: 600;
-                color: var(--dash-text);
-                margin: 0;
-            }
-
-            .dash-panel .panel-body {
-                padding: 6px 0;
-            }
-
+           
             .dash-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -298,10 +271,7 @@ if ($_SESSION['nivel'] == 1) {
                 <?php echo $topnav ?>
 
                 <div class='right_col' role='main'>
-                    <div class='page-header'>
-                        <h4>Usuarios</h4>
-                        <p>Registro de usuarios</p>
-                    </div>
+                 
 
                     <div class='dash-panel'>
                         <div class='panel-header'>
@@ -418,6 +388,8 @@ if ($_SESSION['nivel'] == 1) {
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
         <script src='../build/js/custom.js'></script>
         <script src='js/tablas.js'></script>
+                <script src="js/nombre_pagina.js"></script>
+
         <script>
             document.getElementById('btn-nuevo').addEventListener('click', () => {
                 $('#modal-usuario').modal('show');

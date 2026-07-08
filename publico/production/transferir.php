@@ -27,7 +27,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <head>
 
-        <title>Compras</title>
+        <title>Transferencia de stock</title>
         <?php require_once('includes/headers.php'); ?>
 
         <style>
@@ -48,108 +48,101 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- /top navigation -->
                 <!-- page content -->
                 <div class='right_col' role='main'>
-                    <div class=''>
 
-
+                    <div class="row">
                         <div class="col-lg-12">
-                            <h4>Compras</h4>
-                            <p style="margin-top: -10px;">Nuevas compras realizadas</p>
-                        </div>
-                        <div class='clearfix'></div>
-                        <div class="row">
-                            <div class="col-lg-6 m-auto">
-                                <form id='data-form'>
-                                    <div class="x_panel">
-                                        <div class="x_title">
-                                            <h2>Datos del Producto <small>* obligatorio</small></h2>
-                                            <ul class="nav navbar-right panel_toolbox">
-                                                <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                                </li>
-                                            </ul>
-                                            <div class="clearfix"></div>
-                                        </div>
-                                        <div class="x_content">
-                                            <div class='x_content'>
+                            <form id='data-form'>
+                                <div class="x_panel">
+                                    <div class="x_title">
+                                        <h2>Datos del Producto <small>* obligatorio</small></h2>
+                                        <ul class="nav navbar-right panel_toolbox">
+                                            <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                                            </li>
+                                        </ul>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="x_content">
+                                        <div class='x_content'>
 
-                                                <div class="row">
-                                                    <div class='col-lg-6 form-group mb-3'>
-                                                        <label class='form-label' for='sucursal'>Sucursal origen</label>
-                                                        <select class="form-control" id="sucursal" name="sucursal">
-                                                            <?php if (count($sucursales) > 1): ?>
-                                                                <option value="">-- Seleccione --</option>
-                                                            <?php endif; ?>
+                                            <div class="row">
+                                                <div class='col-lg-6 form-group mb-3'>
+                                                    <label class='form-label' for='sucursal'>Sucursal origen</label>
+                                                    <select class="form-control" id="sucursal" name="sucursal">
+                                                        <?php if (count($sucursales) > 1): ?>
+                                                            <option value="">-- Seleccione --</option>
+                                                        <?php endif; ?>
 
-                                                            <?php foreach ($sucursales as $row): ?>
-                                                                <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($row['nombre']) ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-
-                                                    <div class='col-lg-6 form-group mb-3'>
-                                                        <label class='form-label' for='sucursal_2'>Sucursal destino</label>
-                                                        <select class="form-control" id="sucursal_2" name="sucursal_2">
-                                                            <?php if (count($sucursales) > 1): ?>
-                                                                <option value="">-- Seleccione --</option>
-                                                            <?php endif; ?>
-
-                                                            <?php foreach ($sucursales as $row): ?>
-                                                                <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($row['nombre']) ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-
-
+                                                        <?php foreach ($sucursales as $row): ?>
+                                                            <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                                <?= htmlspecialchars($row['nombre']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
                                                 </div>
 
-                                                <div class="mb-3">
+                                                <div class='col-lg-6 form-group mb-3'>
+                                                    <label class='form-label' for='sucursal_2'>Sucursal destino</label>
+                                                    <select class="form-control" id="sucursal_2" name="sucursal_2">
+                                                        <?php if (count($sucursales) > 1): ?>
+                                                            <option value="">-- Seleccione --</option>
+                                                        <?php endif; ?>
 
-                                                    <div class=' form-group'>
-                                                        <div class='row'>
-                                                            <div class="col-lg-4">
-                                                                <label for='codigo' for='codigo'>Filtro</label>
-                                                                <input type='text' required="required" class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
-                                                            </div>
-                                                            <div class="col-lg-8">
-                                                                <label for='producto'>Seleccione el producto</label>
-                                                                <select id="producto" name="producto" class="form-control" required>
-                                                                    <option>-- Indique un filtro --</option>
-                                                                </select>
-                                                            </div>
+                                                        <?php foreach ($sucursales as $row): ?>
+                                                            <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                                <?= htmlspecialchars($row['nombre']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
 
+
+                                            </div>
+
+                                            <div class="mb-3">
+
+                                                <div class=' form-group'>
+                                                    <div class='row'>
+                                                        <div class="col-lg-4">
+                                                            <label for='codigo' for='codigo'>Filtro</label>
+                                                            <input type='text' required="required" class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
                                                         </div>
-                                                    </div>
-
-                                                </div>
-                                                <div class="row mb-3">
-                                                    <div class="col-lg-3">
-                                                        <label for='disponible' for='disponible'>Disponibilidad</label>
-                                                        <input type='text' readonly required="required" class='form-control' name='disponible' placeholder="Stock disponible" id='disponible'>
-                                                    </div>
-                                                    <div class="col-lg-9">
-
-                                                        <div class=" form-group">
-                                                            <label class="form-label" for="comprado">Unidades a transferir</label>
-                                                            <input type="text" id="unidades_transferir" name="unidades_transferir" required="required" class="form-control" placeholder="Cantidad de unidades a transferir">
+                                                        <div class="col-lg-8">
+                                                            <label for='producto'>Seleccione el producto</label>
+                                                            <select id="producto" name="producto" class="form-control" required>
+                                                                <option>-- Indique un filtro --</option>
+                                                            </select>
                                                         </div>
+
                                                     </div>
-
                                                 </div>
 
-                                                <div class="ln_solid"></div>
-                                                <div class='form-group mt-3 text-end'>
-                                                    <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Guardar">
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-lg-3">
+                                                    <label for='disponible' for='disponible'>Disponibilidad</label>
+                                                    <input type='text' readonly required="required" class='form-control' name='disponible' placeholder="Stock disponible" id='disponible'>
                                                 </div>
+                                                <div class="col-lg-9">
+
+                                                    <div class=" form-group">
+                                                        <label class="form-label" for="comprado">Unidades a transferir</label>
+                                                        <input type="text" id="unidades_transferir" name="unidades_transferir" required="required" class="form-control" placeholder="Cantidad de unidades a transferir">
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div class="ln_solid"></div>
+                                            <div class='form-group mt-3 text-end'>
+                                                <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Guardar">
                                             </div>
                                         </div>
                                     </div>
-                                </form>
-                            </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -158,6 +151,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
+        <script src="js/nombre_pagina.js"></script>
+
         <script>
             function verificarSucursales() {
                 const sucursalOrigen = document.getElementById('sucursal').value;

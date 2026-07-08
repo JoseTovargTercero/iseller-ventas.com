@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 document.addEventListener("DOMContentLoaded", function () {
   const toggleBtn = document.getElementById("toggle-navbar");
+  if (!toggleBtn) return;
   const navbar = document.getElementById("navbar");
   const menuContainer = document.getElementById("menu_button");
 
@@ -88,6 +89,29 @@ document.addEventListener("DOMContentLoaded", function () {
       isClickOutside
     ) {
       closeMenu();
+    }
+  });
+});
+
+// Resaltar item activo en el menú según la página actual
+document.addEventListener("DOMContentLoaded", function () {
+  const paginaActual = window.location.pathname.split("/").pop();
+  if (!paginaActual) return;
+
+  const links = document.querySelectorAll('#navbar a[href]');
+  let encontrado = false;
+
+  links.forEach(function (link) {
+    const href = link.getAttribute('href');
+    if (href === paginaActual) {
+      link.classList.add('active');
+      const navdrop = link.closest('.navdrop');
+      if (navdrop) {
+        navdrop.classList.add('open');
+        const toggle = navdrop.querySelector('.navdrop-toggle');
+        if (toggle) toggle.classList.add('active');
+      }
+      encontrado = true;
     }
   });
 });

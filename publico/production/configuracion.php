@@ -42,137 +42,132 @@ if ($search->num_rows > 0) {
             <!-- /top navigation -->
             <!-- page content -->
             <div class='right_col' role='main'>
-                <div class=''>
 
-                    <h4>Configuracion</h4>
-                    <p class="mt-0">Configuracion del sistema</p>
 
-                    <div class='clearfix'></div>
-                    <div class='row'>
-                        <div class='col-lg-12'>
-                            <div class='x_panel'>
-                                <div class='x_title'>
-                                    <h2>Configuración<small>del sistema</small></h2>
-                                    <ul class='nav navbar-right panel_toolbox'>
-                                        <li><a class='collapse-link'><i class='fa fa-chevron-up'></i></a>
-                                        </li>
+                <div class='row'>
+                    <div class='col-lg-12'>
+                        <div class='x_panel'>
+                            <div class='x_title'>
+                                <h2>Configuración<small>del sistema</small></h2>
+                                <ul class='nav navbar-right panel_toolbox'>
+                                    <li><a class='collapse-link'><i class='fa fa-chevron-up'></i></a>
+                                    </li>
 
-                                    </ul>
-                                    <div class='clearfix'></div>
-                                </div>
-                                <div class="x_content">
-                                    <?php
-                                    // Función para generar los checkbox
-                                    function renderCheckbox($name, $isChecked)
-                                    {
-                                        $checked = $isChecked ? 'checked' : '';
-                                        return '
+                                </ul>
+                                <div class='clearfix'></div>
+                            </div>
+                            <div class="x_content">
+                                <?php
+                                // Función para generar los checkbox
+                                function renderCheckbox($name, $isChecked)
+                                {
+                                    $checked = $isChecked ? 'checked' : '';
+                                    return '
                                             <div class="checkbox_item citem_3">
                                                 <label class="checkbox_wrap">
                                                     <input type="checkbox" name="' . htmlspecialchars($name) . '" class="checkbox_inp config-toggle" ' . $checked . '>
                                                     <span class="checkbox_mark"></span>
                                                 </label>
                                             </div>';
-                                    }
-                                    ?>
+                                }
+                                ?>
 
-                                    <!-- Opción: Impresión de tickets -->
-                                    <div class="d-flex gap-1">
-                                        <div>
-                                            <?= renderCheckbox('tickets_imp', $tickets == 1); ?>
-                                        </div>
-                                        <div>
-                                            <h6 class="m-0">
-                                                Impresión de tickets.
-                                            </h6>
-                                            <small class="text-muted"> Imprime tickets al realizar una venta.</small>
-                                        </div>
+                                <!-- Opción: Impresión de tickets -->
+                                <div class="d-flex gap-1">
+                                    <div>
+                                        <?= renderCheckbox('tickets_imp', $tickets == 1); ?>
+                                    </div>
+                                    <div>
+                                        <h6 class="m-0">
+                                            Impresión de tickets.
+                                        </h6>
+                                        <small class="text-muted"> Imprime tickets al realizar una venta.</small>
+                                    </div>
 
 
+                                </div>
+                                <hr>
+                                <!-- Opción: Imprimir solo en Bolívares -->
+                                <div class="d-flex gap-1">
+                                    <div>
+                                        <?= renderCheckbox('only_bs', $ticketsFijo == 1); ?>
                                     </div>
-                                    <hr>
-                                    <!-- Opción: Imprimir solo en Bolívares -->
-                                    <div class="d-flex gap-1">
-                                        <div>
-                                            <?= renderCheckbox('only_bs', $ticketsFijo == 1); ?>
-                                        </div>
-                                        <div>
-                                            <h6 class="m-0">Imprimir solo en Bolívares</h6>
-                                            <small class="text-muted">Si está desactivado, los tickets se imprimirán en la moneda con la que pague el cliente.</small>
-                                        </div>
+                                    <div>
+                                        <h6 class="m-0">Imprimir solo en Bolívares</h6>
+                                        <small class="text-muted">Si está desactivado, los tickets se imprimirán en la moneda con la que pague el cliente.</small>
                                     </div>
-                                    <hr>
-                                    <!-- Opción: Cortes de caja -->
-                                    <div class="d-flex gap-1">
-                                        <div>
-                                            <?= renderCheckbox('cortes_caja', $cortes_caja == 1); ?>
-                                        </div>
-                                        <div>
-                                            <h6 class="m-0">Cortes de caja</h6>
-                                            <small class="text-muted">Si está desactivado, no se permitirá el corte de caja.</small>
-                                        </div>
+                                </div>
+                                <hr>
+                                <!-- Opción: Cortes de caja -->
+                                <div class="d-flex gap-1">
+                                    <div>
+                                        <?= renderCheckbox('cortes_caja', $cortes_caja == 1); ?>
                                     </div>
-                                    <hr>
-                                    <!-- Opción: Registro de clientes al vender -->
-                                    <div class="d-flex gap-1">
-                                        <div>
-                                            <?= renderCheckbox('registro_clientes', $registro_clientes == 1); ?>
-                                        </div>
-                                        <div>
-                                            <h6 class="m-0">Registro de clientes al vender</h6>
-                                            <small class="text-muted">Si está activado, se solicitaran los datos del cliente al momento de realizar una venta.</small>
-                                        </div>
+                                    <div>
+                                        <h6 class="m-0">Cortes de caja</h6>
+                                        <small class="text-muted">Si está desactivado, no se permitirá el corte de caja.</small>
+                                    </div>
+                                </div>
+                                <hr>
+                                <!-- Opción: Registro de clientes al vender -->
+                                <div class="d-flex gap-1">
+                                    <div>
+                                        <?= renderCheckbox('registro_clientes', $registro_clientes == 1); ?>
+                                    </div>
+                                    <div>
+                                        <h6 class="m-0">Registro de clientes al vender</h6>
+                                        <small class="text-muted">Si está activado, se solicitaran los datos del cliente al momento de realizar una venta.</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <script>
-                            document.addEventListener('DOMContentLoaded', function() {
-                                document.querySelectorAll('.config-toggle').forEach(checkbox => {
-                                    checkbox.addEventListener('change', function() {
-                                        const name = this.name;
-                                        const status = this.checked ? '1' : '0';
-                                        const checkboxElement = this;
-
-                                        fetch('../../configurar/configuracion_sistema.php', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/x-www-form-urlencoded'
-                                                },
-                                                body: new URLSearchParams({
-                                                    name: name.trim(),
-                                                    status: status.trim()
-                                                })
-                                            })
-                                            .then(response => {
-                                                if (!response.ok) {
-                                                    throw new Error('Error en la respuesta del servidor');
-                                                }
-                                                return response.json();
-                                            })
-                                            .then(data => {
-                                                if (data.status === 'success') {
-                                                    Alerta.toast('success', data.message); // Puedes reemplazar con swal/toast
-                                                } else {
-                                                    throw new Error(data.message || 'Error desconocido');
-                                                }
-                                            })
-                                            .catch(error => {
-                                                console.error('Error al actualizar la configuración:', error.message);
-                                                alert('No se pudo guardar el cambio: ' + error.message);
-                                                checkboxElement.checked = !checkboxElement.checked; // Revertir checkbox
-                                            });
-                                    });
-                                });
-                            });
-                        </script>
-
-
-
                     </div>
 
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            document.querySelectorAll('.config-toggle').forEach(checkbox => {
+                                checkbox.addEventListener('change', function() {
+                                    const name = this.name;
+                                    const status = this.checked ? '1' : '0';
+                                    const checkboxElement = this;
+
+                                    fetch('../../configurar/configuracion_sistema.php', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/x-www-form-urlencoded'
+                                            },
+                                            body: new URLSearchParams({
+                                                name: name.trim(),
+                                                status: status.trim()
+                                            })
+                                        })
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error('Error en la respuesta del servidor');
+                                            }
+                                            return response.json();
+                                        })
+                                        .then(data => {
+                                            if (data.status === 'success') {
+                                                Alerta.toast('success', data.message); // Puedes reemplazar con swal/toast
+                                            } else {
+                                                throw new Error(data.message || 'Error desconocido');
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Error al actualizar la configuración:', error.message);
+                                            alert('No se pudo guardar el cambio: ' + error.message);
+                                            checkboxElement.checked = !checkboxElement.checked; // Revertir checkbox
+                                        });
+                                });
+                            });
+                        });
+                    </script>
+
+
+
                 </div>
+
 
             </div>
             <!-- /page content -->
@@ -235,6 +230,7 @@ if ($search->num_rows > 0) {
     <script src='../vendors/starrr/dist/starrr.js'></script>
     <!-- Custom Theme Scripts -->
     <script src='../build/js/custom.js'></script>
+    <script src="js/nombre_pagina.js"></script>
 
 </body>
 

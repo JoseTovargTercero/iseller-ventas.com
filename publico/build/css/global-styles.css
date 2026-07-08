@@ -625,10 +625,15 @@ textarea:disabled {
     border: none !important;
 }
 
+.x_panel {
+    border: 1px solid var(--dash-border) !important;
+}
+
 /* MENU */
 
 #navbar {
-    border-right: 1px solid #202020;
+    border-right: 1px solid #2e353e;
+    background-color: #1e1d22;
 
     top: 0;
     padding: 0;
@@ -781,7 +786,7 @@ textarea:disabled {
 
 
 :root {
-    --dash-bg: #1a1e24;
+    --dash-bg: transparent;
     --dash-card: #232931;
     --dash-border: #2e353e;
     --dash-mint: #2dd4a0;

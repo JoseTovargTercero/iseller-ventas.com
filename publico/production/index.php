@@ -151,7 +151,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     }
 
                     .kpi-card {
-                        background: var(--dash-card);
                         border: 1px solid var(--dash-border);
                         border-radius: 14px;
                         padding: 22px 24px 18px;
@@ -254,32 +253,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         height: 36px;
                     }
 
-                    /* Panel cards (branch info + chart) */
-                    .dash-panel {
-                        background: var(--dash-card);
-                        border: 1px solid var(--dash-border);
-                        border-radius: 14px;
-                        overflow: hidden;
-                    }
-
-                    .dash-panel .panel-header {
-                        padding: 18px 22px 14px;
-                        border-bottom: 1px solid var(--dash-border);
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                    }
-
-                    .dash-panel .panel-header h6 {
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: var(--dash-text);
-                        margin: 0;
-                    }
-
-                    .dash-panel .panel-body {
-                        padding: 6px 0;
-                    }
 
                     /* Branch info list items */
                     .info-item {
@@ -471,15 +444,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                    <div class="d-flex justify-content-between dash-header">
-                        <div>
-                            <h3>Dashboard</h3>
-                            <p>Resumen y estadísticas</p>
-                            <div class="last-updated">
-                                <ion-icon name="time-outline"></ion-icon>
-                                <span id="lastUpdatedLabel">Actualizado ahora</span>
-                            </div>
-                        </div>
+                    <div class="d-flex justify-content-end dash-header">
+
                         <?php if ($_SESSION["nivel"] == 1): ?>
                             <div style="align-self: anchor-center;">
                                 <button type="button" class="btn-dash-filter" data-toggle="modal" data-target="#exampleModalCenter">
@@ -778,6 +744,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         </div>
 
         <script src="../build/js/global-loader.js"></script>
+        <script src="js/nombre_pagina.js"></script>
 
         <script>
             // Mapeo de iconos para indicadores
@@ -1374,7 +1341,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (!json || json.length === 0) return;
                         if (json.error) {
                             console.error('Backend error:', json.error, json.file + ':' + json.line);
-                            document.getElementById('lastUpdatedLabel').innerText = 'Error: ' + json.error;
                             return;
                         }
 
@@ -1460,11 +1426,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         renderTopProductos(json.topProductos);
                         renderTopClientes(json.topClientes);
                         renderInformacionInteres(json);
-                        document.getElementById('lastUpdatedLabel').innerText =
-                            'Última actualización: ' + new Date().toLocaleTimeString('es-VE', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
+
 
                     })
                     .catch(error => console.error("Error en la solicitud:", error));

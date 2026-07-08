@@ -44,9 +44,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <div class='right_col' role='main'>
                     <div class=''>
 
-                        <h4>Nuevo producto</h4>
-                        <p style="margin-top: -10px;">Agregar un producto nuevo al stock</p>
-
+                
 
                         <div class='clearfix'></div>
 
@@ -377,6 +375,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
         <script src='../build/js/custom.js'></script>
         <script src="../build/js/modal.js"></script>
+        <script src="js/nombre_pagina.js"></script>
 
         <script>
             // tasas de cambio

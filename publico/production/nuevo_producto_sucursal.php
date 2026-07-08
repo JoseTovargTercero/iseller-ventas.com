@@ -66,11 +66,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- page content -->
                 <div class='right_col ' role='main'>
                     <div class='fadeInRight animated'>
-                        <h4>Nuevo producto</h4>
-                        <p style="margin-top: -10px;">Agregar un producto nuevo al stock</p>
+
                         <div class='clearfix'></div>
                         <div class='row '>
-                            <div style="width: 70%;" class=' m-auto'>
+                            <div class=' col-lg-12'>
                                 <div class='x_panel'>
                                     <div class='x_title'>
                                         <h2>Datos del Producto</h2>
@@ -143,6 +142,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src='../vendors/jquery/dist/jquery.min.js'></script>
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
         <script src='../build/js/custom.js'></script>
+        <script src="js/nombre_pagina.js"></script>
 
         <script>
             // tasas de cambio

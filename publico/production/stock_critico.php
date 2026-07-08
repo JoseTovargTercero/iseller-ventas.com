@@ -67,12 +67,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 <!-- page content -->
                 <div class="right_col">
-                    <div class="col-lg-12">
-                        <h4>Stock crítico</h4>
-                        <p style="margin-top: -10px;">Listado de productos</p>
-
-                    </div>
-                    <div class="clearfix"></div>
+                
                     <div class="row">
                         <script>
                             // Ejecutar actualización cada segundo
@@ -365,6 +360,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script src="../build/js/global-loader.js"></script>
             <!--<script src="../build/js/global-loader.js"></script>
                                     -->
+        <script src="js/nombre_pagina.js"></script>
 
 
             <script>

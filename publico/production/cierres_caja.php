@@ -56,29 +56,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       font-size: 13px;
     }
 
-    .dash-panel {
-      background: var(--dash-card);
-      border: 1px solid var(--dash-border);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .dash-panel .panel-header {
-      padding: 18px 22px 14px;
-      border-bottom: 1px solid var(--dash-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .dash-panel .panel-header h6 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--dash-text);
-      margin: 0;
-    }
-    .dash-panel .panel-body { padding: 6px 0; }
-
+  
     .dash-table-wrap { overflow-x: auto; padding: 0 16px 16px; }
     .dash-table {
       width: 100%;
@@ -178,12 +156,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <?php echo $topnav ?>
 
     <div class="right_col">
-      <div class="d-flex justify-content-between dash-header">
-        <div>
-          <h3>Cierres de Caja</h3>
-          <p>Cortes de caja por usuario</p>
-        </div>
-      </div>
+     
 
       <div class="dash-panel">
         <div class="panel-header">
@@ -241,6 +214,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 <script src="../vendors/jquery/dist/jquery.min.js"></script>
 <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../build/js/custom.js"></script>
+        <script src="js/nombre_pagina.js"></script>
 
 <script>
 function cargarCortes() {
