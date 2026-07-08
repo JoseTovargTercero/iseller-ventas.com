@@ -20,6 +20,9 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
 
+  <!-- Linearicons (same as index.php) -->
+  <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
+
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -62,7 +65,11 @@
     /* ── PANEL IZQUIERDO (oscuro) ── */
     .panel-left {
       flex: 1 1 55%;
-      background-color: black;
+      background-image: url(web/img/bg.png);
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      position: relative;
       /* color original */
       display: flex;
       flex-direction: column;
@@ -71,6 +78,20 @@
       position: relative;
       overflow: hidden;
     }
+
+
+    .panel-left::before {
+      content: "";
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      opacity: .8;
+      background: -webkit-linear-gradient(to right, #00b2b4, #a0f1dc) !important;
+      background: linear-gradient(to right, #00b2b4, #a0f1dc) !important;
+    }
+
 
     /* Sutil textura / pattern sobre el fondo */
     .panel-left::before {
@@ -131,7 +152,7 @@
 
     .left-subtext {
       font-size: 14px;
-      color: rgba(255, 255, 255, 0.55);
+      color: rgba(255, 255, 255, 1);
       line-height: 1.6;
       max-width: 400px;
       margin-bottom: 36px;
@@ -139,8 +160,8 @@
 
     /* Mini dashboard card */
     .stats-card {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(14, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 1);
       border-radius: 14px;
       padding: 20px 24px;
       max-width: 380px;
@@ -152,7 +173,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: rgba(255, 255, 255, 0.40);
+      color: rgba(255, 255, 255, 1);
       margin-bottom: 16px;
     }
 
@@ -174,7 +195,7 @@
 
     .stat-label {
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.45);
+      color: rgba(255, 255, 255, 1);
       margin-top: 3px;
     }
 
@@ -474,10 +495,11 @@
     <!-- ════════════════════════════════════ -->
     <div class="panel-left">
 
-      <!-- Logo + nombre arriba a la izquierda -->
+      <!-- Logo + nombre (same style as index.php navbar) -->
       <div class="left-header">
-        <img src="web/img/logo.png" alt="Logo iSeller" class="logo-img">
-        <span class="brand-name">iSeller</span>
+        <a class="navbar-brand d-flex align-items-center" href="/">
+          <img src="web/img/logo.png" alt="iSeller" class="logo-img">
+        </a>
       </div>
 
       <!-- Cuerpo central -->
@@ -485,7 +507,7 @@
         <h1 class="left-headline">
           Gestiona tu negocio<br>desde un solo lugar.
         </h1>
-        <p class="left-subtext">
+        <p class="left-subtext ">
           Ventas, inventario, sucursales y reportes en una sola plataforma. Rápido, seguro y siempre disponible.
         </p>
 
@@ -499,7 +521,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-value" id="stat-negocios">—</div>
-              <div class="stat-label">Negocios activos</div>
+              <div class="stat-label">Negocios</div>
             </div>
             <div class="stat-item">
               <div class="stat-value" id="stat-sucursales">—</div>
@@ -555,7 +577,7 @@
             <label for="login">Correo o usuario</label>
           </div>
           <div class="input-group-custom">
-            <span class="field-icon">✉</span>
+            <span class="field-icon lnr lnr-envelope"></span>
             <input
               type="text"
               id="login"
@@ -571,7 +593,7 @@
             <a href="#" class="label-link">¿Olvidaste tu contraseña?</a>
           </div>
           <div class="input-group-custom">
-            <span class="field-icon">🔒</span>
+            <span class="field-icon lnr lnr-lock"></span>
             <input
               type="password"
               id="password"
@@ -579,12 +601,14 @@
               placeholder="••••••••"
               autocomplete="current-password"
               required>
-            <button type="button" class="toggle-pass" id="togglePass" title="Mostrar contraseña">👁</button>
+            <button type="button" class="toggle-pass" id="togglePass" title="Mostrar contraseña">
+              <span class="lnr lnr-eye"></span>
+            </button>
           </div>
 
-          <!-- Botón -->
+          <!-- Botón (same btn-success style as index.php) -->
           <button type="submit" class="btn-ingresar" id="submitBtn">
-            Verificar
+            Iniciar sesión
           </button>
 
         </form>
@@ -600,7 +624,7 @@
 
         <!-- Nota seguridad -->
         <p class="security-note">
-          🔐 Acceso seguro para negocios registrados
+          <span class="lnr lnr-lock" style="font-size:12px;"></span> Acceso seguro para negocios registrados
         </p>
 
       </div>
@@ -616,12 +640,23 @@
   <script src="web/vendor/bootstrap/bootstrap.min.js"></script>
 
   <script>
-    // Toggle contraseña
+    fetch('configurar/stats_landing.php')
+      .then(r => r.json())
+      .then(d => {
+        if (d.status === 'success') {
+          document.getElementById('stat-ventas').textContent = d.ventas.toLocaleString('es-VE');
+          document.getElementById('stat-negocios').textContent = d.negocios.toLocaleString('es-VE');
+          document.getElementById('stat-sucursales').textContent = d.sucursales.toLocaleString('es-VE');
+          document.getElementById('stat-usuarios').textContent = d.usuarios.toLocaleString('es-VE');
+        }
+      })
+      .catch(() => {});
+
     document.getElementById('togglePass').addEventListener('click', function() {
       const inp = document.getElementById('password');
       const isPass = inp.type === 'password';
       inp.type = isPass ? 'text' : 'password';
-      this.textContent = isPass ? '🙈' : '👁';
+      this.innerHTML = isPass ? '<span class="lnr lnr-eye"></span>' : '<span class="lnr lnr-cross"></span>';
     });
   </script>
 

@@ -54,8 +54,13 @@ if (isset($_GET['plan'])) {
 
     /* ── PANEL IZQUIERDO (oscuro) ── */
     .panel-left {
-      flex: 1 1 45%;
-      background-color: black;
+      flex: 1 1 55%;
+      background-image: url(web/img/bg.png);
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      position: relative;
+      /* color original */
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -64,6 +69,21 @@ if (isset($_GET['plan'])) {
       overflow: hidden;
     }
 
+
+    .panel-left::before {
+      content: "";
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      opacity: .8;
+      background: -webkit-linear-gradient(to right, #00b2b4, #a0f1dc) !important;
+      background: linear-gradient(to right, #00b2b4, #a0f1dc) !important;
+    }
+
+
+    /* Sutil textura / pattern sobre el fondo */
     .panel-left::before {
       content: '';
       position: absolute;
@@ -122,14 +142,14 @@ if (isset($_GET['plan'])) {
 
     .left-subtext {
       font-size: 14px;
-      color: rgba(255, 255, 255, 0.55);
+      color: rgba(255, 255, 255, 1);
       line-height: 1.6;
       max-width: 380px;
       margin-bottom: 32px;
     }
 
     .left-subtext strong {
-      color: #28a745;
+      color: #ffffff;
     }
 
     /* Beneficios list */
@@ -149,8 +169,6 @@ if (isset($_GET['plan'])) {
     .benefit-icon {
       width: 28px;
       height: 28px;
-      background: rgba(40, 167, 69, 0.15);
-      border: 1px solid rgba(40, 167, 69, 0.3);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -162,7 +180,7 @@ if (isset($_GET['plan'])) {
 
     .benefit-text {
       font-size: 13px;
-      color: rgba(255, 255, 255, 0.65);
+      color: rgba(255, 255, 255, 1);
       line-height: 1.4;
     }
 
@@ -178,8 +196,6 @@ if (isset($_GET['plan'])) {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(40, 167, 69, 0.12);
-      border: 1px solid rgba(40, 167, 69, 0.3);
       border-radius: 24px;
       padding: 8px 16px;
       margin-bottom: 28px;
@@ -188,8 +204,8 @@ if (isset($_GET['plan'])) {
 
     .promo-badge span {
       font-size: 12px;
-      color: #6ee384;
-      font-weight: 600;
+      color: #ffffff;
+      font-wergb(255, 255, 255)00;
     }
 
     /* Footer izquierdo */
@@ -202,13 +218,13 @@ if (isset($_GET['plan'])) {
 
     .left-footer a {
       font-size: 12px;
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255, 255, 255, 1);
       text-decoration: none;
       transition: color 0.15s;
     }
 
     .left-footer a:hover {
-      color: rgba(255, 255, 255, 0.70);
+      color: rgba(255, 255, 255, 1);
     }
 
     .left-footer span {
