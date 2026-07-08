@@ -498,7 +498,7 @@
       <!-- Logo + nombre (same style as index.php navbar) -->
       <div class="left-header">
         <a class="navbar-brand d-flex align-items-center" href="/">
-          <img src="web/img/logo.png" alt="iSeller" class="logo-img">
+          <img src="publico/production/images/logo1-inv-compact.png" alt="iSeller" class="logo-img">
         </a>
       </div>
 
