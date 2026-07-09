@@ -1621,7 +1621,7 @@
                         let formatoEspanol = new Intl.NumberFormat('es-ES').format(data.ventas_hoy);
                         if (st) st.textContent = '$' + formatoEspanol;
                         const tr = document.getElementById('stat-trans');
-                        if (tr) tr.textContent = data.ventas;
+                        if (tr) tr.textContent = formatoEspanol;
 
                         const rateBcv = document.getElementById('rate-bcv');
                         if (rateBcv && data.tasa_bcv) rateBcv.textContent = 'Bs. ' + data.tasa_bcv;
