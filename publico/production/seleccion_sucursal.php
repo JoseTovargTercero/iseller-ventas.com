@@ -257,6 +257,7 @@ if ($_SESSION['nivel'] == 1) {
         <script src="../build/js/custom.js"></script>
         <script src="js/tablas.js"></script>
         <script src="../build/js/global-loader.js"></script>
+        <script src="js/nombre_pagina.js"></script>
 
         <script>
             function cargarSucursales() {

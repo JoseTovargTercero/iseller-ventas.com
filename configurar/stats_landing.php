@@ -36,12 +36,36 @@ try {
         $stmt->close();
     }
 
+    $tasa_bcv = "36.06";
+    $stmt = $conexion->prepare("SELECT valor FROM cambios_bcv_historico ORDER BY id DESC LIMIT 1");
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $tasa_bcv = $row['valor'];
+        }
+        $stmt->close();
+    }
+
+    $tasa_peso = "4158";
+    $stmt = $conexion->prepare("SELECT bolivar_peso FROM cambio WHERE bss_id = 2 LIMIT 1");
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $tasa_peso = $row['bolivar_peso'] - 0.0001;
+        }
+        $stmt->close();
+    }
+
     echo json_encode([
         'status' => 'success',
         'ventas' => $ventas,
         'negocios' => $negocios,
         'sucursales' => $sucursales,
-        'usuarios' => $usuarios
+        'usuarios' => $usuarios,
+        'tasa_bcv' => $tasa_bcv,
+        'tasa_peso' => $tasa_peso
     ]);
 } catch (Exception $e) {
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);

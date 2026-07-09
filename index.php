@@ -1,657 +1,1645 @@
 <!DOCTYPE html>
-
 <html lang="es">
 
 <head>
-
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>iSeller - Control de Inventario y Ventas Multisucursal en Tiempo Real</title>
+    <title>iSeller — Control de Inventario y Ventas Multisucursal en Tiempo Real</title>
     <meta name="description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller. La plataforma más completa para el control total de tu negocio con soporte multidivisa.">
     <meta name="keywords" content="inventario, ventas, multisucursal, punto de venta, POS, gestión de negocio, iSeller, control de stock, reporte de ventas">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="canonical" href="https://iseller-tiendas.com/">
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://iseller-tiendas.com/">
-    <meta property="og:title" content="iSeller - Control de Inventario y Ventas Multisucursal">
-    <meta property="og:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller. Optimiza tu negocio hoy mismo.">
+    <meta property="og:title" content="iSeller — Control de Inventario y Ventas Multisucursal">
+    <meta property="og:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller.">
     <meta property="og:image" content="https://iseller-tiendas.com/publico/production/images/logo1-inv-compact.png">
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://iseller-tiendas.com/">
-    <meta property="twitter:title" content="iSeller - Control de Inventario y Ventas Multisucursal">
-    <meta property="twitter:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller. Optimiza tu negocio hoy mismo.">
-    <meta property="twitter:image" content="https://iseller-tiendas.com/publico/production/images/logo1-inv-compact.png">
+    <link rel="icon" href="publico/production/images/favicon.ico" type="image/ico">
 
-    <link rel='icon' href='publico/production/images/favicon.ico' type='image/ico' />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- External CSS -->
-    <link rel="stylesheet" href="web/vendor/bootstrap/bootstrap.min.css">
-    <link rel="stylesheet" href="web/vendor/select2/select2.min.css">
-    <link rel="stylesheet" href="web/vendor/owlcarousel/owl.carousel.min.css">
-    <link rel="stylesheet" href="web/vendor/lightcase/lightcase.css">
+    <style>
+        /* ============================================================
+           DESIGN TOKENS - PREMIUM SAAS (Dark Mode Default)
+        ============================================================ */
+        :root {
+            --bg-base: #080A0C;
+            --bg-surface: #101216;
+            --bg-card: #15181C;
+            --bg-card-hover: #1A1D24;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --border-active: rgba(255, 255, 255, 0.3);
 
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css?family=Lato:300,400|Work+Sans:300,400,700" rel="stylesheet">
+            --accent-primary: #FFFFFF;
+            --accent-on-primary: #000000;
+            --brand-blue: #3B82F6;
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="web/css/style.min.css">
-    <link rel="stylesheet" href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
 
-    <!-- Modernizr JS for IE8 support of HTML5 elements and media queries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.js"></script>
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
 
+            --bezier: cubic-bezier(0.2, 0.8, 0.2, 1);
+            --transition: all 0.35s var(--bezier);
+            --transition-fast: all 0.2s var(--bezier);
+
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+        }
+
+        /* ============================================================
+           RESET & BASE
+        ============================================================ */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        /* Focus Accesibilidad */
+        :focus-visible {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+
+        /* ============================================================
+           TYPOGRAPHY
+        ============================================================ */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5 {
+            font-family: 'Sora', sans-serif;
+            font-weight: 600;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+           LAYOUT UTILITIES
+        ============================================================ */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        section {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ============================================================
+           NAVBAR
+        ============================================================ */
+        #navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 20px 0;
+            transition: var(--transition);
+            background: transparent;
+            border-bottom: 1px solid transparent;
+        }
+
+        #navbar.scrolled {
+            background: rgba(8, 10, 12, 0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 0;
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo img {
+            height: 28px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-fast);
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-cta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-ghost {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-fast);
+        }
+
+        .btn-ghost:hover {
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: var(--accent-on-primary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary:hover {
+            background: #E4E4E7;
+            /* Light gray */
+            transform: scale(0.98);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            background: var(--bg-surface);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            transition: var(--transition-fast);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.98);
+        }
+
+        /* Mobile hamburger */
+        .nav-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px;
+            border: none;
+            background: none;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        /* ============================================================
+           HERO
+        ============================================================ */
+        #hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 160px 0 100px;
+            position: relative;
+        }
+
+        /* Iluminación sutil (Storytelling: foco en la solución) */
+        #hero::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .hero-content {
+            max-width: 540px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 100px;
+            margin-bottom: 28px;
+            transition: var(--transition-fast);
+        }
+
+        .hero-badge:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .hero-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--brand-blue);
+            border-radius: 50%;
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 4.5vw, 4rem);
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+        }
+
+        .hero-sub {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .hero-trust {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .hero-trust-stars {
+            color: #F59E0B;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+        }
+
+        .hero-trust-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Hero visual - Parallax Dashboard */
+        .hero-visual {
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .hero-dashboard {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            /* Animación inicial sutil */
+            transform: translateY(0);
+            transition: transform 0.1s linear;
+        }
+
+        /* Dashboard UI interna limpia */
+        .dash-topbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .dash-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .dash-url {
+            flex: 1;
+            margin-left: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .dash-body {
+            padding: 24px;
+        }
+
+        .dash-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .dash-stat {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+        }
+
+        .dash-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .dash-stat-value {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .dash-table-wrap {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .dash-table-header {
+            display: flex;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            background: var(--bg-card);
+        }
+
+        .dash-table-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .dash-table-row:last-child {
+            border-bottom: none;
+        }
+
+        .f1 {
+            flex: 2;
+        }
+
+        .f2 {
+            flex: 1;
+        }
+
+        .f3 {
+            flex: 1;
+            text-align: right;
+        }
+
+        .dash-pill {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Floating card overlay - minimalista */
+        .hero-float-card {
+            position: absolute;
+            bottom: -30px;
+            left: -30px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-md);
+            /* Parallax individual */
+            transition: transform 0.1s linear;
+        }
+
+        .float-card-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .float-card-value {
+            font-family: 'Sora';
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        /* ============================================================
+           SOCIAL PROOF BAR
+        ============================================================ */
+        #social-proof {
+            padding: 64px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .proof-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 48px;
+        }
+
+        .proof-stat {
+            text-align: center;
+        }
+
+        .proof-num {
+            font-family: 'Sora', sans-serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: block;
+        }
+
+        .proof-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ============================================================
+           FEATURES SECTION
+        ============================================================ */
+        .section-wrap {
+            padding: 140px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header {
+            margin-bottom: 80px;
+            max-width: 600px;
+        }
+
+        .section-header.center {
+            text-align: center;
+            margin: 0 auto 80px;
+        }
+
+        .section-eyebrow {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 100px;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 3.5vw, 2.5rem);
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .section-sub {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Feature cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 40px 32px;
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-active);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .feature-card:hover .feature-icon {
+            border-color: var(--text-secondary);
+        }
+
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .feature-title {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .feature-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Large Feature Card */
+        .feature-card-lg {
+            grid-column: span 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .feature-visual-code {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 2;
+        }
+
+        .code-key {
+            color: var(--text-secondary);
+        }
+
+        .code-val {
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+           TASAS DE CAMBIO
+        ============================================================ */
+        .currencies-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .currency-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .currency-card:hover {
+            border-color: var(--border-active);
+            background: var(--bg-card-hover);
+        }
+
+        .currency-flag-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .currency-info {
+            flex: 1;
+        }
+
+        .currency-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .currency-symbol {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .currency-rate {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        /* ============================================================
+           COMO FUNCIONA
+        ============================================================ */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 48px;
+        }
+
+        .step-item {
+            position: relative;
+        }
+
+        .step-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 24px;
+            right: -32px;
+            width: 32px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .step-number {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .step-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .step-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================================
+           PRICING SECTION
+        ============================================================ */
+        .pricing-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 64px;
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .toggle-label.active {
+            color: var(--text-primary);
+        }
+
+        .toggle-switch {
+            width: 52px;
+            height: 28px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            position: relative;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .toggle-switch.annual {
+            border-color: var(--border-active);
+        }
+
+        .toggle-switch.annual::after {
+            transform: translateX(24px);
+            background: var(--text-primary);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 48px 40px;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pricing-card:hover {
+            border-color: var(--border-active);
+        }
+
+        .pricing-card.featured {
+            border-color: rgba(255, 255, 255, 0.25);
+            background: #121519;
+            /* Ligeramente distinto */
+            box-shadow: var(--shadow-lg);
+        }
+
+        .pricing-plan {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .pricing-price {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .price-cur {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .price-amount {
+            font-family: 'Sora', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .price-period {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .pricing-trial {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 40px;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 48px;
+            flex-grow: 1;
+        }
+
+        .pricing-features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features li svg {
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ============================================================
+           CTA SECTION
+        ============================================================ */
+        .cta-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 100px 64px;
+            text-align: center;
+        }
+
+        .cta-title {
+            font-size: clamp(2rem, 3.5vw, 2.5rem);
+            margin-bottom: 24px;
+        }
+
+        .cta-sub {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        /* ============================================================
+           FOOTER
+        ============================================================ */
+        footer {
+            padding: 64px 0 40px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .footer-copy {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .footer-links a {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: var(--transition-fast);
+        }
+
+        .footer-links a:hover {
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+           ANIMATIONS (Elegantes y uniformes)
+        ============================================================ */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.8s var(--bezier), transform 0.8s var(--bezier);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ============================================================
+           RESPONSIVE
+        ============================================================ */
+        @media (max-width: 992px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+                gap: 64px;
+            }
+
+            .hero-visual {
+                display: none;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .feature-card-lg {
+                grid-column: span 2;
+            }
+
+            .steps-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .step-item::after {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .nav-links,
+            .nav-cta {
+                display: none;
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-card-lg {
+                grid-column: span 1;
+                display: block;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .proof-inner {
+                flex-direction: column;
+                gap: 40px;
+            }
+
+            .cta-box {
+                padding: 64px 32px;
+            }
+
+            .section-wrap {
+                padding: 80px 0;
+            }
+        }
+
+        /* Mobile nav */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg-base);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .mobile-close {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 2rem;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
-<body data-spy="scroll" data-target="#navbar-nav-header" class="static-layout ">
-    <div class="boxed-page animate__animated animate__fadeIn">
-        <nav id="gtco-header-navbar" class="navbar navbar-expand-lg py-4">
-            <div class="container">
-                <a class="navbar-brand d-flex align-items-center" href="/">
-                    <img src="publico/production/images/logo1-inv-compact.png" alt="Logo iseller" class="logo">
+<body>
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Menú de navegación">
+        <button class="mobile-close" id="mobileClose" aria-label="Cerrar menú">&times;</button>
+        <a href="#funcionalidades">Funcionalidades</a>
+        <a href="#tasas">Tasas de cambio</a>
+        <a href="#pricing">Planes</a>
+        <a href="login.php" class="btn-secondary" style="font-size:1rem; border:none;">Iniciar sesión</a>
+        <a href="registro.php" class="btn-primary">Comenzar gratis</a>
+    </div>
+
+    <!-- ============================================================
+         NAVBAR
+    ============================================================ -->
+    <nav id="navbar" role="navigation" aria-label="Navegación principal">
+        <div class="container">
+            <div class="nav-inner">
+                <a href="/" class="nav-logo" aria-label="iSeller — Inicio">
+                    <img src="publico/production/images/logo1-inv-compact.png" alt="iSeller logotipo">
                 </a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-nav-header"
-                    aria-controls="navbar-nav-header" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="lnr lnr-menu"></span>
+                <ul class="nav-links" role="list">
+                    <li><a href="#funcionalidades">Funcionalidades</a></li>
+                    <li><a href="#tasas">Tasas de cambio</a></li>
+                    <li><a href="#pricing">Planes</a></li>
+                </ul>
+                <div class="nav-cta">
+                    <a href="login.php" class="btn-ghost">Iniciar sesión</a>
+                    <a href="registro.php" class="btn-primary">Comenzar gratis</a>
+                </div>
+                <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span><span></span><span></span>
                 </button>
-                <div class="collapse navbar-collapse" id="navbar-nav-header">
-                    <ulH class="navbar-nav ml-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="#funcionalidades">Funcionalidades</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#tasas">Tasas de cambio</a>
-                        </li>
-                        <li class="nav-item" style="display: none;">
-                            <a class="nav-link" href="#capturas">Capturas</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#pricing">Planes</a>
-                        </li>
-                        <li class="nav-item" style="display: none;">
-                            <a class="nav-link" href="registro.html">Contacto</a>
-                        </li>
-                        <li class="nav-item ml-3">
-                            <a class="btn btn-sm btn-outline-success" href="login.php">Iniciar sesión</a>
-                        </li>
-                    </ulH>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+         HERO
+    ============================================================ -->
+    <section id="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <!-- Content -->
+                <div class="hero-content">
+                    <div class="hero-badge reveal">
+                        <span class="dot"></span>
+                        Sistema operativo para tu tienda
+                    </div>
+                    <h1 class="hero-title reveal">
+                        Control total de tu inventario y ventas multisucursal
+                    </h1>
+                    <p class="hero-sub reveal">
+                        El punto de venta definitivo. Sincroniza sucursales, maneja múltiples divisas al instante y obtén reportes de ganancias precisos desde un solo panel de control.
+                    </p>
+                    <div class="hero-actions reveal">
+                        <a href="registro.php" class="btn-primary" aria-label="Comenzar a usar iSeller gratis">
+                            Comenzar gratis
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                        <a href="#funcionalidades" class="btn-secondary">
+                            Ver funcionalidades
+                        </a>
+                    </div>
+                    <div class="hero-trust reveal">
+                        <div class="hero-trust-stars" aria-hidden="true">★★★★★</div>
+                        <p class="hero-trust-text">
+                            Con la confianza de decenas de negocios locales.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Dashboard Visual -->
+                <div class="hero-visual reveal">
+                    <div class="hero-dashboard" id="heroDashboard">
+                        <div class="dash-topbar">
+                            <span class="dash-dot"></span>
+                            <span class="dash-dot"></span>
+                            <span class="dash-dot"></span>
+                            <div class="dash-url">iseller-tiendas.com/admin</div>
+                        </div>
+                        <div class="dash-body">
+                            <div class="dash-stats">
+                                <div class="dash-stat">
+                                    <div class="dash-stat-label">Ventas hoy</div>
+                                    <div class="dash-stat-value" id="stat-ventas">$0</div>
+                                </div>
+                                <div class="dash-stat">
+                                    <div class="dash-stat-label">Stock activo</div>
+                                    <div class="dash-stat-value">4,281</div>
+                                </div>
+                                <div class="dash-stat">
+                                    <div class="dash-stat-label">Ganancia</div>
+                                    <div class="dash-stat-value">$1,940</div>
+                                </div>
+                            </div>
+                            <div class="dash-table-wrap">
+                                <div class="dash-table-header">
+                                    <span class="f1">Producto</span>
+                                    <span class="f2">Precio</span>
+                                    <span class="f3">Estado</span>
+                                </div>
+                                <div class="dash-table-row">
+                                    <span class="f1">Camisa Polo XL</span>
+                                    <span class="f2">$24.00</span>
+                                    <span class="f3"><span class="dash-pill">En stock</span></span>
+                                </div>
+                                <div class="dash-table-row">
+                                    <span class="f1">Tenis Runner Pro</span>
+                                    <span class="f2">$89.00</span>
+                                    <span class="f3"><span class="dash-pill">En stock</span></span>
+                                </div>
+                                <div class="dash-table-row">
+                                    <span class="f1">Bolso Cuero</span>
+                                    <span class="f2">$145.00</span>
+                                    <span class="f3"><span class="dash-pill" style="border-color:#555">Agotándose</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-float-card" id="heroFloat">
+                        <div class="float-card-label">Transacciones hoy</div>
+                        <div class="float-card-value" id="stat-trans"></div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </section>
 
-        </nav>
-        <header class="jumbotron d-flex align-items-center">
-            <div class="container text-center mt-5">
-                <h1 class="display-2 mb-4">Control total de tu inventario en tiempo real!</h1>
-                <p>
-                    Gestiona múltiples sucursales, <b>tasas de cambio personalizadas</b>, usuarios ilimitados <br> y
-                    obtén seguimiento detallado de ventas y ganancias, todo desde un solo panel.
-                </p>
-                <a href="registro.php" class="btn btn-success mt-3" aria-label="Comenzar ahora gratis con iSeller">Comenzar ahora, gratis!</a>
-            </div>
-        </header>
-        <main>
-            <section id="funcionalidades" class="bg-white">
-                <div class="container">
-                    <div class="section-content">
-                        <div class="title-wrap">
-                            <h2 class="section-title">La forma más simple y potente <br>
-                                de gestionar tu <b>inventario y ventas</b></h2>
-                            <p class="section-sub-title">Optimiza tus operaciones con control multisucursal, tasas de cambio
-                                personalizadas y <br> reportes de ganancias en tiempo real. Todo desde una sola plataforma.
-                            </p>
-                        </div>
-                        <div class="row text-center">
-
-
-                            <div class="col-md-4 col-sm-6">
-                                <img class="rounded-circle" src="web/icons/animat-checkmark.gif" alt="Icono de verificación de gestión multisucursal"
-                                    width="140" height="140" loading="lazy">
-                                <h5 class="mb-4">Gestión Multisucursal</h5>
-                                <p>Administra tu inventario, productos y listas de precios en múltiples sucursales. </p>
-                            </div>
-                            <div class="col-md-4 col-sm-6">
-                                <img class="rounded-circle" src="web/icons/animat-customize.gif" alt="Icono de personalización de tasas de cambio"
-                                    width="140" height="140" loading="lazy">
-                                <h5 class="mb-4">Tasas de Cambio Personalizables</h5>
-                                <p>Configura tus tasas de cambio según tus necesidades y asigna productos específicos a cada
-                                    una. Así, podrás adaptar tu estrategia de precios ante los cambios del mercado.</p>
-                            </div>
-
-
-
-                            <!-- /.col-md-4 col-sm-6  -->
-                            <div class="col-md-4 col-sm-6 ">
-                                <img class="rounded-circle" src="web/icons/animat-responsive.gif"
-                                    alt="Icono de reportes en dispositivos móviles" width="140" height="140" loading="lazy">
-                                <h5 class="mb-4">Ventas y Ganancias desde cualquier dispositivo</h5>
-                                <p>Visualiza datos de ventas al instante y obtén reportes de rentabilidad por producto,
-                                    categoría o sucursal. </p> b
-                            </div>
-                            <!-- /.col-md-4 col-sm-6  -->
-                        </div>
-                        <!-- /.row -->
-                    </div>
+    <!-- ============================================================
+         SOCIAL PROOF
+    ============================================================ -->
+    <section id="social-proof" aria-label="Estadísticas de la plataforma">
+        <div class="container">
+            <div class="proof-inner">
+                <div class="proof-stat reveal">
+                    <span class="proof-num" id="counter-sucursales">34+</span>
+                    <span class="proof-label">Sucursales gestionadas</span>
                 </div>
-            </section> <!-- Counter Section -->
-            <section id="gtco-counter" class="overlay bg-fixed">
-                <div class="container">
-                    <div class="section-content">
-                        <div class="row justify-content-center">
-                            <!-- Counter Item -->
-                            <div class="col-md-3 col-sm-6 counter-item">
-                                <i class="lnr lnr-users"></i>
-                                <span class="number" data-from="0" data-to="34" data-refresh-interval="100" id="sucursales">0</span>
-                                <h4>Sucursales activas</h4>
-                            </div>
-
-                            <div class="col-md-3 col-sm-6 counter-item">
-                                <i class="lnr lnr-rocket"></i>
-                                <span class="number" data-from="0" data-to="29" data-refresh-interval="100" id="transacciones">0</span>
-                                <h4>Transacciones</h4>
-                            </div>
-                            <!-- End of Counter Item -->
-                        </div>
-                    </div>
+                <div class="proof-stat reveal">
+                    <span class="proof-num" id="counter-ventas">29k+</span>
+                    <span class="proof-label">Transacciones procesadas</span>
                 </div>
-            </section>
-
-
-
-
-
-
-
-            <!-- End of Counter Section --> <!-- Features Section-->
-            <section class="bg-white">
-                <div class="container">
-                    <div class="section-content">
-                        <!-- Section Title -->
-                        <div class="title-wrap">
-                            <h2 class="section-title">
-                                Todas las herramientas que necesitas <br>
-                                para controlar tu negocio como nunca
-                            </h2>
-                            <p class="section-sub-title">Gestiona tu inventario, controla precios en múltiples divisas y
-                                accede a reportes en tiempo real. <br> Todo lo que buscas, en una sola plataforma
-                                inteligente.</p>
-                        </div>
-                        <!-- End of Section Title -->
-                        <div class="row">
-                            <!-- Features Holder-->
-                            <div class="col-md-12 features-holder">
-                                <div class="row">
-                                    <!-- Features Item -->
-                                    <div class="col-md-4 col-sm-6 feature-item item mb-3 mb-3 text-center">
-                                        <div class="my-4">
-                                            <i class="lnr lnr-cog fs-40"></i>
-                                        </div>
-                                        <h4>Inventario</h4>
-                                        <p>Rastrea stock de productos desde múltiples almacenes.</p>
-                                    </div>
-                                    <!-- End of Feature Item -->
-                                    <!-- Features Item -->
-                                    <div class="col-md-4 col-sm-6 feature-item item mb-3 text-center">
-                                        <div class="my-4">
-                                            <i class="lnr lnr-frame-contract fs-40"></i>
-                                        </div>
-                                        <h4>Precios y Divisas</h4>
-                                        <p>Define diferentes tasas por sucursal, sin complicaciones.</p>
-                                    </div>
-                                    <!-- End of Feature Item -->
-                                    <!-- Features Item -->
-                                    <div class="col-md-4 col-sm-6 feature-item item mb-3 text-center">
-                                        <div class="my-4">
-                                            <i class="lnr lnr-bubble fs-40"></i>
-                                        </div>
-                                        <h4>Reportes Avanzados</h4>
-                                        <p>Analiza ganancias, tendencias de ventas y rendimiento por tienda.</p>
-                                    </div>
-                                    <!-- End of Feature Item -->
-                                    <!-- Features Item -->
-                                    <div class="col-md-4 col-sm-6 feature-item item mb-3 text-center">
-                                        <div class="my-4">
-                                            <i class="lnr lnr-magic-wand fs-40"></i>
-                                        </div>
-                                        <h4>Integración POS</h4>
-                                        <p>Terminal de punto de venta optimizada, rápida y fácil de usar.</p>
-                                    </div>
-                                    <!-- End of Feature Item -->
-                                    <!-- Features Item -->
-                                    <div class="col-md-4 col-sm-6 feature-item item mb-3 text-center">
-                                        <div class="my-4">
-                                            <i class="lnr lnr-clock fs-40"></i>
-                                        </div>
-                                        <h4>Roles y permisos</h4>
-                                        <p>Administra el acceso de cada usuario según su rol.</p>
-                                    </div>
-                                    <!-- End of Feature Item -->
-                                    <!-- Features Item -->
-                                    <div class="col-md-4 col-sm-6 feature-item item mb-3 text-center">
-                                        <div class="my-4">
-                                            <i class="lnr lnr-thumbs-up fs-40"></i>
-                                        </div>
-                                        <h4>Historial de transacciones</h4>
-                                        <p>Consulta ventas, devoluciones y movimientos por empleado o caja.</p>
-                                    </div>
-                                    <!-- End of Feature Item -->
-                                </div>
-                            </div>
-                            <!-- End of Features Holder-->
-                        </div>
-                    </div>
+                <div class="proof-stat reveal">
+                    <span class="proof-num">99.9%</span>
+                    <span class="proof-label">Uptime del sistema</span>
                 </div>
-            </section>
-            <!-- End of Features Section-->
-            <section id="tasas" class="featurettes bg-white" style="display: none;">
-
-                <div class="container">
-                    <div class="section-content">
-                        <div class="row">
-                            <div class="col-md-12 text-center">
-                                <!-- Section Title -->
-                                <div class="title-wrap">
-                                    <h2 class="section-title">
-                                        <b>Una plataforma</b> de ventas e inventario,<br> diseñada para crecer con tu
-                                        negocio
-                                    </h2>
-                                    <p class="section-sub-title">
-                                        Gestiona productos, sucursales y ventas desde un solo lugar. Optimiza
-                                        procesos,<br>controla tu stock y accede a reportes en tiempo real sin
-                                        complicaciones.
-                                    </p>
-                                </div>
-                                <!-- End of Section Title -->
-
-                                <div class="featurettes-wrap text-left mb-4">
-                                    <div class="row featurettes-item">
-                                        <div class="col-md-4 offset-md-2 col-sm-6">
-                                            <div class="my-5">
-                                                <span class="lnr lnr-database fs-40 color-primary"></span>
-                                            </div>
-                                            <h4 class="mb-4">Inventario centralizado y actualizado</h4>
-                                            <p>Visualiza el stock en todas tus sucursales en tiempo real. Evita quiebres de
-                                                stock y controla entradas y salidas con precisión.</p>
-                                        </div>
-                                        <div class="col-md-4 offset-md-right-2 col-sm-6">
-                                            <img class="my-5" src="web/img/app-profile-mockup.png" alt="Vista previa del perfil de usuario en la aplicación iSeller" loading="lazy">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="featurettes-wrap text-left">
-                                    <div class="row featurettes-item">
-                                        <div class="col-md-4 offset-md-2 col-sm-6">
-                                            <img class="my-4" src="web/img/app-chat-mockup.png" alt="Vista previa del chat y soporte en la plataforma iSeller" loading="lazy">
-                                        </div>
-                                        <div class="col-md-4 offset-md-right-2 col-sm-6 mb-5">
-                                            <div class="my-4">
-                                                <span class="lnr lnr-chart-bars fs-40 color-primary"></span>
-                                            </div>
-                                            <h4 class="mb-4">Análisis de ventas y ganancias</h4>
-                                            <p>Obtén informes detallados por producto, categoría, empleado o sucursal. Toma
-                                                decisiones basadas en datos.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="featurettes-wrap text-left">
-                                    <div class="row featurettes-item">
-                                        <div class="col-md-4 offset-md-2 col-sm-6 offset-sm-0">
-                                            <h4 class="mb-4">¿Listo para llevar el control total de tu negocio?</h4>
-                                            <p>Comienza a usar nuestro sistema hoy y transforma la forma en la que gestionas
-                                                ventas, inventario y clientes.</p>
-                                        </div>
-                                        <div class="col-md-4 offset-md-right-2 col-sm-6 text-center">
-                                            <a href="#0"><img class="btn-img my-4" src="web/img/appstore-btn.png"
-                                                    alt="Descarga iSeller en el App Store" loading="lazy"></a>
-                                            <a href="#0"><img class="btn-img" src="web/img/playstore-btn.png"
-                                                    alt="Descarga iSeller en el Play Store" loading="lazy"></a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div><!--/ .row -->
-                    </div>
-                </div><!--/ .container -->
-
-            </section>
-            <!-- End of Blog Section --> <!-- Portfolio Section -->
-            <section id="capturas" class="bg-white" style="display: none;">
-                <div class="container">
-                    <div class="section-content">
-                        <!-- Section Title -->
-                        <div class="title-wrap">
-                            <h2 class="section-title">Our <b>Awesome</b> Works</h2>
-                            <p class="section-sub-title">Praesent commodo cursus magna, vel scelerisque nisl consectetur et.
-                                <br> pharetra augue. Donec id elit non mi.
-                            </p>
-                        </div>
-                        <!-- End of Section Title -->
-                        <div class="row">
-                            <!-- Portfolio Holder -->
-                            <div class="col-md-12 portfolio-holder">
-                                <!-- Btn Filter -->
-                                <div class="filter-button-group btn-filter d-flex justify-content-center">
-                                    <a tabindex="0" class="is-checked" data-filter="*">Show All</a>
-                                    <a tabindex="0" data-filter=".minimalism">Minimalism</a>
-                                    <a tabindex="0" data-filter=".vintage">Vintage</a>
-                                    <a tabindex="0" data-filter=".creative">Creative</a>
-                                </div>
-                                <!-- End of Btn Filter -->
-                                <!-- Portfolio Content -->
-                                <div class="grid-portfolio">
-                                    <div class="grid-sizer"></div>
-                                    <div class="gutter-sizer"></div>
-                                    <!-- Portfolio Item -->
-                                    <div class="grid-item minimalism">
-                                        <div class="grid-item-wrapper">
-                                            <img src="web/img/photo-1.jpg" alt="Ejemplo de uso de iSeller - Gestión de productos" class="portfolio-item" loading="lazy">
-                                            <div class="grid-info">
-                                                <div class="grid-link d-flex justify-content-center">
-                                                    <a class="img-pop" data-rel="lightcase" href="web/img/photo-1.jpg"
-                                                        title="Photo-1">
-                                                        <span class="lnr lnr-move"></span>
-                                                    </a>
-                                                    <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                                        <span class="lnr lnr-link"></span>
-                                                    </a>
-                                                </div>
-                                                <div class="grid-title">
-                                                    <h4>Camera</h4>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <!-- End of Portfolio Item -->
-                                    <!-- Portfolio Item -->
-                                    <div class="grid-item vintage">
-                                        <div class="grid-item-wrapper">
-                                            <img src="web/img/photo-6.jpg" alt="Ejemplo de uso de iSeller - Seguimiento de ventas" class="portfolio-item" loading="lazy">
-                                            <div class="grid-info">
-                                                <div class="grid-link d-flex justify-content-center">
-                                                    <a class="img-pop" data-rel="lightcase" href="web/img/photo-6.jpg"
-                                                        title="Ship">
-                                                        <span class="lnr lnr-move"></span>
-                                                    </a>
-                                                    <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                                        <span class="lnr lnr-link"></span>
-                                                    </a>
-                                                </div>
-                                                <div class="grid-title">
-                                                    <h4>Flower</h4>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <!-- End of Portfolio Item -->
-                                    <!-- Portfolio Item -->
-                                    <div class="grid-item creative grid-item-height">
-                                        <div class="grid-item-wrapper">
-                                            <img src="web/img/photo-2.jpg" alt="Ejemplo de uso de iSeller - Análisis de datos" class="portfolio-item" loading="lazy">
-                                            <div class="grid-info">
-                                                <div class="grid-link d-flex justify-content-center">
-                                                    <a class="img-pop" data-rel="lightcase" href="web/img/photo-2.jpg"
-                                                        title="Tracy Portrait">
-                                                        <span class="lnr lnr-move"></span>
-                                                    </a>
-                                                    <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                                        <span class="lnr lnr-link"></span>
-                                                    </a>
-                                                </div>
-                                                <div class="grid-title">
-                                                    <h4>Breakfast</h4>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <!-- End of Portfolio Item -->
-                                    <!-- Portfolio Item -->
-                                    <div class="grid-item creative">
-                                        <div class="grid-item-wrapper">
-                                            <img src="web/img/photo-7.jpg" alt="Ejemplo de uso de iSeller - Interfaz de usuario" class="portfolio-item" loading="lazy">
-                                            <div class="grid-info">
-                                                <div class="grid-link d-flex justify-content-center">
-                                                    <a class="img-pop" data-rel="lightcase" href="web/img/photo-7.jpg"
-                                                        title="Guitar">
-                                                        <span class="lnr lnr-move"></span>
-                                                    </a>
-                                                    <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                                        <span class="lnr lnr-link"></span>
-                                                    </a>
-                                                </div>
-                                                <div class="grid-title">
-                                                    <h4>Chair</h4>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <!-- End of Portfolio Item -->
-                                    <!-- Portfolio Item -->
-                                    <!-- <div class="grid-item minimalism">
-                            <div class="grid-item-wrapper">
-                                <img src="img/photo-3.jpg" alt="portfolio-img" class="portfolio-item">
-                                <div class="grid-info">
-                                    <div class="grid-link d-flex justify-content-center">
-                                        <a class="img-pop" data-rel="lightcase" href="img/photo-3.jpg" title="Clock">
-                                            <span class="lnr lnr-move"></span>
-                                        </a>
-                                        <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                            <span class="lnr lnr-link"></span>
-                                        </a>
-                                    </div>
-                                    <div class="grid-title">
-                                        <h4>Clock</h4>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div> -->
-                                    <!-- End of Portfolio Item -->
-                                    <!-- Portfolio Item -->
-                                    <div class="grid-item vintage">
-                                        <div class="grid-item-wrapper">
-                                            <img src="web/img/photo-4.jpg" alt="Ejemplo de uso de iSeller - Control de stock" class="portfolio-item" loading="lazy">
-                                            <div class="grid-info">
-                                                <div class="grid-link d-flex justify-content-center">
-                                                    <a class="img-pop" data-rel="lightcase" href="web/img/photo-4.jpg"
-                                                        title="Bookself">
-                                                        <span class="lnr lnr-move"></span>
-                                                    </a>
-                                                    <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                                        <span class="lnr lnr-link"></span>
-                                                    </a>
-                                                </div>
-                                                <div class="grid-title">
-                                                    <h4>Hidden Book</h4>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <!-- End of Portfolio Item -->
-                                    <!-- Portfolio Item -->
-                                    <div class="grid-item creative">
-                                        <div class="grid-item-wrapper">
-                                            <img src="web/img/photo-9.jpg" alt="Ejemplo de uso de iSeller - Reportes avanzados" class="portfolio-item" loading="lazy">
-                                            <div class="grid-info">
-                                                <div class="grid-link d-flex justify-content-center">
-                                                    <a class="img-pop" data-rel="lightcase" href="web/img/photo-9.jpg"
-                                                        title="Guitar">
-                                                        <span class="lnr lnr-move"></span>
-                                                    </a>
-                                                    <a class="ext-link" href="https://unsplash.com/" target="_blank">
-                                                        <span class="lnr lnr-link"></span>
-                                                    </a>
-                                                </div>
-                                                <div class="grid-title">
-                                                    <h4>Red</h4>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <!-- End of Portfolio Item -->
-                                </div>
-                                <!-- End of Portfolio Content -->
-                            </div>
-                            <!-- End of Portfolio Holder -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-            <!-- End of Portfolio Section -->
-            <section id="pricing" class="bg-grey">
-                <div class="container">
-                    <div class="section-content">
-                        <!-- Section Title -->
-                        <div class="title-wrap">
-                            <h2 class="section-title">Elige</h2>
-                            <p class="section-sub-title">Disfruta de los primeros 3 meses completamente GRATIS. Sin restricciones, sin compromisos.</p>
-                        </div>
-                        <!-- End of Section Title -->
-                        <div class="card-deck mb-3 text-center">
-
-                            <div class="row m-auto">
-
-                                <div class="col-lg-12 row">
-                                    <!-- Plan Mensual -->
-                                    <div class="price-box card mb-4 box-shadow col-lg-6">
-                                        <div class="card-header p-4">
-                                            <h6 class="mb-0 text-muted font-weight-bold">PLAN MENSUAL</h6>
-                                            <h3 class="display-4 p-2 pb-0 mb-0 font-weight-bold text-success">Gratis</h3>
-                                            <h6 class="text-success mt-0 pt-0" style=" margin-top: -8px !important;"> por 3 meses</h6>
-
-                                            <p class="mb-0">$5 / por mes</p>
-                                        </div>
-                                        <div class="card-body p-4">
-                                            <ul class="price-box-list list-unstyled mt-3 mb-4">
-                                                <li>Acceso multi-sucursal</li>
-                                                <li>Manejo de múltiples tasas de cambio</li>
-                                                <li>Usuarios ilimitados</li>
-                                                <li>Seguimiento de ventas y ganancias</li>
-                                                <li>Soporte por correo</li>
-                                            </ul>
-                                            <br>
-                                            <a href="registro.php?plan=mensual" class="btn btn-block btn-outline-success btn-primary mt-4">Comenzar</a>
-                                        </div>
-                                    </div>
-
-                                    <!-- Plan Mensual -->
-                                    <div class="price-box card mb-4 box-shadow col-lg-6">
-                                        <div class="card-header p-4">
-                                            <h6 class="mb-0 text-muted font-weight-bold">PLAN ANUAL</h6>
-                                            <h3 class="display-4 p-2 pb-0 mb-0 font-weight-bold text-success">Gratis</h3>
-                                            <h6 class="text-success mt-0 pt-0" style=" margin-top: -8px !important;"> por 3 meses</h6>
-
-                                            <p class="mb-0">$30 / por año</p>
-                                        </div>
-                                        <div class="card-body p-4">
-                                            <ul class="price-box-list list-unstyled mt-3 mb-4">
-                                                <li>Acceso multi-sucursal</li>
-                                                <li>Manejo de múltiples tasas de cambio</li>
-                                                <li>Usuarios ilimitados</li>
-                                                <li>Seguimiento de ventas y ganancias</li>
-                                                <li>Soporte por correo</li>
-                                            </ul>
-                                            <br>
-                                            <a href="registro.php?plan=anual" class="btn btn-block btn-outline-success btn-primary mt-4">Comenzar</a>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-
-        <!-- End of Client Section -->
-        <footer class="mastfoot mb-3 bg-white py-4 border-top">
-            <div class="inner container">
-                <div class="row">
-                    <div class="col-md-6 d-flex align-items-center justify-content-md-start justify-content-center">
-                        <p class="mb-0">&copy; 2026 iSeller. Todos los derechos reservados.</p>
-                    </div>
-
-                    <div class="col-md-6">
-                        <nav class="nav nav-mastfoot justify-content-md-end justify-content-center">
-                            <a class="nav-link" href="#">
-                                <i class="icon-facebook"></i>
-                            </a>
-                            <a class="nav-link" href="#">
-                                <i class="icon-twitter"></i>
-                            </a>
-                            <a class="nav-link" href="#">
-                                <i class="icon-instagram"></i>
-                            </a>
-                            <a class="nav-link" href="#">
-                                <i class="icon-linkedin"></i>
-                            </a>
-                            <a class="nav-link" href="#">
-                                <i class="icon-youtube"></i>
-                            </a>
-                            <a class="nav-link" href="#">
-                                <i class="icon-pinterest"></i>
-                            </a>
-                        </nav>
-                    </div>
-
+                <div class="proof-stat reveal">
+                    <span class="proof-num">3 meses</span>
+                    <span class="proof-label">Sin costo inicial</span>
                 </div>
             </div>
-        </footer>
-    </div>
+        </div>
+    </section>
 
-    </div>
-    <!-- External JS -->
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="web/vendor/bootstrap/popper.min.js"></script>
-    <script src="web/vendor/bootstrap/bootstrap.min.js"></script>
-    <script src="web/vendor/select2/select2.min.js "></script>
-    <script src="web/vendor/owlcarousel/owl.carousel.min.js"></script>
-    <script src="web/vendor/isotope/isotope.min.js"></script>
-    <script src="web/vendor/lightcase/lightcase.js"></script>
-    <script src="web/vendor/waypoints/waypoint.min.js"></script>
-    <script src="web/vendor/countTo/jquery.countTo.js"></script>
+    <main>
+        <!-- ============================================================
+             FEATURES
+        ============================================================ -->
+        <section id="funcionalidades" class="section-wrap">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-eyebrow">Funcionalidades</span>
+                    <h2 class="section-title">El poder operativo para escalar</h2>
+                    <p class="section-sub">Herramientas diseñadas para eliminar la fricción del día a día. Sincronización impecable y datos en tiempo real.</p>
+                </div>
 
-    <!-- Main JS -->
-    <script src="web/js/app.min.js "></script>
+                <div class="features-grid">
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <polyline points="9 22 9 12 15 12 15 22" />
+                            </svg>
+                        </div>
+                        <div class="feature-title">Gestión Multisucursal</div>
+                        <p class="feature-desc">Supervisa inventario y ajusta precios globalmente desde un solo panel. Cada tienda siempre actualizada.</p>
+                    </div>
 
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23" />
+                                <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                            </svg>
+                        </div>
+                        <div class="feature-title">Motor Multidivisa</div>
+                        <p class="feature-desc">Factura en bolívares, dólares o cualquier moneda. El sistema calcula los montos al instante en el punto de venta.</p>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg>
+                        </div>
+                        <div class="feature-title">Analítica Profunda</div>
+                        <p class="feature-desc">Mide márgenes de ganancia, productos más vendidos y rendimiento por cajero con precisión contable.</p>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 00-4-4H5c-1.1 0-2 .9-2 2v2" />
+                                <circle cx="8.5" cy="7" r="4" />
+                                <line x1="20" y1="8" x2="20" y2="14" />
+                                <line x1="23" y1="11" x2="17" y2="11" />
+                            </svg>
+                        </div>
+                        <div class="feature-title">Control de Créditos (Fiado)</div>
+                        <p class="feature-desc">Registra cuentas por cobrar de clientes de confianza y gestiona sus abonos de forma transparente.</p>
+                    </div>
+
+                    <div class="feature-card feature-card-lg reveal">
+                        <div>
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="5" y="2" width="14" height="20" rx="2" />
+                                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                                </svg>
+                            </div>
+                            <div class="feature-title">Punto de Venta (POS) Ultra-rápido</div>
+                            <p class="feature-desc" style="margin-bottom:24px">Una terminal optimizada para la velocidad. Soporta lectores de código de barras, búsqueda predictiva y gestión de clientes al momento del cobro.</p>
+                            <a href="registro.php" class="btn-secondary">Conoce el POS</a>
+                        </div>
+                        <div class="feature-visual-code">
+                            <span class="code-line"><span class="code-key">sucursal</span><span class="code-val">: "Tienda Central"</span></span>
+                            <span class="code-line"><span class="code-key">id_producto</span><span class="code-val">: "SKU-9921"</span></span>
+                            <span class="code-line"><span class="code-key">precio_base</span><span class="code-val">: 24.00</span></span>
+                            <span class="code-line"><span class="code-key">tasa_activa</span><span class="code-val">: 36.06</span></span>
+                            <span class="code-line"><span class="code-key">stock_local</span><span class="code-val">: 148</span></span>
+                            <span class="code-line"><span class="code-key">estado</span><span class="code-val">: online</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             TASAS DE CAMBIO
+        ============================================================ -->
+        <section id="tasas" class="section-wrap">
+            <div class="container">
+                <div class="section-header center reveal">
+                    <span class="section-eyebrow">Multidivisa</span>
+                    <h2 class="section-title">Fluidez financiera total</h2>
+                    <p class="section-sub">Mantén tus precios en la moneda fuerte de referencia. Cobra en la moneda local sin fricciones operativas.</p>
+                </div>
+                <div class="currencies-grid">
+                    <div class="currency-card reveal">
+                        <div class="currency-flag-placeholder">🇻🇪</div>
+                        <div class="currency-info">
+                            <div class="currency-name">Bolívar venezolano</div>
+                            <div class="currency-symbol">VES (Bs.)</div>
+                        </div>
+                        <div class="currency-rate" id="rate-bcv">Bs. 36.06</div>
+                    </div>
+                    <div class="currency-card reveal">
+                        <div class="currency-flag-placeholder">🇺🇸</div>
+                        <div class="currency-info">
+                            <div class="currency-name">Dólar estadounidense</div>
+                            <div class="currency-symbol">USD ($)</div>
+                        </div>
+                        <div class="currency-rate">$ 1.00</div>
+                    </div>
+                    <div class="currency-card reveal">
+                        <div class="currency-flag-placeholder">🇨🇴</div>
+                        <div class="currency-info">
+                            <div class="currency-name">Peso colombiano</div>
+                            <div class="currency-symbol">COP ($)</div>
+                        </div>
+                        <div class="currency-rate" id="rate-cop">$ 4,158</div>
+                    </div>
+                    <div class="currency-card reveal" style="opacity: 0;">
+                    </div>
+                    <div class="currency-card reveal">
+                        <div class="currency-flag-placeholder">/</div>
+                        <div class="currency-info">
+                            <div class="currency-name">Divisa personalizada</div>
+                            <div class="currency-symbol">Configura tu tasa</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             COMO FUNCIONA
+        ============================================================ -->
+        <section id="como-funciona" class="section-wrap">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-eyebrow">Onboarding</span>
+                    <h2 class="section-title">Instalación Cero</h2>
+                    <p class="section-sub">Basado en la nube. Tu negocio operativo en minutos, no en semanas.</p>
+                </div>
+                <div class="steps-grid">
+                    <div class="step-item reveal">
+                        <div class="step-number">01</div>
+                        <div class="step-title">Crea tu cuenta</div>
+                        <p class="step-desc">El registro toma segundos. Obtienes 3 meses gratuitos para validar el sistema en entorno real sin requerir tarjeta.</p>
+                    </div>
+                    <div class="step-item reveal">
+                        <div class="step-number">02</div>
+                        <div class="step-title">Configura tu entorno</div>
+                        <p class="step-desc">Agrega sucursales, roles de empleados e importa tu catálogo de inventario con un archivo CSV.</p>
+                    </div>
+                    <div class="step-item reveal">
+                        <div class="step-number">03</div>
+                        <div class="step-title">Despliega el POS</div>
+                        <p class="step-desc">Tus cajeros inician sesión y comienzan a facturar. Todo sincronizado instantáneamente al panel central.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             PRICING
+        ============================================================ -->
+        <section id="pricing" class="section-wrap">
+            <div class="container">
+                <div class="section-header center reveal">
+                    <span class="section-eyebrow">Precios</span>
+                    <h2 class="section-title">Transparencia absoluta</h2>
+                    <p class="section-sub">Planes sin restricciones. Escala tu negocio con todas las herramientas desde el primer día.</p>
+                </div>
+
+                <div class="pricing-toggle reveal">
+                    <span class="toggle-label active" id="label-mensual">Mensual</span>
+                    <button class="toggle-switch annual" id="billingToggle" aria-label="Cambiar entre facturación mensual y anual"></button>
+                    <span class="toggle-label" id="label-anual">Anual (-50%)</span>
+                </div>
+
+                <div class="pricing-grid">
+                    <!-- Plan Mensual -->
+                    <div class="pricing-card reveal">
+                        <div class="pricing-plan">Mensual</div>
+                        <div class="pricing-price">
+                            <span class="price-cur">$</span>
+                            <span class="price-amount" id="price-mensual">5</span>
+                            <span class="price-period">/ mes</span>
+                        </div>
+                        <span class="pricing-trial">Inicia con 3 meses gratuitos</span>
+                        <ul class="pricing-features">
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Acceso multi-sucursal</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Múltiples divisas en tiempo real</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Usuarios y roles ilimitados</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Reportes analíticos de ganancias</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Soporte por correo electrónico</li>
+                        </ul>
+                        <a href="registro.php?plan=mensual" class="btn-secondary btn-block">Seleccionar plan</a>
+                    </div>
+
+                    <!-- Plan Anual -->
+                    <div class="pricing-card featured reveal">
+                        <div class="pricing-plan">Anual</div>
+                        <div class="pricing-price">
+                            <span class="price-cur">$</span>
+                            <span class="price-amount" id="price-anual">30</span>
+                            <span class="price-period">/ año</span>
+                        </div>
+                        <span class="pricing-trial">Facturación anual (Ahorras $30)</span>
+                        <ul class="pricing-features">
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Todas las características del plan mensual</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Soporte prioritario 24/7</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Acceso anticipado a nuevas versiones</li>
+                            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg> Respaldo de datos automático diario</li>
+                        </ul>
+                        <a href="registro.php?plan=anual" class="btn-primary btn-block">Seleccionar plan</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             CTA FINAL
+        ============================================================ -->
+        <section id="cta" class="section-wrap" style="border-bottom:none; padding-bottom:80px;">
+            <div class="container">
+                <div class="cta-box reveal">
+                    <h2 class="cta-title">Tu negocio, sincronizado</h2>
+                    <p class="cta-sub">Da el salto a un control absoluto. Menos fricción administrativa, más tiempo para crecer.</p>
+                    <div class="cta-actions">
+                        <a href="registro.php" class="btn-primary">
+                            Crear cuenta gratis
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============================================================
+         FOOTER
+    ============================================================ -->
+    <footer>
+        <div class="container">
+            <div class="footer-inner">
+                <div class="nav-logo" style="opacity: 0.6;">
+                    <img src="publico/production/images/logo1-inv-compact.png" alt="iSeller logotipo" style="height:24px;">
+                </div>
+                <nav class="footer-links" aria-label="Pie de página">
+                    <a href="#funcionalidades">Funcionalidades</a>
+                    <a href="#tasas">Tasas</a>
+                    <a href="login.php">Login</a>
+                </nav>
+                <p class="footer-copy">&copy; 2026 iSeller. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============================================================
+         SCRIPTS
+    ============================================================ -->
     <script>
-        $(document).ready(function() {
-            $.ajax({
-                url: 'configurar/stats_landing.php',
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        const $transacciones = $('#transacciones');
-                        const $sucursales = $('#sucursales');
-                        $transacciones.attr('data-to', response.ventas);
-                        $transacciones.text(response.ventas.toLocaleString('es-VE'));
-                        $sucursales.attr('data-to', response.sucursales);
-                        $sucursales.text(response.sucursales.toLocaleString('es-VE'));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error al obtener stats:', error);
-                }
+        (function() {
+            'use strict';
+
+            /* ── Navbar ───────────────────────────── */
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                navbar.classList.toggle('scrolled', window.scrollY > 20);
+            }, {
+                passive: true
             });
-        });
+
+            /* ── Parallax muy sutil en Hero ───────────────────────────── */
+            const dash = document.getElementById('heroDashboard');
+            const floatCard = document.getElementById('heroFloat');
+            if (dash && floatCard) {
+                window.addEventListener('scroll', () => {
+                    const y = window.scrollY;
+                    if (y < 800) {
+                        dash.style.transform = `translateY(${y * 0.05}px)`;
+                        floatCard.style.transform = `translateY(${y * 0.08}px)`;
+                    }
+                }, {
+                    passive: true
+                });
+            }
+
+            /* ── Mobile menu ────────────────────────────────────── */
+            const navToggle = document.getElementById('navToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileClose = document.getElementById('mobileClose');
+
+            navToggle.addEventListener('click', () => {
+                mobileMenu.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            });
+            const closeMenu = () => {
+                mobileMenu.classList.remove('open');
+                document.body.style.overflow = '';
+            };
+            mobileClose.addEventListener('click', closeMenu);
+            mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+
+            /* ── Intersection Observer ──────────────────── */
+            const revealObs = new IntersectionObserver((entries) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        e.target.classList.add('visible');
+                        revealObs.unobserve(e.target);
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+            document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+            /* ── Live stats ─────────────────────────────── */
+            fetch('configurar/stats_landing.php')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('counter-sucursales').textContent = data.sucursales.toLocaleString('es-VE') + '+';
+                        document.getElementById('counter-ventas').textContent = data.ventas.toLocaleString('es-VE') + '+';
+                        const st = document.getElementById('stat-ventas');
+                        if (st) st.textContent = '$' + (data.ventas * 24).toLocaleString('es-VE');
+                        const tr = document.getElementById('stat-trans');
+                        if (tr) tr.textContent = data.ventas;
+
+                        const rateBcv = document.getElementById('rate-bcv');
+                        if (rateBcv && data.tasa_bcv) rateBcv.textContent = 'Bs. ' + data.tasa_bcv;
+                        const rateCop = document.getElementById('rate-cop');
+                        if (rateCop && data.tasa_peso) rateCop.textContent = '$ ' + data.tasa_peso;
+                    }
+                }).catch(() => {});
+
+            /* ── Billing toggle ───────────────────── */
+            const billingToggle = document.getElementById('billingToggle');
+            let isAnnual = true;
+            billingToggle.addEventListener('click', () => {
+                isAnnual = !isAnnual;
+                billingToggle.classList.toggle('annual', isAnnual);
+                document.getElementById('label-mensual').classList.toggle('active', !isAnnual);
+                document.getElementById('label-anual').classList.toggle('active', isAnnual);
+            });
+
+        })();
     </script>
 </body>
 
