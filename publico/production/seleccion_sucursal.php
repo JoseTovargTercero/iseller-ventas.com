@@ -223,10 +223,7 @@ if ($_SESSION['nivel'] == 1) {
                 <?php echo $topnav ?>
 
                 <div class="right_col" role='main'>
-                    <div class="page-head">
-                        <h3>Seleccionar sucursal</h3>
-                        <p>Elige la sucursal con la que deseas trabajar</p>
-                    </div>
+
 
                     <div class="row">
                         <div class="col-lg-10 col-xl-8 m-auto">
