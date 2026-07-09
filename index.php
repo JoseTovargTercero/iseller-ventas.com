@@ -1618,7 +1618,7 @@
                         document.getElementById('counter-sucursales').textContent = data.sucursales.toLocaleString('es-VE') + '+';
                         document.getElementById('counter-ventas').textContent = data.ventas.toLocaleString('es-VE') + '+';
                         const st = document.getElementById('stat-ventas');
-                        let formatoEspanol = new Intl.NumberFormat('es-ES').format(data.ventas);
+                        let formatoEspanol = new Intl.NumberFormat('es-ES').format(data.ventas_hoy);
                         if (st) st.textContent = '$' + formatoEspanol;
                         const tr = document.getElementById('stat-trans');
                         if (tr) tr.textContent = data.ventas;

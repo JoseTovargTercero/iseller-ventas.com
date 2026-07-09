@@ -4,6 +4,7 @@ require_once 'configuracion.php';
 
 try {
     $ventas = 0;
+    $ventas_hoy = 0;
     $negocios = 0;
     $sucursales = 0;
     $usuarios = 0;
@@ -14,6 +15,16 @@ try {
         $ventas = (int)$stmt->get_result()->fetch_assoc()['c'] * 2;
         $stmt->close();
     }
+    $fecha = date('Y-m-d');
+    $stmt = $conexion->prepare("SELECT COUNT(*) AS c FROM orden WHERE modified = '$fecha'");
+    if ($stmt) {
+        $stmt->execute();
+        $ventas_hoy = (int)$stmt->get_result()->fetch_assoc()['c'] * 2;
+        $stmt->close();
+    }
+
+
+
 
     $stmt = $conexion->prepare("SELECT COUNT(*) AS c FROM negocio");
     if ($stmt) {
@@ -65,7 +76,8 @@ try {
         'sucursales' => $sucursales,
         'usuarios' => $usuarios,
         'tasa_bcv' => $tasa_bcv,
-        'tasa_peso' => $tasa_peso
+        'tasa_peso' => $tasa_peso,
+        'ventas_hoy' => $ventas_hoy
     ]);
 } catch (Exception $e) {
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
