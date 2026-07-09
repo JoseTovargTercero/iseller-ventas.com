@@ -379,7 +379,7 @@ if ($_SESSION["validate"] != "ok") {
                                     $options .= '<option value="' . $id . '">' . $nombres[$id] . '</option>';
                                 }
                                 ?>
-                                <form action="../../configurar/tasas.php" method="post">
+                                <form id="form-tasas-cambio">
                                     <div class="rate-block">
                                         <div class="rate-block-header">
                                             <div class="icon-box"><ion-icon name="calculator-outline"></ion-icon></div>
@@ -670,6 +670,21 @@ if ($_SESSION["validate"] != "ok") {
                                 if (e.target.matches('[name="margen"]')) {
                                     actualizarBolivar();
                                 }
+                            });
+
+                            document.getElementById('form-tasas-cambio').addEventListener('submit', function(e) {
+                                e.preventDefault();
+                                const formData = new FormData(this);
+                                fetch('../../configurar/tasas.php', { method: 'POST', body: formData })
+                                    .then(r => r.json())
+                                    .then(res => {
+                                        if (res.status === 'success') {
+                                            Alerta.toast('success', res.message);
+                                        } else {
+                                            Alerta.toast('error', res.message);
+                                        }
+                                    })
+                                    .catch(() => Alerta.toast('error', 'Error al conectar con el servidor'));
                             });
                         </script>
 

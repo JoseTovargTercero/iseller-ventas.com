@@ -1,6 +1,8 @@
 <?php
+header('Content-Type: application/json');
 require_once("configuracion.php");
 require_once('session.php');
+require_once('_tasas_cambio.php');
 
 $tipoTasa = $_POST['tipoTasa'];
 $margen = $_POST['margen'] ?? 0;
@@ -10,7 +12,6 @@ $bolivarPeso = $_POST['bolivarPeso'];
 $peso_bolivar = $_POST['peso_bolivar'];
 $bss_id = $_SESSION['bss_id'];
 
-require_once('_tasas_cambio.php');
 $tasasCambio = new TasasCambio($conexion);
 
 if ($tipoTasa == 2) {
@@ -45,16 +46,20 @@ $stmt = $conexion->prepare("
 ");
 
 if ($stmt === false) {
-    echo "Error al preparar la consulta: " . $conexion->error;
+    echo json_encode(['status' => 'error', 'message' => 'Error al preparar la consulta: ' . $conexion->error]);
     exit;
 }
 
 $stmt->bind_param("dddddddi", $peso, $bolivarPeso, $bolivar, $tipoTasa, $margen, $redondeo, $peso_bolivar, $bss_id);
 
 if ($stmt->execute()) {
+    echo json_encode([
+        'status' => 'success',
+        'message' => 'Tasas actualizadas correctamente',
+        'peso_bolivar' => $peso_bolivar
+    ]);
 } else {
-    echo "Error al actualizar los datos: " . $stmt->error;
+    echo json_encode(['status' => 'error', 'message' => 'Error al actualizar los datos: ' . $stmt->error]);
 }
 
 $stmt->close();
-header("Location: " . $_SERVER['HTTP_REFERER']);
