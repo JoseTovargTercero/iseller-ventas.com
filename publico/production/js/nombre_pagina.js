@@ -8,6 +8,10 @@ const configPaginas = {
   "clientes.php": { titulo: "Clientes", subtitulo: "Gestión de clientes" },
   "users.php": { titulo: "Usuarios", subtitulo: "Registro de usuarios" },
   "permisos.php": { titulo: "Permisos", subtitulo: "Permisos de usuarios" },
+  "ficha.php": {
+    titulo: "Detalles del producto",
+    subtitulo: "Consulte los detalles de ventas del producto",
+  },
   "seleccion_sucursal.php": {
     titulo: "Selección de sucursal",
     subtitulo: "Seleccione una sucursal antes de proceder con la ventas",

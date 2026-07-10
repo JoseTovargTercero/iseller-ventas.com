@@ -7,82 +7,136 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $idProducto    = intval($_GET['id'] ?? 0);
     $nivelUsuario  = $_SESSION['nivel'];
     $nombreUsuario = $_SESSION['nombre'];
-    $id            = $idProducto;
 
-    /* ─── Product info ─────────────────────────────────────────────── */
-    $stmtP = $conexion->prepare("SELECT * FROM productos WHERE id = ?");
+    /* ─── Product info ──────────────────────────────────────────────
+       Only fetch the columns we actually use.                        */
+    $stmtP = $conexion->prepare(
+        'SELECT nombre, codigo FROM productos WHERE id = ? LIMIT 1'
+    );
     $stmtP->bind_param('i', $idProducto);
     $stmtP->execute();
     $rowP      = $stmtP->get_result()->fetch_assoc();
     $stmtP->close();
-    $nombreP   = $rowP['nombre']   ?? 'Producto';
-    $categoria = $rowP['categoria'] ?? '';
-    $codigo    = $rowP['codigo']    ?? '';
-
-    /* ─── Helpers ──────────────────────────────────────────────────── */
-    function ventaProducto($conexion, $idProducto, $campo, $valor, $tipo = null)
-    {
-        $tipoClause = $tipo ? "AND o.status = '$tipo'" : "AND o.status IN (1,4)";
-        $sql = "SELECT oa.precio_venta_dolar, oa.precio, oa.quantity, o.descontado, o.status
-                FROM orden o
-                JOIN orden_articulos oa ON oa.order_id = o.id
-                WHERE oa.product_id = '$idProducto'
-                  AND o.$campo = '$valor'
-                  $tipoClause";
-        $res     = $conexion->query($sql);
-        $ventas  = 0;
-        $costo   = 0;
-        while ($r = $res->fetch_assoc()) {
-            $sub = $r['precio_venta_dolar'] * $r['quantity'];
-            if ($r['status'] == '4') {
-                $sub -= $sub * floatval($r['descontado']) / 100;
-            }
-            $ventas += $sub;
-            $costo  += $r['precio'] * $r['quantity'];
-        }
-        return ['ventas' => round($ventas, 2), 'ganancia' => round($ventas - $costo, 2)];
-    }
+    $nombreP   = $rowP['nombre'] ?? 'Producto';
+    $categoria = '';
+    $codigo    = $rowP['codigo'] ?? '';
 
     $dia    = date('Y-m-d');
     $semana = date('Y-W');
     $mes    = date('Y-m');
+    $anio   = date('Y');
 
-    /* ─── KPI data ─────────────────────────────────────────────────── */
-    $kpiDia    = ventaProducto($conexion, $idProducto, 'modified', $dia);
-    $kpiSemana = ventaProducto($conexion, $idProducto, 'semana',   $semana);
-    $kpiMes    = ventaProducto($conexion, $idProducto, 'fecha',    $mes);
+    /* ─── KPI: día / semana / mes ── 1 sola query ──────────────────
+       Usamos agregación condicional para obtener los tres períodos
+       en una única pasada sobre la tabla.  El descuento al mayor
+       (status=4) se aplica directamente en SQL con CASE WHEN.       */
+    $stmtKpi = $conexion->prepare(
+        "SELECT
+            /* ── Hoy ── */
+            SUM(CASE WHEN o.modified = ? THEN
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END
+            ELSE 0 END) AS dia_ventas,
 
-    /* ─── Monthly chart data (current year) ────────────────────────── */
-    $anio       = date('Y');
+            SUM(CASE WHEN o.modified = ? THEN
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END - oa.precio * oa.quantity
+            ELSE 0 END) AS dia_ganancia,
+
+            /* ── Esta semana ── */
+            SUM(CASE WHEN o.semana = ? THEN
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END
+            ELSE 0 END) AS sem_ventas,
+
+            SUM(CASE WHEN o.semana = ? THEN
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END - oa.precio * oa.quantity
+            ELSE 0 END) AS sem_ganancia,
+
+            /* ── Este mes ── */
+            SUM(CASE WHEN o.fecha = ? THEN
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END
+            ELSE 0 END) AS mes_ventas,
+
+            SUM(CASE WHEN o.fecha = ? THEN
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END - oa.precio * oa.quantity
+            ELSE 0 END) AS mes_ganancia
+
+         FROM orden o
+         JOIN orden_articulos oa ON oa.order_id = o.id
+         WHERE oa.product_id = ?
+           AND o.status IN (1, 4)"
+    );
+    $stmtKpi->bind_param('ssssssi', $dia, $dia, $semana, $semana, $mes, $mes, $idProducto);
+    $stmtKpi->execute();
+    $kpiRow = $stmtKpi->get_result()->fetch_assoc();
+    $stmtKpi->close();
+
+    $kpiDia    = ['ventas' => round($kpiRow['dia_ventas']  ?? 0, 2), 'ganancia' => round($kpiRow['dia_ganancia']  ?? 0, 2)];
+    $kpiSemana = ['ventas' => round($kpiRow['sem_ventas']  ?? 0, 2), 'ganancia' => round($kpiRow['sem_ganancia']  ?? 0, 2)];
+    $kpiMes    = ['ventas' => round($kpiRow['mes_ventas']  ?? 0, 2), 'ganancia' => round($kpiRow['mes_ganancia']  ?? 0, 2)];
+
+    /* ─── Chart: 12 meses del año ── 1 sola query ──────────────────
+       GROUP BY mes; el motor agrupa y suma directamente.            */
     $mesesLabel = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    $chartVentas    = [];
-    $chartGanancias = [];
-    $chartCantidad  = [];
 
-    for ($m = 1; $m <= 12; $m++) {
-        $mesKey = $anio . '-' . str_pad($m, 2, '0', STR_PAD_LEFT);
-        $d = ventaProducto($conexion, $idProducto, 'fecha', $mesKey);
-        $chartVentas[]    = $d['ventas'];
-        $chartGanancias[] = $d['ganancia'];
+    $stmtChart = $conexion->prepare(
+        "SELECT
+            SUBSTRING(o.fecha, 6, 2) AS mes_num,
+            SUM(
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END
+            ) AS ventas,
+            SUM(
+                CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity
+                END - oa.precio * oa.quantity
+            ) AS ganancia,
+            SUM(oa.quantity) AS cantidad
+         FROM orden o
+         JOIN orden_articulos oa ON oa.order_id = o.id
+         WHERE oa.product_id = ?
+           AND o.ano = ?
+           AND o.status IN (1, 4)
+         GROUP BY mes_num"
+    );
+    $stmtChart->bind_param('is', $idProducto, $anio);
+    $stmtChart->execute();
+    $chartRes = $stmtChart->get_result();
+    $stmtChart->close();
 
-        // Quantity for the month
-        $stmtQty = $conexion->prepare(
-            "SELECT SUM(oa.quantity) as qty
-             FROM orden o
-             JOIN orden_articulos oa ON oa.order_id = o.id
-             WHERE oa.product_id = ?
-               AND o.fecha = ?
-               AND o.status IN (1,4)"
-        );
-        $stmtQty->bind_param('is', $idProducto, $mesKey);
-        $stmtQty->execute();
-        $qtyRow = $stmtQty->get_result()->fetch_assoc();
-        $stmtQty->close();
-        $chartCantidad[] = intval($qtyRow['qty'] ?? 0);
+    // Inicializar arrays con ceros para los 12 meses
+    $chartVentas    = array_fill(0, 12, 0);
+    $chartGanancias = array_fill(0, 12, 0);
+    $chartCantidad  = array_fill(0, 12, 0);
+
+    while ($cr = $chartRes->fetch_assoc()) {
+        $idx = intval($cr['mes_num']) - 1; // 0-indexed
+        $chartVentas[$idx]    = round(floatval($cr['ventas']),   2);
+        $chartGanancias[$idx] = round(floatval($cr['ganancia']), 2);
+        $chartCantidad[$idx]  = intval($cr['cantidad']);
     }
 
-    /* ─── Sucursales for period table ──────────────────────────────── */
-    $stmtS = $conexion->prepare("SELECT id, nombre FROM sucursales WHERE bss_id = ?");
+    /* ─── Sucursales (para el filtro de período) ────────────────── */
+    $stmtS = $conexion->prepare('SELECT id, nombre FROM sucursales WHERE bss_id = ?');
     $stmtS->bind_param('s', $bss_id);
     $stmtS->execute();
     $sucursalesRows = $stmtS->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -729,6 +783,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script src="js/nombre_pagina.js"></script>
 
         <script>
             /* ── ApexCharts ─────────────────────────────────────────────────── */

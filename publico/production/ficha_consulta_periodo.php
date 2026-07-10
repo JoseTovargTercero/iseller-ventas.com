@@ -18,78 +18,62 @@ if (!$idProducto) {
     exit;
 }
 
-// Sanitize dates
+// Sanitize & validate dates
 $desde = date('Y-m-d', strtotime($desde));
 $hasta = date('Y-m-d', strtotime($hasta));
 
+if ($desde === '1970-01-01' || $hasta === '1970-01-01') {
+    echo json_encode(['error' => 'Fechas inválidas']);
+    exit;
+}
+
+/* ─── Una sola query ─────────────────────────────────────────────────
+   JOIN entre sucursales → orden → orden_articulos.
+   GROUP BY sucursal; el motor calcula ventas, ganancia y cantidad
+   directamente sin traer filas al PHP ni iterar en bucles anidados.
+
+   El descuento (status = 4 = venta al mayor con porcentaje) se
+   aplica con CASE WHEN dentro del SUM.
+   ─────────────────────────────────────────────────────────────────── */
 $stmt = $conexion->prepare(
-    "SELECT id, nombre FROM sucursales WHERE bss_id = ?"
+    "SELECT
+        s.nombre                                    AS sucursal,
+        SUM(oa.quantity)                            AS cantidad,
+        SUM(
+            CASE WHEN o.status = '4'
+                THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                ELSE oa.precio_venta_dolar * oa.quantity
+            END
+        )                                           AS total_venta,
+        SUM(
+            CASE WHEN o.status = '4'
+                THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
+                ELSE oa.precio_venta_dolar * oa.quantity
+            END - oa.precio * oa.quantity
+        )                                           AS total_ganancia
+     FROM sucursales s
+     JOIN orden       o  ON  o.id_sucursal = s.id
+     JOIN orden_articulos oa ON oa.order_id = o.id
+     WHERE s.bss_id       = ?
+       AND oa.product_id  = ?
+       AND o.modified    >= ?
+       AND o.modified    <= ?
+       AND o.status      IN (1, 4)
+     GROUP BY s.id, s.nombre
+     ORDER BY s.nombre"
 );
-$stmt->bind_param('s', $bss_id);
+$stmt->bind_param('siss', $bss_id, $idProducto, $desde, $hasta);
 $stmt->execute();
-$sucursalesResult = $stmt->get_result();
+$res = $stmt->get_result();
 $stmt->close();
 
 $resultados = [];
-
-while ($suc = $sucursalesResult->fetch_assoc()) {
-    $sucId   = $suc['id'];
-    $sucNom  = $suc['nombre'];
-
-    // Get all orders within the date range for this branch
-    $stmt2 = $conexion->prepare(
-        "SELECT o.id, o.descontado, o.status
-         FROM orden o
-         WHERE o.id_sucursal = ?
-           AND o.modified >= ?
-           AND o.modified <= ?
-           AND o.status IN (1, 4)"
-    );
-    $stmt2->bind_param('iss', $sucId, $desde, $hasta);
-    $stmt2->execute();
-    $ordenes = $stmt2->get_result();
-    $stmt2->close();
-
-    $cantidad   = 0;
-    $totalVenta = 0.0;
-    $totalCosto = 0.0;
-
-    while ($orden = $ordenes->fetch_assoc()) {
-        $ordId      = $orden['id'];
-        $descuento  = floatval($orden['descontado']);
-        $status     = $orden['status'];
-
-        $stmt3 = $conexion->prepare(
-            "SELECT precio, precio_venta_dolar, quantity
-             FROM orden_articulos
-             WHERE order_id = ? AND product_id = ?"
-        );
-        $stmt3->bind_param('ii', $ordId, $idProducto);
-        $stmt3->execute();
-        $articulos = $stmt3->get_result();
-        $stmt3->close();
-
-        while ($art = $articulos->fetch_assoc()) {
-            $qty    = floatval($art['quantity']);
-            $pvd    = floatval($art['precio_venta_dolar']);
-            $costo  = floatval($art['precio']);
-            $sub    = $pvd * $qty;
-
-            if ($status == '4') {
-                $sub = $sub - ($sub * $descuento / 100);
-            }
-
-            $cantidad   += $qty;
-            $totalVenta += $sub;
-            $totalCosto += $costo * $qty;
-        }
-    }
-
+while ($row = $res->fetch_assoc()) {
     $resultados[] = [
-        'sucursal'   => $sucNom,
-        'cantidad'   => $cantidad,
-        'total'      => round($totalVenta, 2),
-        'ganancia'   => round($totalVenta - $totalCosto, 2),
+        'sucursal' => $row['sucursal'],
+        'cantidad' => intval($row['cantidad']),
+        'total'    => round(floatval($row['total_venta']),    2),
+        'ganancia' => round(floatval($row['total_ganancia']), 2),
     ];
 }
 
