@@ -1043,6 +1043,10 @@
             .step-item::after {
                 display: none;
             }
+
+            .currencies-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         @media (max-width: 768px) {
@@ -1080,6 +1084,10 @@
 
             .section-wrap {
                 padding: 80px 0;
+            }
+
+            .currencies-grid {
+                grid-template-columns: 1fr;
             }
         }
 
