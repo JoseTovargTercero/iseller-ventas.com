@@ -964,7 +964,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <tbody>
                             <tr>
                                 <td>${data.desde} <span style="color:#475569">→</span> ${data.hasta}</td>
-                                <td><span class="num-big">${r.cantidad}</span> <span class="num-sub">unid.</span></td>
+                                <td><span class="num-big">${r.cantidad.toFixed(2)}</span> <span class="num-sub">unid.</span></td>
                                 <td><span class="num-big">$${parseFloat(r.total).toLocaleString('es-VE', {minimumFractionDigits:2})}</span></td>
                                 <td><span class="${gainClass}">$${parseFloat(r.ganancia).toLocaleString('es-VE', {minimumFractionDigits:2})}</span></td>
                             </tr>
