@@ -1270,7 +1270,7 @@
                     <span class="proof-label">Uptime del sistema</span>
                 </div>
                 <div class="proof-stat reveal">
-                    <span class="proof-num">3 meses</span>
+                    <span class="proof-num">Un mes</span>
                     <span class="proof-label">Sin costo inicial</span>
                 </div>
             </div>
@@ -1422,7 +1422,7 @@
                     <div class="step-item reveal">
                         <div class="step-number">01</div>
                         <div class="step-title">Crea tu cuenta</div>
-                        <p class="step-desc">El registro toma segundos. Obtienes 3 meses gratuitos para validar el sistema en entorno real sin requerir tarjeta.</p>
+                        <p class="step-desc">El registro toma segundos. Obtienes 1 mes gratuito para validar el sistema en entorno real sin requerir tarjeta.</p>
                     </div>
                     <div class="step-item reveal">
                         <div class="step-number">02</div>
@@ -1464,7 +1464,7 @@
                             <span class="price-amount" id="price-mensual">5</span>
                             <span class="price-period">/ mes</span>
                         </div>
-                        <span class="pricing-trial">Inicia con 3 meses gratuitos</span>
+                        <span class="pricing-trial">Inicia con un meses gratuito</span>
                         <ul class="pricing-features">
                             <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="20 6 9 17 4 12" />

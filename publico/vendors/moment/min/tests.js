@@ -14431,7 +14431,7 @@
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 43}), true),  'un mes',       '43 days = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 46}), true),  '2 meses',      '46 days = 2 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 74}), true),  '2 meses',      '75 days = 2 months');
-        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '3 meses',      '76 days = 3 months');
+        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '1 mes',      '76 days = 3 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 1}), true),   'un mes',       '1 month = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 5}), true),   '5 meses',      '5 months = 5 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 345}), true), 'un año',        '345 days = a year');
@@ -19811,7 +19811,7 @@
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 43}), true),  'un mes',       '43 days = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 46}), true),  '2 meses',      '46 days = 2 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 74}), true),  '2 meses',      '75 days = 2 months');
-        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '3 meses',      '76 days = 3 months');
+        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '1 mes',      '76 days = 3 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 1}), true),   'un mes',       '1 month = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 5}), true),   '5 meses',      '5 months = 5 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 345}), true), 'un ano',        '345 days = a year');
@@ -36235,7 +36235,7 @@
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 43}), true),  'um mês',    '43 days = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 46}), true),  '2 meses',   '46 days = 2 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 74}), true),  '2 meses',   '75 days = 2 months');
-        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '3 meses',   '76 days = 3 months');
+        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '1 mes',   '76 days = 3 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 1}), true),   'um mês',    '1 month = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 5}), true),   '5 meses',   '5 months = 5 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 345}), true), 'um ano',     '345 days = a year');
@@ -36715,7 +36715,7 @@
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 43}), true),  'um mês',    '43 days = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 46}), true),  '2 meses',   '46 days = 2 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 74}), true),  '2 meses',   '75 days = 2 months');
-        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '3 meses',   '76 days = 3 months');
+        assert.equal(start.from(moment([2007, 1, 28]).add({d: 76}), true),  '1 mes',   '76 days = 3 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 1}), true),   'um mês',    '1 month = a month');
         assert.equal(start.from(moment([2007, 1, 28]).add({M: 5}), true),   '5 meses',   '5 months = 5 months');
         assert.equal(start.from(moment([2007, 1, 28]).add({d: 345}), true), 'um ano',     '345 days = a year');
