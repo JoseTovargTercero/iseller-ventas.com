@@ -594,24 +594,31 @@ textarea:disabled {
     /* Oculto por defecto, se muestra en móviles */
 }
 
-/* Animaciones para navbar oculto y visible */
 #navbar {
-    transition: transform 0.3s ease-in-out;
+    border-right: 1px solid #2e353e;
+    background-color: #1e1d22;
+
+    top: 0;
+    padding: 0;
+    width: 5em;
+    height: 100vh;
+    position: fixed;
+    transition: width .35s cubic-bezier(var(--transition-main), 1), transform 0.3s ease-in-out;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 9999; /* ensure it's higher than the 9997 overlay even on desktop just in case */
 }
 
 @media (max-width: 992px) {
     #navbar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
         width: 16em;
         transform: translateX(-100%);
-        z-index: 9998;
+        z-index: 9999;
     }
 
     #navbar.open {
         transform: translateX(0);
+        width: 16em;
     }
 
     .navbar-toggle-btn {
@@ -627,23 +634,6 @@ textarea:disabled {
 
 .x_panel {
     border: 1px solid var(--dash-border) !important;
-}
-
-/* MENU */
-
-#navbar {
-    border-right: 1px solid #2e353e;
-    background-color: #1e1d22;
-
-    top: 0;
-    padding: 0;
-    width: 5em;
-    height: 100vh;
-    position: fixed;
-    transition: width .35s cubic-bezier(var(--transition-main), 1);
-    overflow-y: auto;
-    overflow-x: hidden;
-    z-index: 99;
 }
 
 @media (max-width: 563.98px) {

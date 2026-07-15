@@ -73,6 +73,9 @@
         html {
             scroll-behavior: smooth;
             font-size: 16px;
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100vw;
         }
 
         body {
@@ -83,6 +86,8 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             overflow-x: hidden;
+            width: 100%;
+            max-width: 100vw;
         }
 
         /* Focus Accesibilidad */
@@ -199,7 +204,7 @@
 
         .btn-primary {
             background: var(--accent-primary);
-            color: var(--accent-on-primary);
+            color: var(--accent-on-primary) !important;
             text-decoration: none;
             font-size: 0.875rem;
             font-weight: 600;

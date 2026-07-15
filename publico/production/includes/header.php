@@ -17,8 +17,13 @@ function topnav()
     <div class='top_nav' style="display: flex;">
         <div class='nav_menu'>
 
-            <nav class='nav d-flex justify-content-between'>
-                <div class="text-white" style="margin-left: 85px;" id="nombre_pagina">
+            <nav class='nav d-flex justify-content-between align-items-center' style="width: 100%;">
+                <div class="left-nav-section d-flex align-items-center">
+                    <a id="mobile_menu_toggle" class="mobile-menu-toggle">
+                        <ion-icon name="menu-outline"></ion-icon>
+                    </a>
+                    <div class="text-white page-title" id="nombre_pagina">
+                    </div>
                 </div>
 
                 <div class="nav-user-dropdown">
@@ -50,6 +55,55 @@ function topnav()
     </div>
 
     <style>
+        .page-title {
+            margin-left: 85px;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            color: var(--dash-text, #e8edf2);
+            font-size: 28px;
+            cursor: pointer;
+            margin-left: 15px;
+            margin-right: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .page-title {
+                margin-left: 0 !important;
+                font-size: 15px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 150px;
+            }
+            .mobile-menu-toggle {
+                display: flex;
+            }
+            .nav-user-dropdown {
+                margin-right: 5px !important;
+            }
+        }
+
+        /* Mobile Menu Overlay */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9997;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
         .nav-user-dropdown {
             display: flex;
             align-items: center;
@@ -189,6 +243,40 @@ function topnav()
             margin: 4px 0;
         }
     </style>
+    <script>
+        // Custom mobile menu logic
+        document.addEventListener("DOMContentLoaded", function() {
+            var toggleBtn = document.getElementById('mobile_menu_toggle');
+            var navbar = document.getElementById('navbar');
+            
+            if (toggleBtn && navbar) {
+                // Create overlay
+                var overlay = document.createElement('div');
+                overlay.className = 'mobile-menu-overlay';
+                document.body.appendChild(overlay);
+
+                function toggleMenu() {
+                    navbar.classList.toggle('open');
+                    if (navbar.classList.contains('open')) {
+                        overlay.classList.add('active');
+                        document.body.style.overflow = 'hidden'; // Prevent scrolling
+                    } else {
+                        overlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                }
+
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleMenu();
+                });
+
+                overlay.addEventListener('click', function() {
+                    toggleMenu();
+                });
+            }
+        });
+    </script>
 <?php
 
     return ob_get_clean();
