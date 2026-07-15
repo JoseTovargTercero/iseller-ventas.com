@@ -534,7 +534,11 @@ textarea:disabled {
     }
 }
 
-@media only screen and (max-width: 496px) {}
+@media only screen and (max-width: 496px) {
+    .nav-user-dropdown {
+        display: none !important;
+    }
+}
 
 .navdrop {
     width: 100%;
@@ -606,7 +610,8 @@ textarea:disabled {
     transition: width .35s cubic-bezier(var(--transition-main), 1), transform 0.3s ease-in-out;
     overflow-y: auto;
     overflow-x: hidden;
-    z-index: 9999; /* ensure it's higher than the 9997 overlay even on desktop just in case */
+    z-index: 9999;
+    /* ensure it's higher than the 9997 overlay even on desktop just in case */
 }
 
 @media (max-width: 992px) {
