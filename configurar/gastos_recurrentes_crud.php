@@ -166,22 +166,29 @@ switch ($accion) {
         $fecha_semana = date('Y-m-d', strtotime($semana . '-1'));
         $mes = substr($fecha_semana, 0, 7);
 
+        $filtroSucursalAplicar = ($id_sucursal > 0) ? 'AND id_sucursal = ?' : '';
         $stmt = $conexion->prepare(
-            "SELECT id, concepto, categoria_id, tipo, frecuencia, monto_estimado, moneda, observacion
+            "SELECT id, concepto, categoria_id, tipo, frecuencia, monto_estimado, moneda, observacion, dia_ejecucion, id_sucursal
              FROM gastos_recurrentes
-             WHERE activo=1 AND bss_id=? AND id_sucursal=?"
+             WHERE activo=1 AND bss_id=? $filtroSucursalAplicar"
         );
-        $stmt->bind_param('ii', $bss_id, $id_sucursal);
+        if ($id_sucursal > 0) {
+            $stmt->bind_param('ii', $bss_id, $id_sucursal);
+        } else {
+            $stmt->bind_param('i', $bss_id);
+        }
         $stmt->execute();
         $reglas = $stmt->get_result();
         $aplicados = 0;
 
         while ($regla = $reglas->fetch_assoc()) {
+            $regla_sucursal = $regla['id_sucursal']; // Usar la sucursal de la regla en lugar de la sesión (para admin general)
+            
             $check = $conexion->prepare(
                 "SELECT id FROM gastos
                  WHERE recurrente_id=? AND semana=? AND bss_id=? AND id_sucursal=? AND estado='ACTIVO'"
             );
-            $check->bind_param('isii', $regla['id'], $semana, $bss_id, $id_sucursal);
+            $check->bind_param('isii', $regla['id'], $semana, $bss_id, $regla_sucursal);
             $check->execute();
             if ($check->get_result()->num_rows > 0) {
                 $check->close();
@@ -189,28 +196,49 @@ switch ($accion) {
             }
             $check->close();
 
-            // Verificar si la regla aplica para esta semana/mes
+            // Verificar si la regla aplica para la semana objetivo
             $aplica = false;
             $dia_ej = intval($regla['dia_ejecucion'] ?? 0);
-            $hoy = new DateTime();
-            $dow = (int) $hoy->format('N'); // 1=Lun, 7=Dom
-            $dia_mes = (int) $hoy->format('d');
-            $ultimo_dia_mes = (int) $hoy->format('t');
+            
+            // Determinar fechas de la semana objetivo
+            $inicio_semana_target = new DateTime();
+            $inicio_semana_target->setISODate((int)substr($semana, 0, 4), (int)substr($semana, 5, 2));
+            $fin_semana_target = clone $inicio_semana_target;
+            $fin_semana_target->modify('+6 days');
 
             switch ($regla['frecuencia']) {
                 case 'DIARIO':
-                    $aplica = true;
-                    break;
                 case 'SEMANAL':
-                    $aplica = ($dia_ej > 0) ? ($dow === $dia_ej) : true;
-                    break;
                 case 'QUINCENAL':
+                    // Semanal siempre aplica una vez por semana (el query de duplicados ya verifica que no se repita en la misma semana).
+                    // El usuario forzará el pago de la semana sin importar qué día de la semana sea.
                     $aplica = true;
                     break;
                 case 'MENSUAL':
                     if ($dia_ej > 0) {
+                        // Verificamos si el día de ejecución cae dentro de la semana objetivo
+                        $mes_inicio = (int) $inicio_semana_target->format('m');
+                        $anio_inicio = (int) $inicio_semana_target->format('Y');
+                        
+                        $ultimo_dia_mes = (int) date('t', strtotime($inicio_semana_target->format('Y-m-01')));
                         $dia_ajustado = min($dia_ej, $ultimo_dia_mes);
-                        $aplica = ($dia_mes === $dia_ajustado);
+                        $fecha_ejecucion_mes = new DateTime("$anio_inicio-$mes_inicio-$dia_ajustado");
+                        
+                        if ($fecha_ejecucion_mes >= $inicio_semana_target && $fecha_ejecucion_mes <= $fin_semana_target) {
+                            $aplica = true;
+                        } else {
+                            // También verificar si el día cae en el mes del fin de la semana (si cruza de mes)
+                            $mes_fin = (int) $fin_semana_target->format('m');
+                            if ($mes_inicio !== $mes_fin) {
+                                $anio_fin = (int) $fin_semana_target->format('Y');
+                                $ultimo_dia_mes_fin = (int) date('t', strtotime($fin_semana_target->format('Y-m-01')));
+                                $dia_ajustado_fin = min($dia_ej, $ultimo_dia_mes_fin);
+                                $fecha_ejecucion_mes_fin = new DateTime("$anio_fin-$mes_fin-$dia_ajustado_fin");
+                                if ($fecha_ejecucion_mes_fin >= $inicio_semana_target && $fecha_ejecucion_mes_fin <= $fin_semana_target) {
+                                    $aplica = true;
+                                }
+                            }
+                        }
                     } else {
                         $aplica = true;
                     }
@@ -262,7 +290,7 @@ switch ($accion) {
                     'sssssisssdddsiiii',
                     $codigo, $fecha_semana, $semana, $mes, $regla['concepto'], $cat_id,
                     $regla['tipo'], $regla['frecuencia'], $regla['moneda'], $monto_est, $tasa, $monto_usd,
-                    $obs, $regla['id'], $usuario_id, $id_sucursal, $bss_id
+                    $obs, $regla['id'], $usuario_id, $regla_sucursal, $bss_id
                 );
             } else {
                 $ins = $conexion->prepare(
@@ -274,7 +302,7 @@ switch ($accion) {
                     'ssssssssdddsiiii',
                     $codigo, $fecha_semana, $semana, $mes, $regla['concepto'],
                     $regla['tipo'], $regla['frecuencia'], $regla['moneda'], $monto_est, $tasa, $monto_usd,
-                    $obs, $regla['id'], $usuario_id, $id_sucursal, $bss_id
+                    $obs, $regla['id'], $usuario_id, $regla_sucursal, $bss_id
                 );
             }
 

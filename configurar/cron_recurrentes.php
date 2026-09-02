@@ -7,8 +7,23 @@
 
 date_default_timezone_set('America/Caracas');
 
-// Conexión directa a BD (sin sesión)
 require_once __DIR__ . '/configuracion.php';
+
+$log_dir  = __DIR__ . '/../logs';
+$log_file = $log_dir . '/cron_recurrentes_' . date('Y-m') . '.log';
+
+if (!is_dir($log_dir)) {
+    mkdir($log_dir, 0755, true);
+}
+
+function cron_log($msg) {
+    global $log_file;
+    $line = date('Y-m-d H:i:s') . ' ' . $msg . PHP_EOL;
+    file_put_contents($log_file, $line, FILE_APPEND);
+}
+
+cron_log('--- INICIO CRON RECURRENTES ---');
+cron_log('PHP ' . PHP_VERSION . ' | ' . php_uname('n'));
 
 function obtenerSiguienteCodigo($conexion, $bss_id) {
     $stmt = $conexion->prepare("SELECT codigo FROM gastos WHERE bss_id=? ORDER BY id DESC LIMIT 1");
@@ -75,9 +90,11 @@ $primer_dia_mes = $mes_actual . '-01';
 // Todos los negocios activos
 $negocios = $conexion->query("SELECT id FROM negocio WHERE estado='activo'");
 if (!$negocios || $negocios->num_rows === 0) {
+    cron_log('No hay negocios activos. Finalizando.');
     echo date('Y-m-d H:i:s') . " No hay negocios activos.\n";
     exit;
 }
+cron_log('Negocios activos: ' . $negocios->num_rows);
 
 $total_aplicados = 0;
 
@@ -116,8 +133,10 @@ while ($neg = $negocios->fetch_assoc()) {
     $stmt_r->execute();
     $reglas = $stmt_r->get_result();
     $stmt_r->close();
+    $total_reglas = $reglas->num_rows;
 
     $aplicados_neg = 0;
+    $skipped_neg = 0;
 
     while ($regla = $reglas->fetch_assoc()) {
         $dia_ej = intval($regla['dia_ejecucion'] ?? 0);
@@ -125,6 +144,8 @@ while ($neg = $negocios->fetch_assoc()) {
         $cat_id = $regla['categoria_id'] ?: null;
         $suc_regla = (int) $regla['id_sucursal'];
         list($monto_est, $tasa, $monto_usd) = calcularMontoUSD($regla, $dolarBolivar, $pesoDolar);
+
+        cron_log("  Regla #{$regla['id']} \"{$regla['concepto']}\" freq={$frecuencia} dia_ej={$dia_ej} moneda={$regla['moneda']} monto={$monto_est} sucursal={$suc_regla}");
 
         if ($frecuencia === 'SEMANAL') {
             for ($d = 1; $d <= $ultimo_dia_mes; $d++) {
@@ -138,13 +159,16 @@ while ($neg = $negocios->fetch_assoc()) {
                 );
                 $chk->bind_param('isi', $regla['id'], $fecha_str, $bss_id);
                 $chk->execute();
-                if ($chk->get_result()->num_rows > 0) { $chk->close(); continue; }
+                if ($chk->get_result()->num_rows > 0) { $chk->close(); $skipped_neg++; cron_log("    SKIP duplicado fecha {$fecha_str}"); continue; }
                 $chk->close();
 
                 $semana_gasto = date('Y-W', strtotime($fecha_str));
                 $codigo = obtenerSiguienteCodigo($conexion, $bss_id);
                 if (insertarGasto($conexion, $codigo, $fecha_str, $semana_gasto, $mes_actual, $regla, $cat_id, $usuario_id, $suc_regla, $bss_id, $monto_est, $tasa, $monto_usd)) {
                     $aplicados_neg++;
+                    cron_log("    OK {$codigo} fecha={$fecha_str} monto_usd=\${$monto_usd}");
+                } else {
+                    cron_log("    FAIL insert {$regla['concepto']} fecha={$fecha_str}");
                 }
             }
         } else {
@@ -154,7 +178,7 @@ while ($neg = $negocios->fetch_assoc()) {
             );
             $chk->bind_param('isi', $regla['id'], $mes_actual, $bss_id);
             $chk->execute();
-            if ($chk->get_result()->num_rows > 0) { $chk->close(); continue; }
+            if ($chk->get_result()->num_rows > 0) { $chk->close(); $skipped_neg++; cron_log("    SKIP duplicado mes {$mes_actual}"); continue; }
             $chk->close();
 
             $aplica = false;
@@ -186,20 +210,31 @@ while ($neg = $negocios->fetch_assoc()) {
                     $aplica = true;
             }
 
-            if (!$aplica) continue;
+            if (!$aplica) {
+                $skipped_neg++;
+                cron_log("    SKIP no aplica hoy (freq={$frecuencia}, dia_ej={$dia_ej}, hoy=" . date('d') . ")");
+                continue;
+            }
 
             $codigo = obtenerSiguienteCodigo($conexion, $bss_id);
             $semana_gasto = date('Y-W', strtotime($fecha_gasto));
             if (insertarGasto($conexion, $codigo, $fecha_gasto, $semana_gasto, $mes_actual, $regla, $cat_id, $usuario_id, $suc_regla, $bss_id, $monto_est, $tasa, $monto_usd)) {
                 $aplicados_neg++;
+                cron_log("    OK {$codigo} fecha={$fecha_gasto} monto_usd=\${$monto_usd}");
+            } else {
+                cron_log("    FAIL insert {$regla['concepto']} fecha={$fecha_gasto}");
             }
         }
     }
 
     $total_aplicados += $aplicados_neg;
+    cron_log("Negocio #{$bss_id}: {$total_reglas} reglas activas, {$aplicados_neg} aplicados, {$skipped_neg} saltados.");
     if ($aplicados_neg > 0) {
         echo date('Y-m-d H:i:s') . " Negocio #{$bss_id}: {$aplicados_neg} gastos aplicados.\n";
     }
 }
 
+cron_log("TOTAL: {$total_aplicados} gastos aplicados.");
+cron_log('--- FIN CRON RECURRENTES ---');
 echo date('Y-m-d H:i:s') . " Total: {$total_aplicados} gastos aplicados.\n";
+echo "Log: {$log_file}\n";
