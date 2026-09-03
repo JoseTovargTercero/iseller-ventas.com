@@ -1348,26 +1348,29 @@
                         <p class="feature-desc">Registra cuentas por cobrar de clientes de confianza y gestiona sus abonos de forma transparente.</p>
                     </div>
 
-                    <div class="feature-card feature-card-lg reveal">
-                        <div>
-                            <div class="feature-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="5" y="2" width="14" height="20" rx="2" />
-                                    <line x1="12" y1="18" x2="12.01" y2="18" />
-                                </svg>
-                            </div>
-                            <div class="feature-title">Punto de Venta (POS) Ultra-rápido</div>
-                            <p class="feature-desc" style="margin-bottom:24px">Una terminal optimizada para la velocidad. Soporta lectores de código de barras, búsqueda predictiva y gestión de clientes al momento del cobro.</p>
-                            <a href="registro.php" class="btn-secondary">Conoce el POS</a>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="5" y="2" width="14" height="20" rx="2" />
+                                <line x1="12" y1="18" x2="12.01" y2="18" />
+                            </svg>
                         </div>
-                        <div class="feature-visual-code">
-                            <span class="code-line"><span class="code-key">sucursal</span><span class="code-val">: "Tienda Central"</span></span>
-                            <span class="code-line"><span class="code-key">id_producto</span><span class="code-val">: "SKU-9921"</span></span>
-                            <span class="code-line"><span class="code-key">precio_base</span><span class="code-val">: 24.00</span></span>
-                            <span class="code-line"><span class="code-key">tasa_activa</span><span class="code-val">: 36.06</span></span>
-                            <span class="code-line"><span class="code-key">stock_local</span><span class="code-val">: 148</span></span>
-                            <span class="code-line"><span class="code-key">estado</span><span class="code-val">: online</span></span>
+                        <div class="feature-title">Punto de Venta (POS) Ultra-rápido</div>
+                        <p class="feature-desc">Una terminal optimizada para la velocidad. Soporta lectores de código de barras, búsqueda predictiva y gestión de clientes al momento del cobro.</p>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 00-4-4H5c-1.1 0-2 .9-2 2v2" />
+                                <circle cx="8.5" cy="7" r="4" />
+                                <line x1="20" y1="8" x2="23" y2="8" />
+                                <line x1="20" y1="12" x2="23" y2="12" />
+                                <line x1="20" y1="16" x2="23" y2="16" />
+                            </svg>
                         </div>
+                        <div class="feature-title">Gastos y Empleados</div>
+                        <p class="feature-desc">Controla gastos fijos y variables, gestiona nóminas recurrentes y analiza la rentabilidad de cada sucursal con reportes automatizados.</p>
                     </div>
                 </div>
             </div>
@@ -1477,7 +1480,7 @@
                             <span class="price-amount" id="price-mensual">5</span>
                             <span class="price-period">/ mes</span>
                         </div>
-                        <span class="pricing-trial">Inicia con un meses gratuito</span>
+                        <span class="pricing-trial">Inicia con un mes gratuito</span>
                         <ul class="pricing-features">
                             <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="20 6 9 17 4 12" />

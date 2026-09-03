@@ -231,6 +231,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <small>Cómo registrar compras y llevar el control de inventario.</small>
               </div>
             </div>
+            <div class="tuto-card" data-video="SpNZEsTxUFE" data-title="Módulo de gastos">
+              <div class="tuto-thumb">
+                <img src="https://img.youtube.com/vi/SpNZEsTxUFE/maxresdefault.jpg" alt="Módulo de gastos" loading="lazy">
+                <div class="play-overlay"><ion-icon name="play-circle-outline"></ion-icon></div>
+              </div>
+              <div class="tuto-body">
+                <h6>Módulo de gastos</h6>
+                <small>Cómo registrar, filtrar y gestionar los gastos del negocio.</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
