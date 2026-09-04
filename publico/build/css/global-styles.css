@@ -782,7 +782,7 @@ textarea:disabled {
 
 :root {
     --dash-bg: transparent;
-    --dash-card: #232931;
+    --dash-card: #1e1d22;
     --dash-border: #2e353e;
     --dash-mint: #2dd4a0;
     --dash-mint-dim: rgba(45, 212, 160, 0.12);

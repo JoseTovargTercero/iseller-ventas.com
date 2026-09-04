@@ -2979,7 +2979,7 @@ ul.msg_list li a .message {
 }
 
 .dropdown-menu {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     border-radius: 12px !important;
     box-shadow: 0 10px 40px rgba(0, 0, 0, .4);
@@ -3431,7 +3431,7 @@ h4.graph_title {
     -moz-background-clip: padding;
     border-radius: 7px;
     background-clip: padding-box;
-    background: #232931;
+    background: #1e1d22;
     transition: all 300ms ease-in-out -webkit-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
     -moz-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
     -ms-box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.01);
@@ -3983,7 +3983,7 @@ select.parsley-error {
     min-height: 20px;
     padding: 19px;
     margin-bottom: 20px;
-    background-color: #232931;
+    background-color: #1e1d22;
     border: 1px solid #2e353e;
     border-radius: 12px;
     box-shadow: none;
@@ -5814,6 +5814,72 @@ div[data-role="editor-toolbar"] {
     border: 1px solid #ccc
 }
 
+/* Select2 dark mode dropdown */
+.select2-dropdown {
+    background-color: #1a1e24 !important;
+    border: 1px solid #2e353e !important;
+    color: #e8edf2 !important;
+}
+
+.select2-results__option {
+    color: #e8edf2 !important;
+    background-color: #1a1e24 !important;
+    padding: 8px 12px !important;
+}
+
+.select2-results__option--highlighted,
+.select2-results__option[aria-selected="true"] {
+    background-color: #2e353e !important;
+    color: #2dd4a0 !important;
+}
+
+.select2-results__option:hover {
+    background-color: #2e353e !important;
+}
+
+.select2-search__field {
+    background-color: #1a1e24 !important;
+    color: #e8edf2 !important;
+    border: 1px solid #2e353e !important;
+}
+
+.select2-container--default .select2-selection--single {
+    background-color: #1a1e24 !important;
+    border: 1px solid #2e353e !important;
+    color: #e8edf2 !important;
+}
+
+.select2-container--default .select2-selection--multiple {
+    background-color: #1a1e24 !important;
+    border: 1px solid #2e353e !important;
+    color: #e8edf2 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #e8edf2 !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #2e353e !important;
+    color: #e8edf2 !important;
+    border: none !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #e8edf2 !important;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border: 1px solid #2dd4a0 !important;
+}
+
+/* Native select dark mode */
+select.form-control option,
+select option {
+    background-color: #1a1e24 !important;
+    color: #e8edf2 !important;
+}
+
 .switchery {
     width: 32px;
     height: 20px
@@ -6876,7 +6942,7 @@ input[type="number"] {
 
 /* Estilizar el modal */
 .details-modal {
-    background: #232931;
+    background: #1e1d22;
     border-radius: 0.5em;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     width: 80%;
@@ -6984,7 +7050,7 @@ input[type="number"] {
 
 /* ===== Modal ===== */
 .modal-content {
-    background: #232931 !important;
+    background: #1e1d22 !important;
     border: 1px solid #2e353e !important;
     border-radius: 14px !important;
     box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
@@ -7028,7 +7094,7 @@ input[type="number"] {
 
 /* ===== Card ===== */
 .card {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     border-radius: 14px;
 }
@@ -7161,7 +7227,7 @@ input[type="number"] {
 
 /* ===== List group ===== */
 .list-group-item {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     color: #e8edf2;
 }
@@ -7178,7 +7244,7 @@ input[type="number"] {
 
 /* ===== Pagination ===== */
 .page-link {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     color: #e8edf2;
     border-radius: 8px !important;
@@ -7207,7 +7273,7 @@ input[type="number"] {
 
 /* ===== Tooltip ===== */
 .tooltip-inner {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     color: #e8edf2;
     border-radius: 8px;
@@ -7234,7 +7300,7 @@ input[type="number"] {
 
 /* ===== Popover ===== */
 .popover {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, .4);
@@ -7258,19 +7324,19 @@ input[type="number"] {
 }
 
 .popover.bs-popover-top .arrow::after {
-    border-top-color: #232931;
+    border-top-color: #1e1d22;
 }
 
 .popover.bs-popover-bottom .arrow::after {
-    border-bottom-color: #232931;
+    border-bottom-color: #1e1d22;
 }
 
 .popover.bs-popover-left .arrow::after {
-    border-left-color: #232931;
+    border-left-color: #1e1d22;
 }
 
 .popover.bs-popover-right .arrow::after {
-    border-right-color: #232931;
+    border-right-color: #1e1d22;
 }
 
 /* ===== Nav Tabs ===== */
@@ -7319,7 +7385,7 @@ input[type="number"] {
 
 /* ===== Jumbotron ===== */
 .jumbotron {
-    background: #232931;
+    background: #1e1d22;
     border: 1px solid #2e353e;
     border-radius: 14px;
     padding: 2rem 2rem;
@@ -7403,7 +7469,7 @@ hr {
 }
 
 .bg-dark {
-    background: #232931 !important;
+    background: #1e1d22 !important;
 }
 
 .bg-light {
@@ -7421,7 +7487,7 @@ hr {
 .dataTables_wrapper .dataTables_paginate .paginate_button {
     border-radius: 8px !important;
     border: 1px solid #2e353e !important;
-    background: #232931 !important;
+    background: #1e1d22 !important;
     color: #e8edf2 !important;
     padding: 6px 12px !important;
     margin: 0 2px;
@@ -7456,7 +7522,7 @@ hr {
 /* ===== SweetAlert2 dark overrides ===== */
 .swal2-container.swal2-center>.swal2-popup {
     color: #e8edf2 !important;
-    background: #232931 !important;
+    background: #1e1d22 !important;
     border: 1px solid #2e353e !important;
     border-radius: 14px !important;
 }
@@ -7492,7 +7558,7 @@ hr {
 }
 
 .swal2-toast {
-    background: #232931 !important;
+    background: #1e1d22 !important;
     border: 1px solid #2e353e !important;
     border-radius: 12px !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;

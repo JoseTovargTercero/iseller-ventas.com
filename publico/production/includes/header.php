@@ -77,9 +77,11 @@ function topnav()
                 text-overflow: ellipsis;
                 max-width: 150px;
             }
+
             .mobile-menu-toggle {
                 display: flex;
             }
+
             .nav-user-dropdown {
                 margin-right: 5px !important;
             }
@@ -174,7 +176,7 @@ function topnav()
         }
 
         .dropdown-menu {
-            background: var(--dash-card, #232931) !important;
+            background: var(--dash-card, #1e1d22) !important;
             border: 1px solid var(--dash-border, #2e353e) !important;
             border-radius: 12px !important;
             box-shadow: 0 8px 24px rgba(0, 0, 0, .3) !important;
@@ -248,7 +250,7 @@ function topnav()
         document.addEventListener("DOMContentLoaded", function() {
             var toggleBtn = document.getElementById('mobile_menu_toggle');
             var navbar = document.getElementById('navbar');
-            
+
             if (toggleBtn && navbar) {
                 // Create overlay
                 var overlay = document.createElement('div');

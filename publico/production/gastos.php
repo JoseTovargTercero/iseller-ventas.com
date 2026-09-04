@@ -1,1138 +1,1269 @@
 <?php
 require_once('includes/requires.php');
 
-error_reporting(0);
+if ($_SESSION['nivel'] != 1 && $_SESSION['nivel'] != 2) {
+    header('Location: ../../index.php');
+    exit;
+}
 
+$topnav       = topnav();
+$nivelUsuario = $_SESSION['nivel'];
+$nombreUsuario = $_SESSION['nombre'];
 
-if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
+$semana = date('Y-W');
+$mes    = date('Y-m');
 
-    $topnav = topnav();
-    $nivelUsuario = $_SESSION['nivel'];
-    $nombreUsuario = $_SESSION['nombre'];
-
-
-
-    if ($_SESSION["validate"] != "ok") {
-        define('PAGINA_INICIO', '../../index.php');
-        header('Location: ' . PAGINA_INICIO);
-    }
-
-
-    function retornarMes($fecha)
-    {
-        $explodeFecha = explode('-', $fecha);
-
-
-        $dias = ($explodeFecha[1] * 7) * 86400;
-
-        if ($explodeFecha[1] == date('W')) {
-            $diasSemana = (7 - date('N')) * 86400;
-            $dias = $dias - $diasSemana;
-        }
-
-        $pr = strtotime($explodeFecha[0] . '-01-01');
-        $pr += $dias;
-
-        return date('Y-m', $pr);
-    }
-
-
-    if (isset($_POST['fechaSolic'])) {
-        $semana = $_POST['fechaSolic'];
-        $mes =  retornarMes($semana);
-    } else {
-        $semana = date('Y-W');
-        $mes = date('Y-m');
-    }
-
-
-
-
-    $querysas = "SELECT * FROM gastos WHERE mes='$mes'";
-    $buscarAlumnossas = $conexion->query($querysas);
-    if ($buscarAlumnossas->num_rows > 0) {
-        while ($filaAlumnosasd = $buscarAlumnossas->fetch_assoc()) {
-            $gastosMes += $filaAlumnosasd['importe'];
-        }
-    } else {
-        $gastosMes = '0';
-    }
-
-
-
-    $query = "SELECT * FROM gastos WHERE semana='$semana'";
-    $buscarAlumnos = $conexion->query($query);
-    if ($buscarAlumnos->num_rows > 0) {
-        while ($filaAlumnos = $buscarAlumnos->fetch_assoc()) {
-            $gastosSemana += $filaAlumnos['importe'];
-        }
-    } else {
-        $gastosSemana = '0';
-    }
-
-
-
-
-
-    $VentasSe = 0;
-    $precioTotal = 0;
-    ///////////////////GANANCIAS DE LA SEMANA/////////////////////
-
-    $query22222 = "SELECT * FROM orden WHERE semana='$semana' AND status='1' OR semana='$semana' AND status='4'";
-    $buscarAlumnos22222 = $conexion->query($query22222);
-    if ($buscarAlumnos22222->num_rows > 0) {
-        while ($filaAlumnos22222 = $buscarAlumnos22222->fetch_assoc()) {
-            $Venta = $filaAlumnos22222['id'];
-            $VentasSe += $filaAlumnos22222['total_price'];
-
-            $query222222 = "SELECT * FROM orden_articulos WHERE order_id='$Venta'";
-            $buscarAlumnos222222 = $conexion->query($query222222);
-            if ($buscarAlumnos222222->num_rows > 0) {
-                while ($filaAlumnos222222 = $buscarAlumnos222222->fetch_assoc()) {
-                    $VentaPrducto = $filaAlumnos222222['product_id'];
-                    $quantity14 = $filaAlumnos222222['quantity'];
-
-                    $precioPrducto = number_format($filaAlumnos222222['precio'], '2', '.', '.');
-                    $precioNeto = $precioPrducto * $quantity14;
-
-                    $precioTotal += $precioNeto;
-                }
+// Obtener sucursales (solo nivel 1)
+$sucursales = [];
+if ($nivelUsuario == 1) {
+    $suc_stmt = $conexion->prepare("SELECT id, nombre FROM sucursales WHERE bss_id=? ORDER BY nombre");
+    if ($suc_stmt) {
+        $suc_stmt->bind_param('i', $bss_id);
+        $suc_stmt->execute();
+        $suc_result = $suc_stmt->get_result();
+        if ($suc_result) {
+            while ($row = $suc_result->fetch_assoc()) {
+                $sucursales[] = $row;
             }
-            $gananciasSe = $VentasSe - $precioTotal;
+        }
+        $suc_stmt->close();
+    }
+}
+
+// Obtener categorías del negocio
+$cat_stmt = $conexion->prepare("SELECT id, nombre FROM gastos_categorias WHERE bss_id=? AND activo=1 ORDER BY nombre");
+if ($cat_stmt) {
+    $cat_stmt->bind_param('i', $bss_id);
+    $cat_stmt->execute();
+    $cat_result = $cat_stmt->get_result();
+    $categorias = [];
+    if ($cat_result) {
+        while ($row = $cat_result->fetch_assoc()) {
+            $categorias[] = $row;
         }
     }
-
-
-    $VentasSe24 = 0;
-    $precioTotal24 = 0;
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////GANANCIAS DEL mes//////////////////////////
-    $query2222234 = "SELECT * FROM orden WHERE fecha='$mes' AND status='1' OR fecha='$mes' AND status='4'";
-    $buscarAlumnos2222234 = $conexion->query($query2222234);
-    if ($buscarAlumnos2222234->num_rows > 0) {
-        while ($filaAlumnos2222234 = $buscarAlumnos2222234->fetch_assoc()) {
-            $Venta24 = $filaAlumnos2222234['id'];
-            $VentasSe24 += $filaAlumnos2222234['total_price'];
-
-            $query2222223344 = "SELECT * FROM orden_articulos WHERE order_id='$Venta24'";
-            $buscarAlumnos2222223344 = $conexion->query($query2222223344);
-            if ($buscarAlumnos2222223344->num_rows > 0) {
-                while ($filaAlumnos2222223344 = $buscarAlumnos2222223344->fetch_assoc()) {
-                    $VentaPrducto24 = $filaAlumnos2222223344['product_id'];
-
-                    $quantity154 = $filaAlumnos2222223344['quantity'];
-
-                    $precioPrducto24 = number_format($filaAlumnos2222223344['precio'], '2', '.', '.');
-
-                    $precioNeto24 = $precioPrducto24 * $quantity154;
-                    $precioTotal24 += $precioNeto24;
-                }
-            }
-            $gananciasMes = $VentasSe24 - $precioTotal24;
-        }
-    }
-
-
-
-    $gananciaNetaSemana = $gananciasSe - $gastosSemana;
-    $gananciaNetaMes = $gananciasMes - $gastosMes;
-
-
-
-
+    $cat_stmt->close();
+} else {
+    $categorias = [];
+}
 ?>
+<!DOCTYPE html>
+<html lang="es">
 
-    <!DOCTYPE html>
-    <html lang='es'>
-
-    <head>
-
-
-        <title>Gastos </title>
-
-        <?php require_once('includes/headers.php'); ?>
-
-
-        <style>
-            /* The switch - the box around the slider */
-            .switch {
-                position: relative;
-                display: inline-block;
-                width: 50px;
-                height: 24px;
-            }
-
-            /* Hide default HTML checkbox */
-            .switch input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-
-            /* The slider */
-            .slider {
-                position: absolute;
-                cursor: pointer;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: #ccc;
-                -webkit-transition: .4s;
-                transition: .4s;
-            }
-
-            .slider:before {
-                position: absolute;
-                content: "";
-                height: 18px;
-                width: 18px;
-                left: 4px;
-                bottom: 3px;
-                background-color: white;
-                -webkit-transition: .4s;
-                transition: .4s;
-
-            }
-
-            input:checked+.slider {
-                background-color: #32d7c0;
-            }
-
-            input:focus+.slider {
-                box-shadow: 1px 1px 5px #26af9c;
-            }
-
-            input:checked+.slider:before {
-                -webkit-transform: translateX(26px);
-                -ms-transform: translateX(26px);
-                transform: translateX(26px);
-            }
-
-            .green {
-                color: #32d7c0 !important;
-            }
-
-            /* Rounded sliders */
-            .slider.round {
-                border-radius: 24px;
-            }
-
-            .slider.round:before {
-                border-radius: 50%;
-            }
-        </style>
-    </head>
-
+<head>
+    <title>Gastos</title>
+    <?php require_once('includes/headers.php'); ?>
+    <link rel="stylesheet" href="theme.css">
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: #edeef6;
-            font-family: 'Poppins', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .right_col {
+            background: var(--dash-bg);
             min-height: 100vh;
-            margin: 0;
+            padding: 24px 28px !important;
         }
 
-        button {
-            background-color: #32d7c0;
-            border: 0;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            color: #fff;
-            font-size: 14px;
-            padding: 5px;
-        }
-
-        .modal-container5 {
-            z-index: 99;
+        .dash-header {
             display: flex;
-            background-color: rgba(0, 0, 0, 0.3);
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            position: fixed;
-            pointer-events: none;
-            opacity: 0;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 100vw;
-            transition: opacity 0.3s ease;
+            margin-bottom: 24px;
         }
 
-        .show {
-            pointer-events: auto;
-            opacity: 1;
-        }
-
-        .modal5 {
-            width: 600px;
-            max-width: 100%;
-            padding: 30px 50px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
-
-        .modal5 h1 {
+        .dash-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dash-text);
             margin: 0;
+            letter-spacing: -.3px;
         }
 
-        .modal5 p {
-            opacity: 0.7;
-            font-size: 14px;
+        .dash-header p {
+            color: var(--dash-text-muted);
+            margin: 2px 0 0;
+            font-size: 13px;
         }
 
-        .col-lg-3 {
+        .dash-header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-dash-filter {
+            background: linear-gradient(135deg, #2dd4a0, #25b88a);
+            border: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 18px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all .2s ease;
+            box-shadow: 0 3px 12px rgba(45, 212, 160, .25);
+            cursor: pointer;
+        }
+
+        .btn-dash-filter:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 212, 160, .35);
+            color: #fff;
+        }
+
+        .btn-dash-filter ion-icon {
+            font-size: 16px;
+        }
+
+        .btn-dash-new {
+            background: linear-gradient(135deg, #2dd4a0, #25b88a);
+            border: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 18px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all .2s ease;
+            box-shadow: 0 3px 12px rgba(45, 212, 160, .25);
+            cursor: pointer;
+        }
+
+        .btn-dash-new:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 212, 160, .35);
+            color: #fff;
+        }
+
+        .btn-dash-new ion-icon {
+            font-size: 16px;
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-card {
+            border: 1px solid var(--dash-border);
+            border-radius: 14px;
+            padding: 22px 24px 18px;
+            transition: border-color .25s ease, box-shadow .25s ease;
+            position: relative;
             overflow: hidden;
         }
 
-        .col-lg-3>label {
-            white-space: nowrap;
+        .kpi-card:hover {
+            border-color: rgba(45, 212, 160, .35);
+            box-shadow: 0 0 0 1px rgba(45, 212, 160, .08), 0 8px 30px rgba(0, 0, 0, .25);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #2dd4a0, transparent);
+            opacity: 0;
+            transition: opacity .3s ease;
+        }
+
+        .kpi-card:hover::before {
+            opacity: .6;
+        }
+
+        .kpi-card.negative::before {
+            background: linear-gradient(90deg, transparent, #ef5a6f, transparent);
+        }
+
+        .kpi-card.negative:hover {
+            border-color: rgba(239, 90, 111, .35);
+            box-shadow: 0 0 0 1px rgba(239, 90, 111, .08), 0 8px 30px rgba(0, 0, 0, .25);
+        }
+
+        .kpi-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .kpi-info h6 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dash-text-muted);
+            margin: 0 0 2px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .kpi-info small {
+            font-size: 11px;
+            color: rgba(136, 146, 160, .6);
+        }
+
+        .kpi-icon-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(45, 212, 160, .1);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(45, 212, 160, .15);
+            flex-shrink: 0;
+        }
+
+        .kpi-icon-circle ion-icon {
+            font-size: 22px;
+            color: var(--dash-mint);
+        }
+
+        .kpi-card.negative .kpi-icon-circle {
+            background: rgba(239, 90, 111, .1);
+            border-color: rgba(239, 90, 111, .15);
+        }
+
+        .kpi-card.negative .kpi-icon-circle ion-icon {
+            color: var(--dash-danger);
+        }
+
+        .kpi-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--dash-text);
+            line-height: 1.1;
+            margin-bottom: 6px;
+            letter-spacing: -.5px;
+        }
+
+        .kpi-metrics {
+            display: flex;
+            gap: 18px;
+            font-size: 12px;
+        }
+
+        .kpi-metrics .metric-up {
+            color: var(--dash-mint);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .kpi-metrics .metric-down {
+            color: var(--dash-danger);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .dash-panel {
+            border: 1px solid var(--dash-border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 22px 14px;
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        .panel-header h6 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dash-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-header h6 ion-icon {
+            font-size: 16px;
+            color: var(--dash-mint);
+        }
+
+        .panel-body {
+            padding: 18px 22px;
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar .filter-label {
+            font-size: 12px;
+            color: var(--dash-text-muted);
+            font-weight: 500;
+        }
+
+        .btn-period {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text-muted);
+            padding: 5px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+
+        .btn-period:hover {
+            border-color: var(--dash-mint);
+            color: var(--dash-mint);
+        }
+
+        .btn-period.active {
+            background: var(--dash-mint);
+            border-color: var(--dash-mint);
+            color: #fff;
+        }
+
+        .dash-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .dash-table thead th {
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: var(--dash-text-muted);
+            border-bottom: 1px solid var(--dash-border);
+            background: transparent;
+        }
+
+        .dash-table tbody tr {
+            transition: background .15s ease;
+            border-bottom: 1px solid rgba(46, 53, 62, .4);
+        }
+
+        .dash-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .dash-table tbody tr:hover {
+            background: rgba(45, 212, 160, .03);
+        }
+
+        .dash-table tbody td {
+            padding: 12px 14px;
+            color: var(--dash-text);
+            vertical-align: middle;
+        }
+
+        .badge-activo {
+            background: #32d7c0;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-anulado {
+            background: #ef5a6f;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .btn-action {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid var(--dash-border);
+            background: transparent;
+            color: var(--dash-text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .2s ease;
+            padding: 0;
+            font-size: 14px;
+            margin-right: 4px;
+        }
+
+        .btn-action:last-child {
+            margin-right: 0;
+        }
+
+        .btn-action:hover {
+            border-color: var(--dash-mint);
+            color: var(--dash-mint);
+            background: rgba(45, 212, 160, .06);
+        }
+
+        .btn-action.btn-danger:hover {
+            border-color: #ef5a6f;
+            color: #ef5a6f;
+            background: rgba(239, 90, 111, .06);
+        }
+
+        .modal-content {
+            background: var(--dash-card) !important;
+            border: 1px solid var(--dash-border) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--dash-border);
+            padding: 18px 22px 14px;
+        }
+
+        .modal-header .close {
+            color: var(--dash-text-muted);
+            opacity: .7;
+            font-size: 24px;
+            transition: opacity .15s ease;
+        }
+
+        .modal-header .close:hover {
+            opacity: 1;
+            color: var(--dash-text);
+        }
+
+        .modal-title {
+            color: var(--dash-text);
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 18px 22px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--dash-border);
+            padding: 14px 22px 18px;
+        }
+
+        .modal .form-control,
+        .modal select.form-control {
+            background: var(--dash-bg);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text);
+            border-radius: 8px;
+            padding: 9px 14px;
+            font-size: 13px;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .modal .form-control:focus,
+        .modal select.form-control:focus {
+            border-color: var(--dash-mint);
+            box-shadow: 0 0 0 2px rgba(45, 212, 160, .12);
+        }
+
+        .modal .form-group {
+            margin-bottom: 6px;
+        }
+
+        .modal .col-form-label,
+        .modal label.form-label {
+            color: var(--dash-text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+        }
+
+        .btn-dash-submit {
+            background: linear-gradient(135deg, #2dd4a0, #25b88a);
+            border: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 24px;
+            border-radius: 8px;
+            transition: all .2s ease;
+            cursor: pointer;
+        }
+
+        .btn-dash-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 212, 160, .35);
+        }
+
+        .btn-dash-close {
+            background: rgba(255, 255, 255, .06);
+            border: none;
+            color: var(--dash-text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 24px;
+            border-radius: 8px;
+            transition: all .2s ease;
+            cursor: pointer;
+        }
+
+        .btn-dash-close:hover {
+            background: rgba(255, 255, 255, .1);
+        }
+
+        .swal2-popup {
+            background: var(--dash-card) !important;
+            border: 1px solid var(--dash-border) !important;
+            border-radius: 14px !important;
+        }
+
+        .swal2-title {
+            color: var(--dash-text) !important;
+        }
+
+        .swal2-html-container {
+            color: var(--dash-text-muted) !important;
+        }
+
+        .swal2-confirm {
+            background: linear-gradient(135deg, #2dd4a0, #25b88a) !important;
+            border: none !important;
+            border-radius: 8px !important;
+        }
+
+        .swal2-cancel {
+            background: rgba(255, 255, 255, .06) !important;
+            border: none !important;
+            border-radius: 8px !important;
+            color: var(--dash-text-muted) !important;
+        }
+
+        .swal2-input,
+        .swal2-textarea {
+            background: var(--dash-bg) !important;
+            border: 1px solid var(--dash-border) !important;
+            color: var(--dash-text) !important;
+            border-radius: 8px !important;
+        }
+
+        #modal-anular-gasto textarea.is-invalid {
+            border-color: #ef5a6f !important;
+            box-shadow: 0 0 0 2px rgba(239, 90, 111, .15) !important;
+        }
+
+        @media (max-width: 991px) {
+            .kpi-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 575px) {
+            .kpi-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="nav-md">
+    <div class="container body">
+        <div class="main_container">
+            <?php echo $menu ?>
+            <?php echo $topnav ?>
+
+            <div class="right_col" role="main">
+
+                <div class="dash-header">
+                    <div>
+                        <h3>Gastos</h3>
+                        <p>Consulta y registro de gastos</p>
+                    </div>
+                    <div class="dash-header-actions">
+                        <select id="filterSucursal" onchange="cambiarSucursal()" style="background:var(--dash-bg);border:1px solid var(--dash-border);color:var(--dash-text);border-radius:8px;padding:8px 12px;font-size:12px;display:none;">
+                            <option value="0">Todas las sucursales</option>
+                        </select>
+                        <?php if ($nivelUsuario == 1 && count($sucursales) > 0): ?>
+                            <script>
+                                (function() {
+                                    var sel = document.getElementById('filterSucursal');
+                                    var data = <?= json_encode($sucursales) ?>;
+                                    data.forEach(function(s) {
+                                        var o = document.createElement('option');
+                                        o.value = s.id;
+                                        o.textContent = s.nombre;
+                                        sel.appendChild(o);
+                                    });
+                                    sel.style.display = '';
+                                })();
+                            </script>
+                        <?php endif; ?>
+                        <button class="btn-dash-filter" onclick="mostrarModal()">
+                            <ion-icon name="funnel-outline"></ion-icon> Filtros
+                        </button>
+                        <button class="btn-dash-new" style="background:linear-gradient(135deg,#5b9cf5,#4a8ae0);box-shadow:0 3px 12px rgba(91,156,245,.25);text-decoration:none;" onclick="abrirModalNuevo()">
+                            <ion-icon name="add-outline"></ion-icon> Nuevo gasto
+                        </button>
+                    </div>
+                </div>
+
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-top">
+                            <div class="kpi-info">
+                                <h6>Ganancias semana</h6>
+                                <small>Ventas - Costo de la semana</small>
+                            </div>
+                            <div class="kpi-icon-circle">
+                                <ion-icon name="trending-up-outline"></ion-icon>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="gananciaBrutaSemana">$0.00</div>
+                        <div class="kpi-metrics">
+                            <span class="metric-down">
+                                <ion-icon name="arrow-down-outline"></ion-icon>
+                                <span id="gastosSemanaCount">0</span> <small>gastos</small>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-top">
+                            <div class="kpi-info">
+                                <h6>Ganancias mes</h6>
+                                <small>Ventas - Costo del mes</small>
+                            </div>
+                            <div class="kpi-icon-circle">
+                                <ion-icon name="calendar-outline"></ion-icon>
+                            </div>
+                        </div>
+                        <div class="kpi-value" id="gananciaBrutaMes">$0.00</div>
+                        <div class="kpi-metrics">
+                            <span class="metric-down">
+                                <ion-icon name="arrow-down-outline"></ion-icon>
+                                <span id="gastosMesCount">0</span> <small>gastos</small>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="kpi-card negative">
+                        <div class="kpi-top">
+                            <div class="kpi-info">
+                                <h6>Beneficio neto semana</h6>
+                                <small>Ganancias - Gastos semana</small>
+                            </div>
+                            <div class="kpi-icon-circle">
+                                <ion-icon name="wallet-outline"></ion-icon>
+                            </div>
+                        </div>
+                        <div class="kpi-value"><span id="gananciaNetaSemana">0.00</span>$</div>
+                    </div>
+                    <div class="kpi-card negative">
+                        <div class="kpi-top">
+                            <div class="kpi-info">
+                                <h6>Beneficio neto mes</h6>
+                                <small>Ganancias - Gastos mes</small>
+                            </div>
+                            <div class="kpi-icon-circle">
+                                <ion-icon name="stats-chart-outline"></ion-icon>
+                            </div>
+                        </div>
+                        <div class="kpi-value"><span id="gananciaNetaMes">0.00</span>$</div>
+                    </div>
+                </div>
+
+                <div id="proyeccion-box" style="background:rgba(91,156,245,.08);border:1px solid rgba(91,156,245,.2);border-radius:14px;padding:18px 24px;margin-bottom:24px;display:none;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:44px;height:44px;border-radius:50%;background:rgba(91,156,245,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <ion-icon name="calculator-outline" style="font-size:22px;color:#5b9cf5;"></ion-icon>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:var(--dash-text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Proyección gastos recurrentes (mes)</div>
+                            <div style="font-size:13px;color:var(--dash-text-muted);">Monto estimado de gastos fijos que se aplicarán este mes</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:24px;">
+                        <div style="text-align:right;">
+                            <div style="font-size:28px;font-weight:700;color:#5b9cf5;" id="proyeccionMonto">$0.00</div>
+                            <div style="font-size:11px;color:var(--dash-text-muted);">Gastos recurrentes</div>
+                        </div>
+                        <div style="width:1px;height:40px;background:rgba(91,156,245,.2);"></div>
+                        <div style="text-align:right;">
+                            <div style="font-size:28px;font-weight:700;" id="proyeccionBalance">$0.00</div>
+                            <div style="font-size:11px;color:var(--dash-text-muted);" id="proyeccionBalanceLabel">Balance neto vs recurrentes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-panel">
+                    <div class="panel-header">
+                        <h6><ion-icon name="receipt-outline"></ion-icon>Gastos registrados</h6>
+                        <div class="filter-bar">
+                            <span class="filter-label">Período:</span>
+                            <button class="btn-period" onclick="filtroRapido('hoy', this)">Hoy</button>
+                            <button class="btn-period" onclick="filtroRapido('semana', this)">Esta semana</button>
+                            <button class="btn-period active" onclick="filtroRapido('mes', this)">Este mes</button>
+                            <button class="btn-period" onclick="filtroRapido('anio', this)">Este año</button>
+                        </div>
+                    </div>
+                    <div class="panel-body" style="padding:0 16px 16px;">
+                        <div class="table-responsive" id="tablaContenidoPagos">
+                            <div style="text-align:center;padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Cargando tabla de gastos <ion-icon name="sync-outline" style="animation:spin 1s linear infinite;"></ion-icon></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Filtros -->
+    <div class="modal fade" id="modal-filtros" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><ion-icon name="funnel-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);vertical-align:middle;"></ion-icon>Filtrar gastos</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Fecha desde</label>
+                        <input type="date" id="filterFechaDesde" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha hasta</label>
+                        <input type="date" id="filterFechaHasta" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoría</label>
+                        <select id="filterCategoria" class="form-control">
+                            <option value="">Todas</option>
+                            <?php foreach ($categorias as $cat): ?>
+                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select id="filterTipo" class="form-control">
+                            <option value="">Todos</option>
+                            <option value="FIJO">Fijo</option>
+                            <option value="VARIABLE">Variable</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        <select id="filterEstado" class="form-control">
+                            <option value="">Todos</option>
+                            <option value="ACTIVO">Activo</option>
+                            <option value="ANULADO">Anulado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-dash-close" data-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn-dash-submit" onclick="aplicarFiltros()">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Gasto -->
+    <div class="modal fade" id="modal-gasto" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-gasto-title">Nuevo gasto</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <form id="form-gasto" autocomplete="off">
+                    <input type="hidden" id="gastoId" value="">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label class="form-label">Fecha *</label>
+                                    <input type="date" id="gastoFecha" class="form-control" value="<?= date('Y-m-d') ?>">
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label class="form-label">Categoría</label>
+                                    <select id="gastoCategoria" class="form-control">
+                                        <option value="">Sin categoría</option>
+                                        <?php foreach ($categorias as $cat): ?>
+                                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nombre']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <?php if ($nivelUsuario == 1 && count($sucursales) > 0): ?>
+                            <div class="form-group">
+                                <label class="form-label">Sucursal *</label>
+                                <select id="gastoSucursal" class="form-control">
+                                    <?php foreach ($sucursales as $suc): ?>
+                                        <option value="<?= $suc['id'] ?>"><?= htmlspecialchars($suc['nombre']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
+                        <div class="form-group">
+                            <label class="form-label">Concepto *</label>
+                            <input type="text" id="gastoConcepto" class="form-control" placeholder="Descripción del gasto" maxlength="255">
+                        </div>
+                        <input type="hidden" id="gastoTipo" value="VARIABLE">
+                        <input type="hidden" id="gastoFrecuencia" value="UNICO">
+                        <input type="hidden" id="gastoMoneda" value="USD">
+                        <div class="row">
+                            <div class="col-lg-4">
+                                <div class="form-group">
+                                    <label class="form-label">Monto *</label>
+                                    <input type="number" id="gastoMonto" class="form-control" step="0.01" min="0">
+                                </div>
+                            </div>
+                            <div class="col-lg-8">
+                                <div class="form-group">
+                                    <label class="form-label">Observación</label>
+                                    <input type="text" id="gastoObservacion" class="form-control" maxlength="500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-dash-close" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn-dash-submit">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Anular Gasto -->
+    <div class="modal fade" id="modal-anular-gasto" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="border-bottom-color:rgba(239,90,111,.2);">
+                    <h5 class="modal-title" style="display:flex;align-items:center;gap:10px;">
+                        <span style="width:34px;height:34px;border-radius:50%;background:rgba(239,90,111,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <ion-icon name="ban-outline" style="font-size:18px;color:#ef5a6f;"></ion-icon>
+                        </span>
+                        Anular gasto
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div style="background:rgba(239,90,111,.08);border:1px solid rgba(239,90,111,.18);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;">
+                        <ion-icon name="warning-outline" style="font-size:20px;color:#ef5a6f;margin-top:1px;flex-shrink:0;"></ion-icon>
+                        <div>
+                            <div style="font-size:13px;font-weight:600;color:var(--dash-text);margin-bottom:2px;">¿Está seguro de anular este gasto?</div>
+                            <div style="font-size:12px;color:var(--dash-text-muted);">El gasto <strong style="color:var(--dash-text);"><span id="anular-gasto-codigo"></span></strong> quedará marcado como anulado y no se podrá revertir.</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="anular-gasto-id" value="">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+                            <ion-icon name="pencil-outline" style="font-size:13px;color:var(--dash-text-muted);"></ion-icon>
+                            Motivo de anulación *
+                        </label>
+                        <textarea id="anular-gasto-motivo" class="form-control" rows="3" placeholder="Describa el motivo de la anulación..." style="resize:vertical;"></textarea>
+                        <div class="invalid-feedback" style="font-size:11px;">El motivo es obligatorio</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-dash-close" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn-dash-submit" style="background:linear-gradient(135deg,#ef5a6f,#d94460);box-shadow:0 3px 12px rgba(239,90,111,.25);" onclick="confirmarAnulacion()">
+                        <ion-icon name="ban-outline" style="font-size:14px;margin-right:4px;vertical-align:middle;"></ion-icon> Anular gasto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../vendors/jquery/dist/jquery.min.js"></script>
+    <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../build/js/custom.js"></script>
+
+    <style>
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 
-
-
-    <body class='nav-md' onload="obtener_registros()">
-
-        <div id="modal_container" class="modal-container5">
-            <div class="modal5">
-
-
-                <div id="Divfiltro" style="display: none;">
-                    <h2>Filtrar por semana</h2>
-                    <form action="" method="post">
-                        <p>
-                            <select class="form-control" required='required' name="fechaSolic" onchange="capturar()" division()>
-                                <option value="<?php echo date('Y-W') ?>"> <?php echo date('Y-W') ?> (actual)</option>
-                                <?php
-                                $semanaPasada = date('W') - 1;
-                                while ($semanaPasada >= 3) {
-                                    echo '<option value="' . date('Y-') . $semanaPasada . '">' . date('Y-') . $semanaPasada . '</option>';
-                                    $semanaPasada -= 1;
-                                }
-                                ?>
-                            </select>
-                        </p>
-                        <button class="btn btn-success">Filtrar</button>
-                        <a style="color: white; cursor: pointer" class="btn btn-info" onclick="cerrarModal()">Cerrar</a>
-                    </form>
-                </div>
-
-                <div id="divGRecurrentes" style="display: none;">
-                    <h1 style="font-size: 22px;">Gastos recurrentes</h1>
-                    <br>
-                    <p style="text-align: left !important;">Se aplicaran los siguientes gastos a su lista de gastos semanales, <strong>(para la semana consultada)</strong>.
-                    <p>
-                    <p style="text-align: left !important;">En caso de heber aplicado previamente una configuración de gastos recurrentes para la semana consultada, <strong>se remplazara con la nueva configuración</strong>.</p>
-                    <br>
-                    <ul id="listaGastosModal" style="text-align: left !important;">
-
-                    </ul>
-
-
-                    <br>
-                    <button class="btn btn-success" onclick="aplicarGastosRecurrentes()">Aplicar</button>
-                    <a style="color: white; cursor: pointer" class="btn btn-info" onclick="cerrarModal()">Cerrar</a>
-                </div>
-
-                <div id="divEmpleados" style="display: none;">
-
-                    <h1 style="font-size: 22px;">Empleados</h1>
-
-                    <br>
-                    <p style="text-align: left !important;">Se aplicaran los siguientes gastos a su lista de gastos semanales, <strong>(para la semana consultada)</strong>.
-                    <p>
-                    <p style="text-align: left !important;">
-                        * Cada rol se multiplica por la cantidad de empleados registrados.
-                        <br>
-                        <a style="cursor: pointer; color: #32d7c0" onclick="nuevoEmpleado()">Agregar nuevo rol</a>.
-                    </p>
-
-                    <br>
-
-
-
-
-                    <ul id="listaEmpleadosModal" style="text-align: left !important;"></ul>
-
-
-                    <div style="display: none" id="divModificarEmpleados" class="row">
-                        <div class="col-lg-12">
-                            <hr>
-                        </div>
-                        <input type="number" hidden class="form-control" id="id" value="0">
-
-                        <div class='col-lg-3'>
-                            <label for="nombreRol">Rol del empleado</label>
-                            <input type="text" class="form-control" id="nombreRol" value="">
-                        </div>
-
-                        <div class='col-lg-3'>
-                            <label for="importe">Monto</label>
-                            <input type="number" class="form-control" id="importe" value="" placeholder="">
-                        </div>
-                        <div class='col-lg-3'>
-                            <label for="cantidadRol">Empleados</label>
-                            <input type="number" class="form-control" id="cantidadRol" value="" placeholder="">
-                        </div>
-
-                        <div class='col-lg-3'>
-                            <label for="" style="color: white;">Guardar </label>
-                            <button class="btn btn-success" onclick="guardaEmpleado()">Guardar</button>
-                        </div>
-
-                    </div>
-
-
-
-
-                    <br>
-                    <br>
-                    <button class="btn btn-success" onclick="guardarConfiguracionEmpleados()">Guardar y Aplicar</button>
-                    <a style="color: white; cursor: pointer" class="btn btn-info" onclick="cerrarModal()">Cerrar</a>
-                </div>
-
-
-
-            </div>
-        </div>
-
-
-
-
-        <div class='container body'>
-            <div class='main_container'>
-
-                <?php echo $menu ?>
-
-                <style>
-                    .h3ini {
-                        font-size: 16px;
-                    }
-
-                    .count {
-                        font-size: 32px !important;
-                    }
-                </style>
-
-                <!-- top navigation -->
-                <?php echo $topnav ?>
-                <!-- /top navigation -->
-
-                <!-- page content -->
-                <div class='right_col'>
-
-
-
-
-                    <h4>Gastos</h4>
-                    <p style="margin-top: -10px;">Consulta</p>
-
-
-
-                    <style>
-                        .gastos {
-                            font-size: 12px;
-                            position: absolute;
-                            margin-top: 35px;
-                            color: #ff8989;
-                            font-weight: 900;
-                        }
-                    </style>
-                    <div class='row'>
-
-                        <div class="animated fadeInLeft col-lg-3">
-                            <div class="tile-stats" style="text-align:center">
-
-                                <div class="count green count33"><?php echo number_format($gananciasSe, '2', '.', '.'); ?>$
-
-                                    <span class="gastos"><span id="gastosSemanaCount"><?php echo $gastosSemana ?></span>$ <i style="font-size: 10px;margin-left: -3px;" class="line icon-arrow-down-circle"></i></span>
-
-                                </div>
-
-
-
-
-
-
-                                <h3 class="h3ini h3edit">Ganancias de la semana</h3>
-                                <p>&nbsp;</p>
-
-                            </div>
-                        </div>
-
-                        <div class="animated fadeInLeft col-lg-3">
-                            <div class="tile-stats" style="text-align:center">
-
-                                <div class="count count33"><?php echo number_format($gananciasMes, '2', '.', '.'); ?>$
-
-                                    <span class="gastos"><span id="gastosMesCount"><?php echo $gastosMes ?></span>$ <i style="font-size: 10px;margin-left: -3px;" class="line icon-arrow-down-circle"></i></span>
-
-                                </div>
-
-
-                                <h3 class="h3ini h3edit">Ganancias del mes</h3>
-                                <p>&nbsp;</p>
-
-                            </div>
-                        </div>
-
-
-                        <div class="animated fadeInLeft col-lg-3">
-                            <div class="tile-stats" style="text-align:center">
-                                <div class="count green count33"><span id="gananciaNetaSemana"><?php echo number_format($gananciaNetaSemana, '2', '.', '.'); ?></span>$</div>
-                                <h3 class="h3ini h3edit">Beneficio neto de la semana</h3>
-                                <p>&nbsp;</p>
-                            </div>
-                        </div>
-
-                        <div class="animated fadeInLeft col-lg-3">
-                            <div class="tile-stats" style="text-align:center">
-                                <div class="count count33"><span id="gananciaNetaMes"><?php echo number_format($gananciaNetaMes, '2', '.', '.'); ?></span>$</div>
-                                <h3 class="h3ini h3edit">Beneficio neto del mes</h3>
-                                <p>&nbsp;</p>
-                            </div>
-                        </div>
-
-                    </div>
-                    <style>
-                        ul {
-                            list-style: none;
-                            padding-left: 0;
-                        }
-
-                        .ul>li {
-                            border-bottom: 1px solid #f1f1f1;
-                            padding: 5px 5px;
-                            display: flex;
-                        }
-
-                        li>p {
-                            font-weight: 600;
-                            color: #747474;
-                        }
-
-                        li>span {
-                            float: right;
-                        }
-                    </style>
-
-
-                    <div class="row">
-                        <div class="col-lg-3  animated fadeInRight" style="padding: 0 !important;">
-
-                            <div class="col-lg-12">
-                                <div class="x_panel">
-                                    <h2 style="font-size: 15px; ">Gastos recurrentes
-                                        <i title="Esto gastos se aplicaran de manera automatica a la semana en curso" style="float: right; cursor: pointer; border: 1px solid; padding: 2px 6px; border-radius: 50%;" class="line icon-exclamation"></i>
-                                    </h2>
-                                    <div class="x_content ">
-                                        <br>
-
-                                        <ul class="ul" id="listFijosSemanas">
-
-
-
-
-                                        </ul>
-                                        <div id="divAplicar" style="text-align: right; width: 100%; ">
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-
-
-
-
-                            <div class="col-lg-12">
-                                <div class="x_panel">
-                                    <div class="x_content ">
-
-                                        <ul class="ul" style="padding: 0 !important;margin-top: 13px !important;">
-                                            <li style="border: none; ">
-
-                                                <div style="margin-right: 20px; padding-top: 4px;">
-                                                    <i style="font-size: 32px;" class="line green icon-people"></i>
-                                                </div>
-
-                                                <div>
-                                                    <span>Empleados.</span><br>
-                                                    <a onclick="mostrarModal('divEmpleados')" style="cursor: pointer; color: #45cbb8;">Configurar...</a>
-                                                </div>
-
-                                                <div style="text-align: right;position: absolute; right: 0;">
-
-                                                    <?php
-                                                    $query2 = "SELECT * FROM gastosEmpleados";
-                                                    $buscarAlumnos2 = $conexion->query($query2);
-                                                    if ($buscarAlumnos2->num_rows > 0) {
-                                                        while ($filaAlumnos2 = $buscarAlumnos2->fetch_assoc()) {
-
-                                                            $pagar += $filaAlumnos2['importe'] * $filaAlumnos2['cantidad'];
-                                                            $emp += $filaAlumnos2['cantidad'];
-                                                        }
-                                                    } else {
-                                                        $pagar = 0;
-                                                        $emp = 0;
-                                                    }
-
-                                                    $result =  '  <span>' . $pagar . '$</span><br>
-                                                        <span>' . $emp . ' empleados</span>';
-                                                    ?>
-                                                    <div id="empledosResumen">
-                                                        <?php echo $result ?>
-                                                    </div>
-
-
-
-                                                </div>
-
-                                            </li>
-
-
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-
-
-
-
-
-
-                        </div>
-
-
-
-                        <div class="col-lg-9 animated fadeInUp" id="nuevoGastoDiv" style="display: none;">
-                            <div class="x_panel">
-                                <h2 style="font-size: 15px; ">Nuevo gasto
-
-
-                                    <span style="float: right;">
-                                        <button onclick="$('#nuevoGastoDiv').toggle();$('#tablaGastos').toggle()">
-                                            <i title="Nuevo gasto" class="fa fa-close"></i>
-                                        </button>
-                                    </span>
-
-                                </h2>
-                                <div class="x_content ">
-
-                                    <div class='item form-group'>
-                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Nombre del gasto</label>
-                                        <input type='text' id='nombreGasto' required='required' class='form-control '>
-                                    </div>
-
-                                    <div class='item form-group'>
-                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Tipo </label>
-                                        <select onchange="mostrarFecha()" class="form-control" required='required' name="tipo" id="tipo">
-                                            <option value="">Seleccione</option>
-                                            <option value="1">Gasto recurrente</option>
-                                            <option value="2">Gasto unico</option>
-                                        </select>
-                                    </div>
-
-
-                                    <div class='item form-group'>
-                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Cantidad a pagar <small>(USD)</small></label>
-                                        <input type='number' id='pagar' name='pagar' required='required' class='form-control '>
-                                    </div>
-
-
-
-
-                                    <div class='item form-group' id="divFechaGasto" style="display: none;">
-                                        <label class='col-form-label col-md-3 col-sm-3 ' for='first-name'>Semana a aplicar </label>
-                                        <input type="date" id="fechaAplicar" class="form-control">
-                                    </div>
-
-                                    <button onclick="salvarGasto()" style="float: right; margin-top: 15px;" class="btn btn-success">Guardar</button>
-
-                                </div>
-                            </div>
-                        </div>
-
-
-                        <script>
-                            const Toast = Swal.mixin({
-                                toast: true,
-                                position: 'bottom-end',
-                                showConfirmButton: false,
-                                timer: 3000,
-                                timerProgressBar: true,
-                                didOpen: (toast) => {
-                                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                                }
-                            })
-
-                            function mostrarFecha() {
-
-                                if ($('#tipo').val() == '2') {
-                                    $('#divFechaGasto').show();
-                                } else {
-                                    $('#divFechaGasto').hide();
-                                }
-                            }
-
-
-
-                            function validarCampos(campo) {
-                                if ($('#' + campo).val() == '') {
-                                    Toast.fire({
-                                        icon: 'error',
-                                        title: 'Rellene todos los campos'
-                                    })
-                                    return true;
-                                } else {
-                                    return false;
-                                }
-                            }
-
-
-                            function salvarGasto() {
-                                let nombreGasto = $('#nombreGasto').val()
-                                let tipo = $('#tipo').val()
-                                let pagar = $('#pagar').val()
-                                let fechaAplicar;
-
-                                if ($('#tipo').val() == '2') {
-                                    fechaAplicar = $('#fechaAplicar').val()
-                                    if (validarCampos('fechaAplicar')) {
-                                        return;
-                                    }
-                                } else {
-                                    fechaAplicar = 'NA';
-                                }
-                                if (validarCampos('nombreGasto')) {
-                                    return;
-                                }
-                                if (validarCampos('tipo')) {
-                                    return;
-                                }
-                                if (validarCampos('pagar')) {
-                                    return;
-                                }
-
-
-                                $.ajax({
-                                        url: '../../configurar/aggregarGasto.php',
-                                        type: 'POST',
-                                        dataType: 'html',
-                                        data: {
-                                            nombreGasto: nombreGasto,
-                                            tipo: tipo,
-                                            pagar: pagar,
-                                            fechaAplicar: fechaAplicar
-                                        },
-                                    })
-                                    .done(function(resultado1) {
-                                        Toast.fire({
-                                            icon: 'success',
-                                            title: 'Se agrego correctamente'
-                                        })
-
-                                        $('#nombreGasto').val('')
-                                        $('#tipo').val('')
-                                        $('#pagar').val('')
-                                        $('#divFechaGasto').hide()
-
-                                        obtener_registros()
-                                        nuevoGasto()
-                                    })
-
-
-
-
-                            }
-
-                            function aplicarGastosRecurrentes() {
-                                let semana = "<?php echo $semana ?>";
-                                $.ajax({
-                                        url: '../../configurar/aggregarGastoLista.php',
-                                        type: 'POST',
-                                        dataType: 'html',
-                                        data: {
-                                            semana: semana
-                                        },
-                                    })
-                                    .done(function(resultado1) {
-                                        Toast.fire({
-                                            icon: 'success',
-                                            title: 'Se actualizo correctamente'
-                                        })
-                                        obtener_registros()
-                                        cerrarModal()
-                                    })
-
-
-                            }
-
-
-                            function guardarConfiguracionEmpleados() {
-                                let semana = "<?php echo $semana ?>";
-                                $.ajax({
-                                        url: '../../configurar/aggregarGastoListaEmpleado.php',
-                                        type: 'POST',
-                                        dataType: 'html',
-                                        data: {
-                                            semana: semana
-                                        },
-                                    })
-                                    .done(function(resultado1) {
-                                        Toast.fire({
-                                            icon: 'success',
-                                            title: 'Se actualizo correctamente'
-                                        })
-
-                                        $('#empledosResumen').html(resultado1)
-                                        obtener_registros()
-                                        cerrarModal()
-                                    })
-                            }
-                        </script>
-
-
-
-
-
-
-
-
-
-                        <div class="col-lg-9 animated fadeInRight" id="tablaGastos">
-                            <div class="x_panel">
-                                <h2 style="font-size: 15px; ">Gastos aplicados a la semana <strong><?php echo $semana;
-                                                                                                    if ($semana == date('Y-W')) {
-                                                                                                        echo ' (Semana actual)';
-                                                                                                    } else {
-                                                                                                        echo ' (Se muestra una semana anterior)';
-                                                                                                    }
-                                                                                                    ?></strong>
-                                    <span style="float: right;">
-                                        <button onclick="nuevoGasto()">
-                                            <i title="Nuevo gasto" class="fa fa-plus"></i>
-                                        </button>
-
-                                        <button onclick="mostrarModal('Divfiltro')">
-                                            <i title="Filtrar por semana" class="fa fa-filter"></i>
-                                        </button>
-
-                                    </span>
-
-                                </h2>
-                                <div class="x_content " id="tablaContenidoPagos">
-                                    Cargando tabla de gastos <i class="fa fa-spin fa-spinner"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-
-                    <script>
-                        function nuevoGasto() {
-                            $('#nuevoGastoDiv').toggle()
-                            $('#tablaGastos').toggle()
-                        }
-
-
-
-                        function obtener_registros() {
-                            let semana = "<?php echo $semana ?>";
-                            $.ajax({
-                                    url: 'consulta_tablaPagos.php',
-                                    type: 'POST',
-                                    dataType: 'html',
-                                    data: {
-                                        semana: semana
-                                    },
-                                })
-
-                                .done(function(resultado) {
-                                    $("#tablaContenidoPagos").html(resultado);
-                                })
-
-
-                            $.ajax({
-                                    url: 'consulta_listaFijosSemana.php',
-                                    type: 'POST',
-                                    dataType: 'html',
-                                    data: {},
-                                })
-
-                                .done(function(resultado) {
-                                    if (resultado != 'No hay nada para mostrar') {
-                                        $("#divAplicar").html('<a onclick="mostrarModal(\'divGRecurrentes\')" style="cursor: pointer">Aplicar gastos</a>');
-                                    }
-
-                                    $("#listFijosSemanas").html(resultado);
-
-
-
-                                    actualizarCounts();
-                                })
-
-                        }
-
-
-                        function actualizarCounts() {
-                            let semana = "<?php echo $semana ?>"
-                            let mes = "<?php echo $mes ?>"
-                            let gananciasSemana = "<?php echo $gananciasSe ?>"
-                            let gananciasMes = "<?php echo $gananciasMes ?>"
-
-                            $.ajax({
-                                    url: 'consulta_gastosCount.php',
-                                    type: 'POST',
-                                    dataType: 'html',
-                                    data: {
-                                        semana: semana,
-                                        mes: mes,
-                                        gananciasSemana: gananciasSemana,
-                                        gananciasMes: gananciasMes
-                                    },
-                                })
-
-                                .done(function(resultado1) {
-                                    let resultado = resultado1.split('*')
-                                    $('#gastosSemanaCount').html(resultado[0])
-                                    $('#gastosMesCount').html(resultado[1])
-                                    $('#gananciaNetaSemana').html(resultado[2])
-                                    $('#gananciaNetaMes').html(resultado[3])
-                                })
-
-                        }
-
-
-                        function setGasto(id) {
-                            $.ajax({
-                                url: '../../configurar/setGastoAjax.php',
-                                type: 'POST',
-                                dataType: 'html',
-                                data: {
-                                    id: id
-                                },
-                            })
-                        }
-
-                        function setEmpleados(id) {
-                            $.ajax({
-                                url: '../../configurar/setEmpleadosAjax.php',
-                                type: 'POST',
-                                dataType: 'html',
-                                data: {
-                                    id: id
-                                },
-                            })
-                        }
-
-
-                        function confirm(id) {
-
-                            Swal.fire({
-                                title: 'Esta seguro?',
-                                html: 'No se aplicara el gasto a la semana ¿desea continuar?',
-                                icon: 'question',
-                                confirmButtonText: 'Eliminar',
-                                cancelButtonText: 'Cancelar',
-                                confirmButtonColor: '#32d7c0',
-                                showCancelButton: true,
-
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    elimi(id)
-
-                                }
-                            })
-
-
-
-                        }
-
-                        function elimi(params) {
-                            $.ajax({
-                                    url: '../../configurar/deleteGastoAjax.php',
-                                    type: 'POST',
-                                    dataType: 'html',
-                                    data: {
-                                        id: params
-                                    },
-                                })
-
-                                .done(function(resultado1) {
-                                    Toast.fire({
-                                        icon: 'success',
-                                        title: 'Se elimino correctamente'
-                                    })
-
-                                    obtener_registros()
-                                })
-
-
-                        }
-                    </script>
-
-
-                </div>
-                <!-- /page content -->
-                <!-- footer content -->
-
-
-                <!-- /footer content -->
-            </div>
-        </div>
-
-
-
-
-
-
-
-
-        <script>
-            function actualizarGastosActivoModal() {
-                $.ajax({
-                        url: 'consulta_listaFijosSemanaModal.php',
-                        type: 'POST',
-                        dataType: 'html'
-                    })
-
-                    .done(function(gastosFios) {
-                        $('#listaGastosModal').html(gastosFios)
-                    })
+    <script>
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'bottom-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
             }
+        });
 
+        function getSucursalId() {
+            const sel = document.getElementById('filterSucursal');
+            return sel ? parseInt(sel.value) || 0 : 0;
+        }
 
-            function actualizarEmpleadosActivoModal() {
+        function getSucursalData() {
+            return {
+                id_sucursal: getSucursalId()
+            };
+        }
 
-                $.ajax({
-                        url: 'consulta_listaEmpleados.php',
-                        type: 'POST',
-                        dataType: 'html'
-                    })
+        function cambiarSucursal() {
+            obtener_registros();
+        }
 
-                    .done(function(gastosFios) {
-                        $('#listaEmpleadosModal').html(gastosFios)
-                        $('#divModificarEmpleados').hide()
-                    })
-            }
+        function abrirModalNuevo() {
+            $('#gastoId').val('');
+            $('#form-gasto')[0].reset();
+            const d = new Date();
+            const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            $('#gastoFecha').val(ds);
+            $('#modal-gasto-title').text('Nuevo gasto');
+            $('#modal-gasto').modal('show');
+        }
 
-            function guardaEmpleado() {
-
-                let id = $('#id').val()
-                let nombreRol = $('#nombreRol').val()
-                let importe = $('#importe').val()
-                let cantidadRol = $('#cantidadRol').val()
-
-                if (validarCampos('id')) {
-                    return;
-                }
-                if (validarCampos('nombreRol')) {
-                    return;
-                }
-                if (validarCampos('importe')) {
-                    return;
-                }
-                if (validarCampos('cantidadRol')) {
-                    return;
-                }
-
-
-
-                $.ajax({
-                        url: '../../configurar/addEmpleadoAjax.php',
-                        type: 'POST',
-                        dataType: 'html',
-                        data: {
-                            id: id,
-                            nombreRol: nombreRol,
-                            importe: importe,
-                            cantidadRol: cantidadRol
-                        },
-                    })
-                    .done(function(resultado1) {
-                        Toast.fire({
-                            icon: 'success',
-                            title: 'Se actualizo correctamente'
-                        })
-                        $('#empledosResumen').html(resultado1)
-                        actualizarEmpleadosActivoModal()
-                    })
-
-            }
-
-
-
-            function modificarEmpleado(id, nombre, cantidad, pago) {
-                $('#divModificarEmpleados').show(300)
-                $('#id').val(id)
-                $('#nombreRol').val(nombre)
-                $('#importe').val(pago)
-                $('#cantidadRol').val(cantidad)
-            }
-
-
-            function nuevoEmpleado() {
-                $('#divModificarEmpleados').show(300)
-                $('#id').val(0)
-                $('#nombreRol').val('')
-                $('#importe').val('')
-                $('#cantidadRol').val('')
-            }
-
-
-
-
-            var arrayDivsModal = ['Divfiltro', 'divGRecurrentes', 'divEmpleados'];
-
-            function mostrarModal(div) {
-                arrayDivsModal.forEach(element => {
-                    if (element == div) {
-                        $('#' + element).show();
-                    } else {
-                        $('#' + element).hide();
-                    }
+        function obtener_registros() {
+            const data = {
+                id_sucursal: getSucursalId()
+            };
+            $.ajax({
+                    url: 'consulta_tablaPagos.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: data
+                })
+                .done(function(resultado) {
+                    $('#tablaContenidoPagos').html(resultado);
                 });
 
-                if (div == 'divGRecurrentes') {
-                    actualizarGastosActivoModal();
-                } else if (div == 'divEmpleados') {
-                    actualizarEmpleadosActivoModal();
+            actualizarCounts();
+        }
+
+        function filtroRapido(periodo, el) {
+            document.querySelectorAll('.btn-period').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            el.classList.add('active');
+
+            let data = {
+                id_sucursal: getSucursalId()
+            };
+
+            if (periodo === 'hoy') {
+                const hoy = new Date();
+                const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+                data.fecha_desde = hoyStr;
+                data.fecha_hasta = hoyStr;
+            } else if (periodo === 'semana') {
+                const hoy = new Date();
+                const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+                const d = new Date(hoy);
+                d.setDate(hoy.getDate() - hoy.getDay() + 1);
+                data.fecha_desde = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                data.fecha_hasta = hoyStr;
+            } else if (periodo === 'mes') {
+                const hoy = new Date();
+                const yyyy = hoy.getFullYear();
+                const mm = hoy.getMonth();
+                const ultimoDia = new Date(yyyy, mm + 1, 0).getDate();
+                data.fecha_desde = yyyy + '-' + String(mm + 1).padStart(2, '0') + '-01';
+                data.fecha_hasta = yyyy + '-' + String(mm + 1).padStart(2, '0') + '-' + ultimoDia;
+            } else if (periodo === 'anio') {
+                const hoy = new Date();
+                data.fecha_desde = hoy.getFullYear() + '-01-01';
+                data.fecha_hasta = '9999-12-31';
+            }
+
+            $.ajax({
+                    url: 'consulta_tablaPagos.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    cache: false,
+                    data: data
+                })
+                .done(function(resultado) {
+                    $('#tablaContenidoPagos').html(resultado);
+                })
+                .fail(function(xhr, status, error) {
+                    $('#tablaContenidoPagos').html('<div style="text-align:center;padding:40px 0;color:#ef5a6f;font-size:13px;">Error al cargar: ' + status + '</div>');
+                });
+        }
+
+        function mostrarModal() {
+            $('#modal-filtros').modal('show');
+        }
+
+        function aplicarFiltros() {
+            let data = {
+                id_sucursal: getSucursalId()
+            };
+            const fd = $('#filterFechaDesde').val();
+            const fh = $('#filterFechaHasta').val();
+            const cat = $('#filterCategoria').val();
+            const tipo = $('#filterTipo').val();
+            const estado = $('#filterEstado').val();
+
+            if (fd && fh) {
+                data.fecha_desde = fd;
+                data.fecha_hasta = fh;
+            }
+            if (cat) data.categoria_id = cat;
+            if (tipo) data.tipo = tipo;
+            if (estado) data.estado = estado;
+
+            $.ajax({
+                    url: 'consulta_tablaPagos.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: data
+                })
+                .done(function(resultado) {
+                    $('#tablaContenidoPagos').html(resultado);
+                    $('#modal-filtros').modal('hide');
+                });
+        }
+
+        function actualizarCounts() {
+            const semana = "<?= $semana ?>";
+            const mes = "<?= $mes ?>";
+            const data = {
+                semana: semana,
+                mes: mes,
+                id_sucursal: getSucursalId()
+            };
+            let netoMes = 0;
+
+            $.ajax({
+                    url: 'consulta_gastosCount.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: data
+                })
+                .done(function(resultado1) {
+                    const r = resultado1.split('*');
+                    $('#gananciaBrutaSemana').html('$' + r[0]);
+                    $('#gananciaBrutaMes').html('$' + r[1]);
+                    $('#gastosSemanaCount').html(r[2]);
+                    $('#gastosMesCount').html(r[3]);
+                    $('#gananciaNetaSemana').html(r[4]);
+                    $('#gananciaNetaMes').html(r[5]);
+                    netoMes = parseFloat(r[5]) || 0;
+                    cargarProyeccion(netoMes);
+                });
+        }
+
+        function cargarProyeccion(netoMes) {
+            $.ajax({
+                    url: 'consulta_proyeccionRecurrentes.php',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: {
+                        id_sucursal: getSucursalId()
+                    }
+                })
+                .done(function(resp) {
+                    const proyeccion = parseFloat(resp) || 0;
+                    if (proyeccion > 0) {
+                        $('#proyeccionMonto').text('$' + proyeccion.toFixed(2));
+                        const balance = netoMes - proyeccion;
+                        const balanceEl = $('#proyeccionBalance');
+                        const labelEl = $('#proyeccionBalanceLabel');
+                        balanceEl.text((balance >= 0 ? '+' : '-') + '$' + Math.abs(balance).toFixed(2));
+                        if (balance >= 0) {
+                            balanceEl.css('color', '#2dd4a0');
+                            labelEl.text('Ya cubres los recurrentes ✓');
+                        } else {
+                            balanceEl.css('color', '#ef5a6f');
+                            labelEl.text('Falta para cubrir recurrentes');
+                        }
+                        $('#proyeccion-box').css('display', 'flex');
+                    } else {
+                        $('#proyeccion-box').hide();
+                    }
+                });
+        }
+
+        $('#form-gasto').on('submit', function(e) {
+            e.preventDefault();
+            if ($('#gastoConcepto').val().trim() === '') {
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Ingrese el concepto'
+                });
+                return;
+            }
+            if (!$('#gastoMonto').val() || parseFloat($('#gastoMonto').val()) <= 0) {
+                Toast.fire({
+                    icon: 'error',
+                    title: 'El monto debe ser mayor a 0'
+                });
+                return;
+            }
+
+            $.ajax({
+                    url: '../../configurar/aggregarGasto.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        concepto: $('#gastoConcepto').val(),
+                        categoria_id: $('#gastoCategoria').val(),
+                        tipo: $('#gastoTipo').val(),
+                        frecuencia: $('#gastoFrecuencia').val(),
+                        moneda: 'USD',
+                        monto: $('#gastoMonto').val(),
+                        fecha: $('#gastoFecha').val(),
+                        observacion: $('#gastoObservacion').val(),
+                        id_sucursal: $('#gastoSucursal').length ? $('#gastoSucursal').val() : <?= intval($_SESSION['sucursal'] ?? 0) ?>
+                    }
+                })
+                .done(function(resp) {
+                    if (resp.status === 'ok') {
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Gasto registrado: ' + resp.codigo
+                        });
+                        $('#modal-gasto').modal('hide');
+                        obtener_registros();
+                    } else {
+                        Toast.fire({
+                            icon: 'error',
+                            title: resp.msg || 'Error al registrar'
+                        });
+                    }
+                })
+                .fail(function() {
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Error de conexión'
+                    });
+                });
+        });
+
+        function verDetalle(el) {
+            const d = JSON.parse(el.closest('tr').getAttribute('data-detalle'));
+            const estadoBadge = d.estado === 'ACTIVO' ?
+                '<span style="background:#32d7c0;color:#fff;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">Activo</span>' :
+                '<span style="background:#ef5a6f;color:#fff;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">Anulado</span>';
+            const tipoBadge = d.tipo === 'Fijo' ?
+                '<span style="background:rgba(91,156,245,.15);color:#5b9cf5;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">Fijo</span>' :
+                '<span style="background:rgba(245,180,91,.15);color:#f5b45b;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">Variable</span>';
+
+            function row(icon, label, value) {
+                return '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(46,53,62,.4);">' +
+                    '<div style="width:32px;height:32px;border-radius:8px;background:rgba(45,212,160,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                    '<ion-icon name="' + icon + '" style="font-size:16px;color:var(--dash-mint);"></ion-icon></div>' +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--dash-text-muted);margin-bottom:2px;">' + label + '</div>' +
+                    '<div style="font-size:14px;font-weight:500;color:var(--dash-text);">' + value + '</div>' +
+                    '</div></div>';
+            }
+
+            let html = '<div style="text-align:left;">';
+
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--dash-border);">' +
+                '<div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dash-text-muted);margin-bottom:2px;">Concepto</div>' +
+                '<div style="font-size:16px;font-weight:700;color:var(--dash-text);">' + d.concepto + '</div></div>' +
+                '<div style="display:flex;gap:8px;">' + tipoBadge + estadoBadge + '</div></div>';
+
+            html += row('calendar-outline', 'Fecha', d.fecha);
+            html += row('pricetag-outline', 'Categoría', d.categoria);
+            html += row('repeat-outline', 'Frecuencia', d.frecuencia);
+            html += row('cash-outline', 'Monto', d.simbolo + ' ' + d.monto + ' <span style="color:var(--dash-text-muted);font-size:12px;">( $ ' + d.monto_usd + ' USD )</span>');
+            html += row('person-outline', 'Registrado por', d.usuario);
+
+            if (d.observacion) {
+                html += row('chatbubble-outline', 'Observación', d.observacion);
+            }
+
+            html += '</div>';
+
+            Swal.fire({
+                title: '<span style="display:flex;align-items:center;gap:10px;">' +
+                    '<span style="width:36px;height:36px;border-radius:50%;background:rgba(45,212,160,.1);display:flex;align-items:center;justify-content:center;">' +
+                    '<ion-icon name="receipt-outline" style="font-size:20px;color:var(--dash-mint);"></ion-icon></span>' +
+                    d.codigo + '</span>',
+                html: html,
+                confirmButtonText: 'Cerrar',
+                confirmButtonColor: '#2dd4a0',
+                width: 520,
+                customClass: {
+                    popup: 'swal-detail-popup'
                 }
+            });
+        }
 
-                modal_container.classList.add('show');
+        function anularGasto(id, codigo) {
+            $('#anular-gasto-id').val(id);
+            $('#anular-gasto-codigo').text(codigo);
+            $('#anular-gasto-motivo').val('');
+            $('#anular-gasto-motivo').removeClass('is-invalid');
+            $('#modal-anular-gasto').modal('show');
+        }
 
+        function confirmarAnulacion() {
+            const motivo = $('#anular-gasto-motivo').val().trim();
+            if (!motivo) {
+                $('#anular-gasto-motivo').addClass('is-invalid');
+                return;
             }
+            $('#anular-gasto-motivo').removeClass('is-invalid');
+            const id = $('#anular-gasto-id').val();
 
-            function cerrarModal() {
-                modal_container.classList.remove('show');
-            }
-        </script>
+            $.ajax({
+                    url: '../../configurar/anular_gasto.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id: id,
+                        motivo: motivo
+                    }
+                })
+                .done(function(resp) {
+                    $('#modal-anular-gasto').modal('hide');
+                    if (resp.status === 'ok') {
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Gasto anulado'
+                        });
+                        obtener_registros();
+                    } else {
+                        Toast.fire({
+                            icon: 'error',
+                            title: resp.msg || 'Error al anular'
+                        });
+                    }
+                })
+                .fail(function() {
+                    $('#modal-anular-gasto').modal('hide');
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Error de conexión'
+                    });
+                });
+        }
 
-        <!-- jQuery -->
-        <script src="../vendors/jquery/dist/jquery.min.js"></script>
-        <!-- Bootstrap -->
-        <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- FastClick -->
-        <script src="../vendors/fastclick/lib/fastclick.js"></script>
-        <script src="../vendors/nprogress/nprogress.js"></script>
-        <script src="../build/js/custom.js"></script>
+        obtener_registros();
+    </script>
+</body>
 
-
-    <?php
-} else {
-    define('PAGINA_INICIO', '../../index.php');
-    header('Location: ' . PAGINA_INICIO);
-}
-    ?>
+</html>

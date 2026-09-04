@@ -3,7 +3,7 @@ ob_start();
 ?>
 <nav id="navbar">
   <ul class="navbar-items flexbox-col">
-    <li class="navbar-logo d-flex justify-content-between" style="padding-left: 10px;">
+    <li class="navbar-logo d-flex justify-content-between" style="padding-left: 12px;">
       <a class="navbar-item-inner flexbox">
         <img src='images/logo1-inv-compact.png' style='max-width:40px; opacity: 0.8'>
       </a>

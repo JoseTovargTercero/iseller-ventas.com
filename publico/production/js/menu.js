@@ -107,7 +107,6 @@ document.addEventListener("DOMContentLoaded", function () {
       link.classList.add('active');
       const navdrop = link.closest('.navdrop');
       if (navdrop) {
-        navdrop.classList.add('open');
         const toggle = navdrop.querySelector('.navdrop-toggle');
         if (toggle) toggle.classList.add('active');
       }

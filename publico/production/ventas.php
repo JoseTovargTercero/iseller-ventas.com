@@ -192,7 +192,7 @@ $stmt->close();
 <style>
     :root {
         --dash-bg: #1a1e24;
-        --dash-card: #232931;
+        --dash-card: #1e1d22;
         --dash-border: #2e353e;
         --dash-mint: #2dd4a0;
         --dash-mint-dim: rgba(45, 212, 160, 0.12);
@@ -830,11 +830,13 @@ $stmt->close();
         padding: 60px 20px;
         color: var(--dash-text-muted);
     }
+
     .cart-empty-state ion-icon {
         font-size: 56px;
         margin-bottom: 16px;
         opacity: 0.4;
     }
+
     .cart-empty-state p {
         margin: 0;
         text-align: center;
@@ -842,6 +844,7 @@ $stmt->close();
         line-height: 1.6;
         color: var(--dash-text-muted);
     }
+
     .cart-empty-state p b {
         color: var(--dash-mint);
         font-weight: 700;
@@ -873,7 +876,7 @@ $stmt->close();
 
         #result-escaner {
             position: relative;
-            background: var(--dash-card, #232931);
+            background: var(--dash-card, #1e1d22);
             padding: 20px;
             border-radius: 12px;
             min-width: 300px;
@@ -2036,7 +2039,7 @@ $stmt->close();
             max-width: 420px;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             text-align: center;
-            background: var(--dash-card, #232931);
+            background: var(--dash-card, #1e1d22);
             color: var(--dash-text, #e8edf2);
         ">
             <div style="
