@@ -158,13 +158,13 @@ switch ($accion) {
 
     case 'aplicar':
         $semana = trim($_POST['semana'] ?? date('Y-W'));
-        $dt_semana = DateTime::createFromFormat('Y-W', $semana);
-        if (!$dt_semana) {
+        if (!preg_match('/^(\d{4})-(\d{2})$/', $semana, $m)) {
             echo json_encode(['status' => 'error', 'msg' => 'Formato de semana inválido']);
             exit;
         }
-        $fecha_semana = $dt_semana->modify('next monday -7 days')->format('Y-m-d');
-        $mes = $dt_semana->format('Y-m');
+        // strtotime soporta formato ISO "YYYY-WXX-D" (D=1 es lunes)
+        $fecha_semana = date('Y-m-d', strtotime($semana . '-1'));
+        $mes = substr($fecha_semana, 0, 7);
 
         $stmt = $conexion->prepare(
             "SELECT id, concepto, categoria_id, tipo, frecuencia, monto_estimado, moneda, observacion

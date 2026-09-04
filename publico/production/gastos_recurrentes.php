@@ -274,7 +274,7 @@ if ($cat_stmt) {
                             <small style="color:var(--dash-text-muted);">Reglas de gastos que se aplican manualmente cada semana</small>
                         </div>
                         <div>
-                            <button class="btn-dash-new" onclick="aplicarRecurrentes()" style="background:linear-gradient(135deg,#5b9cf5,#4a8ae0);box-shadow:0 3px 12px rgba(91,156,245,.25);">
+                            <button class="btn-dash-new d-none" onclick="aplicarRecurrentes()" style="background:linear-gradient(135deg,#5b9cf5,#4a8ae0);box-shadow:0 3px 12px rgba(91,156,245,.25);">
                                 <ion-icon name="play-outline" style="font-size:16px;"></ion-icon> Aplicar a semana actual
                             </button>
                             <button class="btn-dash-new" onclick="abrirModal()">
