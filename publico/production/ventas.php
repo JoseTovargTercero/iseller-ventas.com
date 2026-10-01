@@ -91,7 +91,6 @@ $result = $stmt->get_result();
 $data = [];
 $codigos = [];
 $productos_por_id = [];
-
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $nombre = strtoupper($row["nombre"]);
@@ -125,8 +124,9 @@ if ($result->num_rows > 0) {
         /* PRODUCTOS PARA LA BUSQUEDA */
 
 
-        //  PARA LA BUSQUEDA POR CODIGO DE BARRA
-        if (strlen($codigo) > 5) {
+
+        //  PARA LA BUSQUEDA POR CODIGO DE BARRA  
+        if (strlen($codigo) > 5 && $row['mayor'] != '1') {
 
 
             $data["$codigo"] = [
