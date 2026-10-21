@@ -86,7 +86,9 @@ if (($_GET['descargar'] ?? '') === '1') {
 // ── Metadatos de la versión ────────────────────────────────────────────────────
 $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 $base = ($esHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-$appPath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/api/app_version.php')), '/');
+// Ruta pública real (funciona igual en la raíz o bajo /inventario/ con rewrite)
+$uriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$appPath = rtrim(str_replace('\\', '/', dirname($uriPath)), '/');
 
 salirJson(200, [
     'ok'           => true,

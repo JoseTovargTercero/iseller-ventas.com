@@ -178,7 +178,9 @@ $token = AppAuth::issue((int)$u['id'], ['bss' => $bssId]);
 
 $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 $base = ($esHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-$appPath = rtrim(str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/'))), '/');
+// Ruta pública real (funciona igual en la raíz o bajo /inventario/ con rewrite)
+$uriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$appPath = rtrim(str_replace('\\', '/', dirname(dirname($uriPath))), '/');
 $sessionUrl = $base . $appPath . '/login/app_autologin.php?token=' . $token;
 
 $registrarLog(1, $u['nivel'], 'App login exitoso');
