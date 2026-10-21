@@ -651,6 +651,9 @@ if ($resNegs) {
             <a class="nav-item" href="reputacion.php">
                 <i class="bx bx-star"></i> Reputación
             </a>
+            <a class="nav-item" href="inactivos.php">
+                <i class="bx bx-user-x"></i> Cuentas inactivas
+            </a>
         </nav>
 
         <div class="sidebar-footer">

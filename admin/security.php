@@ -23,6 +23,10 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('X-XSS-Protection: 1; mode=block');
 
+// 3. Conexión única de la aplicación ($conexion), alimentada por el .env
+//    que carga configurar/configuracion.php. Sin credenciales en este archivo.
+require_once dirname(__DIR__) . '/configurar/configuracion.php';
+
 class AdminSecurity
 {
     // Configuración de rate limiting
@@ -31,43 +35,14 @@ class AdminSecurity
     const INACTIVITY_TIMEOUT_SECONDS = 7200; // 2 horas
 
     /**
-     * Obtiene o genera la conexión a la base de datos
+     * Devuelve la misma conexión que usa el resto de la aplicación.
      */
     public static function getConexion()
     {
-        static $conexion = null;
-        if ($conexion !== null && !$conexion->connect_error) {
-            return $conexion;
-        }
+        $conexion = $GLOBALS['conexion'] ?? null;
 
-        $archivoEnv = dirname(__DIR__) . '/.env';
-        $archivoAlt = dirname(__DIR__) . '/env';
-        if (!file_exists($archivoEnv) && file_exists($archivoAlt)) {
-            $archivoEnv = $archivoAlt;
-        }
-
-        if (file_exists($archivoEnv)) {
-            $lineas = file($archivoEnv, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lineas as $linea) {
-                if (strpos(trim($linea), '#') === 0) continue;
-                $partes = explode('=', $linea, 2);
-                if (count($partes) === 2) {
-                    $k = trim($partes[0]);
-                    $v = trim($partes[1]);
-                    if (!isset($_ENV[$k])) $_ENV[$k] = $v;
-                }
-            }
-        }
-
-        $user = $_ENV['DB_USER'] ?? 'root';
-        $pass = $_ENV['DB_PASS'] ?? '';
-        $name = $_ENV['DB_NAME'] ?? 'iseller';
-        $host = $_ENV['DB_HOST'] ?? 'localhost';
-
-        $conexion = new mysqli($host, $user, $pass, $name);
-        $conexion->set_charset('utf8');
-
-        if ($conexion->connect_error) {
+        if (!($conexion instanceof mysqli) || $conexion->connect_error) {
+            http_response_code(500);
             die('<p style="color:red;font-family:monospace;padding:30px;">Error de conexión a la base de datos.</p>');
         }
 

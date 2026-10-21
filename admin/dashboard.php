@@ -806,6 +806,12 @@ $admin_name = htmlspecialchars($_SESSION['admin_name'] ?? ($_SESSION['admin_user
             <a class="nav-item" href="reputacion.php">
                 <span class="icon">⭐</span> Reputación
             </a>
+            <a class="nav-item" href="inactivos.php">
+                <span class="icon">🚫</span> Cuentas inactivas
+            </a>
+            <a class="nav-item" href="../temp/otorgar_7_dias.php" target="_blank" rel="noopener" title="Script temporal: otorga 7 días de prueba a los negocios sin pago vigente">
+                <span class="icon">⏳</span> Dar 7 días
+            </a>
         </nav>
 
         <div class="sidebar-footer">
