@@ -1,11 +1,15 @@
 <?php
-session_start();
+require_once __DIR__ . '/security.php';
 
-// Redirect if already logged in
-if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+// Redirect if already logged in with valid session
+if (AdminSecurity::isLoggedIn()) {
     header('Location: dashboard.php');
     exit;
 }
+
+$rateLimit = AdminSecurity::checkRateLimit();
+$isLocked = $rateLimit['blocked'];
+$lockWait = (int)$rateLimit['remaining_wait'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -14,9 +18,7 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iSeller Admin — Inicio de sesión</title>
     <meta name="description" content="Panel de administración iSeller. Acceso exclusivo para administradores del sistema.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="../publico/vendors/fonts/fonts.css" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -319,12 +321,14 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
             <h1>Bienvenido de vuelta</h1>
             <p class="subtitle">Ingresa tus credenciales para acceder al panel de administración.</p>
 
-            <div class="error-msg" id="errorMsg">
+            <div class="error-msg <?= $isLocked ? 'show' : '' ?>" id="errorMsg">
                 <span>⚠</span>
-                <span id="errorText">Usuario o contraseña incorrectos.</span>
+                <span id="errorText"><?= $isLocked ? "Acceso temporalmente bloqueado por demasiados intentos. Espera {$lockWait} minutos." : "Usuario o contraseña incorrectos." ?></span>
             </div>
 
             <form id="loginForm" method="POST" action="auth.php" novalidate>
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(AdminSecurity::getCsrfToken()) ?>">
+
                 <div class="field">
                     <label for="admin_user">Usuario</label>
                     <div class="input-wrap">
@@ -335,6 +339,7 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
                             placeholder="admin"
                             autocomplete="username"
                             required
+                            <?= $isLocked ? 'disabled' : '' ?>
                         >
                         <span class="input-icon">👤</span>
                     </div>
@@ -350,20 +355,21 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
                             placeholder="••••••••"
                             autocomplete="current-password"
                             required
+                            <?= $isLocked ? 'disabled' : '' ?>
                         >
                         <span class="input-icon">🔒</span>
                         <button type="button" class="toggle-pw" id="togglePw" title="Mostrar contraseña">👁</button>
                     </div>
                 </div>
 
-                <button type="submit" class="btn-submit" id="submitBtn">
-                    <span id="btnText">Ingresar al panel</span>
+                <button type="submit" class="btn-submit" id="submitBtn" <?= $isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '' ?>>
+                    <span id="btnText"><?= $isLocked ? 'Bloqueado temporalmente' : 'Ingresar al panel' ?></span>
                     <span class="spinner" id="spinner"></span>
                 </button>
             </form>
 
             <div class="card-footer">
-                <div class="badge-secure">🔐 Acceso protegido</div>
+                <div class="badge-secure">🔐 Acceso protegido · CSRF & Rate Limit Activo</div>
                 <p>© 2025 iSeller · Uso exclusivo interno</p>
             </div>
         </div>
@@ -389,9 +395,24 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 
         // Show error if URL has error param
         const params = new URLSearchParams(window.location.search);
-        if (params.get('error') === '1') {
+        const err = params.get('error');
+        const wait = params.get('wait');
+
+        if (err === '1') {
             errorMsg.classList.add('show');
             errorText.textContent = 'Usuario o contraseña incorrectos. Intenta nuevamente.';
+        } else if (err === 'locked') {
+            errorMsg.classList.add('show');
+            errorText.textContent = `Demasiados intentos fallidos. Acceso bloqueado por ${wait || 15} minutos.`;
+        } else if (err === 'csrf') {
+            errorMsg.classList.add('show');
+            errorText.textContent = 'Token de seguridad inválido o expirado. Por favor intenta de nuevo.';
+        } else if (err === 'expired') {
+            errorMsg.classList.add('show');
+            errorText.textContent = 'Tu sesión ha expirado por inactividad. Inicia sesión nuevamente.';
+        } else if (err === 'empty') {
+            errorMsg.classList.add('show');
+            errorText.textContent = 'Por favor completa todos los campos.';
         }
 
         form.addEventListener('submit', (e) => {

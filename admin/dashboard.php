@@ -1,42 +1,16 @@
 <?php
-session_start();
+require_once __DIR__ . '/security.php';
 
-// ── Guard ────────────────────────────────────────────────────────────────────
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: index.php');
-    exit;
-}
+// ── Guard de seguridad ────────────────────────────────────────────────────────
+AdminSecurity::requireLogin();
 
-// ── DB connection (reusing existing config pattern) ───────────────────────────
-function cargarDotEnv($ruta)
-{
-    $archivoEnv = rtrim($ruta, '/') . '/.env';
-    $archivoAlt = rtrim($ruta, '/') . '/env';
-    if (file_exists($archivoEnv)) $archivo = $archivoEnv;
-    elseif (file_exists($archivoAlt)) $archivo = $archivoAlt;
-    else return;
+// ── Conexión segura a la BD ───────────────────────────────────────────────────
+$conexion = AdminSecurity::getConexion();
 
-    $lineas = file($archivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lineas as $linea) {
-        if (strpos(trim($linea), '#') === 0) continue;
-        list($nombre, $valor) = explode('=', $linea, 2);
-        $nombre = trim($nombre);
-        $valor = trim($valor);
-        if (!isset($_ENV[$nombre])) $_ENV[$nombre] = $valor;
-    }
-}
+// Contar pagos de membresía pendientes para el badge del menú
+$resPagosPend = $conexion->query("SELECT COUNT(*) AS total FROM membresias_pagos WHERE estado = 'pendiente'");
+$cant_pagos_pendientes = $resPagosPend ? (int)($resPagosPend->fetch_assoc()['total'] ?? 0) : 0;
 
-cargarDotEnv(dirname(__DIR__) . '/../../');
-$usuario   = $_ENV['DB_USER']  ?? 'root';
-$contrasena = $_ENV['DB_PASS'] ?? '';
-$baseDatos  = $_ENV['DB_NAME'] ?? '';
-
-$conexion = new mysqli('localhost', $usuario, $contrasena, $baseDatos);
-$conexion->set_charset('utf8');
-
-if ($conexion->connect_error) {
-    die('<p style="color:red;font-family:monospace;padding:40px">DB Error: ' . $conexion->connect_error . '</p>');
-}
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
@@ -107,7 +81,7 @@ foreach ($negocios_stats as $s) {
     $total_sucursales_global += $s['cant_sucursales'];
 }
 
-$admin_name = htmlspecialchars($_SESSION['admin_user'] ?? 'Admin');
+$admin_name = htmlspecialchars($_SESSION['admin_name'] ?? ($_SESSION['admin_user'] ?? 'Admin'));
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -117,9 +91,7 @@ $admin_name = htmlspecialchars($_SESSION['admin_user'] ?? 'Admin');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iSeller Admin — Dashboard</title>
     <meta name="description" content="Dashboard de administración iSeller. Vista de negocios, ventas y sucursales.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="../publico/vendors/fonts/fonts.css" rel="stylesheet">
     <style>
         *,
         *::before,
@@ -825,8 +797,14 @@ $admin_name = htmlspecialchars($_SESSION['admin_user'] ?? 'Admin');
             <a class="nav-item active" href="dashboard.php">
                 <span class="icon">🏠</span> Dashboard
             </a>
-            <a class="nav-item" href="dashboard.php">
-                <span class="icon">🏢</span> Negocios
+            <a class="nav-item" href="pagos.php" style="display: flex; align-items: center; justify-content: space-between;">
+                <span><span class="icon">💳</span> Pagos Membresía</span>
+                <?php if ($cant_pagos_pendientes > 0): ?>
+                    <span class="badge badge-amber" style="font-size: 10px; padding: 2px 7px;"><?= $cant_pagos_pendientes ?></span>
+                <?php endif; ?>
+            </a>
+            <a class="nav-item" href="reputacion.php">
+                <span class="icon">⭐</span> Reputación
             </a>
         </nav>
 
