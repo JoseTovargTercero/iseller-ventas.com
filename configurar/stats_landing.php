@@ -59,11 +59,15 @@ try {
     }
 
     $tasa_peso = "4158";
+    $tasa_peso_bolivar = 0.0043;
     $stmt = $conexion->prepare("SELECT bolivar_peso, pesoDolar FROM cambio WHERE bss_id = 2 LIMIT 1");
     if ($stmt) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($row = $result->fetch_assoc()) {
+            // Peso -> Bolívar: bolívares que vale 1 peso colombiano.
+            $tasa_peso_bolivar = round((float)$row['bolivar_peso'], 4);
+
             $tasa_peso = (float)$row['bolivar_peso'];
             // En algunas bases bolivar_peso es Bs por COP (< 1); la tarjeta muestra
             // COP por USD, que es pesoDolar. Se redondea a pesos enteros.
@@ -83,6 +87,7 @@ try {
         'usuarios' => $usuarios,
         'tasa_bcv' => $tasa_bcv,
         'tasa_peso' => $tasa_peso,
+        'tasa_peso_bolivar' => $tasa_peso_bolivar,
         'ventas_hoy' => $ventas_hoy
     ]);
 } catch (Exception $e) {

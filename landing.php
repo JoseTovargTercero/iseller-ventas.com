@@ -1594,7 +1594,6 @@
         .text-white {
             color: white !important;
         }
-
     </style>
 </head>
 
@@ -1659,7 +1658,7 @@
                         Todo en un solo lugar. Lleva el control de tu negocio y empieza a vender en linea en minutos, con tu propia tienda personalizada.
                     </p>
 
-                    <div class="hero-platforms reveal" style="display: none;">
+                    <div class="hero-platforms reveal">
                         <span class="hero-platform" title="Úsalo desde cualquier navegador">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -1949,17 +1948,17 @@
                         <div class="currency-rate" id="rate-bcv">Bs. 36.06</div>
                     </div>
                     <div class="currency-card reveal">
-                        <div class="currency-flag-placeholder">🇺🇸</div>
+                        <div class="currency-flag-placeholder">🇨🇴</div>
                         <div class="currency-info">
-                            <div class="currency-name">Dólar estadounidense</div>
-                            <div class="currency-symbol">USD ($)</div>
+                            <div class="currency-name">Pesos colombianos 1</div>
+                            <div class="currency-symbol">Peso → Bolívar (Bs.)</div>
                         </div>
-                        <div class="currency-rate">$ 1.00</div>
+                        <div class="currency-rate" id="rate-cop-bolivar">Bs. 0.0043</div>
                     </div>
                     <div class="currency-card reveal">
                         <div class="currency-flag-placeholder">🇨🇴</div>
                         <div class="currency-info">
-                            <div class="currency-name">Peso colombiano</div>
+                            <div class="currency-name">Pesos colombianos 2</div>
                             <div class="currency-symbol">COP ($)</div>
                         </div>
                         <div class="currency-rate" id="rate-cop">$ 4,158.0000</div>
@@ -2263,10 +2262,21 @@
 
                         const rateBcv = document.getElementById('rate-bcv');
                         if (rateBcv && data.tasa_bcv) rateBcv.textContent = 'Bs. ' + data.tasa_bcv;
+
+                        // Pesos colombianos 1: peso -> bolívar (bolívares por COP).
+                        const rateCopBolivar = document.getElementById('rate-cop-bolivar');
+                        const copBolivar = Number(data.tasa_peso_bolivar);
+                        if (rateCopBolivar && Number.isFinite(copBolivar) && copBolivar > 0) {
+                            rateCopBolivar.textContent = 'Bs. ' + copBolivar.toLocaleString('en-US', {
+                                minimumFractionDigits: 4,
+                                maximumFractionDigits: 4
+                            });
+                        }
+
+                        // Pesos colombianos 2: COP por USD.
                         const rateCop = document.getElementById('rate-cop');
                         const cop = Number(data.tasa_peso);
                         if (rateCop && Number.isFinite(cop) && cop >= 1) {
-                            // COP con 4 decimales.
                             rateCop.textContent = '$ ' + cop.toLocaleString('en-US', {
                                 minimumFractionDigits: 4,
                                 maximumFractionDigits: 4
