@@ -6,7 +6,7 @@ ob_start();
   <ul class="navbar-items flexbox-col">
     <li class="navbar-logo d-flex justify-content-between" style="padding-left: 12px;">
       <a class="navbar-item-inner brand-lockup" aria-label="iSeller">
-        <img class="brand-mark" src='images/logo1-inv-compact.png' alt="iSeller">
+        <img class="brand-mark" src='images/logo1-inv-96.png' alt="iSeller">
         <span class="brand-wordmark" aria-hidden="true"><span style="--i:0">i</span><span style="--i:1">S</span><span style="--i:2">e</span><span style="--i:3">l</span><span style="--i:4">l</span><span style="--i:5">e</span><span style="--i:6">r</span></span>
       </a>
       <a class="navbar-item-inner flexbox" id="menu_button"></a>

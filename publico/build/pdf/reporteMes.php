@@ -520,7 +520,7 @@ $html = '   <head>
     <link rel="stylesheet" href="style.css" media="all" />
   </head>
 
-<img src="../../production/images/logo1-inv-compact.png" height="14px" width="14px" alt=""> MI TIENDA
+<img src="../../production/images/logo1-inv-96.png" height="14px" width="14px" alt=""> MI TIENDA
 <h1>
 
 </h1>

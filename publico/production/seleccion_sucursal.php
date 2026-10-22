@@ -291,7 +291,7 @@ if ($_SESSION['nivel'] == 1) {
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="js/tablas.js"></script>
-        <script src="../build/js/global-loader.js"></script>
+        <script src="../build/js/global-loader.js?v=2"></script>
         <script src="js/nombre_pagina.js"></script>
 
         <script>

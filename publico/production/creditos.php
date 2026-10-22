@@ -295,7 +295,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
     <script src="../vendors/datatables/buttons.html5.min.js"></script>
     <script src="../build/js/custom.js"></script>
-    <script src="../build/js/global-loader.js"></script>
+    <script src="../build/js/global-loader.js?v=2"></script>
     <script src="js/nombre_pagina.js"></script>
 
     <script>

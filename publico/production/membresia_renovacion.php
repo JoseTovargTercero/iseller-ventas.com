@@ -541,7 +541,7 @@ if ($en_verificacion && empty($msg_success)) {
     <div class="paywall-container">
         <div class="paywall-header">
             <div class="paywall-brand">
-                <img src="images/logo1-inv-compact.png" alt="logo iseller" height="25px"> iSeller Tiendas
+                <img src="images/logo1-inv-96.png" alt="logo iseller" height="25px"> iSeller Tiendas
             </div>
             <div>
                 <?php if ($infoMembresia['pago_pendiente']): ?>

@@ -25,7 +25,7 @@ $css = '
 
 // Construcción del HTML
 $html = $css . '
-<h1><img src="../../production/images/logo1-inv-compact.png" height="20px"> iSeller</h1>
+<h1><img src="../../production/images/logo1-inv-96.png" height="20px"> iSeller</h1>
 <h5> LISTA DE COMPRAS</h5>
 
 <table>

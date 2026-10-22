@@ -1,6 +1,6 @@
 {
-    "version_code": 3,
-    "version_name": "1.2",
-    "notas": "Descarga de actualizaciones reanudable: si se corta la conexión, continúa donde quedó.",
+    "version_code": 4,
+    "version_name": "1.3",
+    "notas": "Carga más rápida, pantalla de conexión propia, reintento y app más liviana.",
     "archivo": "apk/iseller_pos.apk"
 }

@@ -490,7 +490,7 @@ $topnav = topnav();
         </div>
     </div>
 
-    <script src="../build/js/global-loader.js"></script>
+    <script src="../build/js/global-loader.js?v=2"></script>
     <script src="js/nombre_pagina.js"></script>
 
     <script>

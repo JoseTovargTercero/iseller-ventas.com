@@ -39,6 +39,9 @@ window.fetch = async (...args) => {
   }
 };
 
+// Fetch que NO muestra el loader: para polling y autorefrescos en segundo plano.
+window.fetchSilencioso = (...args) => originalFetch(...args);
+
 // jQuery AJAX global
 $(document).ajaxStart(function () {
   solicitudesActivas++;

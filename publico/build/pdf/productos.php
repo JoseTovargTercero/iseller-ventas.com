@@ -9,7 +9,7 @@ $html = '   <head>
     <link rel="stylesheet" href="style.css" media="all" />
   </head>
 
-</h1><img src="../../production/images/logo1-inv-compact.png" height="14px" width="14px" alt=""> MI TIENDA<h1>
+</h1><img src="../../production/images/logo1-inv-96.png" height="14px" width="14px" alt=""> MI TIENDA<h1>
 </h5>LISTA DE PRECIOS<h5>
      <div class="table-responsive">
                       <table class="table table-striped  jambo_table bulk_action">

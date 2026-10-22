@@ -875,7 +875,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             </div>
         </div>
 
-        <script src="../build/js/global-loader.js"></script>
+        <script src="../build/js/global-loader.js?v=2"></script>
         <script src="js/nombre_pagina.js"></script>
 
         <script>

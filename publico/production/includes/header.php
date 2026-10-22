@@ -221,7 +221,8 @@ function topnav()
             }
 
             function fetchNotifs() {
-                fetch('db/notificaciones_api.php?action=listar&limite=10')
+                // Polling cada 30s en segundo plano: no debe abrir el loader global
+                (window.fetchSilencioso || window.fetch)('db/notificaciones_api.php?action=listar&limite=10')
                     .then(function(r) {
                         return r.json()
                     })
