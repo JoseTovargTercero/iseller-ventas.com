@@ -1593,67 +1593,6 @@
             color: white !important;
         }
 
-        /* ── Overlay de acceso (login / registro) ── */
-        .auth-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 2000;
-            background: rgba(8, 10, 12, 0.55);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.35s ease;
-        }
-
-        .auth-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .auth-overlay iframe {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-            background: #080A0C;
-            transform: translateX(100%);
-            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .auth-overlay.open iframe {
-            transform: translateX(0);
-        }
-
-        .auth-close {
-            position: absolute;
-            top: 18px;
-            right: 22px;
-            z-index: 2;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(16, 18, 22, 0.85);
-            color: #fff;
-            font-size: 1.4rem;
-            line-height: 1;
-            cursor: pointer;
-            transition: background 0.2s ease, transform 0.2s ease;
-        }
-
-        .auth-close:hover {
-            background: rgba(59, 130, 246, 0.35);
-            transform: scale(1.05);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-
-            .auth-overlay,
-            .auth-overlay iframe {
-                transition: none;
-            }
-        }
     </style>
 </head>
 
@@ -2243,14 +2182,6 @@
     </footer>
 
     <!-- ============================================================
-         OVERLAY DE ACCESO (login / registro)
-    ============================================================ -->
-    <div class="auth-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-label="Acceso a iSeller" aria-hidden="true">
-        <button type="button" class="auth-close" id="authClose" aria-label="Cerrar">&times;</button>
-        <iframe id="authFrame" title="Iniciar sesión o registrarse en iSeller"></iframe>
-    </div>
-
-    <!-- ============================================================
          SCRIPTS
     ============================================================ -->
     <script>
@@ -2322,62 +2253,6 @@
                 billingToggle.classList.toggle('annual', isAnnual);
                 document.getElementById('label-mensual').classList.toggle('active', !isAnnual);
                 document.getElementById('label-anual').classList.toggle('active', isAnnual);
-            });
-
-            /* ── Acceso en overlay (login / registro) ─────────────── */
-            const authOverlay = document.getElementById('authOverlay');
-            const authFrame = document.getElementById('authFrame');
-            const authClose = document.getElementById('authClose');
-            let authCloseTimer = null;
-
-            const openAuth = (src) => {
-                clearTimeout(authCloseTimer);
-                authFrame.src = src;
-                authOverlay.classList.add('open');
-                authOverlay.setAttribute('aria-hidden', 'false');
-                document.body.style.overflow = 'hidden';
-                mobileMenu.classList.remove('open');
-                authClose.focus();
-            };
-
-            const closeAuth = () => {
-                authOverlay.classList.remove('open');
-                authOverlay.setAttribute('aria-hidden', 'true');
-                document.body.style.overflow = '';
-                authCloseTimer = setTimeout(() => {
-                    if (!authOverlay.classList.contains('open')) authFrame.src = 'about:blank';
-                }, 450);
-            };
-
-            document.addEventListener('click', (e) => {
-                const link = e.target.closest('a[href^="login.php"], a[href^="registro.php"]');
-                if (!link || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
-                e.preventDefault();
-                openAuth(link.getAttribute('href'));
-            });
-            authClose.addEventListener('click', closeAuth);
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && authOverlay.classList.contains('open')) closeAuth();
-            });
-            window.addEventListener('pageshow', (e) => {
-                if (e.persisted) closeAuth();
-            });
-            // Al autenticarse, el iframe navega al dashboard: se abre a pantalla completa.
-            authFrame.addEventListener('load', () => {
-                if (!authOverlay.classList.contains('open')) return;
-                let url;
-                try {
-                    url = authFrame.contentWindow.location;
-                } catch (err) {
-                    return;
-                }
-                if (url.href === 'about:blank') return;
-                if (/\/(login|registro)\.php$/.test(url.pathname)) return;
-                if (url.pathname.indexOf('/publico/production/') !== -1) {
-                    window.location.href = url.href;
-                    return;
-                }
-                closeAuth();
             });
 
         })();
