@@ -162,7 +162,7 @@ if ($tienda_slug) {
                     <h1>Tienda no encontrada</h1>
                     <p>Lo sentimos, la tienda que estás buscando no existe, ha sido desactivada o su enlace es incorrecto.</p>
                     <div class="not-found-actions">
-                        <a href="/iseller-tiendas.com/" class="btn btn-primary">
+                        <a href="/" class="btn btn-primary">
                             <i class="bi bi-house-door me-1"></i> Ir al inicio
                         </a>
                         <a href="javascript:history.back()" class="btn btn-outline-secondary">

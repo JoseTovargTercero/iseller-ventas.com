@@ -195,15 +195,19 @@ if ($action === 'cambiar_estado') {
 
     // 4. Notificación in-app al cliente (fuera de la transacción)
     if ((int)$orden['customer_id'] > 0) {
-        require_once($_SERVER['DOCUMENT_ROOT'] . '/iseller-tiendas.com/iseller_store/api/chat/crear_notificacion_cliente.php');
-        notificar_cliente(
-            $conexion,
-            (int)$orden['customer_id'],
-            "Pedido #$id actualizado",
-            "Tu pedido ahora está: $label",
-            'compra',
-            'perfil.php?tab=orders'
-        );
+        // Ruta relativa al archivo: vale igual en local y en el hosting.
+        $notifFile = __DIR__ . '/../../../iseller_store/api/chat/crear_notificacion_cliente.php';
+        if (file_exists($notifFile)) {
+            require_once($notifFile);
+            notificar_cliente(
+                $conexion,
+                (int)$orden['customer_id'],
+                "Pedido #$id actualizado",
+                "Tu pedido ahora está: $label",
+                'compra',
+                'perfil.php?tab=orders'
+            );
+        }
     }
 
     echo json_encode(['ok' => true]);

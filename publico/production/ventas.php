@@ -180,7 +180,8 @@ $codigos = [];
 $productos_por_id = [];
 
 // Imágenes disponibles: una sola lectura de directorios al iniciar (evita 404 en consola).
-$imgRoot = __DIR__ . '/../../../iseller_store';
+// ventas.php está en publico/production/, así que iseller_store queda 2 niveles arriba.
+$imgRoot = __DIR__ . '/../../iseller_store';
 $listarArchivos = function ($dir) {
     $set = [];
     if (is_dir($dir)) {

@@ -153,7 +153,7 @@ switch ($action) {
 
         // Notificar al cliente
         if ((int)$conv['usuario_id'] > 0) {
-            $notifFile = $_SERVER['DOCUMENT_ROOT'] . '/iseller-tiendas.com/iseller_store/api/chat/crear_notificacion_cliente.php';
+            $notifFile = __DIR__ . '/../../../iseller_store/api/chat/crear_notificacion_cliente.php';
             if (file_exists($notifFile)) {
                 require_once($notifFile);
                 notificar_cliente(
