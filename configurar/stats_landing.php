@@ -59,12 +59,18 @@ try {
     }
 
     $tasa_peso = "4158";
-    $stmt = $conexion->prepare("SELECT bolivar_peso FROM cambio WHERE bss_id = 2 LIMIT 1");
+    $stmt = $conexion->prepare("SELECT bolivar_peso, pesoDolar FROM cambio WHERE bss_id = 2 LIMIT 1");
     if ($stmt) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($row = $result->fetch_assoc()) {
-            $tasa_peso = $row['bolivar_peso'] - 0.0001;
+            $tasa_peso = (float)$row['bolivar_peso'];
+            // En algunas bases bolivar_peso es Bs por COP (< 1); la tarjeta muestra
+            // COP por USD, que es pesoDolar. Se redondea a pesos enteros.
+            if ($tasa_peso < 1 && (float)$row['pesoDolar'] >= 1) {
+                $tasa_peso = (float)$row['pesoDolar'];
+            }
+            $tasa_peso = round($tasa_peso, 4);
         }
         $stmt->close();
     }

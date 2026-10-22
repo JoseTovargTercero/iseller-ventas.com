@@ -12,13 +12,12 @@ $plan = in_array($_GET['plan'] ?? '', ['mensual', 'anual'], true) ? $_GET['plan'
     <title>Registro — iSeller</title>
     <meta name="description" content="Regístrate en iSeller. Empieza gratis durante el primer mes.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="publico/production/images/favicon.ico" type="image/ico">
+    <link rel="icon" href="web/img/favicon-32x32.png" type="image/png" sizes="32x32">
 
-    <!-- SweetAlert2 -->
-    <script src="publico/assets/sweetalert2.all.min.js"></script>
-
-    <!-- Google Fonts — same as landing -->
-    <link href="publico/vendors/fonts/fonts.css" rel="stylesheet">
+    <!-- Fuentes: solo Inter+Sora; precarga de los 2 archivos que usa esta página -->
+    <link rel="preload" href="publico/vendors/fonts/font_15.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="publico/vendors/fonts/font_34.woff2" as="font" type="font/woff2" crossorigin>
+    <link href="publico/build/css/fonts-core.css" rel="stylesheet">
 
     <style>
         /* ============================================================
@@ -904,7 +903,7 @@ $plan = in_array($_GET['plan'] ?? '', ['mensual', 'anual'], true) ? $_GET['plan'
             <!-- Logo -->
             <div class="left-header">
                 <a href="/" aria-label="Volver al inicio">
-                    <img src="publico/production/images/logo1-inv-compact.png" alt="iSeller logotipo">
+                    <img src="publico/production/images/logo1-inv-96.png" alt="iSeller logotipo" width="32" height="32" decoding="async">
                 </a>
             </div>
 
@@ -1252,8 +1251,8 @@ $plan = in_array($_GET['plan'] ?? '', ['mensual', 'anual'], true) ? $_GET['plan'
         <input type="password" id="hidden_password" name="password">
     </form>
 
-    <!-- External JS -->
-    <script type="text/javascript" src="publico/vendors/jquery/jquery-3.7.1.min.js"></script>
+    <!-- External JS (defer: no bloquea el render) -->
+    <script defer src="publico/assets/sweetalert2.all.min.js"></script>
 
     <script>
         const plan = <?php echo json_encode($plan); ?>;

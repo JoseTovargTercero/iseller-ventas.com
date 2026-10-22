@@ -67,19 +67,66 @@ if (!$apkPath || !$rootDir || strpos($apkPath, $rootDir) !== 0 || !is_file($apkP
     salirJson(404, ['ok' => false, 'error' => 'APK no disponible en el servidor']);
 }
 
-// ── Descarga directa del APK ───────────────────────────────────────────────────
+// ── Descarga del APK con soporte de reanudación (Range) ───────────────────────
 if (($_GET['descargar'] ?? '') === '1') {
-    $tamano = filesize($apkPath);
+    $tamano = (int)filesize($apkPath);
+    @set_time_limit(0);
+    ignore_user_abort(true);
+
+    $inicio = 0;
+    $fin = $tamano - 1;
+    $parcial = false;
+
+    $rango = trim($_SERVER['HTTP_RANGE'] ?? '');
+    if ($rango !== '' && preg_match('/^bytes=(\d*)-(\d*)$/', $rango, $m)) {
+        if ($m[1] === '' && $m[2] !== '') {
+            $inicio = max(0, $tamano - (int)$m[2]);   // bytes=-N (últimos N)
+        } else {
+            $inicio = (int)$m[1];
+            if ($m[2] !== '') {
+                $fin = min((int)$m[2], $tamano - 1);
+            }
+        }
+        if ($inicio > $fin || $inicio >= $tamano) {
+            header('Content-Range: bytes */' . $tamano);
+            http_response_code(416);
+            exit;
+        }
+        $parcial = true;
+    }
+
+    $longitud = $fin - $inicio + 1;
+
     header('Content-Type: application/vnd.android.package-archive');
     header('Content-Disposition: attachment; filename="iseller_pos.apk"');
-    if ($tamano !== false) {
-        header('Content-Length: ' . $tamano);
-    }
+    header('Accept-Ranges: bytes');
+    header('Content-Length: ' . $longitud);
     header('Cache-Control: no-store');
+    if ($parcial) {
+        http_response_code(206);
+        header('Content-Range: bytes ' . $inicio . '-' . $fin . '/' . $tamano);
+    }
+
     if (ob_get_level()) {
         ob_end_clean();
     }
-    readfile($apkPath);
+
+    $fp = @fopen($apkPath, 'rb');
+    if ($fp === false) {
+        exit;
+    }
+    fseek($fp, $inicio);
+    $restante = $longitud;
+    while ($restante > 0 && !feof($fp) && !connection_aborted()) {
+        $bloque = fread($fp, min(65536, $restante));
+        if ($bloque === false || $bloque === '') {
+            break;
+        }
+        echo $bloque;
+        flush();
+        $restante -= strlen($bloque);
+    }
+    fclose($fp);
     exit;
 }
 

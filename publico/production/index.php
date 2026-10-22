@@ -68,12 +68,29 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <title>Inicio </title>
         <?php require_once('includes/headers.php'); ?>
         <link rel="stylesheet" href="theme.css">
-        <script src="../vendors/apexcharts/apexcharts.min.js"></script>
+        <!-- 940 KB: se descarga en paralelo y sin bloquear el render; los gráficos arrancan en DOMContentLoaded -->
+        <script src="../vendors/apexcharts/apexcharts.min.js" defer></script>
 
 
     </head>
 
     <body class='nav-md'>
+        <script>
+            // La primera petición de datos arranca ya, sin esperar a ApexCharts (940 KB)
+            window.__dashboardInicial = fetch('../../configurar/index_back.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sucursal: null,
+                    usuario: null,
+                    periodo: 'mes',
+                    periodoPie: 'mes',
+                    periodoProductos: 'mes'
+                })
+            });
+        </script>
         <div class='container body'>
             <div class='main_container'>
 
@@ -696,7 +713,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                     <script>
-                        document.getElementById('sucursal').addEventListener('change', function() {
+                        document.getElementById('sucursal')?.addEventListener('change', function() {
                             const sucursalId = this.value;
                             const usuarioSelect = document.getElementById('usuario');
                             usuarioSelect.innerHTML = '<option value="todos">-- Seleccione --</option>'; // Limpiar opciones anteriores
@@ -862,6 +879,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="js/nombre_pagina.js"></script>
 
         <script>
+        // ApexCharts (defer) se ejecuta antes de este evento, así que ya está disponible
+        document.addEventListener('DOMContentLoaded', function () {
             // En el WebView de la app manda el ancho real del teléfono
             const esMovil = window.innerWidth < 640;
             let esMovilPrev = esMovil;
@@ -1461,7 +1480,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             let sparklineMes = null;
 
             function cargar_tabla(sucursal = null, usuario = null, periodo = 'mes', periodoPie = 'mes', periodoProductos = 'mes') {
-                fetch('../../configurar/index_back.php', {
+                // La carga inicial ya viene en curso desde el inicio del <body> (en paralelo con ApexCharts)
+                let peticion;
+                if (!sucursal && !usuario && window.__dashboardInicial) {
+                    peticion = window.__dashboardInicial;
+                    window.__dashboardInicial = null;
+                } else {
+                    window.__dashboardInicial = null; // descartar la prefetch si hay filtros
+                    peticion = fetch('../../configurar/index_back.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -1473,7 +1499,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             periodoPie: periodoPie,
                             periodoProductos: periodoProductos
                         })
-                    })
+                    });
+                }
+                peticion
                     .then(response => response.json())
                     .then(json => {
                         console.log(json)
@@ -1580,6 +1608,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     currentPeriodoProductos
                 );
             }
+            // El onclick del botón "Actualizar" del HTML necesita la función en window
+            window.refreshChart = refreshChart;
 
             // Render dinámico con iconos vectoriales
             function renderInformacionInteres(json) {
@@ -1612,13 +1642,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             // Llamada inicial
             cargar_tabla(null, null, 'mes', 'mes');
 
-            document.getElementById('sucursal').addEventListener('change', function() {
+            document.getElementById('sucursal')?.addEventListener('change', function() {
                 cargar_tabla(this.value, null, currentPeriodo, currentPeriodoPie, currentPeriodoProductos);
             });
-            document.getElementById('usuario').addEventListener('change', function() {
-                const sucursal = document.getElementById('sucursal').value;
+            document.getElementById('usuario')?.addEventListener('change', function() {
+                const sucursal = document.getElementById('sucursal')?.value;
                 cargar_tabla(sucursal, this.value, currentPeriodo, currentPeriodoPie, currentPeriodoProductos);
             });
+        });
         </script>
 
 

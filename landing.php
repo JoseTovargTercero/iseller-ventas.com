@@ -17,10 +17,12 @@
     <meta property="og:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller.">
     <meta property="og:image" content="https://iseller-tiendas.com/publico/production/images/logo1-inv-compact.png">
 
-    <link rel="icon" href="publico/production/images/favicon.ico" type="image/ico">
+    <link rel="icon" href="web/img/favicon-32x32.png" type="image/png" sizes="32x32">
 
-    <!-- Google Fonts -->
-    <link href="publico/vendors/fonts/fonts.css" rel="stylesheet">
+    <!-- Fuentes: solo Inter+Sora; precarga de los 2 archivos que usa esta página -->
+    <link rel="preload" href="publico/vendors/fonts/font_15.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="publico/vendors/fonts/font_34.woff2" as="font" type="font/woff2" crossorigin>
+    <link href="publico/build/css/fonts-core.css" rel="stylesheet">
 
     <style>
         /* ============================================================
@@ -1615,7 +1617,7 @@
         <div class="container">
             <div class="nav-inner">
                 <a href="/" class="nav-logo" aria-label="iSeller — Inicio">
-                    <img src="publico/production/images/logo1-inv-compact.png" alt="iSeller logotipo">
+                    <img src="publico/production/images/logo1-inv-96.png" alt="iSeller logotipo" width="28" height="28" decoding="async">
                 </a>
                 <ul class="nav-links" role="list">
                     <li><a href="#funcionalidades">Funcionalidades</a></li>
@@ -1638,9 +1640,9 @@
          HERO
     ============================================================ -->
     <section id="hero">
-        <video class="hero-bg-video" autoplay loop muted playsinline poster="publico/production/images/hero.webp">
-            <source src="publico/production/images/hero.webm" type="video/webm">
-        </video>
+        <video class="hero-bg-video" id="heroVideo" autoplay loop muted playsinline preload="none"
+            poster="publico/production/images/hero.webp"
+            data-src="publico/production/images/hero.webm"></video>
         <div class="container">
             <div class="hero-grid">
                 <!-- Content -->
@@ -1960,7 +1962,7 @@
                             <div class="currency-name">Peso colombiano</div>
                             <div class="currency-symbol">COP ($)</div>
                         </div>
-                        <div class="currency-rate" id="rate-cop">$ 4,158</div>
+                        <div class="currency-rate" id="rate-cop">$ 4,158.0000</div>
                     </div>
                     <div class="currency-card reveal" style="opacity: 0;">
                     </div>
@@ -2168,7 +2170,7 @@
         <div class="container">
             <div class="footer-inner">
                 <div class="nav-logo" style="opacity: 0.6;">
-                    <img src="publico/production/images/logo1-inv-compact.png" alt="iSeller logotipo" style="height:24px;">
+                    <img src="publico/production/images/logo1-inv-96.png" alt="iSeller logotipo" style="height:24px;" width="24" height="24" decoding="async">
                 </div>
                 <nav class="footer-links" aria-label="Pie de página">
                     <a href="#funcionalidades">Funcionalidades</a>
@@ -2225,6 +2227,27 @@
             });
             document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
 
+            /* ── Video de fondo ────────────────────────────
+               Se descarga después del evento load para no competir con el
+               primer render. Sin src si hay reduce-motion o ahorro de datos:
+               queda el poster. */
+            const heroVideo = document.getElementById('heroVideo');
+            const sinVideo = matchMedia('(prefers-reduced-motion: reduce)').matches ||
+                (navigator.connection && navigator.connection.saveData);
+            if (heroVideo && !sinVideo) {
+                const arrancarVideo = () => {
+                    heroVideo.addEventListener('loadeddata', () => heroVideo.play().catch(() => {}), {
+                        once: true
+                    });
+                    heroVideo.src = heroVideo.dataset.src;
+                    heroVideo.load();
+                };
+                if (document.readyState === 'complete') arrancarVideo();
+                else window.addEventListener('load', arrancarVideo, {
+                    once: true
+                });
+            }
+
             /* ── Live stats ─────────────────────────────── */
             fetch('configurar/stats_landing.php')
                 .then(r => r.json())
@@ -2241,7 +2264,14 @@
                         const rateBcv = document.getElementById('rate-bcv');
                         if (rateBcv && data.tasa_bcv) rateBcv.textContent = 'Bs. ' + data.tasa_bcv;
                         const rateCop = document.getElementById('rate-cop');
-                        if (rateCop && data.tasa_peso) rateCop.textContent = '$ ' + data.tasa_peso;
+                        const cop = Number(data.tasa_peso);
+                        if (rateCop && Number.isFinite(cop) && cop >= 1) {
+                            // COP con 4 decimales.
+                            rateCop.textContent = '$ ' + cop.toLocaleString('en-US', {
+                                minimumFractionDigits: 4,
+                                maximumFractionDigits: 4
+                            });
+                        }
                     }
                 }).catch(() => {});
 
