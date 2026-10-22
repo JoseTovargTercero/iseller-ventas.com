@@ -74,7 +74,7 @@ try {
             if ($tasa_peso < 1 && (float)$row['pesoDolar'] >= 1) {
                 $tasa_peso = (float)$row['pesoDolar'];
             }
-            $tasa_peso = round($tasa_peso, 4);
+            $tasa_peso = round($tasa_peso);
         }
         $stmt->close();
     }

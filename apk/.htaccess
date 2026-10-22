@@ -1,1 +1,6 @@
-Require all denied
+# El APK se descarga desde la landing; no listar el directorio.
+Options -Indexes
+
+<FilesMatch "\.apk$">
+    Require all granted
+</FilesMatch>

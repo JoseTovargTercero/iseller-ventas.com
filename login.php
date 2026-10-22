@@ -9,7 +9,7 @@
     <title>Iniciar sesión — iSeller</title>
     <meta name="description" content="Gestiona tu negocio desde un solo lugar. Ingresa a tu cuenta de iSeller.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="web/img/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="publico/production/images/favicon.png" type="image/png" sizes="32x32">
 
     <!-- Fuentes: solo Inter+Sora; precarga de los 2 archivos que usa esta página -->
     <link rel="preload" href="publico/vendors/fonts/font_15.woff2" as="font" type="font/woff2" crossorigin>

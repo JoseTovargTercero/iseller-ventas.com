@@ -17,7 +17,7 @@
     <meta property="og:description" content="Gestiona múltiples sucursales, inventario en tiempo real y ventas con iSeller.">
     <meta property="og:image" content="https://iseller-tiendas.com/publico/production/images/logo1-inv-compact.png">
 
-    <link rel="icon" href="web/img/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="publico/production/images/favicon.png" type="image/png" sizes="32x32">
 
     <!-- Fuentes: solo Inter+Sora; precarga de los 2 archivos que usa esta página -->
     <link rel="preload" href="publico/vendors/fonts/font_15.woff2" as="font" type="font/woff2" crossorigin>
@@ -395,6 +395,7 @@
             font-size: 0.9rem;
             font-weight: 600;
             letter-spacing: -0.01em;
+            text-decoration: none;
             transition: var(--transition-fast);
         }
 
@@ -1659,15 +1660,15 @@
                     </p>
 
                     <div class="hero-platforms reveal">
-                        <span class="hero-platform" title="Úsalo desde cualquier navegador">
+                        <a class="hero-platform" href="registro.php" title="Crear una cuenta gratis">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="2" y="4" width="20" height="16" rx="2" />
                                 <path d="M2 9h20" />
                                 <path d="M5 6.5h.01M8 6.5h.01" />
                             </svg>
                             Web
-                        </span>
-                        <span class="hero-platform" title="App de escritorio para Windows">
+                        </a>
+                        <a class="hero-platform" href="windows/iSellerPOS-Setup-1.0.0.exe" download title="Descargar iSeller POS para Windows">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 6.2l7.2-1v6.3H3V6.2z" />
                                 <path d="M12.6 4.9L21 3.5v8h-8.4V4.9z" />
@@ -1675,8 +1676,8 @@
                                 <path d="M12.6 12.9H21v7.6l-8.4-1.4v-6.2z" />
                             </svg>
                             Windows
-                        </span>
-                        <span class="hero-platform" title="App para Android">
+                        </a>
+                        <a class="hero-platform" href="apk/iseller_pos.apk" download title="Descargar iSeller POS para Android">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M6.4 12.6a5.6 5.6 0 0111.2 0z" />
                                 <path d="M8.8 9.6L7.4 7" />
@@ -1684,7 +1685,7 @@
                                 <path d="M10 10.7h.01M14 10.7h.01" />
                             </svg>
                             Android
-                        </span>
+                        </a>
                     </div>
                 </div>
                 <div class="hero-features-bar reveal">
@@ -1961,7 +1962,7 @@
                             <div class="currency-name">Pesos colombianos 2</div>
                             <div class="currency-symbol">COP ($)</div>
                         </div>
-                        <div class="currency-rate" id="rate-cop">$ 4,158.0000</div>
+                        <div class="currency-rate" id="rate-cop">$ 4,158</div>
                     </div>
                     <div class="currency-card reveal" style="opacity: 0;">
                     </div>
@@ -2273,14 +2274,11 @@
                             });
                         }
 
-                        // Pesos colombianos 2: COP por USD.
+                        // Pesos colombianos 2: COP por USD, sin decimales.
                         const rateCop = document.getElementById('rate-cop');
                         const cop = Number(data.tasa_peso);
                         if (rateCop && Number.isFinite(cop) && cop >= 1) {
-                            rateCop.textContent = '$ ' + cop.toLocaleString('en-US', {
-                                minimumFractionDigits: 4,
-                                maximumFractionDigits: 4
-                            });
+                            rateCop.textContent = '$ ' + Math.round(cop).toLocaleString('en-US');
                         }
                     }
                 }).catch(() => {});

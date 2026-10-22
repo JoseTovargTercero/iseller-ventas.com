@@ -1336,9 +1336,7 @@ if ($es_tienda_individual && $negocio_data) {
         }
     </style>
 
-    <!-- Scripts -->
-    <script src="../publico/vendors/fuse/fuse.min.js"></script>
-    <script src="../publico/vendors/dexie/dexie.min.js"></script>
+    <!-- Scripts: fuse/dexie se cargan al final, junto al script que los usa -->
 
 </head>
 
@@ -1997,7 +1995,7 @@ if ($es_tienda_individual && $negocio_data) {
         <!-- BANNER DEL MARKETPLACE (Genérico) - Nuevo diseño -->
         <style>
             .mkt-hero {
-                background-image: url('assets/img/bg-hero-a.png');
+                background-image: url('assets/img/bg-hero-a.webp');
                 border-bottom: 1px solid #e8f5e9;
                 padding-top: 68px;
                 background-position: center;
@@ -2218,7 +2216,7 @@ if ($es_tienda_individual && $negocio_data) {
                     </div>
                 </div>
                 <div class="mkt-hero-img-col">
-                    <img src="assets/img/bat-1.png" alt="iSeller Store - Mercado local" loading="eager">
+                    <img src="assets/img/bat-1.webp" alt="iSeller Store - Mercado local" loading="eager">
                 </div>
             </div>
         </div>
@@ -2679,6 +2677,10 @@ if ($es_tienda_individual && $negocio_data) {
     <!-- Notiflix Library -->
     <script src="assets/dist/notiflix-Notiflix-67ba12d/dist/notiflix-aio-3.2.8.min.js"></script>
 
+    <!-- Búsqueda y caché local: se usan en el script de abajo, no antes -->
+    <script src="../publico/vendors/fuse/fuse.min.js"></script>
+    <script src="../publico/vendors/dexie/dexie.min.js"></script>
+
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const ref = urlParams.get('ref');
@@ -2855,11 +2857,7 @@ if ($es_tienda_individual && $negocio_data) {
             },
         ];
 
-        // Precarga imágenes
-        heroSlides.forEach(s => {
-            const i = new Image();
-            i.src = s.img;
-        });
+        // Ya no se precargan bg-hero-0/2: eran 4.3 MB y el slider no tiene destino (#hero-bg no existe)
 
         let heroSlideIndex = 0;
         let isAnimating = false;
