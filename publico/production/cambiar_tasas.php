@@ -680,6 +680,9 @@ if ($_SESSION["validate"] != "ok") {
                                     .then(res => {
                                         if (res.status === 'success') {
                                             Alerta.toast('success', res.message);
+                                            if (typeof window.tutorialAvanzar === 'function') {
+                                                window.tutorialAvanzar();
+                                            }
                                         } else {
                                             Alerta.toast('error', res.message);
                                         }

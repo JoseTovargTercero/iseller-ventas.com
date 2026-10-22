@@ -1,0 +1,444 @@
+<?php
+// Inicialización
+include 'la-carta.php';
+$cart = new Cart;
+
+require_once('db.php');
+require_once('session.php');
+require("_tasas_cambio.php");
+require("_calculadrora_precios.php");
+
+$desscontado = '';
+
+// Variables globales que seran re-escritas por cada carrito
+$id_sucursal = $_SESSION["sucursal"] ?? 9;
+$bss_id = $_SESSION["bss_id"] ?? 3;
+
+// Factory para soportar multi-tenant de tasas de cambio
+$_tasas_cache = [];
+function getCalculadora(int $bss_id, $recompensas = []) {
+    global $_tasas_cache, $conexion;
+    if (!isset($_tasas_cache[$bss_id])) {
+        $stmt = $conexion->prepare("SELECT * FROM cambio WHERE bss_id = ? LIMIT 1");
+        $stmt->bind_param('i', $bss_id);
+        $stmt->execute();
+        $cambioRow = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $stmt2 = $conexion->prepare("SELECT tasas FROM cambios_mostrados WHERE bss_id = ? LIMIT 1");
+        $stmt2->bind_param('i', $bss_id);
+        $stmt2->execute();
+        $mostradosRow = $stmt2->get_result()->fetch_assoc();
+        $stmt2->close();
+        $data_monedas_neg = $mostradosRow ? json_decode($mostradosRow['tasas'], true) : [];
+
+        $bcvRes = $conexion->query("SELECT valor FROM cambios_bcv_historico ORDER BY time DESC LIMIT 1");
+        $bcvRow = $bcvRes ? $bcvRes->fetch_assoc() : null;
+        $bcv_val = $bcvRow ? (float)$bcvRow['valor'] : 0;
+
+        $_tasas_cache[$bss_id] = [
+            'pesoDolar'    => (float)($cambioRow['pesoDolar'] ?? 0),
+            'peso_bolivar' => (float)($cambioRow['peso_bolivar'] ?? 0),
+            'bolivar_peso' => (float)($cambioRow['bolivar_peso'] ?? 0),
+            'dolarBolivar' => (float)($cambioRow['DolarBolivar'] ?? 0),
+            'bcv'          => $bcv_val,
+            'data_monedas' => $data_monedas_neg,
+        ];
+    }
+    $t = $_tasas_cache[$bss_id];
+    return new CalculadoraPrecios(
+        $t['pesoDolar'], $t['peso_bolivar'], $t['dolarBolivar'],
+        $t['bolivar_peso'], $t['bcv'], $t['data_monedas'], $recompensas
+    );
+}
+
+// Obtener configuración del sistema
+
+// Funciones auxiliares
+function diaSemana($fecha)
+{
+    return date('N', strtotime($fecha));
+}
+
+function semanaAno($fecha)
+{
+    return date('W', strtotime($fecha));
+}
+
+// Validar acción
+if (isset($_REQUEST['action']) && !empty($_REQUEST['action'])) {
+    $action = $_REQUEST['action'];
+
+    switch ($action) {
+        case 'enviarPedidos':
+            procesarCarritos();
+            break;
+
+        default:
+            echo json_encode(['status' => false, 'data' => 'No se ha especificado una acción']);
+    }
+} else {
+    echo json_encode(['status' => false, 'data' => 'No se ha especificado una acción']);
+}
+
+// -----------------------------------------------------------
+// FUNCIONES
+// -----------------------------------------------------------
+
+function procesarCarritos()
+{
+    $pedidos = $_REQUEST['pedidos'];
+    global $conexion;
+    // recorre pedidos, cada pedido es un carrito. que posee un 'metodoPago', despacho (puede se placeOrder o placeOrderCredito), y un array de productos
+    $pedidos = json_decode($pedidos, true);
+    if (empty($pedidos)) {
+        echo json_encode(['status' => false, 'data' => 'No hay pedidos para procesar']);
+        return;
+    }
+
+    $errores = [];
+
+    foreach ($pedidos as $pedido) {
+        $metodoPago = str_replace('option', '', $pedido['metodoPago']);
+        $valorFinalBs = $pedido['valorFinalBs'];
+        $valorFinalCop = $pedido['valorFinalCop'];
+        $despacho = $pedido['despacho'];
+        $productos = $pedido['productos'];
+        $idPedido = $pedido['id'];
+        $cliente = $pedido['datosCliente'] ?? [];
+
+        if (empty($productos)) {
+            $errores[] = "El pedido con mtodo de pago '$metodoPago' no tiene productos.";
+            continue;
+        }
+        
+        // Multi-tenant fix: Assign the global bss_id and id_sucursal for this order
+        $primerProd = reset($productos);
+        global $bss_id, $id_sucursal;
+        $bss_id = (int)$primerProd['bss_id'];
+        $id_sucursal = (int)$primerProd['id_sucursal'];
+
+        // Crear un nuevo carrito
+        $cart = new Cart;
+
+        // Validar y Actualizar precios con DB
+        $productosValidados = [];
+        $valorFinalVenta = 0;
+        $valorFinalBs = 0;
+        $valorFinalCop = 0;
+
+        foreach ($productos as $prodFrontend) {
+            $idProd = (int)$prodFrontend['id'];
+            
+            // Consultar datos reales
+            $sqlProd = "SELECT p.*, s.stock, s.porcentaje, s.bss_id, s.id_sucursal 
+                        FROM productos p 
+                        INNER JOIN stock s ON p.id = s.id_producto 
+                        WHERE p.id = ? LIMIT 1";
+            
+            $stmtP = $conexion->prepare($sqlProd);
+            $stmtP->bind_param("i", $idProd);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            
+            if ($resP->num_rows === 0) {
+                 continue; // Producto no existe o no disponible en sucursal
+            }
+            
+            $prodDB = $resP->fetch_assoc();
+            $stmtP->close();
+
+             // Validar Stock
+             $qty = (float)$prodFrontend['qty'];
+             // Si es venta al mayor, validar stock de bultos? (Lógica existente asumida correcta, pero se puede reforzar)
+             if ($qty > $prodDB['stock'] && $prodDB['mayor'] != '1') {
+                 $errores[$idPedido] = "Stock insuficiente para el producto: " . $prodDB['nombre'];
+                 break; 
+             }
+
+             // Recalcular Precios
+             $precios = getCalculadora($prodDB['bss_id'])->calcularPrecios($prodDB);
+             $valorUnidad = (float) $prodDB['precio_compra'] / (float) $prodDB['cantidad_unidades'];
+
+             // Sobreescribir datos del frontend con los calculados
+             $prodFrontend['price'] = $precios['precio_venta_dolar'];
+             $prodFrontend['pricePeso'] = $precios['precio_venta_peso'];
+             $prodFrontend['priceBolivar'] = $precios['precio_venta_bs'];
+             
+             $prodFrontend['price_C'] = $valorUnidad;
+             $prodFrontend['price_C_Bs'] = $valorUnidad * $_tasas_cache[$prodDB['bss_id']]['dolarBolivar'];
+             $prodFrontend['price_C_Cop'] = $valorUnidad * $_tasas_cache[$prodDB['bss_id']]['pesoDolar'];
+
+             // Acumular totales reales
+             $valorFinalVenta += $prodFrontend['price'] * $qty;
+             $valorFinalBs += $prodFrontend['priceBolivar'] * $qty;
+             $valorFinalCop += $prodFrontend['pricePeso'] * $qty;
+
+             $prodFrontend['bss_id'] = $prodDB['bss_id'];
+             $prodFrontend['id_sucursal'] = $prodDB['id_sucursal'];
+
+             agregarAlCarrito($cart, $prodFrontend);
+        }
+
+        if (isset($errores[$idPedido])) {
+            $cart->destroy();
+            continue;
+        }
+
+        // Procesar la orden según el método de pago
+        $tipoVeta = ($despacho == '2' ? 'credito' : 'contado'); // Credito/contado
+
+        $respuesta = procesarOrden(
+            $conexion,
+            $cart,
+            $tipoVeta,
+            $despacho,
+            $metodoPago,
+            $valorFinalBs,
+            $valorFinalCop,
+            $cliente
+        );
+        if (!$respuesta['status']) {
+            $errores[$idPedido] = $respuesta['data'];
+        }
+
+        $cart->destroy();
+    }
+    if (empty($errores)) {
+        echo json_encode(['status' => true, 'data' => 'Todos las vetnas se procesaron correctamente.']);
+    } else {
+        echo json_encode(['status' => false, 'data' => $errores]);
+    }
+}
+
+
+
+function agregarAlCarrito($cart, $producto)
+{
+    $mayor = $producto['mayor'] == 'undefined' ? '0' : ($producto['mayor'] ?? 0);
+
+    $itemData = [
+        'id' => $producto['id'],
+        'name' => $producto['name'],
+        'price_C' => $producto['price_C'],
+        'price_C_Bs' => $producto['price_C_Bs'],
+        'price_C_Cop' => $producto['price_C_Cop'],
+        'price' => floatval($producto['price']),
+        'pricePeso' => floatval($producto['pricePeso']),
+        'priceBolivar' => floatval($producto['priceBolivar']),
+        'qty' => $producto['qty'],
+        'mayor' => $mayor,
+        'cantidadPaca' => $producto['cantidadPaca'],
+        'bss_id' => $producto['bss_id'],
+        'id_sucursal' => $producto['id_sucursal']
+    ];
+
+    $cart->insert($itemData);
+}
+
+
+function es_venta_mayor($cart)
+{
+    $result = false;
+
+    foreach ($cart->contents() as $item) {
+        if ($item['mayor'] == '1') {
+            $result = true;
+        }
+    }
+    return $result;
+}
+
+/* * Procesa la orden de compra, ya sea al contado o a crédito.
+ * @param object $conexion Conexión a la base de datos.
+ * @param object $cart Objeto del carrito de compras.
+ * @param string $tipoVenta Tipo de venta ( 1 es venta normal. 2 es credito, 3 es descuento, 4 es venta al mayor ).
+ * @param int $compraTipo Tipo de compra (1 para detal, 2 para mayor).
+ * @param int $pagoTipo Tipo de pago (Punto, biopago, pesos, etc).
+ * @param float $precioBs Precio en bolívares.
+ * @param float $precioCop Precio en pesos colombianos.
+ */
+
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = [])
+{
+    global $id_sucursal, $bss_id;
+
+    if ($cart->total_items() <= 0 || empty($_SESSION['id'])) {
+        echo json_encode(['status' => false, 'data' => 'No hay productos en el carrito']);
+        return;
+    }
+
+    $conexion_store->begin_transaction();
+
+    try {
+        // Datos base
+        $fechaVenta = date('Y-m-d');
+        $precioCop = formatPeso($precioCop ?? 0);
+
+        $valorFinalVenta = $cart->total();
+        $compraTipo = 1; // Detal por defecto
+        if ($tipo == 'credito') {
+            $tipoVenta = 2;
+        }
+
+        // verifica el $cart, si hay algun producto al mayor, el statuV pasa a ser 4
+        if (es_venta_mayor($cart)) {
+            $compraTipo = 4; // Venta al mayor
+            if ($tipo == 'credito') {
+                $pagoTipo = 4;
+            } else {
+                $tipoVenta = 4;
+            }
+        }
+
+
+        $mes = date('Y-m');
+        $ano = date('Y');
+        $semana = date('Y-W');
+        $dia = date('N');
+
+        // Registrar orden
+        $stmt = $conexion_store->prepare("
+        INSERT INTO tienda_ordenes (
+            status, customer_id, total_price, created, modified, fecha,
+            semana, ano, total_price_bs, total_price_cop, tipoPago,
+            dia, id_sucursal, bss_id, negocio_id
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+        if (!$stmt) {
+            throw new Exception("Error al preparar la consulta: " . $conexion_store->error);
+        }
+
+        $stmt->bind_param(
+            "iisssssddsiiii",
+            $tipoVenta,
+            $_SESSION['id'],
+            $valorFinalVenta,
+            $fechaVenta,
+            $mes,
+            $semana,
+            $ano,
+            $precioBs,
+            $precioCop,
+            $pagoTipo,
+            $dia,
+            $id_sucursal,
+            $bss_id,
+            $bss_id
+        );
+
+        if (!$stmt->execute()) {
+            $error = $stmt->error;
+            $stmt->close();
+            throw new Exception("Error al ejecutar la inserción en orden: " . $error);
+        }
+
+        $orderID = $stmt->insert_id;
+        $stmt->close();
+
+        if ($orderID <= 0) {
+            throw new Exception("No se pudo obtener el ID de la orden insertada.");
+        }
+
+
+        // Guardar artículos
+        guardarArticulosOrden($conexion_store, $cart, $orderID);
+
+      
+        $conexion_store->commit(); // Éxito
+
+        $cart->destroy();
+
+        return ['status' => true];
+        echo json_encode(['status' => true, 'data' => $msg, 'id' => $orderID]);
+    } catch (Exception $e) {
+        $conexion_store->rollback();
+        return ['status' => false, 'data' => 'Error al procesar la orden: ' . $e->getMessage()];
+    }
+}
+
+
+
+function guardarArticulosOrden($conexion_store, $cart, $orderID)
+{
+    global $dolarBolivar, $pesoDolar, $id_sucursal, $bss_id, $conexion;
+
+    // Preparar consulta de inserción para tienda_orden_articulos
+    $insertStmt = $conexion_store->prepare(
+        "INSERT INTO tienda_orden_articulos (
+            order_id, product_id, quantity, precio, bolivar, peso,
+            precio_venta_dolar, precio_venta_bs, precio_venta_cop, id_sucursal, bss_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+
+    // Preparar consultas para stock
+    $stmtStock  = $conexion->prepare("SELECT stock, id_stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+    // para obtener la cantidad actual
+    $updateStmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+    $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
+    // para actualizar la cantidad actual
+    $stmtStockParaMayor  = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+
+
+    foreach ($cart->contents() as $item) {
+
+        // Ejecutar inserción del artículo de la orden
+        $insertStmt->bind_param(
+            "iiddddddddi",
+            $orderID,
+            $item['id'],
+            $item['qty'],
+            $item['price_C'],
+            $item['price_C_Bs'],
+            $item['price_C_Cop'],
+            $item['price'],
+            $item['priceBolivar'],
+            $item['pricePeso'],
+            $item['id_sucursal'],
+            $item['bss_id']
+        );
+        $insertStmt->execute();
+
+
+
+        if ($item['mayor'] == '1') {
+
+            $stmtStock->bind_param("iii", $item['id'], $item['id_sucursal'], $item['bss_id']);
+            $stmtStock->execute();
+            $result = $stmtStock->get_result()->fetch_assoc();
+            $id_stock = $result['id_stock'];
+
+
+
+            $stmtStockParaMayor->bind_param("iii", $id_stock, $item['id_sucursal'], $item['bss_id']);
+            $stmtStockParaMayor->execute();
+            $result = $stmtStockParaMayor->get_result()->fetch_assoc();
+            $stock = max(0, $result['stock'] - ($item['qty'] * $item['cantidadPaca']));
+            // se debe multiplicar por la cantidad
+
+
+
+
+            $updateStmtMayor->bind_param("iiii", $stock, $id_stock, $item['id_sucursal'], $item['bss_id']);
+            $updateStmtMayor->execute();
+        } else {
+
+            // Actualizar stock
+            $stmtStock->bind_param("iii", $item['id'], $item['id_sucursal'], $item['bss_id']);
+            $stmtStock->execute();
+            $result = $stmtStock->get_result()->fetch_assoc();
+            $stock = max(0, $result['stock'] - $item['qty']);
+
+
+            $updateStmt->bind_param("iiii", $stock, $item['id'], $item['id_sucursal'], $item['bss_id']);
+            $updateStmt->execute();
+        }
+    }
+
+    // Cerrar todas las sentencias
+    $insertStmt->close();
+    $stmtStock->close();
+    $updateStmt->close();
+    $updateStmtMayor->close();
+}

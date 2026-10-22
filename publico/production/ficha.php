@@ -22,7 +22,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $codigo    = $rowP['codigo'] ?? '';
 
     $dia    = date('Y-m-d');
-    $semana = date('Y-W');
+    $semana = date('o-W');
     $mes    = date('Y-m');
     $anio   = date('Y');
 
@@ -33,14 +33,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $stmtKpi = $conexion->prepare(
         "SELECT
             /* ── Hoy ── */
-            SUM(CASE WHEN o.modified = ? THEN
+            SUM(CASE WHEN DATE(o.created) = ? THEN
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
                     ELSE oa.precio_venta_dolar * oa.quantity
                 END
             ELSE 0 END) AS dia_ventas,
 
-            SUM(CASE WHEN o.modified = ? THEN
+            SUM(CASE WHEN DATE(o.created) = ? THEN
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
                     ELSE oa.precio_venta_dolar * oa.quantity
@@ -48,14 +48,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             ELSE 0 END) AS dia_ganancia,
 
             /* ── Esta semana ── */
-            SUM(CASE WHEN o.semana = ? THEN
+            SUM(CASE WHEN DATE_FORMAT(o.created, '%x-%v') = ? THEN
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
                     ELSE oa.precio_venta_dolar * oa.quantity
                 END
             ELSE 0 END) AS sem_ventas,
 
-            SUM(CASE WHEN o.semana = ? THEN
+            SUM(CASE WHEN DATE_FORMAT(o.created, '%x-%v') = ? THEN
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
                     ELSE oa.precio_venta_dolar * oa.quantity
@@ -63,14 +63,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             ELSE 0 END) AS sem_ganancia,
 
             /* ── Este mes ── */
-            SUM(CASE WHEN o.fecha = ? THEN
+            SUM(CASE WHEN DATE_FORMAT(o.created, '%Y-%m') = ? THEN
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
                     ELSE oa.precio_venta_dolar * oa.quantity
                 END
             ELSE 0 END) AS mes_ventas,
 
-            SUM(CASE WHEN o.fecha = ? THEN
+            SUM(CASE WHEN DATE_FORMAT(o.created, '%Y-%m') = ? THEN
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
                     ELSE oa.precio_venta_dolar * oa.quantity
@@ -97,7 +97,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     $stmtChart = $conexion->prepare(
         "SELECT
-            SUBSTRING(o.fecha, 6, 2) AS mes_num,
+            DATE_FORMAT(o.created, '%m') AS mes_num,
             SUM(
                 CASE WHEN o.status = '4'
                     THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
@@ -154,13 +154,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <?php require_once('includes/headers.php'); ?>
 
         <!-- Flatpickr date picker -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+        <link rel="stylesheet" href="../vendors/flatpickr/flatpickr.min.css">
+        <script src="../vendors/flatpickr/flatpickr.min.js"></script>
+        <script src="../vendors/flatpickr/es.js"></script>
 
         <style>
             /* ── Google Font ─────────────────────────────────────────── */
-            @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap');
+            @import url('../vendors/fonts/fonts.css');
 
             /* ── Reset / base ────────────────────────────────────────── */
             .ficha-wrap * {
@@ -658,8 +658,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     grid-template-columns: 1fr 1fr;
                 }
 
+                /* La tercera tarjeta quedaba sola y descolgada: ocupa la fila completa */
+                .kpi-card:last-child {
+                    grid-column: 1 / -1;
+                }
+
                 .ficha-header {
                     flex-direction: column;
+                }
+
+                /* Consultar a lo ancho, como en el resto del panel */
+                .btn-filter {
+                    width: 100%;
+                    justify-content: center;
                 }
             }
         </style>
@@ -782,12 +793,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../vendors/fastclick/lib/fastclick.js"></script>
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script src="../vendors/apexcharts/apexcharts.min.js"></script>
         <script src="js/nombre_pagina.js"></script>
 
         <script>
             /* ── ApexCharts ─────────────────────────────────────────────────── */
             (function() {
+                const esMovil = window.innerWidth < 640;
                 const ventasSeries = <?= json_encode($chartVentas) ?>;
                 const gananciasSeries = <?= json_encode($chartGanancias) ?>;
                 const cantidadSeries = <?= json_encode($chartCantidad) ?>;
@@ -849,9 +861,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     xaxis: {
                         categories: meses,
                         labels: {
+                            /* En teléfono los 12 meses se pisaban: menos marcas y más chicas */
+                            tickAmount: esMovil ? 6 : undefined,
+                            rotate: esMovil ? 0 : -45,
                             style: {
                                 colors: '#64748b',
-                                fontSize: '12px'
+                                fontSize: esMovil ? '10px' : '12px'
                             }
                         },
                         axisBorder: {

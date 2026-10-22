@@ -1,6 +1,21 @@
 <?php
 require_once('includes/requires.php');
 
+if (empty($_SESSION['sucursal']) && !empty($_SESSION['bss_id']) && isset($conexion)) {
+    $stmtSucAuto = $conexion->prepare("SELECT id FROM sucursales WHERE bss_id = ?");
+    if ($stmtSucAuto) {
+        $bssIdVal = (int)$_SESSION['bss_id'];
+        $stmtSucAuto->bind_param("i", $bssIdVal);
+        $stmtSucAuto->execute();
+        $resSucAuto = $stmtSucAuto->get_result();
+        if ($resSucAuto && $resSucAuto->num_rows === 1) {
+            $rowSucAuto = $resSucAuto->fetch_assoc();
+            $_SESSION['sucursal'] = (int)$rowSucAuto['id'];
+        }
+        $stmtSucAuto->close();
+    }
+}
+
 if (empty($_SESSION['sucursal']) || $_SESSION['sucursal'] == null) {
     define('PAGINA_INICIO', 'seleccion_sucursal.php');
     header('Location: ' . PAGINA_INICIO);
@@ -65,6 +80,71 @@ if (@$_SESSION["dist_ventas"] == "activa") {
 
 
 
+// Comprobar permiso para venta de productos al mayor
+$puede_vender_al_mayor = false;
+if ($_SESSION['nivel'] == 1) {
+    $puede_vender_al_mayor = true;
+} else {
+    // Si es empleado, verificar si tiene el permiso asignado
+    $stmtPermMayor = $conexion->prepare("
+        SELECT 1 FROM users_permisos up
+        INNER JOIN menu m ON m.id = up.id_item_menu
+        WHERE up.id_user = ? AND m.nombre = 'Venta de productos al mayor'
+        LIMIT 1
+    ");
+    if ($stmtPermMayor) {
+        $stmtPermMayor->bind_param("i", $usuario_id);
+        $stmtPermMayor->execute();
+        $resPermMayor = $stmtPermMayor->get_result();
+        if ($resPermMayor && $resPermMayor->num_rows > 0) {
+            $puede_vender_al_mayor = true;
+        }
+        $stmtPermMayor->close();
+    }
+}
+
+// Pre-cargar items de combos para el negocio y sucursal actual
+$combos_mapa = [];
+$stmtCombos = $conexion->prepare("
+    SELECT 
+        ci.combo_producto_id,
+        ci.producto_id,
+        ci.cantidad,
+        p.nombre,
+        COALESCE(s.stock, 0) AS stock_hijo
+    FROM combo_items ci
+    INNER JOIN productos p ON p.id = ci.producto_id
+    LEFT JOIN stock s ON s.id_producto = p.id AND s.id_sucursal = ? AND s.bss_id = ?
+    WHERE ci.bss_id = ?
+");
+if ($stmtCombos) {
+    $stmtCombos->bind_param("iii", $sucursal, $bss_id, $bss_id);
+    $stmtCombos->execute();
+    $resCombos = $stmtCombos->get_result();
+    while ($rowC = $resCombos->fetch_assoc()) {
+        $cid = (int)$rowC['combo_producto_id'];
+        $qtyC = (float)$rowC['cantidad'];
+        $stkH = (float)$rowC['stock_hijo'];
+        $armables = $qtyC > 0 ? (int)floor($stkH / $qtyC) : 0;
+
+        if (!isset($combos_mapa[$cid])) {
+            $combos_mapa[$cid] = [
+                'stock_disponible' => $armables,
+                'items' => []
+            ];
+        } else {
+            if ($armables < $combos_mapa[$cid]['stock_disponible']) {
+                $combos_mapa[$cid]['stock_disponible'] = $armables;
+            }
+        }
+        $combos_mapa[$cid]['items'][] = [
+            'nombre' => $rowC['nombre'],
+            'cantidad' => $qtyC
+        ];
+    }
+    $stmtCombos->close();
+}
+
 $sql = "SELECT 
             p.cantidad_unidades,
             p.origen,
@@ -74,23 +154,46 @@ $sql = "SELECT
             p.precio_compra,
             p.cantidad_unidades,
             p.mayor,
+            p.es_combo,
             p.id,
             s.stock,
-            p.codigo_barras
+            p.codigo_barras,
+            np.foto_url
         FROM productos p
         INNER JOIN stock s ON p.id = s.id_producto
+        LEFT JOIN negocio_productos np ON np.producto_id = p.id AND np.negocio_id = ?
         WHERE p.activo = 0
         AND s.id_sucursal = ?
         AND s.bss_id = ?";
 
+if (!$puede_vender_al_mayor) {
+    $sql .= " AND (p.mayor IS NULL OR p.mayor != '1')";
+}
+
 $stmt = $conexion->prepare($sql);
-$stmt->bind_param("ii", $sucursal, $bss_id);
+$stmt->bind_param("iii", $bss_id, $sucursal, $bss_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
 $data = [];
 $codigos = [];
 $productos_por_id = [];
+
+// Imágenes disponibles: una sola lectura de directorios al iniciar (evita 404 en consola).
+$imgRoot = __DIR__ . '/../../../iseller_store';
+$listarArchivos = function ($dir) {
+    $set = [];
+    if (is_dir($dir)) {
+        foreach ((array) @scandir($dir) as $f) {
+            if ($f !== '.' && $f !== '..') $set[$f] = true;
+        }
+    }
+    return $set;
+};
+$setOptimized = $listarArchivos($imgRoot . '/assets/img/stock/optimized');
+$setStock     = $listarArchivos($imgRoot . '/assets/img/stock');
+$setTienda    = $listarArchivos($imgRoot . '/assets/img/tiendas/' . (int) $bss_id);
+
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $nombre = strtoupper($row["nombre"]);
@@ -101,18 +204,44 @@ if ($result->num_rows > 0) {
         // Formatear nombre
         /* PRODUCTOS PARA LA BUSQUEDA */
 
-        $valorUnidad = (float) $row['precio_compra'] / (float) $row['cantidad_unidades'];
         $mayor = floatval($row['mayor']);
+        // Al mayor se vende la paca completa: el costo es el del paquete, no el unitario
+        // (si no, la ganancia de esas ventas sale multiplicada por cantidad_unidades).
+        $valorUnidad = $mayor == 1
+            ? (float) $row['precio_compra']
+            : (float) $row['precio_compra'] / (float) $row['cantidad_unidades'];
 
+        // Resolver UNA sola ruta de imagen que exista en disco (o vacío).
+        $fotoUrl = trim($row['foto_url'] ?? '');
+        $imgRef = '';
+        if ($fotoUrl !== '' && isset($setTienda[basename($fotoUrl)])) {
+            $imgRef = $fotoUrl; // foto subida por el negocio
+        } elseif (isset($setOptimized[$row['id'] . '.webp'])) {
+            $imgRef = 'assets/img/stock/optimized/' . $row['id'] . '.webp';
+        } elseif (isset($setStock[$row['id'] . '.png'])) {
+            $imgRef = 'assets/img/stock/' . $row['id'] . '.png';
+        }
+
+        $esCombo = (int)($row['es_combo'] ?? 0);
+        $stockProducto = ($esCombo === 1 && isset($combos_mapa[$row['id']]))
+            ? $combos_mapa[$row['id']]['stock_disponible']
+            : $row['stock'];
+        $comboItemsProd = ($esCombo === 1 && isset($combos_mapa[$row['id']]))
+            ? $combos_mapa[$row['id']]['items']
+            : [];
 
         $productos_por_id[$row['id']] = [
             'id' => $row['id'],
-            'stock' => $row['stock'],
+            'stock' => $stockProducto,
             'porcentaje' => $row['porcentaje'],
             'nombre' => $row['nombre'],
             'cantidad_unidades' => $row['cantidad_unidades'],
             'codigo' => $row['codigo_barras'],
+            'foto' => $imgRef,
             'mayor' => $mayor,
+            'es_combo' => $esCombo,
+            'combo_items' => $comboItemsProd,
+            'origen' => $row['origen'], // 'v' venezolano / 'c' colombiano (para conversión por producto)
             "precio_dolar_visible" => $precios['precio_venta_dolar'], // Precio de Venta
             "precio_peso_visible" => $precios['precio_venta_peso'], // Precio de Venta
             "precio_bs_visible" => $precios['precio_venta_bs'], // Precio de Venta
@@ -131,13 +260,16 @@ if ($result->num_rows > 0) {
 
             $data["$codigo"] = [
                 'id' => $row['id'],
-                'stock' => $row['stock'],
+                'stock' => $stockProducto,
                 'codigo' => trim($codigo),
                 'nombre' => $nombre,
+                'foto' => $imgRef,
                 'precio_dolar_visible' => $precios['precio_venta_dolar'],
                 'precio_peso_visible' => $precios['precio_venta_peso'],
                 'precio_bs_visible' => $precios['precio_venta_bs'],
                 'mayor' => $row['mayor'],
+                'es_combo' => $esCombo,
+                'combo_items' => $comboItemsProd,
             ];
 
             $codigos[] = $codigo;
@@ -146,6 +278,11 @@ if ($result->num_rows > 0) {
 }
 
 $stmt->close();
+
+
+// ── Ranking: 9 productos más vendidos de la sucursal (últimas 100 ventas válidas) ──
+require_once(__DIR__ . '/includes/top_vendidos.php');
+$top_vendidos_ids = calcular_top_vendidos($conexion, $sucursal);
 
 
 // Obtener clientes
@@ -178,13 +315,11 @@ $stmt->close();
     <title>Ventas</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
-        crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/4.2.0/dexie.min.js"></script>
+    <!-- Sin defer: el script inline del POS usa Fuse y Dexie en el parseo,
+         y los scripts con defer se ejecutan después (Fuse is not defined). -->
+    <script src="../vendors/fuse/fuse.min.js"></script>
+    <script src="../vendors/dexie/dexie.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 
@@ -192,7 +327,7 @@ $stmt->close();
 <style>
     :root {
         --dash-bg: #1a1e24;
-        --dash-card: #1e1d22;
+        --dash-card: #181b22;
         --dash-border: #2e353e;
         --dash-mint: #2dd4a0;
         --dash-mint-dim: rgba(45, 212, 160, 0.12);
@@ -273,6 +408,18 @@ $stmt->close();
         border-radius: 8px !important;
         padding: 7px 18px !important;
         font-size: 13px !important;
+    }
+
+    /* Pie del modal de despacho: Cancelar, Atrás y Continuar del mismo tamaño */
+    #modalDespacho .modal-footer {
+        padding-top: 15px !important;
+    }
+
+    #modalDespacho .modal-footer .btn {
+        padding: 7px 18px !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        min-width: 110px;
     }
 
     .btn-success {
@@ -357,6 +504,16 @@ $stmt->close();
     .btn-outline-danger:hover {
         background: rgba(239, 90, 111, 0.1) !important;
         border-color: var(--dash-danger) !important;
+    }
+
+    /* Centrado del icono dentro de los botones de acción del carrito */
+    .btn-outline-success,
+    .btn-outline-secondary,
+    .btn-outline-danger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
     }
 
     .modal-cierre-seccion {
@@ -600,6 +757,172 @@ $stmt->close();
 
     .totales-pendiente {
         gap: 5px;
+    }
+
+    /* Alerta de pedidos web: campanita compacta que se expande al pasar el mouse.
+       Absoluta para no desplazar el <ul> de pestañas; al expandirse se superpone a él. */
+    .pedidos-web-alert {
+        gap: 8px;
+        border-radius: 10px;
+        padding: 8px 12px;
+        border: 1px solid rgba(245, 180, 91, 0.35);
+        background: var(--dash-card);
+        color: #f5b45b;
+        overflow: hidden;
+        max-width: 46px;
+        white-space: nowrap;
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 20;
+        cursor: pointer;
+        transition: max-width 0.35s ease;
+    }
+
+    .pedidos-web-alert .pedidos-web-icon {
+        font-size: 20px;
+        flex: 0 0 auto;
+        transform-origin: top center;
+        animation: campanita 1.4s ease-in-out infinite;
+    }
+
+    .pedidos-web-alert .pedidos-web-texto {
+        flex: 0 0 auto;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .pedidos-web-alert:hover {
+        max-width: 480px;
+    }
+
+    .pedidos-web-alert:hover .pedidos-web-icon {
+        animation: none;
+    }
+
+    .pedidos-web-alert:hover .pedidos-web-texto {
+        opacity: 1;
+    }
+
+    /* Sacudida tipo campanita mientras está compacta */
+    @keyframes campanita {
+
+        0%,
+        100% {
+            transform: rotate(0deg);
+        }
+
+        10% {
+            transform: rotate(16deg);
+        }
+
+        20% {
+            transform: rotate(-14deg);
+        }
+
+        30% {
+            transform: rotate(11deg);
+        }
+
+        40% {
+            transform: rotate(-8deg);
+        }
+
+        50% {
+            transform: rotate(5deg);
+        }
+
+        60% {
+            transform: rotate(-3deg);
+        }
+
+        70% {
+            transform: rotate(0deg);
+        }
+    }
+
+    /* En pantallas sin hover (táctil) siempre visible */
+    @media (hover: none) {
+        .pedidos-web-alert {
+            max-width: 480px;
+        }
+
+        .pedidos-web-alert .pedidos-web-texto {
+            opacity: 1;
+        }
+
+        .pedidos-web-alert .pedidos-web-icon {
+            animation: none;
+        }
+    }
+
+    /* ═══ Responsive: WebView de la app (teléfono / pantalla táctil) ═══ */
+
+    @media (max-width: 991px) {
+        .right_col {
+            padding: 16px 14px !important;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .right_col {
+            padding: 14px 12px !important;
+        }
+    }
+
+    /* La campanita de pedidos web era absolute y se pisaba con las pestañas.
+       En pantalla angosta (o táctil, donde no hay hover) pasa a ser una banda
+       encima de las pestañas, a todo el ancho. */
+    @media (max-width: 768px), (hover: none) {
+        #control-tabs {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .pedidos-web-alert {
+            position: static;
+            transform: none;
+            order: -1;
+            max-width: none;
+            width: 100%;
+            padding: 10px 14px;
+            white-space: normal;
+            justify-content: center;
+        }
+
+        .pedidos-web-alert .pedidos-web-texto,
+        .pedidos-web-alert:hover .pedidos-web-texto {
+            opacity: 1;
+        }
+
+        .pedidos-web-alert .pedidos-web-icon,
+        .pedidos-web-alert:hover .pedidos-web-icon {
+            animation: none;
+        }
+    }
+
+    /* Pestañas deslizables en el teléfono (antes se partían en dos filas) */
+    @media (max-width: 640px) {
+        #myTab {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+        }
+
+        #myTab::-webkit-scrollbar {
+            display: none;
+        }
+
+        #myTab .nav-item {
+            flex: 0 0 auto;
+        }
+
+        #myTab .nav-link {
+            white-space: nowrap;
+        }
     }
 
     /* Modal dark theme */
@@ -849,6 +1172,419 @@ $stmt->close();
         color: var(--dash-mint);
         font-weight: 700;
     }
+
+    /* Botones de caja (Búsqueda / Cerrar caja) en una sola línea */
+    .acciones-caja {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .acciones-caja .btn {
+        padding: 7px 16px !important;
+        font-size: 12px !important;
+    }
+
+    @media (max-width: 576px) {
+        .acciones-caja {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+
+    /* Miniaturas de productos en resultados de búsqueda */
+    .pos-thumb {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        display: block;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--dash-border);
+        margin-right: 15px;
+    }
+
+    /* Imágenes muy verticales: rellenan la miniatura sin deformarse */
+    .pos-thumb--cover {
+        object-fit: cover;
+    }
+
+    /* Grilla de los 9 productos más vendidos (buscador vacío) */
+    #posTopVendidos {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .pos-top-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--dash-border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .pos-top-item:hover {
+        border-color: var(--dash-mint, #6faf7a);
+    }
+
+    .pos-top-num {
+        flex: 0 0 auto;
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: var(--dash-mint, #6faf7a);
+        color: #fff;
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .pos-top-nombre {
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+    }
+
+    .pos-top-precio {
+        flex: 0 0 auto;
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--dash-success, #2fb344);
+    }
+
+    .pos-top-vacio {
+        grid-column: 1 / -1;
+        color: #8892a0;
+        font-size: 14px;
+        padding: 10px 2px;
+    }
+
+    #tabla_resultado_codigo_producto td.thumb-cell {
+        width: 48px;
+        padding: 4px !important;
+    }
+
+    /* Botón del ojo: invisible, cubre la miniatura; al hacer clic abre el modal */
+    .pos-thumb-btn {
+        position: relative;
+        display: inline-block;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        line-height: 0;
+        cursor: pointer;
+    }
+
+    .pos-thumb-btn>i {
+        display: none;
+        /* el botón no se ve */
+    }
+
+    .pos-thumb-btn:focus-visible {
+        outline: 2px solid var(--dash-mint, #6faf7a);
+        outline-offset: 2px;
+        border-radius: 8px;
+    }
+
+    /* Modal de fotografía de producto */
+    #modalImagen {
+        z-index: 10050 !important;
+    }
+
+    /* Bootstrap pone el backdrop (1050) bajo el modal (1055); aquí el backdrop
+       sube a 10040 para tapar el buscador (#modal-container, z-index 9999), así
+       que el modal debe subir por encima de él. */
+    .modal {
+        z-index: 10045 !important;
+    }
+
+    .modal-backdrop {
+        z-index: 10040 !important;
+    }
+
+    .modal-img-wrap {
+        position: relative;
+        min-height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--dash-border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .modal-img {
+        max-width: 100%;
+        max-height: 55vh;
+        object-fit: contain;
+    }
+
+    .modal-img-estado {
+        color: var(--dash-text-muted);
+        font-size: 13px;
+        padding: 40px 20px;
+        text-align: center;
+    }
+
+    /* ═══ Wizard del despacho (paso 1 / paso 2) ═══ */
+    .wizard-steps {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding: 8px 10px;
+        border: 1px solid var(--dash-border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, .02);
+    }
+
+    .wizard-step {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: var(--dash-text-muted);
+        white-space: nowrap;
+    }
+
+    .wizard-step span {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        border: 1px solid var(--dash-border);
+        background: var(--dash-bg);
+        color: var(--dash-text-muted);
+    }
+
+    .wizard-step.active {
+        color: var(--dash-mint);
+    }
+
+    .wizard-step.active span {
+        background: var(--dash-mint);
+        border-color: var(--dash-mint);
+        color: #fff;
+    }
+
+    .wizard-step.done span {
+        border-color: var(--dash-mint);
+        color: var(--dash-mint);
+    }
+
+    .wizard-line {
+        flex: 1 1 auto;
+        height: 1px;
+        background: var(--dash-border);
+    }
+
+    /* ═══ Pago fraccionado ═══ */
+    #seccionFraccionado {
+        border: 1px solid var(--dash-border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .02);
+        padding: 12px 14px 10px;
+        margin-top: 6px;
+    }
+
+    .frac-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--dash-border);
+        margin-bottom: 10px;
+    }
+
+    .frac-head-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: var(--dash-text-muted);
+    }
+
+    .frac-head-title ion-icon {
+        font-size: 15px;
+        color: var(--dash-mint);
+    }
+
+    .frac-falta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .frac-pill {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+        padding: 4px 9px;
+        border-radius: 7px;
+        border: 1px solid var(--dash-border);
+        background: var(--dash-bg);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .frac-pill small {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .4px;
+        color: var(--dash-text-muted);
+    }
+
+    .frac-pill b {
+        font-size: 13px;
+        color: var(--dash-text);
+    }
+
+    .frac-pill--cop b { color: var(--dash-info); }
+    .frac-pill--bs b  { color: var(--dash-danger); }
+    .frac-pill--usd b { color: var(--dash-mint); }
+
+    .frac-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+    }
+
+    .frac-row {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .frac-row label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        color: var(--dash-text-muted);
+        margin: 0;
+    }
+
+    .frac-field {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--dash-border);
+        border-radius: 8px;
+        background: var(--dash-bg);
+        overflow: hidden;
+    }
+
+    .frac-field > span {
+        flex: 0 0 auto;
+        width: 38px;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--dash-text-muted);
+        border-right: 1px solid var(--dash-border);
+        padding: 6px 0;
+    }
+
+    .frac-field input {
+        flex: 1 1 auto;
+        min-width: 0;
+        border: 0 !important;
+        background: transparent !important;
+        color: var(--dash-text) !important;
+        font-size: 13px !important;
+        padding: 6px 9px !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Botón "completar restante" pegado a la derecha, dentro del mismo campo */
+    .frac-fill {
+        flex: 0 0 auto;
+        align-self: stretch;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        padding: 0;
+        border: 0;
+        border-left: 1px solid var(--dash-border);
+        background: rgba(45, 212, 160, .1);
+        color: var(--dash-mint);
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .frac-fill:hover {
+        background: rgba(45, 212, 160, .22);
+    }
+
+    .frac-fill:disabled {
+        color: var(--dash-text-muted);
+        background: transparent;
+        opacity: .45;
+        cursor: default;
+    }
+
+    .frac-field:focus-within {
+        border-color: var(--dash-mint);
+        box-shadow: 0 0 0 2px rgba(45, 212, 160, .12);
+    }
+
+    .frac-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 9px;
+        border-top: 1px solid var(--dash-border);
+    }
+
+    .frac-estado {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--dash-text-muted);
+    }
+
+    .frac-estado.ok { color: var(--dash-mint); }
+    .frac-estado.aviso { color: #f5b45b; }
+    .frac-estado.exceso { color: var(--dash-info); }
+
+    @media (max-width: 576px) {
+        .frac-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .frac-head {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
 </style>
 <div class="contenedor-loader" id="cargando">
     <span class="loader"></span>
@@ -876,7 +1612,7 @@ $stmt->close();
 
         #result-escaner {
             position: relative;
-            background: var(--dash-card, #1e1d22);
+            background: var(--dash-card, #181b22);
             padding: 20px;
             border-radius: 12px;
             min-width: 300px;
@@ -1006,6 +1742,16 @@ $stmt->close();
         .scan-btn.remove:hover {
             background: rgba(239, 90, 111, 0.25);
         }
+
+        /* En el teléfono el aviso del escáner ocupa el ancho disponible
+           (antes: min-width 300px con max-width 50%, que se contradecían) */
+        @media (max-width: 576px) {
+            #result-escaner {
+                min-width: 0;
+                width: calc(100% - 24px);
+                max-width: 420px;
+            }
+        }
     </style>
 
     <section class="d-flex section-scanner hide" id="section-scanner">
@@ -1035,9 +1781,27 @@ $stmt->close();
             <!-- /top navigation -->
             <div class="right_col h-100" role='main'>
 
+                <script>
+                    function checkPedidosWeb() {
+                        fetch('db/tienda_pendientes.php?_=' + Date.now())
+                            .then(r => r.json())
+                            .then(d => {
+                                const n = d.pendientes || 0;
+                                document.getElementById('alert-pedidos-web').style.display = n > 0 ? 'flex' : 'none';
+                                document.getElementById('pedidos-web-num').textContent = n;
+                            })
+                            .catch(() => {});
+                    }
+                    checkPedidosWeb();
+                    setInterval(checkPedidosWeb, 120000);
+                </script>
 
 
-                <div class="d-flex mb-3" style="place-self: anchor-center;">
+                <div class="d-flex mb-3" id="control-tabs" style="position: relative; justify-content: center;">
+                    <div class="align-items-center pedidos-web-alert" id="alert-pedidos-web" style="display:none;">
+                        <ion-icon name="notifications-outline" class="pedidos-web-icon"></ion-icon>
+                        <span class="pedidos-web-texto">Existe <b id="pedidos-web-num">0</b> compra(s) web pendiente(s) sin procesar.</span>
+                    </div>
                     <div class="pt-1">
                         <ul class="nav nav-tabs" id="myTab" role="tablist">
                             <li class="nav-item" role="presentation">
@@ -1141,17 +1905,17 @@ $stmt->close();
                 <div class="row" id="myTabContent">
                     <div class="tab-pane col-lg-12  show active" id="home" role="tabpanel"
                         aria-labelledby="home-tab">
-                        <div class="x_panel" style="min-height: 80vh">
+                        <div class="x_panel" style="min-height: 70vh">
                             <div class="x_title d-flex justify-content-between">
                                 <div class="d-flex flex-column">
                                     <h2>Carrito del cliente</h2>
                                     <span><b>SUCURSAL: </b><span id="sucursal_nombre">
                                 </div>
-                                <div class="d-flex flex-column">
-                                    <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal">
-                                        (B) BÚSQUEDA</button>
+                                <div class="acciones-caja">
                                     <button class="btn btn-sm d-none btn-danger" style="height: min-content"
                                         id="btn-cerrar-caja"> CERRAR CAJA</button>
+                                    <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal">
+                                        (B) BÚSQUEDA</button>
                                 </div>
                             </div>
                             <div class="x_content cart">
@@ -1345,6 +2109,14 @@ $stmt->close();
 
                             <input type="text" id="tipo_despacho" value="1" hidden>
 
+                            <!-- Indicador de pasos: sólo se muestra en pago fraccionado -->
+                            <div id="wizardDespacho" class="wizard-steps d-none">
+                                <div class="wizard-step active" data-step="1"><span>1</span> Despacho</div>
+                                <div class="wizard-line"></div>
+                                <div class="wizard-step" data-step="2"><span>2</span> Fracciones</div>
+                            </div>
+
+                            <div id="pasoDespacho1">
                             <section id="resumenVenta" class="mb-3">
                                 <div class="border-0">
                                     <div class="card-body p-0">
@@ -1381,17 +2153,83 @@ $stmt->close();
                                     <label class="pb-0" for="metodoPago">Metodo de pago</label>
                                     <br>
                                     <small class="text-muted">(1) Punto, (2) BioPago, (3) Pesos, (4) Efectivo, (5)
-                                        Pago Movil, (6) Transferencia, (7) Dólares.</p>
-                                        <select id="metodoPago" class="form-control">
-                                            <option value="">Seleccione</option>
-                                            <option value="option1">(1) Punto</option>
-                                            <option value="option7">(2) BioPago</option>
-                                            <option value="option6">(3) Pesos</option>
-                                            <option value="option4">(4) Efectivo</option>
-                                            <option value="option2">(5) Pago Movil</option>
-                                            <option value="option3">(6) Transferencia</option>
-                                            <option value="option5">(7) Dólares</option>
-                                        </select>
+                                        Pago Movil, (6) Transferencia, (7) Dólares, (8) Fraccionado.</small>
+                                    <select id="metodoPago" class="form-control">
+                                        <option value="">Seleccione</option>
+                                        <option value="option1">(1) Punto</option>
+                                        <option value="option7">(2) BioPago</option>
+                                        <option value="option6">(3) Pesos</option>
+                                        <option value="option4">(4) Efectivo</option>
+                                        <option value="option2">(5) Pago Movil</option>
+                                        <option value="option3">(6) Transferencia</option>
+                                        <option value="option5">(7) Dólares</option>
+                                        <option value="option8">(8) Fraccionado</option>
+                                    </select>
+                                </div>
+
+                                <!-- División del pago entre varios medios -->
+                                <div id="seccionFraccionado" class="d-none">
+                                    <div class="frac-head">
+                                        <div class="frac-head-title">
+                                            <ion-icon name="git-compare-outline"></ion-icon>
+                                            <span>Falta por pagar</span>
+                                        </div>
+                                        <div class="frac-falta">
+                                            <span class="frac-pill frac-pill--cop"><small>COP</small><b id="fracFaltaCop">0</b></span>
+                                            <span class="frac-pill frac-pill--bs"><small>Bs</small><b id="fracFaltaBs">0,00</b></span>
+                                            <span class="frac-pill frac-pill--usd"><small>USD</small><b id="fracFaltaUsd">$0,00</b></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="frac-grid">
+                                        <div class="frac-row">
+                                            <label for="frac_punto">Punto</label>
+                                            <div class="frac-field"><span>Bs</span>
+                                                <input type="number" min="0" step="0.01" id="frac_punto" data-frac="punto" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="frac-row">
+                                            <label for="frac_bioPago">BioPago</label>
+                                            <div class="frac-field"><span>Bs</span>
+                                                <input type="number" min="0" step="0.01" id="frac_bioPago" data-frac="bioPago" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="frac-row">
+                                            <label for="frac_pagoMovil">Pago Móvil</label>
+                                            <div class="frac-field"><span>Bs</span>
+                                                <input type="number" min="0" step="0.01" id="frac_pagoMovil" data-frac="pagoMovil" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="frac-row">
+                                            <label for="frac_transferencia">Transferencia</label>
+                                            <div class="frac-field"><span>Bs</span>
+                                                <input type="number" min="0" step="0.01" id="frac_transferencia" data-frac="transferencia" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="frac-row">
+                                            <label for="frac_efectivo">Efectivo Bs</label>
+                                            <div class="frac-field"><span>Bs</span>
+                                                <input type="number" min="0" step="0.01" id="frac_efectivo" data-frac="efectivo" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="frac-row">
+                                            <label for="frac_dolares">Dólares</label>
+                                            <div class="frac-field"><span>USD</span>
+                                                <input type="number" min="0" step="0.01" id="frac_dolares" data-frac="dolares" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="frac-row">
+                                            <label for="frac_pesos">Pesos</label>
+                                            <div class="frac-field"><span>COP</span>
+                                                <input type="number" min="0" step="1" id="frac_pesos" data-frac="pesos" placeholder="0">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="frac-foot">
+                                        <span id="fracEstado" class="frac-estado"></span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetFraccionadoMontos()">Limpiar</button>
+                                    </div>
                                 </div>
                             </section>
 
@@ -1412,10 +2250,16 @@ $stmt->close();
                                         placeholder="Telefono del cliente" maxlength="11" minlength="11">
                                 </div>
                             </section>
+                            </div><!-- /pasoDespacho1 -->
+
+                            <!-- Paso 2: las fracciones se inyectan aquí por JS -->
+                            <div id="pasoDespacho2" class="d-none"></div>
 
                             <div class="modal-footer p-0 mt-2">
                                 <button type="button" class="btn btn-secondary"
-                                    data-bs-dismiss="modal">Cancelar</button>
+                                    data-bs-dismiss="modal" id="btnCancelarDespacho">Cancelar</button>
+                                <button type="button" class="btn btn-secondary d-none"
+                                    id="btnAtrasDespacho">Atrás</button>
                                 <button type="button" class="btn btn-primary"
                                     id="btnConfirmarDespacho">Continuar</button>
                             </div>
@@ -1424,6 +2268,30 @@ $stmt->close();
                 </div>
             </div>
         </div>
+
+        <!-- Modal fotografía del producto -->
+        <div class="modal fade" id="modalImagen" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalImgNombre"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="modal-img-wrap">
+                            <img id="modalImgImagen" class="modal-img d-none" alt="">
+                            <div id="modalImgEstado" class="modal-img-estado">Cargando imagen…</div>
+                        </div>
+                        <div class="mt-3 d-flex justify-content-center gap-3 flex-wrap">
+                            <span class="text-total text-success" id="modalImgPrecio"></span>
+                            <span class="text-total text-info" id="modalImgPrecioPeso"></span>
+                            <span class="text-total text-danger" id="modalImgPrecioBs"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- jQuery -->
         <script src="../vendors/jquery/dist/jquery.min.js"></script>
         <!-- Bootstrap -->
@@ -1850,7 +2718,8 @@ $stmt->close();
                 'option4': 'Efectivo',
                 'option5': 'Dólares',
                 'option6': 'Pesos',
-                'option7': 'BioPago'
+                'option7': 'BioPago',
+                'option8': 'Fraccionado'
             };
 
 
@@ -2039,7 +2908,7 @@ $stmt->close();
             max-width: 420px;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             text-align: center;
-            background: var(--dash-card, #1e1d22);
+            background: var(--dash-card, #181b22);
             color: var(--dash-text, #e8edf2);
         ">
             <div style="
@@ -2098,15 +2967,7 @@ $stmt->close();
 
 
             function imprimir_desde_front(nuevoPedido, moneda = 'default') {
-                // 1. Replicar la función de redondeo de centenas de PHP
-                function redondearCentena(numero) {
-                    let resto = numero % 100;
-                    if (resto > 50) {
-                        return Math.ceil(numero / 100) * 100;
-                    } else {
-                        return Math.floor(numero / 100) * 100;
-                    }
-                }
+                // 1. redondearCentena() está definida más abajo (mismo criterio que PHP)
 
                 // 2. Determinar la moneda de texto inicial según el tipo de pago (metodoPago)
                 let monedaTexto = '';
@@ -2331,6 +3192,9 @@ $stmt->close();
                 const tipo_despacho = document.getElementById('tipo_despacho');
                 const esCredito = (tipo === 'credito');
 
+                resetFraccionado();
+                btnConfirmarDespacho.disabled = false;
+
                 if (!modalDespacho) {
                     modalDespacho = new bootstrap.Modal(document.getElementById('modalDespacho'));
                 }
@@ -2419,8 +3283,79 @@ $stmt->close();
                     }
                 }); // Enivar el formulario cuando se presiona enter en el select de pago
 
+                // Mover el panel de fracciones al paso 2 del wizard
+                const paso2 = document.getElementById('pasoDespacho2');
+                const panelFrac = document.getElementById('seccionFraccionado');
+                if (paso2 && panelFrac) {
+                    paso2.appendChild(panelFrac);
+                    panelFrac.classList.remove('d-none');
+                }
+
+                // Botón dentro de cada monto para completar lo que falta en esa moneda
+                if (panelFrac) {
+                    const etiquetaMoneda = { bs: 'Bs', usd: 'USD', cop: 'COP' };
+                    panelFrac.querySelectorAll('input[data-frac]').forEach(inp => {
+                        const moneda = METODOS_FRACCIONADO[inp.dataset.frac].moneda;
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'frac-fill';
+                        btn.dataset.fracFill = inp.dataset.frac;
+                        btn.title = 'Completar el restante en ' + etiquetaMoneda[moneda];
+                        btn.setAttribute('aria-label', btn.title);
+                        btn.innerHTML = '<ion-icon name="add-outline"></ion-icon>';
+                        inp.parentElement.appendChild(btn);
+                    });
+                }
+
+                // Pago fraccionado: el wizard sólo aplica a este método
+                document.getElementById('metodoPago').addEventListener('change', function() {
+                    const esFrac = this.value === 'option8';
+                    const wizard = document.getElementById('wizardDespacho');
+                    if (wizard) wizard.classList.toggle('d-none', !esFrac);
+                    if (esFrac) {
+                        resetFraccionadoMontos(); // limpia montos si se cambió de método
+                        irPasoDespacho(1);        // las fracciones se piden al Continuar
+                        actualizarFraccionadoUI();
+                    }
+                });
+
+                const btnAtrasDespacho = document.getElementById('btnAtrasDespacho');
+                if (btnAtrasDespacho) {
+                    btnAtrasDespacho.addEventListener('click', () => irPasoDespacho(1));
+                }
+
+                const modalDespachoEl = document.getElementById('modalDespacho');
+                if (modalDespachoEl) {
+                    modalDespachoEl.addEventListener('hidden.bs.modal', function() {
+                        const wizard = document.getElementById('wizardDespacho');
+                        if (wizard) wizard.classList.add('d-none');
+                        irPasoDespacho(1);
+                    });
+                }
+
+                const seccionFrac = document.getElementById('seccionFraccionado');
+                if (seccionFrac) {
+                    seccionFrac.addEventListener('input', actualizarFraccionadoUI);
+                    seccionFrac.addEventListener('click', function(e) {
+                        const btn = e.target.closest('.frac-fill');
+                        if (btn) completarFraccionado(btn.dataset.fracFill);
+                    });
+                    // El lector de códigos escucha keydown en document; aquí se aísla.
+                    seccionFrac.addEventListener('keydown', function(e) {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') e.preventDefault();
+                    });
+                }
+
                 if (btnConfirmarDespacho) {
                     btnConfirmarDespacho.addEventListener('click', () => {
+                        // En el paso 2 se confirma el desglose
+                        if (pasoDespachoActual === 2) {
+                            btnConfirmarDespacho.disabled = true;
+                            confirmarFraccionado();
+                            return;
+                        }
+
                         btnConfirmarDespacho.disabled = true;
                         const despacho = tipo_despacho.value
                         despacho == '2' ? validarCredito() : validarVenta();
@@ -2488,6 +3423,13 @@ $stmt->close();
 
                     if (selectPago.value == '') {
                         Swal.fire('Error', 'Por favor, selecciona un método de pago', 'error');
+                        btnConfirmarDespacho.disabled = false;
+                        return;
+                    }
+
+                    if (selectPago.value === 'option8') {
+                        // Los datos del despacho ya están completos: se pasa al paso de fracciones
+                        irPasoDespacho(2);
                         return;
                     }
 
@@ -2499,7 +3441,31 @@ $stmt->close();
                     });
                 } // Valida los datos de la venta
 
+                // Paso 2: valida el desglose y confirma la venta
+                function confirmarFraccionado() {
+                    const r = calcularFraccionado();
+                    const hayMonto = Object.values(r.pagos).some(v => Number(v) > 0);
 
+                    if (!hayMonto) {
+                        Swal.fire('Error', 'Ingrese al menos un monto para el pago fraccionado', 'error');
+                        btnConfirmarDespacho.disabled = false;
+                        return;
+                    }
+                    if (!r.saldado) {
+                        Swal.fire('Pago incompleto', `Aún falta por cubrir: ${resumenFaltante()}`, 'warning');
+                        btnConfirmarDespacho.disabled = false;
+                        return;
+                    }
+
+                    if (modalDespacho) modalDespacho.hide();
+                    const wizard = document.getElementById('wizardDespacho');
+                    if (wizard) wizard.classList.add('d-none');
+                    procesarPedido('option8', 1, {
+                        nombre: nombreClienteModal.value.trim(),
+                        cedula: cedulaClienteModal.value.trim(),
+                        telefono: telefonoClienteModal.value.trim()
+                    });
+                }
 
                 // Auto-consulta de datos del cliente por cédula
                 const inputCedula = document.getElementById('cedulaClienteModal');
@@ -2632,16 +3598,18 @@ $stmt->close();
             // Abrir el modal
             openModalButton.addEventListener("click", () => {
                 modo = 1
+                mostrarGridSiVacio();
             });
 
             // Cerrar el modal al hacer clic en el botón de cerrar o en el overlay
             closeModalButton.addEventListener("click", () => {
                 modo = 2
+                ocultarGrid();
             });
 
             modalOverlay.addEventListener("click", () => {
                 modo = 2
-
+                ocultarGrid();
             });
 
 
@@ -2729,19 +3697,65 @@ $stmt->close();
 
 
 
+            function verProductosCombo(id) {
+                const prod = productos_por_id[id] || carritoActivo[id];
+                const items = (prod && Array.isArray(prod.combo_items)) ? prod.combo_items : [];
+                const nombreCombo = prod ? (prod.nombre || prod.name || 'Combo') : 'Combo';
+
+                if (!items.length) {
+                    Swal.fire({
+                        title: nombreCombo,
+                        text: 'No se encontraron productos asociados a este combo.',
+                        icon: 'info',
+                        confirmButtonColor: '#2dd4a0'
+                    });
+                    return;
+                }
+
+                const listaHtml = items.map(it => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13.5px;">
+                        <span style="text-align:left;font-weight:500;">${it.nombre}</span>
+                        <span class="badge bg-success" style="font-size:12px;">x${it.cantidad}</span>
+                    </div>
+                `).join('');
+
+                Swal.fire({
+                    title: `<span style="font-size:16px;">Contenido: ${nombreCombo}</span>`,
+                    html: `<div style="border:1px solid #2e353e;border-radius:10px;overflow:hidden;margin-top:8px;">${listaHtml}</div>`,
+                    confirmButtonText: 'Cerrar',
+                    confirmButtonColor: '#2dd4a0',
+                    background: '#181b22',
+                    color: '#e8edf2'
+                });
+            }
+
             function representarResultado(resultado) {
                 $("#tabla_resultado_codigo_producto").html('')
                 if (!Array.isArray(resultado)) return;
 
                 resultado.forEach(item => {
-                    const rest = (item.mayor === '1' ?
+                    const esCombo = Number(item.es_combo) === 1;
+                    // mayor llega como número desde productos_por_id; comparar como texto
+                    const rest = (String(item.mayor) === '1' ?
                         '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' :
-                        item.stock);
+                        (esCombo ? `<span class="badge bg-info me-1">Combo</span> ${item.stock}` : item.stock));
+
+                    const btnVerCombo = esCombo ? `
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="verProductosCombo('${item.id}')" title="Ver productos del combo">
+                            <ion-icon name="layers-outline" style="font-size:13px;vertical-align:middle;"></ion-icon> Ver combo
+                        </button>
+                    ` : '';
 
                     $("#tabla_resultado_codigo_producto").append(`
                         <tr>
+                            <td class="thumb-cell text-center">
+                                <button type="button" class="pos-thumb-btn btn-ver-foto" data-pid="${item.id}" title="Ver fotografía">
+                                    <img class="pos-thumb" alt="" src="${IMG_PLACEHOLDER}" data-pid="${item.id}">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </td>
+                            <td style="padding-left:15px !important; font-size: 15px;"><span>${item.nombre}</span>${btnVerCombo}</td>
                             <td>${rest}</td>
-                            <td style="font-size: 15px;"><span>${item.nombre}</span></td>
                             <td style="place-content: center" class="text-center text-total text-success">
                                 <span>${formatNumber(item.precio_dolar_visible)}$</span>
                             </td>
@@ -2776,8 +3790,109 @@ $stmt->close();
                         </tr>
                     `);
                 });
+
+                // Carga diferida y en caché de las miniaturas ya renderizadas
+                $("#tabla_resultado_codigo_producto .pos-thumb").each(function() {
+                    const prod = productos_por_id[this.dataset.pid];
+                    if (prod) cargarMiniatura(this, prod);
+                });
             }
 
+
+            // ── Grilla: 9 productos más vendidos de la sucursal (cálculo del servidor) ──
+            // El ranking se resuelve en PHP y se reutiliza el catálogo ya cargado (nombre y precios).
+            const topVendidos = <?php echo json_encode($top_vendidos_ids); ?>
+                .map(function(id) {
+                    return productos_por_id[id];
+                })
+                .filter(Boolean)
+                .slice(0, 9);
+
+            function renderTopVendidos() {
+                const cont = document.getElementById('posTopVendidos');
+                if (!cont) return;
+                if (!topVendidos.length) {
+                    cont.innerHTML = '<div class="pos-top-vacio">Aún no hay ventas suficientes para mostrar los más vendidos.</div>';
+                } else {
+                    cont.innerHTML = topVendidos.map(function(p, i) {
+                        return `<button type="button" class="pos-top-item" data-idx="${i}">
+                            <span class="pos-top-num">${i + 1}</span>
+                            <span class="pos-top-nombre">${p.nombre}</span>
+                            <span class="pos-top-precio">$${formatNumber(p.precio_dolar_visible)}</span>
+                        </button>`;
+                    }).join('');
+                }
+                cont.classList.remove('d-none');
+            }
+
+            // Muestra la grilla solo si el buscador está vacío; si no, la oculta.
+            function mostrarGridSiVacio() {
+                const cont = document.getElementById('posTopVendidos');
+                if (!cont) return;
+                const s = document.getElementById('search');
+                if (s && s.value.trim() === '') {
+                    $("#tabla_resultado_codigo_producto").html('');
+                    renderTopVendidos();
+                } else {
+                    cont.classList.add('d-none');
+                }
+            }
+
+            function ocultarGrid() {
+                const cont = document.getElementById('posTopVendidos');
+                if (cont) cont.classList.add('d-none');
+            }
+
+            // Atajos 1-9: con el modal abierto, la grilla visible y el buscador vacío, el número
+            // escribe el nombre EXACTO del producto y deja que Fuse haga la búsqueda normal.
+            document.addEventListener('keydown', function(event) {
+                if (event.key < '1' || event.key > '9') return;
+                if (event.ctrlKey || event.metaKey || event.altKey) return;
+                const modal = document.querySelector('#modal-container');
+                const cont = document.getElementById('posTopVendidos');
+                const search = document.getElementById('search');
+                if (!modal || !modal.classList.contains('active') || !cont || !search) return;
+                if (cont.classList.contains('d-none')) return;
+                // No interceptar si otro campo editable (cantidad, cédula, etc.) tiene el foco.
+                const ae = document.activeElement;
+                if (ae && ae !== search && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return;
+                const prod = topVendidos[Number(event.key) - 1];
+                if (!prod) return;
+                event.preventDefault();
+                search.value = prod.nombre;
+                $(search).trigger('keyup');
+            });
+
+            // Clic en la grilla = mismo comportamiento que pulsar su número.
+            $(document).on('click', '.pos-top-item', function(e) {
+                e.preventDefault();
+                const p = topVendidos[Number(this.dataset.idx)];
+                if (!p) return;
+                const search = document.getElementById('search');
+                search.value = p.nombre;
+                $(search).trigger('keyup');
+            });
+
+            // Refresca el ranking tras registrar ventas (1 sola petición; sin conexión conserva el actual).
+            async function refrescarTopVendidos() {
+                if (!navigator.onLine) return;
+                try {
+                    const res = await fetch('top_vendidos.php', {
+                        cache: 'no-store'
+                    });
+                    const data = await res.json();
+                    if (data && data.ok && Array.isArray(data.ids)) {
+                        const nuevos = data.ids.map(function(id) {
+                            return productos_por_id[id];
+                        }).filter(Boolean).slice(0, 9);
+                        topVendidos.length = 0;
+                        Array.prototype.push.apply(topVendidos, nuevos);
+                        if (!$('#posTopVendidos').hasClass('d-none')) renderTopVendidos();
+                    }
+                } catch (e) {
+                    /* silencioso: no debe romper la venta */
+                }
+            }
 
 
 
@@ -2839,6 +3954,17 @@ $stmt->close();
 
             $(document).on('keyup', '#search', function() {
                 var nombreProducto = $(this).val();
+                if (nombreProducto.trim() === '') {
+                    // Buscador vacío: mostrar grilla de más vendidos y limpiar resultados
+                    mostrarGridSiVacio();
+                    $("#tabla_resultado_codigo_producto").html('');
+                    const modal_footer = document.getElementById('modal-footer')
+                    modal_footer.innerHTML = ''
+                    modal_footer.classList.add('hide')
+                    return;
+                }
+
+                ocultarGrid();
                 if (nombreProducto.length > 2) {
 
                     let resultados = buscarConFuse(nombreProducto)
@@ -2862,18 +3988,167 @@ $stmt->close();
             const db = new Dexie("POS_DB");
 
             // Definir estructura
-            db.version(1).stores({
+            // Misma versión y stores que la tienda (index.php/checkout.php): si no,
+            // el POS y la tienda se rompen entre sí con VersionError.
+            db.version(2).stores({
                 carritoActivo: 'id', // clave primaria será el id del producto
                 carritosVenta: 'id', // para ventas ya procesadas
-                carritosReservados: 'id' // para reservados
+                carritosReservados: 'id', // para reservados
+                cart_meta: 'id'
+            });
+
+            async function abrirDbCarrito() {
+                try {
+                    await db.open();
+                } catch (err) {
+                    if (err.name !== 'VersionError') throw err;
+                    await Dexie.delete('POS_DB');
+                    await db.open();
+                }
+            }
+
+            // Caché de imágenes en una base APARTE: no toca POS_DB (compartida con la tienda,
+            // que la declara en versión 2) y queda separada del carrito/ventas transaccionales.
+            const dbImagenes = new Dexie("POS_IMAGENES_DB");
+            dbImagenes.version(1).stores({
+                imagenes: 'id' // { id, url, blob, ts } clave = id estable del producto
             });
             // * IndexedBD //
+
+
+            // ── Imágenes de productos: miniaturas y modal ──────────────────
+            // Referencias únicamente; las imágenes se descargan bajo demanda.
+            const IMG_BASE = '/iseller_store/';
+            const IMG_PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8892a0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'
+            );
+            const imgUrlCache = new Map(); // id -> objectURL (reutiliza y evita repetir descargas)
+            const imgSinImagen = new Set(); // ids sin imagen para no reintentar en la sesión
+
+            // El servidor ya resolvió UNA ruta existente (o vacío), así que no se prueban
+            // candidatos y no se generan 404 en consola.
+            function candidatosImagen(prod) {
+                return prod.foto ? [IMG_BASE + prod.foto] : [];
+            }
+
+            // Devuelve un objectURL desde la caché local o descargándolo (y guardándolo). Nunca lanza.
+            async function obtenerImagenProducto(prod) {
+                const id = String(prod.id);
+                if (imgUrlCache.has(id)) return imgUrlCache.get(id);
+                if (imgSinImagen.has(id)) return null;
+
+                const candidatos = candidatosImagen(prod);
+                if (!candidatos.length) return null;
+
+                // 1) Caché local → sigue funcionando sin conexión
+                try {
+                    const guardada = await dbImagenes.imagenes.get(id);
+                    if (guardada && guardada.blob && candidatos.includes(guardada.url)) {
+                        const url = URL.createObjectURL(guardada.blob);
+                        imgUrlCache.set(id, url);
+                        return url;
+                    }
+                } catch (e) {
+                    /* IndexedDB no disponible */
+                }
+
+                // 2) Red → guarda blob localmente (no bloquea la interfaz)
+                for (const url of candidatos) {
+                    try {
+                        const res = await fetch(url, {
+                            cache: 'force-cache'
+                        });
+                        if (!res.ok) continue;
+                        const blob = await res.blob();
+                        if (!blob.type.startsWith('image/')) continue;
+                        const objUrl = URL.createObjectURL(blob);
+                        imgUrlCache.set(id, objUrl);
+                        // ponytail: caché best-effort; si falla por cuota se ignora sin romper el POS
+                        if (blob.size <= 1500000) {
+                            dbImagenes.imagenes.put({
+                                id: id,
+                                url: url,
+                                blob: blob,
+                                ts: Date.now()
+                            }).catch(() => {});
+                        }
+                        return objUrl;
+                    } catch (e) {
+                        // sin conexión o error de red: probar el siguiente candidato
+                    }
+                }
+
+                // Solo marcar como "sin imagen" si estamos en línea (un fallo offline se reintenta luego)
+                if (navigator.onLine) imgSinImagen.add(id);
+                return null;
+            }
+
+            function cargarMiniatura(imgEl, prod) {
+                obtenerImagenProducto(prod).then(function(url) {
+                    if (!imgEl.isConnected) return;
+                    if (url) {
+                        // ponytail: umbral fijo; ajustar si alguna foto vertical se recorta de más
+                        imgEl.onload = function() {
+                            const w = imgEl.naturalWidth,
+                                h = imgEl.naturalHeight;
+                            imgEl.classList.toggle('pos-thumb--cover', !!(w && h && (w / h) < 0.75));
+                        };
+                    }
+                    imgEl.src = url || IMG_PLACEHOLDER;
+                });
+            }
+
+            // Modal de fotografía (única instancia, sin duplicar listeners)
+            let modalImagen = null;
+            let imgModalToken = 0;
+
+            function abrirModalImagen(pid) {
+                const prod = productos_por_id[pid];
+                if (!prod) return;
+                const token = ++imgModalToken;
+
+                document.getElementById('modalImgNombre').textContent = prod.nombre;
+                document.getElementById('modalImgPrecio').textContent = '$' + formatNumber(prod.precio_dolar_visible);
+                document.getElementById('modalImgPrecioPeso').textContent = formatearMiles(formatPeso(prod.precio_peso_visible)) + ' Cop';
+                document.getElementById('modalImgPrecioBs').textContent = formatNumber(recortarADosDecimales(prod.precio_bs_visible)) + ' Bs';
+
+                const imgEl = document.getElementById('modalImgImagen');
+                const estadoEl = document.getElementById('modalImgEstado');
+                imgEl.classList.add('d-none');
+                imgEl.removeAttribute('src');
+                estadoEl.textContent = 'Cargando imagen…';
+                estadoEl.classList.remove('d-none');
+
+                if (!modalImagen) modalImagen = new bootstrap.Modal(document.getElementById('modalImagen'));
+                modalImagen.show();
+
+                obtenerImagenProducto(prod).then(function(url) {
+                    if (token !== imgModalToken) return; // evita condiciones de carrera
+                    if (url) {
+                        imgEl.src = url;
+                        imgEl.classList.remove('d-none');
+                        estadoEl.classList.add('d-none');
+                    } else {
+                        estadoEl.textContent = navigator.onLine ?
+                            'Este producto no tiene fotografía.' :
+                            'Fotografía no disponible sin conexión.';
+                    }
+                });
+            }
+
+            // Listener delegado: uno solo para todas las filas (no se duplica al re-renderizar)
+            $(document).on('click', '.btn-ver-foto', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                abrirModalImagen(String(this.dataset.pid));
+            });
 
 
             let carritoActivo = {};
 
             // Cargar carrito activo desde IndexedDB al iniciar
             (async function cargarCarritoInicial() {
+                await abrirDbCarrito();
                 const items = await db.carritoActivo.toArray();
                 carritoActivo = items.reduce((obj, item) => {
                     obj[item.id] = item;
@@ -2929,7 +4204,10 @@ $stmt->close();
                         priceBolivar: parseFloat(bolivarventa_p),
                         qty: cant,
                         mayor: mayor,
-                        cantidadPaca: cantidad_por_mayor
+                        cantidadPaca: cantidad_por_mayor,
+                        es_combo: producto.es_combo || 0,
+                        combo_items: producto.combo_items || [],
+                        origen: producto.origen || 'v'
                     };
                 }
 
@@ -2985,14 +4263,23 @@ $stmt->close();
                         let subtotalDolar = element.price * element.qty;
                         subtotalPeso = Math.round(subtotalPeso);
 
+                        const prodCat = productos_por_id[element.id];
+                        const esComboItem = (Number(element.es_combo) === 1) || (prodCat && Number(prodCat.es_combo) === 1);
+                        const btnVerComboCarrito = esComboItem ? `
+                            <button class="btn btn-sm btn-outline-secondary" onclick="verProductosCombo('${element.id}')" title="Ver productos del combo">
+                                <ion-icon style="font-size: 12px" name="layers-outline"></ion-icon>
+                            </button>
+                        ` : '';
+
                         $("#tabla-carrito tbody").append(`
                         <tr>
                             <td class="ac-c">${element.qty}</td>
-                            <td class="ac-c">${element.name}</td>
+                            <td class="ac-c">${element.name} ${esComboItem ? '<span class="badge bg-info ms-1">Combo</span>' : ''}</td>
                             <td class="ac-c">${formatearMiles(subtotalPeso)} Cop</td>
                             <td class="ac-c">${formatNumber(subtotalBolivar)} Bs</td>
                             <td class="ac-c">$${formatNumber(subtotalDolar)}</td>
                             <td class="ac-c">
+                                ${btnVerComboCarrito}
                                 <button class="btn btn-sm btn-outline-success" onclick="actualizarProductosCantidad('${element.id}', 'sumar')"><ion-icon style="font-size: 12px" name="arrow-up"></ion-icon></button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="actualizarProductosCantidad('${element.id}', 'restar')"><ion-icon style="font-size: 12px" name="arrow-down"></ion-icon></button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="quitarProductoJs('${element.id}')"><ion-icon style="font-size: 12px"  name="trash-outline"></ion-icon></button>
@@ -3070,6 +4357,252 @@ $stmt->close();
             }
 
             // ======================
+            // PAGO FRACCIONADO (varios medios)
+            // ======================
+            function _r2(n) {
+                return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+            }
+
+            // Redondeo de pesos a la centena más cercana (mismo criterio que CalculadoraPrecios::formatPeso()).
+            function redondearCentena(numero) {
+                let resto = numero % 100;
+                if (resto >= 50) {
+                    return Math.ceil(numero / 100) * 100;
+                } else {
+                    return Math.floor(numero / 100) * 100;
+                }
+            }
+
+            const METODOS_FRACCIONADO = {
+                punto: { moneda: 'bs' },
+                bioPago: { moneda: 'bs' },
+                pagoMovil: { moneda: 'bs' },
+                transferencia: { moneda: 'bs' },
+                efectivo: { moneda: 'bs' },
+                dolares: { moneda: 'usd' },
+                pesos: { moneda: 'cop' }
+            };
+
+            function leerPagosFraccionados() {
+                const out = {};
+                Object.keys(METODOS_FRACCIONADO).forEach(k => {
+                    const el = document.getElementById('frac_' + k);
+                    out[k] = el ? (parseFloat(el.value) || 0) : 0;
+                });
+                return out;
+            }
+
+            /**
+             * Calcula la cobertura del carrito: cada moneda con su propio total es un
+             * precio completo, así que un pago cubre la fracción que representa en ella.
+             */
+            function calcularFraccionado() {
+                const pagos = leerPagosFraccionados();
+
+                // Totales del carrito en cada moneda. Cada una es un precio completo del
+                // carrito (el cliente puede pagar todo en Bs, todo en COP o todo en USD).
+                const totales = { usd: 0, cop: 0, bs: 0 };
+                Object.values(carritoActivo).forEach(p => {
+                    const qty = Number(p.qty) || 0;
+                    totales.usd += (Number(p.price) || 0) * qty;
+                    totales.cop += (Number(p.pricePeso) || 0) * qty;
+                    totales.bs += (Number(p.priceBolivar) || 0) * qty;
+                });
+
+                // Cobertura: cada pago cubre la fracción que representa dentro del total de
+                // su propia moneda. Convertir entre monedas con la tasa actual fallaba porque
+                // los precios del carrito pueden ser snapshots de tasas anteriores: al pagar
+                // "lo que faltaba" seguía apareciendo un faltante.
+                const pagosPorMoneda = { usd: 0, cop: 0, bs: 0 };
+                Object.keys(METODOS_FRACCIONADO).forEach(k => {
+                    pagosPorMoneda[METODOS_FRACCIONADO[k].moneda] += Number(pagos[k]) || 0;
+                });
+
+                let cobertura = 0;
+                ['usd', 'cop', 'bs'].forEach(m => {
+                    if (totales[m] > 0) cobertura += pagosPorMoneda[m] / totales[m];
+                });
+
+                const falta = Math.max(0, 1 - cobertura);
+                const saldado = falta * totales.usd <= 0.02;
+
+                let restante = { usd: 0, cop: 0, bs: 0 };
+                if (!saldado) {
+                    restante.usd = _r2(falta * totales.usd);
+                    restante.cop = Math.max(0, redondearCentena(falta * totales.cop));
+                    restante.bs = _r2(falta * totales.bs);
+                }
+
+                // Vuelto: si el carrito ya está cubierto, el exceso se atribuye a una sola
+                // moneda (la de mayor fracción sobrante) para no duplicar el vuelto.
+                // shortcut: sin orden de pago real, en sobrepagos combinados el vuelto puede
+                // atribuirse a otra moneda; basta para devolver el monto total.
+                const exceso = { usd: 0, cop: 0, bs: 0 };
+                if (cobertura > 1) {
+                    let elegida = null;
+                    let mejorFraccion = 0;
+                    ['cop', 'bs', 'usd'].forEach(m => {
+                        if (totales[m] <= 0) return;
+                        const otros = Math.min(1, cobertura - (pagosPorMoneda[m] / totales[m]));
+                        const requerido = (1 - otros) * totales[m];
+                        const sobrante = pagosPorMoneda[m] - requerido;
+                        if (sobrante <= 0) return;
+                        const fraccion = sobrante / totales[m];
+                        if (fraccion > mejorFraccion) {
+                            mejorFraccion = fraccion;
+                            elegida = { moneda: m, monto: sobrante };
+                        }
+                    });
+                    if (elegida) exceso[elegida.moneda] = elegida.monto;
+                }
+                exceso.usd = _r2(exceso.usd);
+                exceso.cop = Math.round(exceso.cop);
+                exceso.bs = _r2(exceso.bs);
+
+                return {
+                    pagos,
+                    saldado,
+                    restante,
+                    exceso
+                };
+            }
+
+            // Vuelto: se descuenta del efectivo de la misma moneda antes de guardar,
+            // para que el cierre de caja cuadre con lo que realmente queda en caja.
+            // shortcut: solo se devuelve vuelto desde métodos en efectivo (no por punto/tarjeta);
+            // si el sobrante supera lo ingresado en efectivo, el resto queda como diferencia en el cierre.
+            function pagosFraccionadosNetos() {
+                const r = calcularFraccionado();
+                const neto = { ...r.pagos };
+                const orden = {
+                    bs: ['efectivo'],
+                    usd: ['dolares'],
+                    cop: ['pesos']
+                };
+                ['usd', 'cop', 'bs'].forEach(m => {
+                    let ex = Number(r.exceso[m]) || 0;
+                    const minimo = (m === 'cop') ? 1 : 0.01;
+                    if (ex < minimo) return;
+                    for (const k of orden[m]) {
+                        if (ex < minimo) break;
+                        const actual = Number(neto[k]) || 0;
+                        const quitar = Math.min(actual, ex);
+                        neto[k] = _r2(actual - quitar);
+                        ex -= quitar;
+                    }
+                });
+                return neto;
+            }
+
+            function textoVuelto(exceso) {
+                const partes = [];
+                if (exceso.usd > 0.01) partes.push('$' + formatNumber(exceso.usd));
+                if (exceso.cop > 1) partes.push(formatearMiles(exceso.cop) + ' COP');
+                if (exceso.bs > 0.05) partes.push(formatNumber(exceso.bs) + ' Bs');
+                return partes.join(' · ');
+            }
+
+            function actualizarFraccionadoUI() {
+                if (!document.getElementById('seccionFraccionado')) return;
+                const r = calcularFraccionado();
+
+                document.getElementById('fracFaltaCop').textContent = formatearMiles(r.restante.cop);
+                document.getElementById('fracFaltaBs').textContent = formatNumber(r.restante.bs);
+                document.getElementById('fracFaltaUsd').textContent = '$' + formatNumber(r.restante.usd);
+
+                document.querySelectorAll('#seccionFraccionado .frac-fill').forEach(btn => {
+                    const def = METODOS_FRACCIONADO[btn.dataset.fracFill];
+                    if (!def) return;
+                    const min = def.moneda === 'cop' ? 1 : 0.01;
+                    btn.disabled = (Number(r.restante[def.moneda]) || 0) < min;
+                });
+
+                const estado = document.getElementById('fracEstado');
+                const vuelto = textoVuelto(r.exceso);
+
+                if (r.saldado && vuelto) {
+                    estado.textContent = 'Cuenta cubierta · Vuelto: ' + vuelto;
+                    estado.className = 'frac-estado exceso';
+                } else if (r.saldado) {
+                    estado.textContent = 'Cuenta cubierta';
+                    estado.className = 'frac-estado ok';
+                } else {
+                    estado.textContent = 'Falta por cubrir la cuenta';
+                    estado.className = 'frac-estado aviso';
+                }
+            }
+
+            let pasoDespachoActual = 1;
+
+            // Alterna entre el paso 1 (despacho) y el paso 2 (fracciones).
+            function irPasoDespacho(paso) {
+                pasoDespachoActual = (paso === 2) ? 2 : 1;
+
+                const p1 = document.getElementById('pasoDespacho1');
+                const p2 = document.getElementById('pasoDespacho2');
+                const atras = document.getElementById('btnAtrasDespacho');
+                const cancelar = document.getElementById('btnCancelarDespacho');
+                const confirmar = document.getElementById('btnConfirmarDespacho');
+                const wizard = document.getElementById('wizardDespacho');
+
+                if (p1) p1.classList.toggle('d-none', pasoDespachoActual === 2);
+                if (p2) p2.classList.toggle('d-none', pasoDespachoActual !== 2);
+                if (atras) atras.classList.toggle('d-none', pasoDespachoActual !== 2);
+                if (cancelar) cancelar.classList.toggle('d-none', pasoDespachoActual === 2);
+                if (confirmar) {
+                    confirmar.textContent = pasoDespachoActual === 2 ? 'Confirmar venta' : 'Continuar';
+                    confirmar.disabled = false;
+                }
+                if (wizard) {
+                    wizard.querySelectorAll('.wizard-step').forEach(s => {
+                        const n = Number(s.dataset.step);
+                        s.classList.toggle('active', n === pasoDespachoActual);
+                        s.classList.toggle('done', n < pasoDespachoActual);
+                    });
+                }
+                if (pasoDespachoActual === 2) {
+                    actualizarFraccionadoUI();
+                    const primero = document.querySelector('#pasoDespacho2 input');
+                    if (primero) primero.focus();
+                }
+            }
+
+            function resetFraccionado() {
+                const sec = document.getElementById('seccionFraccionado');
+                if (sec) sec.querySelectorAll('input').forEach(i => i.value = '');
+                const wizard = document.getElementById('wizardDespacho');
+                if (wizard) wizard.classList.add('d-none');
+                irPasoDespacho(1);
+            }
+
+            function resetFraccionadoMontos() {
+                const sec = document.getElementById('seccionFraccionado');
+                if (!sec) return;
+                sec.querySelectorAll('input').forEach(i => i.value = '');
+                actualizarFraccionadoUI();
+            }
+
+            // Suma al monto del input lo que falta por cubrir en su moneda.
+            function completarFraccionado(clave) {
+                const def = METODOS_FRACCIONADO[clave];
+                const input = document.getElementById('frac_' + clave);
+                if (!def || !input) return;
+
+                const falta = Number(calcularFraccionado().restante[def.moneda]) || 0;
+                const min = def.moneda === 'cop' ? 1 : 0.01;
+                if (falta < min) return;
+
+                input.value = _r2((parseFloat(input.value) || 0) + falta);
+                actualizarFraccionadoUI();
+                input.focus();
+            }
+
+            function resumenFaltante() {
+                const r = calcularFraccionado().restante;
+                return `${formatearMiles(r.cop)} COP · ${formatNumber(r.bs)} Bs · $${formatNumber(r.usd)}`;
+            }
+
+            // ======================
             // PROCESAR PEDIDO (VENTA)
             // ======================
             async function procesarPedido(metodoPago, despacho, cliente = {
@@ -3085,6 +4618,10 @@ $stmt->close();
                 // proceso extra de verificar que no existan duplicados
 
                 const idPedido = String(Date.now()) + '-' + Math.floor(Math.random() * 10000);
+                const tsPedido = parseInt(String(idPedido).split('-')[0], 10);
+                const fechaPedido = new Date(tsPedido);
+                const pad2 = n => String(n).padStart(2, '0');
+                const fechaVenta = `${fechaPedido.getFullYear()}-${pad2(fechaPedido.getMonth() + 1)}-${pad2(fechaPedido.getDate())} ${pad2(fechaPedido.getHours())}:${pad2(fechaPedido.getMinutes())}:${pad2(fechaPedido.getSeconds())}`;
                 const datosCliente = {
                     nombre: cliente.nombre || "",
                     cedula: cliente.cedula || "",
@@ -3111,6 +4648,7 @@ $stmt->close();
 
                 let nuevoPedido = {
                     id: idPedido,
+                    fechaVenta,
                     metodoPago,
                     despacho, // 1= Venta normal, 2= crédito, 3= descuento
                     valorFinalVenta,
@@ -3123,6 +4661,10 @@ $stmt->close();
                     usuario_id: "<?php echo $usuario_id ?>",
                     usuario_nombre: "<?php echo $nombreUsuario ?>"
                 };
+
+                if (metodoPago === 'option8') {
+                    nuevoPedido.pagosFraccionados = pagosFraccionadosNetos();
+                }
 
                 // =========================================================================
                 // 2. ¡AQUÍ LO LLAMAS! - VALIDACIÓN ANTES DE GUARDAR
@@ -3263,6 +4805,35 @@ $stmt->close();
                         valido: false,
                         error: `Pedido [ID: ${pedido.id}]: El campo 'despacho' es obligatorio.`
                     };
+                }
+
+                // Desglose obligatorio cuando el pago es fraccionado
+                if (pedido.metodoPago === 'option8') {
+                    const pf = pedido.pagosFraccionados;
+                    if (!pf || typeof pf !== 'object') {
+                        return {
+                            valido: false,
+                            error: `Pedido [ID: ${pedido.id}]: Falta el desglose 'pagosFraccionados'.`
+                        };
+                    }
+                    const claves = ['punto', 'bioPago', 'pagoMovil', 'transferencia', 'efectivo', 'dolares', 'pesos'];
+                    let positivo = false;
+                    for (const k of claves) {
+                        const v = Number(pf[k] ?? 0);
+                        if (!isFinite(v) || v < 0) {
+                            return {
+                                valido: false,
+                                error: `Pedido [ID: ${pedido.id}]: Monto fraccionado inválido en '${k}'.`
+                            };
+                        }
+                        if (v > 0) positivo = true;
+                    }
+                    if (!positivo) {
+                        return {
+                            valido: false,
+                            error: `Pedido [ID: ${pedido.id}]: El pago fraccionado no tiene montos.`
+                        };
+                    }
                 }
 
                 // Validar que los montos finales existan y sean numéricos
@@ -3412,6 +4983,16 @@ $stmt->close();
                     } else if (exitos > 0 && fallos > 0) {
                         Alerta.toast('warning', `Sincronización parcial: ${exitos} verificados, ${fallos} retenidos o fallidos.`);
                     }
+
+                    // Si el tutorial está activo y en paso 3 (ventas), intentar avanzarlo
+                    if (exitos > 0 && typeof window.tutorialAvanzar === 'function') {
+                        setTimeout(function() {
+                            window.tutorialAvanzar();
+                        }, 1200);
+                    }
+
+                    // Actualizar el ranking de más vendidos si se registraron ventas
+                    if (exitos > 0) refrescarTopVendidos();
 
                     actualizarProductosSinEnviar();
                     actualizarProductosEnviados();
@@ -3568,7 +5149,8 @@ $stmt->close();
                     option4: '(4) Efectivo',
                     option5: '(7) Dólares',
                     option6: '(3) Pesos',
-                    option7: '(2) BioPago'
+                    option7: '(2) BioPago',
+                    option8: '(8) Fraccionado'
                 };
 
                 function formatNumber(n) {
@@ -3607,7 +5189,8 @@ $stmt->close();
                         option4: 'Bs',
                         option5: 'Usd',
                         option6: 'Cop',
-                        option7: 'Bs'
+                        option7: 'Bs',
+                        option8: 'Usd'
                     };
                     let moneda = monedas[metodoPago] || 'Bs';
                     let monto;
@@ -3834,7 +5417,8 @@ $stmt->close();
                             option4: 'Bs',
                             option5: 'Usd',
                             option6: 'Cop',
-                            option7: 'Bs'
+                            option7: 'Bs',
+                            option8: 'Usd'
                         }
                         let moneda = monedas[metodoPago];
                         let monto;
@@ -4138,6 +5722,7 @@ $stmt->close();
                             openModalButton.click();
                             document.getElementById("search").focus();
                             document.getElementById("search").value = "";
+                            mostrarGridSiVacio();
 
                             break;
                         case 'v':
@@ -4190,13 +5775,16 @@ $stmt->close();
                         '5': 'option2',
                         '6': 'option3',
                         '7': 'option5',
+                        '8': 'option8',
                     };
 
                     if (opciones[key]) {
                         select.value = opciones[key];
                         select.dispatchEvent(new Event('change'));
-                        // quita el foco
-                        document.getElementById('cedulaClienteModal').focus()
+                        // En fraccionado el listener del select ya enfoca el primer monto
+                        if (opciones[key] !== 'option8') {
+                            document.getElementById('cedulaClienteModal').focus()
+                        }
                     }
 
                     if (key == 'enter') {
@@ -4209,7 +5797,7 @@ $stmt->close();
             document.addEventListener('keyup', function(event) {
                 const key = event.key.toLowerCase();
 
-                const allowedKeys = ['+', '-', 'b', 'v', 'c', 'escape', 'enter', '1', '2', '3', '4', '5', '6', '7'];
+                const allowedKeys = ['+', '-', 'b', 'v', 'c', 'escape', 'enter', '1', '2', '3', '4', '5', '6', '7', '8'];
 
 
 

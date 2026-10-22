@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /iseller_store/
+
+# Si es un archivo o directorio real, servirlo directamente
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Si no, enviarlo a index.php con el parámetro tienda_slug
+RewriteRule ^([^/]+)/?$ index.php?tienda_slug=$1 [L,QSA]

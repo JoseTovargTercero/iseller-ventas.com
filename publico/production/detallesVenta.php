@@ -223,6 +223,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                             $precioFinalMoneda = $precioBs * $cantidad;
                                                             $moneda = 'BS';
                                                             break;
+                                                        case '8':
+                                                            // En fraccionado no hay una sola moneda por artículo:
+                                                            // el desglose real se muestra debajo de la tabla.
+                                                            $precioFinalMoneda = null;
+                                                            $moneda = 'Fraccionado';
+                                                            break;
                                                         case '5':
                                                             $precioFinalMoneda = $precioDolar * $cantidad;
                                                             $moneda = '$';
@@ -239,8 +245,37 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <td>' . htmlspecialchars($nombreProducto) . '</td>
                                                     <td>' . $cantidad . '</td>
                                                     <td>$' . number_format($precioFinal, 2, ',', '.') . '</td>
-                                                    <td>' . number_format($precioFinalMoneda, 2, ',', '.') . ' <small>' . $moneda . '</small></td>
+                                                    <td>' . ($precioFinalMoneda === null ? '— <small>Fraccionado</small>' : number_format($precioFinalMoneda, 2, ',', '.') . ' <small>' . $moneda . '</small>') . '</td>
                                                 </tr>';
+                                                }
+
+                                                if ($tipopago == '8') {
+                                                    $stmtFrac = $conexion->prepare("SELECT * FROM fracciones WHERE id_order = ? LIMIT 1");
+                                                    $stmtFrac->bind_param("i", $orderid);
+                                                    $stmtFrac->execute();
+                                                    $frac = $stmtFrac->get_result()->fetch_assoc();
+                                                    $stmtFrac->close();
+                                                    if ($frac) {
+                                                        $detalleFrac = [
+                                                            'Punto (Bs)' => $frac['punto'],
+                                                            'BioPago (Bs)' => $frac['bioPago'],
+                                                            'Pago Movil (Bs)' => $frac['pagoMovil'],
+                                                            'Transferencia (Bs)' => $frac['transferencia'],
+                                                            'Efectivo (Bs)' => $frac['efectivo'],
+                                                            'Dolares (USD)' => $frac['dolares'],
+                                                            'Pesos (COP)' => $frac['pesos'],
+                                                        ];
+                                                        echo '<div class="orden-detalle" style="margin-top:10px">
+                                                            <p><strong>Desglose del pago fraccionado:</strong></p>
+                                                            <table class="dash-table" style="width:100%"><tbody>';
+                                                        foreach ($detalleFrac as $etiqueta => $valor) {
+                                                            if ((float) $valor == 0) {
+                                                                continue;
+                                                            }
+                                                            echo '<tr><td>' . htmlspecialchars($etiqueta) . '</td><td style="text-align:right">' . number_format((float) $valor, 2, ',', '.') . '</td></tr>';
+                                                        }
+                                                        echo '</tbody></table></div>';
+                                                    }
                                                 }
                                             }
                                         }

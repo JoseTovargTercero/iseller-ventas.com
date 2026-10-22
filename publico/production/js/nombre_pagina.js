@@ -8,6 +8,7 @@ const configPaginas = {
   "clientes.php": { titulo: "Clientes", subtitulo: "Gestión de clientes" },
   "users.php": { titulo: "Usuarios", subtitulo: "Registro de usuarios" },
   "permisos.php": { titulo: "Permisos", subtitulo: "Permisos de usuarios" },
+  
   "ficha.php": {
     titulo: "Detalles del producto",
     subtitulo: "Consulte los detalles de ventas del producto",
@@ -29,8 +30,8 @@ const configPaginas = {
     subtitulo: "Lista de productos con stock crítico",
   },
   "productos_al_mayor.php": {
-    titulo: "Agregar producto al mayor",
-    subtitulo: "Registre la version de venta al mayor de un producto",
+    titulo: "Productos al Mayor",
+    subtitulo: "Listado y registro de productos al por mayor",
   },
   "transferir.php": {
     titulo: "Transferir stock",
@@ -69,6 +70,46 @@ const configPaginas = {
   "tutoriales.php": {
     titulo: "Dashboard",
     subtitulo: "Aprende a usar el sistema con estos videos guía",
+  },
+  "rendimiento_categoria.php": {
+    titulo: "Rendimiento por categoría",
+    subtitulo: "Análisis de ventas, márgenes y existencias por categoría",
+  },
+  "rendimiento_tienda.php": {
+    titulo: "Rendimiento Tienda Online",
+    subtitulo: "Estadísticas de órdenes, ingresos y productos de tu tienda web",
+  },
+  "tienda_onboarding.php": {
+    titulo: "Crear Tienda",
+    subtitulo: "Configura tu tienda virtual",
+  },
+  "tienda_productos.php": {
+    titulo: "Productos",
+    subtitulo: "Catálogo de tu tienda virtual",
+  },
+  "tienda_pedidos.php": {
+    titulo: "Pedidos",
+    subtitulo: "Pedidos de tu tienda virtual",
+  },
+  "tienda_chat.php": {
+    titulo: "Chat",
+    subtitulo: "Conversaciones con tus clientes",
+  },
+  "tienda_configuracion.php": {
+    titulo: "Configuración de Tienda Virtual",
+    subtitulo: "Gestiona la información pública de tu negocio",
+  },
+  "tienda_planes_entrega.php": {
+    titulo: "Planes de Entrega",
+    subtitulo: "Agrupa pedidos delivery y visualiza sus rutas en el mapa",
+  },
+  "tienda_publicidad.php": {
+    titulo: "Publicidad",
+    subtitulo: "Promociona tu tienda virtual",
+  },
+  "combos.php": {
+    titulo: "Packs y Combos",
+    subtitulo: "Creación de combos y seguimiento de variaciones de precios en productos",
   },
 };
 

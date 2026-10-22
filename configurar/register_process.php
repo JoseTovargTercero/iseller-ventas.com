@@ -24,6 +24,19 @@ try {
         throw new Exception("Todos los campos son obligatorios");
     }
 
+    if (mb_strlen($password) < 5) {
+        throw new Exception("La contraseña debe tener al menos 5 caracteres");
+    }
+
+    if (isset($_POST['confirmar_password']) && $_POST['confirmar_password'] !== $password) {
+        throw new Exception("Las contraseñas no coinciden");
+    }
+
+    // El usuario de acceso es el email; se acepta un correo válido o un teléfono de al menos 6 dígitos.
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) && !preg_match('/^\d{6,}$/', $email)) {
+        throw new Exception("El correo electrónico no es válido");
+    }
+
     // 1.5 Verificar si el email ya existe
     $stmtCheck = $conexion->prepare("SELECT id FROM usuarios WHERE usuario = ? LIMIT 1");
     if (!$stmtCheck) throw new Exception("Error al verificar disponibilidad de email");
@@ -41,15 +54,23 @@ try {
     // 2. Iniciar transacción
     $conexion->begin_transaction();
 
-    // 3. Paso 1: Registrar negocio
+    // 3. Paso 1: Registrar negocio con membresía de prueba
     $fecha_registro = date('Y-m-d H:i:s');
-    $proxima_facturacion = date('Y-m-d', strtotime('+3 months'));
+    $proxima_facturacion = date('Y-m-d', strtotime('+1 month'));
     $estado = 'activo';
 
-    $stmtNegocio = $conexion->prepare("INSERT INTO negocio (tipo, nombre, fecha_regitro, proxima_facturacion, estado, plan) VALUES (?, ?, ?, ?, ?, ?)");
+    $planes_validos = ['mensual', 'anual'];
+    $plan_elegido = in_array($plan, $planes_validos) ? $plan : 'mensual';
+
+    $membresia_tipo = 'prueba';
+    $membresia_estado = 'activa';
+    $fecha_inicio_membresia = $fecha_registro;
+    $fecha_fin_membresia = date('Y-m-d 23:59:59', strtotime('+1 month'));
+
+    $stmtNegocio = $conexion->prepare("INSERT INTO negocio (tipo, nombre, fecha_regitro, proxima_facturacion, estado, plan, membresia_tipo, membresia_estado, fecha_inicio_membresia, fecha_fin_membresia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if (!$stmtNegocio) throw new Exception("Error preparando negocio: " . $conexion->error);
     
-    $stmtNegocio->bind_param("ssssss", $tipo_negocio, $nombre_negocio, $fecha_registro, $proxima_facturacion, $estado, $plan);
+    $stmtNegocio->bind_param("ssssssssss", $tipo_negocio, $nombre_negocio, $fecha_registro, $proxima_facturacion, $estado, $plan_elegido, $membresia_tipo, $membresia_estado, $fecha_inicio_membresia, $fecha_fin_membresia);
     
     if (!$stmtNegocio->execute()) {
         throw new Exception("Error al registrar negocio: " . $stmtNegocio->error);
@@ -107,7 +128,7 @@ try {
     $stmtConfig->close();
 
     // 7. Paso 5: cambios_mostrados
-    $tasas_default = json_encode(["precio_bolivar_dolar"=>"1","precio_bolivar_peso"=>"1","precio_bs_visible"=>"1"]);
+    $tasas_default = json_encode(["precio_dolar_visible"=>"1","precio_bolivar_peso"=>"1","precio_bs_visible"=>"1"]);
     
     $stmtCambios = $conexion->prepare("INSERT INTO cambios_mostrados (bss_id, tasas) VALUES (?, ?)");
     if (!$stmtCambios) throw new Exception("Error preparando cambios mostrados: " . $conexion->error);

@@ -259,6 +259,50 @@ if ($_SESSION['nivel'] == 1) {
                 border-radius: 8px !important;
                 box-shadow: 0 3px 12px rgba(45, 212, 160, .25) !important;
             }
+
+            /* ── Móvil (WebView de la app) ───────────────────────────────── */
+            @media (max-width: 768px) {
+                .right_col {
+                    padding: 14px 12px !important;
+                }
+
+                .dash-panel .panel-header {
+                    padding: 14px 16px 12px;
+                }
+
+                /* El botón "Nuevo" en su propia fila, a lo ancho */
+                .btn-dash-new {
+                    width: 100%;
+                    justify-content: center;
+                    padding: 11px 18px;
+                }
+
+                .table-responsive {
+                    padding: 0 10px 12px !important;
+                }
+
+                /* El contador de filas no aporta en el teléfono */
+                #tabla-usuarios th:first-child,
+                #tabla-usuarios td:first-child {
+                    display: none;
+                }
+
+                #tabla-usuarios th,
+                #tabla-usuarios td {
+                    padding: 10px 8px;
+                    font-size: .8rem;
+                }
+
+                /* Borrar usuario con tamaño de dedo */
+                #tabla-usuarios .btn-delete {
+                    width: 36px;
+                    height: 36px;
+                    padding: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            }
         </style>
     </head>
     <div id="preload" style="display: none;">Cargando...</div>
@@ -324,7 +368,7 @@ if ($_SESSION['nivel'] == 1) {
 
                             <div class="form-group">
                                 <label class='col-form-label'>Correo electronico</label>
-                                <input class='form-control' type="mail" name='user' placeholder='Correo electronico' required='required' />
+                                <input class='form-control' type="email" name='user' placeholder='Correo electronico' required='required' />
                             </div>
 
                             <div class="form-group">

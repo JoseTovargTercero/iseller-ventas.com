@@ -20,6 +20,31 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     </head>
 
     <style>
+        /* Modal Calcular Precio compacto sin scroll */
+        #w-modal.modal-calc-precio {
+            width: 95% !important;
+            max-width: 440px !important;
+            height: auto !important;
+            max-height: none !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            border-radius: 14px !important;
+            background: #181b22 !important;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+        }
+
+        #w-modal.modal-calc-precio #modal {
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        #w-modal.modal-calc-precio #modal-body {
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
         .tabs section {
             display: none;
             opacity: 0;
@@ -29,6 +54,217 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         .tabs section.active {
             display: block;
             opacity: 1;
+        }
+
+        .x_title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 15px;
+            background: transparent;
+            border-bottom: 1px solid var(--dash-border, #2e353e);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .x_title h2 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--dash-text, #e8edf2);
+        }
+
+        .x_content {
+            padding-top: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-group label,
+        .col-form-label {
+            margin-bottom: 4px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dash-text, #e8edf2);
+            padding-bottom: 8px;
+            border-bottom: 2px solid #28a745;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title ion-icon {
+            color: #28a745;
+            font-size: 18px;
+        }
+
+        /* Sucursales: tarjetas seleccionables */
+        .suc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .suc-card {
+            position: relative;
+        }
+
+        .suc-card input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .suc-card label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dash-text-muted, #8892a0);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--dash-border, #2e353e);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+
+        .suc-card label:hover {
+            color: var(--dash-text, #e8edf2);
+            border-color: rgba(45, 212, 160, 0.5);
+        }
+
+        .suc-card .suc-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            border: 2px solid #3a424d;
+            border-radius: 6px;
+            transition: all .18s ease;
+        }
+
+        .suc-card .suc-box ion-icon {
+            font-size: 14px;
+            color: #0b1310;
+            opacity: 0;
+            transition: opacity .15s ease;
+        }
+
+        .suc-card input:checked+label {
+            color: var(--dash-text, #e8edf2);
+            border-color: #2dd4a0;
+            background: rgba(45, 212, 160, 0.1);
+            box-shadow: 0 0 0 1px rgba(45, 212, 160, 0.3);
+        }
+
+        .suc-card input:checked+label .suc-box {
+            background: #2dd4a0;
+            border-color: #2dd4a0;
+        }
+
+        .suc-card input:checked+label .suc-box ion-icon {
+            opacity: 1;
+        }
+
+        .suc-card input.is-invalid+label {
+            border-color: #ef5a6f;
+        }
+
+        /* Precios de venta: tarjetas de resumen */
+        .price-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--dash-border, #2e353e);
+            border-radius: 12px;
+        }
+
+        .price-card .pc-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            font-size: 20px;
+            color: var(--dash-text-muted, #8892a0);
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+        }
+
+        .price-card .pc-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+
+        .price-card .pc-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dash-text, #e8edf2);
+        }
+
+        .price-card .pc-sub {
+            font-size: 11px;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            color: var(--dash-text-muted, #8892a0);
+        }
+
+        .price-card .pc-value {
+            margin-left: auto;
+            min-width: 0;
+            width: 45%;
+            padding: 0;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: right;
+            color: var(--dash-text, #e8edf2);
+            background: transparent;
+            border: none;
+        }
+
+        .price-card .pc-value:focus {
+            outline: none;
+        }
+
+        .price-card.highlight {
+            border-color: rgba(45, 212, 160, 0.45);
+            background: linear-gradient(135deg, rgba(45, 212, 160, 0.12), rgba(45, 212, 160, 0.03));
+        }
+
+        .price-card.highlight .pc-icon {
+            color: #2dd4a0;
+            background: rgba(45, 212, 160, 0.15);
+        }
+
+        .price-card.highlight .pc-value {
+            color: #2dd4a0;
+        }
+
+        .price-card.muted .pc-value {
+            font-size: 16px;
+            color: var(--dash-text-muted, #8892a0);
         }
     </style>
 
@@ -44,7 +280,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <div class='right_col' role='main'>
                     <div class=''>
 
-                
+
 
                         <div class='clearfix'></div>
 
@@ -57,7 +293,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                             $(document).ready(function() {
                                 ['precioMonedaOrigen', 'cantidad', 'porcentaje'].forEach(element => {
-                                    document.getElementById(element).addEventListener('keyup', () => calcularPrecioVenta())
+                                    const el = document.getElementById(element);
+                                    // Solo dígitos y un punto decimal (la coma se normaliza a punto)
+                                    el.addEventListener('input', () => {
+                                        const partes = el.value.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.');
+                                        el.value = partes.length > 2 ? partes.shift() + '.' + partes.join('') : partes.join('.');
+                                    });
+                                    el.addEventListener('keyup', () => calcularPrecioVenta())
                                 });
 
                                 document.getElementById('origenProducto').addEventListener('change', () => calcularPrecioVenta())
@@ -204,21 +446,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 return valor.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                             }
                         </script>
-                        <form id='form-data' action='../../configurar/agregarProducto.php' method='post' class='form-horizontal form-label-left   fadeInUp animated'>
+                        <form id='form-data' action='../../configurar/agregarProducto.php' method='post' class='form-horizontal form-label-left   fadeInUp animated' enctype='multipart/form-data'>
                             <div class='row'>
                                 <div class='col-lg-6 '>
                                     <div class='x_panel'>
                                         <div class='x_title'>
-                                            <h2>Datos del Producto</h2>
-                                            <div class='clearfix'></div>
-
+                                            <h2><ion-icon name="create-outline" style="font-size:16px;vertical-align:middle;margin-right:4px;"></ion-icon> Datos del Producto</h2>
                                         </div>
                                         <div class='x_content'>
                                             <div class="tabs">
                                                 <section>
 
                                                     <div class="mb-2">
-                                                        <label class='col-form-label' for='first-name'>Nombre del producto</label>
+                                                        <label class='col-form-label' for='nombre'>Nombre del producto</label>
                                                         <div class="row">
 
                                                             <div class='col-md-7  col-sm-7'>
@@ -236,13 +476,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                     <div class="row mb-2">
                                                         <div class='col-lg-6 form-group'>
-                                                            <label class='col-form-label' for='first-name'>Precio de Compra
-                                                            </label>
+                                                            <label class='col-form-label' for='precioMonedaOrigen'>Precio de Compra</label>
                                                             <input type='text' required placeholder="Precio del bulto" id='precioMonedaOrigen' name='precioMonedaOrigen' class='form-control '>
                                                         </div>
                                                         <div class='col-lg-6 form-group'>
 
-                                                            <label class='col-form-label' for='first-name'>Origen del producto</label>
+                                                            <label class='col-form-label' for='origenProducto'>Origen del producto</label>
                                                             <select class="form-control" required name="origenProducto" id="origenProducto">
                                                                 <option value="">Seleccione</option>
                                                                 <option value="v">Venezolano</option>
@@ -255,17 +494,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <div class="row  mb-2">
 
                                                         <div class='col-lg-6 form-group'>
-                                                            <label class='col-form-label' for='first-name'>Unidades por bulto
-                                                            </label>
+                                                            <label class='col-form-label' for='cantidad'>Unidades por bulto</label>
                                                             <input type='text' required id='cantidad' placeholder="Unidades que contiene el bulto" name='cantidad' class='form-control '>
                                                         </div>
 
-                                                        <select style="display: none;" class="form-control" name="categoria">
-                                                            <option> -- Categoria -- </option>
-                                                        </select>
                                                         <div class='col-lg-6 form-group'>
-                                                            <label class='col-form-label' for='first-name'>Porcentaje
-                                                            </label>
+                                                            <label class='col-form-label' for='porcentaje'>Porcentaje</label>
                                                             <input required type='text' id='porcentaje' name='porcentaje' placeholder="Porcentaje incrementado" class='form-control '>
 
                                                         </div>
@@ -278,55 +512,120 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                                     <div class="row  mb-2">
                                                         <div class='col-lg-6 form-group'>
-                                                            <label class='col-form-label' for='first-name'>Proveedor
-                                                            </label>
+                                                            <label class='col-form-label' for='proveedor'>Proveedor</label>
                                                             <input required type='text' id='proveedor' name='proveedor' placeholder="Nombre del proveedor" class='form-control '>
                                                         </div>
                                                         <div class='col-lg-6 form-group'>
-                                                            <label class='col-form-label' for='first-name'>Código de barras
-                                                            </label>
+                                                            <label class='col-form-label' for='c_barras'>Código de barras</label>
                                                             <input required type='text' id='c_barras' name='c_barras' placeholder="Código de barras del producto" class='form-control '>
                                                         </div>
                                                     </div>
-                                                    <div class='ln_solid'></div>
+
+                                                    <div class="row mb-2">
+                                                        <div class='col-lg-12 form-group'>
+                                                            <label class='col-form-label'>Categoría del producto</label>
+                                                            <select name="categoria" id="categoria_select" class="form-select" style="width: 100%;">
+                                                                <option value="">Seleccione una categoría</option>
+                                                                <?php
+                                                                $stmtCat = $conexion->prepare("SELECT id, nombre, slug, grupo FROM categorias_producto WHERE bss_id = 0 OR bss_id = ? ORDER BY grupo ASC, nombre ASC");
+                                                                if ($stmtCat) {
+                                                                    $stmtCat->bind_param("i", $bss_id);
+                                                                    $stmtCat->execute();
+                                                                    $catResult = $stmtCat->get_result();
+                                                                    $grupoActual = '';
+                                                                    if ($catResult && $catResult->num_rows > 0) {
+                                                                        while ($cat = $catResult->fetch_assoc()) {
+                                                                            $grupo = $cat['grupo'] ?? 'Otros';
+                                                                            if ($grupo !== $grupoActual) {
+                                                                                if ($grupoActual !== '') echo '</optgroup>';
+                                                                                echo '<optgroup label="' . htmlspecialchars($grupo) . '">';
+                                                                                $grupoActual = $grupo;
+                                                                            }
+                                                                            echo '<option value="' . (int)$cat['id'] . '">' . htmlspecialchars($cat['nombre']) . '</option>';
+                                                                        }
+                                                                        if ($grupoActual !== '') echo '</optgroup>';
+                                                                    }
+                                                                    $stmtCat->close();
+                                                                }
+                                                                ?>
+                                                            </select>
+                                                        </div>
+                                                    </div>
 
 
-                                                    <div class="mb-3">
-                                                        <h6 class="mb-3">Sucursales donde se va a vender el producto</h6>
+                                                    <?php
+                                                    $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
+                                                    $stmt->bind_param('i', $bss_id);
+                                                    $stmt->execute();
+                                                    $result = $stmt->get_result();
+                                                    $numSucursales = $result->num_rows;
+                                                    ?>
+                                                    <div class="mb-3" id="bloque-sucursales" <?php if ($numSucursales <= 1) echo 'style="display:none"'; ?>>
+                                                        <div class="section-title">
+                                                            <ion-icon name="storefront-outline"></ion-icon>
+                                                            Sucursales donde se va a vender el producto
+                                                        </div>
                                                         <?php
-                                                        $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
-                                                        $stmt->bind_param('i', $bss_id);
-                                                        $stmt->execute();
-                                                        $result = $stmt->get_result();
-                                                        if ($result->num_rows > 0) {
+                                                        if ($numSucursales > 1) {
+                                                            echo '<div class="suc-grid">';
                                                             while ($row = $result->fetch_assoc()) {
                                                                 $checked = $row['principal'] == 1 ? 'checked' : '';
 
                                                                 echo <<<HTML
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" {$checked} name="sucursales[]" data-nombre="{$row['nombre']}" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
-                                                            <label class="form-check-label" for="suc-{$row['id']}">
-                                                                {$row['nombre']}
+                                                        <div class="suc-card">
+                                                            <input {$checked} name="sucursales[]" data-nombre="{$row['nombre']}" data-id="{$row['id']}" type="checkbox" value="{$row['id']}" id="suc-{$row['id']}">
+                                                            <label for="suc-{$row['id']}">
+                                                                <span class="suc-box"><ion-icon name="checkmark-outline"></ion-icon></span>
+                                                                <span class="suc-name">{$row['nombre']}</span>
                                                             </label>
                                                         </div>
                                                         HTML;
                                                             }
+                                                            echo '</div>';
+                                                        } elseif ($numSucursales == 1) {
+                                                            // Una sola sucursal: checkbox oculto y premarcado (mantiene el flujo de stock)
+                                                            $row = $result->fetch_assoc();
+                                                            echo '<input type="checkbox" checked name="sucursales[]" data-id="' . $row['id'] . '" value="' . $row['id'] . '" id="suc-' . $row['id'] . '" style="display:none">';
                                                         }
                                                         $stmt->close();
 
                                                         ?>
                                                     </div>
                                                 </section>
+
+                                                <!-- Foto del producto -->
+                                                <section>
+                                                    <div class="mb-3">
+                                                        <div class="section-title">
+                                                            <ion-icon name="camera-outline"></ion-icon>
+                                                            Foto del producto
+                                                        </div>
+                                                        <p style="font-size:12px;color:#8892a0;margin-bottom:12px;">Sube una imagen para que tu producto se vea mejor en la tienda.</p>
+                                                        <div id="np-photo-dropzone" style="border:2px dashed #2e353e;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;" onclick="document.getElementById('np-photo-input').click()">
+                                                            <input type="file" id="np-photo-input" name="foto_producto" accept="image/jpeg,image/png,image/webp" hidden>
+                                                            <div id="np-photo-placeholder">
+                                                                <ion-icon name="camera-outline" style="font-size:2.5rem;color:#2e353e;display:block;margin-bottom:8px;"></ion-icon>
+                                                                <p style="margin:0;font-size:13px;color:#8892a0;">Haz clic para subir una foto</p>
+                                                                <p style="margin:4px 0 0;font-size:11px;color:#8892a0;">JPEG, PNG o WebP — Máx. 5 MB</p>
+                                                            </div>
+                                                            <div id="np-photo-preview" style="display:none;">
+                                                                <img id="np-preview-img" src="" alt="Preview" style="max-width:100%;max-height:200px;border-radius:10px;border:1px solid #2e353e;margin-bottom:10px;">
+                                                                <br>
+                                                                <button type="button" onclick="event.stopPropagation();npClearPhoto()" style="background:rgba(239,90,111,0.12);border:1px solid rgba(239,90,111,0.25);color:#ef5a6f;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">Eliminar foto</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </section>
+
                                                 <section>
                                                     <div id="listado_stock"></div>
                                                 </section>
                                             </div>
+                                        </div>
 
-                                            <div class='ln_solid'></div>
-                                            <div class="w-100 d-flex justify-content-between">
-                                                <button type="button" onclick="sectionsNav('anterior')" class="btn btn-info actualizar">Anterior</button>
-                                                <button type="button" onclick="sectionsNav('siguiente')" class="btn btn-success actualizar">Siguiente</button>
-                                            </div>
+                                        <div class="w-100 d-flex justify-content-between">
+                                            <button type="button" onclick="sectionsNav('anterior')" class="btn btn-info actualizar">Anterior</button>
+                                            <button type="button" onclick="sectionsNav('siguiente')" class="btn btn-success actualizar">Siguiente</button>
                                         </div>
                                     </div>
                                 </div>
@@ -334,29 +633,44 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class='col-lg-6 '>
                                     <div class='x_panel'>
                                         <div class='x_title'>
-                                            <h2>Precios de venta (Unidad)</h2>
-
-                                            <div class='clearfix'></div>
+                                            <h2><ion-icon name="cash-outline" style="font-size:16px;vertical-align:middle;margin-right:4px;"></ion-icon> Precios de venta (Unidad)</h2>
                                         </div>
                                         <div class='x_content'>
-                                            <div class='form-group mb-3'>
-                                                <label>Precio de Compra ($USD)</label>
-                                                <input type='text' class='form-control' readonly='readonly' name='resultado' id='resultado'>
+                                            <div class="price-card muted">
+                                                <div class="pc-icon"><ion-icon name="pricetag-outline"></ion-icon></div>
+                                                <div class="pc-info">
+                                                    <span class="pc-label">Precio de Compra</span>
+                                                    <span class="pc-sub">Costo unitario &middot; USD</span>
+                                                </div>
+                                                <input type='text' class='pc-value' readonly='readonly' name='resultado' id='resultado'>
                                             </div>
 
-                                            <div class="form-group mb-3">
-                                                <label class='ml-2'>Precio de Venta ($USD) </label>
-                                                <input type='text' class='form-control' readonly='readonly' name='resultado2' id='resultado2'>
+                                            <div class="price-card highlight">
+                                                <div class="pc-icon"><ion-icon name="cash-outline"></ion-icon></div>
+                                                <div class="pc-info">
+                                                    <span class="pc-label">Precio de Venta</span>
+                                                    <span class="pc-sub">D&oacute;lares &middot; USD</span>
+                                                </div>
+                                                <input type='text' class='pc-value' readonly='readonly' name='resultado2' id='resultado2'>
                                             </div>
-                                            <div class="form-group mb-3">
-                                                <label class='ml-2'>Precio de Venta (COP)</label>
-                                                <input type='text' class='form-control' readonly='readonly' name='resultado3' id='resultado3'>
-                                            </div>
-                                        </div>
 
-                                        <div class="form-group mb-3">
-                                            <label class='ml-2'>Precio de Venta (BS)</label>
-                                            <input class='date-picker form-control' type='text' readonly='readonly' name='resultado4' id='resultado4'>
+                                            <div class="price-card">
+                                                <div class="pc-icon"><ion-icon name="logo-usd"></ion-icon></div>
+                                                <div class="pc-info">
+                                                    <span class="pc-label">Precio de Venta</span>
+                                                    <span class="pc-sub">Pesos colombianos &middot; COP</span>
+                                                </div>
+                                                <input type='text' class='pc-value' readonly='readonly' name='resultado3' id='resultado3'>
+                                            </div>
+
+                                            <div class="price-card">
+                                                <div class="pc-icon"><ion-icon name="cash-outline"></ion-icon></div>
+                                                <div class="pc-info">
+                                                    <span class="pc-label">Precio de Venta</span>
+                                                    <span class="pc-sub">Bol&iacute;vares &middot; BS</span>
+                                                </div>
+                                                <input type='text' class='pc-value' readonly='readonly' name='resultado4' id='resultado4'>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -372,6 +686,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <!-- jQuery -->
         <script src='../vendors/jquery/dist/jquery.min.js'></script>
+        <script src='../vendors/select2/dist/js/select2.full.min.js'></script>
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
         <script src='../build/js/custom.js'></script>
         <script src="../build/js/modal.js"></script>
@@ -580,9 +895,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         }
 
                         if (json.tipo === 'success') {
-                            // Opcional: limpiar el formulario
-                            sectionsNav('anterior')
+                            // Volver al paso 1 (datos)
+                            sections.forEach(s => s.classList.remove('active'));
+                            currentSectionIndex = 0;
+                            sections[0].classList.add('active');
+                            const btnSiguiente = document.querySelector("button.btn-success.actualizar");
+                            if (btnSiguiente) btnSiguiente.textContent = 'Siguiente';
+
+                            // Limpiar formulario y foto
                             this.reset();
+                            npClearPhoto();
+                            // Limpiar stock generado
+                            document.getElementById('listado_stock').innerHTML = '';
+                            // Limpiar Select2 de categoría
+                            $('#categoria_select').val(null).trigger('change');
                         }
                         Alerta.toast(json.tipo, json.mensaje);
 
@@ -596,67 +922,141 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             // MODIFICAR EL MODAL
             $(document).ready(function() {
+                // Inicializar Select2 en el select de categorías
+                $('#categoria_select').select2({
+                    tags: true,
+                    placeholder: 'Seleccione o escriba una categoría',
+                    allowClear: true,
+                    createTag: function(params) {
+                        var term = $.trim(params.term);
+                        if (term === '') return null;
+                        var slug = term.toLowerCase()
+                            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                            .replace(/[^a-z0-9]+/g, '-')
+                            .replace(/(^-|-$)/g, '');
+                        return {
+                            id: slug,
+                            text: term,
+                            newTag: true
+                        };
+                    },
+                    templateResult: function(data) {
+                        if (data.children) return null;
+                        return data.text;
+                    },
+                    matcher: function(params, data) {
+                        if ($.trim(params.term) === '') return data;
+                        if (data.children) {
+                            var matches = [];
+                            data.children.forEach(function(child) {
+                                if (child.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                                    matches.push(child);
+                                }
+                            });
+                            if (matches.length > 0) {
+                                return {
+                                    text: data.text,
+                                    children: matches
+                                };
+                            }
+                            return null;
+                        }
+                        if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) return data;
+                        return null;
+                    }
+                });
+
+                // Guardar categorías nuevas vía AJAX
+                $('#categoria_select').on('select2:select', function(e) {
+                    if (e.params.data.newTag) {
+                        var $select = $(this);
+                        var tempId = e.params.data.id;
+                        var text = e.params.data.text;
+                        fetch('../../configurar/guardar_categoria.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                                },
+                                body: 'nombre=' + encodeURIComponent(text)
+                            })
+                            .then(function(r) {
+                                return r.json();
+                            })
+                            .then(function(data) {
+                                if (data.success) {
+                                    $select.find('option[value="' + tempId + '"]').remove();
+                                    var opt = new Option(text, data.id, true, true);
+                                    $select.append(opt).trigger('change');
+                                }
+                            });
+                    }
+                });
                 const modal_body = document.getElementById('modal-body')
-                modal_body.style = 'overflow: auto;'
-                modal_body.innerHTML = `<h2 class="mb-0 mt-0" id="titulo_modal">Calcular precio </h2>
-                <hr>
-                    <div class="item form-group">
-                        <label class="col-form-label col-md-3 col-sm-3 " for="moneda">Moneda <span class="required">*</span>
-                        </label>
-                        <div class="col-md-9 col-sm-9 ">
-                            <select id="moneda" class="form-control">
-                                <option value="">Seleccione</option>
-                                <option value="bs">Bolívares</option>
-                                <option value="cop">Pesos</option>
-                            </select>
+                modal_body.style.cssText = 'overflow: visible !important; padding: 20px 22px 14px 22px !important; height: auto !important; max-height: none !important;'
+                modal_body.innerHTML = `
+                    <div style="margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between;">
+                        <div>
+                            <h5 style="margin:0 0 2px;font-weight:600;display:flex;align-items:center;gap:8px;font-size:15px;color:#e8edf2;">
+                                Calcular precio de compra
+                            </h5>
+                            <p style="margin:0;font-size:12px;color:#8a9ab5;">
+                                Convierte el precio del proveedor a d&oacute;lares
+                            </p>
                         </div>
+                        <button type="button" onclick="modalContainer.classList.remove('active');" style="background:none;border:none;color:#8a9ab5;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;" title="Cerrar">&times;</button>
+                    </div>
+                    <hr style="border-color:#2e353e;margin:0 0 14px 0;">
+
+                    <div style="margin-bottom:10px;">
+                        <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="moneda">Moneda del proveedor</label>
+                        <select id="moneda" class="form-control" style="font-size:13px;height:38px;">
+                            <option value="">— Seleccione la moneda —</option>
+                            <option value="bs">Bolívares (Bs.)</option>
+                            <option value="cop">Pesos colombianos (COP)</option>
+                        </select>
                     </div>
 
-                    <div class="item form-group">
-                        <label class="col-form-label col-md-3" for="tasa_proveedor">Tasa del proveedor<span class="required">*</span>
-                        </label>
-                        <div class="col-md-9 col-sm-9 ">
-                            <input type="text" id="tasa_proveedor" class="form-control">
-                        </div>
+                    <div style="margin-bottom:10px;">
+                        <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="tasa_proveedor">Tasa de cambio</label>
+                        <input type="number" step="any" id="tasa_proveedor" class="form-control" style="font-size:13px;height:38px;" placeholder="Ej: 36.50">
                     </div>
 
-                    <div class="item form-group">
-                        <label class="col-form-label col-md-3" for="precio_proveedor">Precio<span class="required">*</span>
-                        </label>
-                        <div class="col-md-9 col-sm-9 ">
-                            <input type="text" id="precio_proveedor" class="form-control">
-                        </div>
+                    <div style="margin-bottom:10px;">
+                        <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="precio_proveedor">Precio del proveedor</label>
+                        <input type="number" step="any" id="precio_proveedor" class="form-control" style="font-size:13px;height:38px;" placeholder="Monto en la moneda seleccionada">
                     </div>
 
-                    <div class="item form-group">
-                        <label class="col-form-label col-md-3 col-sm-3 " for="impuesto">Impuesto <span class="required">*</span>
-                        </label>
-                        <div class="col-md-9 col-sm-9 ">
-                            <select id="impuesto" class="form-control">
-                                <option value="">Seleccione</option>
-                                <option value="exento">Exento</option>
-                                <option value="iva">Iva (16%)</option>
-                            </select>
-                        </div>
+                    <div style="margin-bottom:10px;">
+                        <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="impuesto">IVA / Impuesto</label>
+                        <select id="impuesto" class="form-control" style="font-size:13px;height:38px;">
+                            <option value="">— Sin impuesto —</option>
+                            <option value="exento">Exento</option>
+                            <option value="iva">Incluir IVA (16%)</option>
+                        </select>
+                    </div>
+
+                    <div id="vista_previa_precio" style="display:none;margin-top:10px;padding:10px 14px;border-radius:8px;background:rgba(45,212,160,0.08);border:1px solid rgba(45,212,160,0.25);">
+                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#2dd4a0;font-weight:600;">Precio de compra calculado</div>
+                        <div id="resultado_calculo" style="font-size:20px;font-weight:700;color:#e8edf2;margin-top:2px;">— USD</div>
                     </div>`
 
-                document.getElementById('modal').style = 'height: 100% !important;'
+                const modalContent = document.getElementById('modal')
+                if (modalContent) {
+                    modalContent.style.cssText = 'height: auto !important; max-height: none !important; overflow: visible !important;'
+                }
+
                 const modal_footer = document.getElementById('modal-footer')
                 modal_footer.classList.remove('hide')
+                modal_footer.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 22px 18px 22px;border-top:1px solid #2e353e;height:auto !important;'
                 modal_footer.innerHTML = `
-                           <div class="d-flex" style='gap: 15px;'>
-                         <div class="me-2 vista_precio" id="texto_vista_previo"> </div>
-                        <div class="me-2 vista_precio" id="vista_previa_precio"></div>
-                        </div>
-
-                        <div class="d-flex" style='gap: 8px;'>
-                            <button class="btn btn-sm btn-danger" onclick=' modalContainer.classList.remove("active");'>Cerrar</button>
-                            <button class="btn btn-sm btn-success" id="btn-actualizar">Actualizar</button>
-                        </div>
-                        `
+                    <button class="btn btn-sm btn-secondary" onclick='modalContainer.classList.remove("active");'>Cancelar</button>
+                    <button class="btn btn-sm btn-success" id="btn-actualizar" style="background:#2dd4a0;border-color:#2dd4a0;color:#0b1310;font-weight:600;">
+                        <i class="bx bx-check"></i> Usar este precio
+                    </button>`
                 const modal = document.getElementById('w-modal')
-                modal.classList.add('w-50', 'h-60')
-                modal.style = "padding: 0px;"
+                modal.classList.remove('w-50', 'h-60')
+                modal.classList.add('modal-calc-precio')
+                modal.style.cssText = 'width: 95% !important; max-width: 440px !important; height: auto !important; max-height: none !important; overflow: visible !important; padding: 0 !important; border-radius: 14px !important;'
 
 
 
@@ -664,63 +1064,108 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                 // Seccion del modal para calcular el precio
-                // Cambiar la tasa
+                // Cambiar la tasa automáticamente al elegir moneda
                 document.getElementById('moneda').addEventListener('change', function() {
-                    document.getElementById('tasa_proveedor').value = tasas[this.value];
+                    document.getElementById('tasa_proveedor').value = tasas[this.value] || '';
+                    calcularPrecio();
                 })
-                // Calcular precio
-                document.getElementById('precio_proveedor').addEventListener('change', function() {
-                    if (this.value != '') {
-                        calcularPrecio()
-                    }
+                // Calcular en tiempo real
+                document.getElementById('precio_proveedor').addEventListener('input', function() {
+                    calcularPrecio();
+                })
+                document.getElementById('tasa_proveedor').addEventListener('input', function() {
+                    calcularPrecio();
                 })
                 document.getElementById('impuesto').addEventListener('change', function() {
-                    calcularPrecio()
+                    calcularPrecio();
                 })
 
                 function calcularPrecio() {
-                    const texto_vista_previo = document.getElementById('vista_previa_precio');
-                    const divPrecio = document.getElementById('vista_previa_precio');
+                    const previewCard = document.getElementById('vista_previa_precio');
+                    const resultadoEl = document.getElementById('resultado_calculo');
                     const tasaValor = parseFloat(document.getElementById('tasa_proveedor').value);
                     const precioValor = parseFloat(document.getElementById('precio_proveedor').value);
                     const impuesto = document.getElementById('impuesto').value;
 
-                    // Validación de entradas numéricas
-                    if (isNaN(tasaValor) || isNaN(precioValor) || tasaValor <= 0 || precioValor < 0) {
-                        divPrecio.innerHTML = '';
-                        divPrecio.className = ''; // Limpiar clases anteriores
+                    // Ocultar resultado si los datos no son válidos
+                    if (isNaN(tasaValor) || isNaN(precioValor) || tasaValor <= 0 || precioValor <= 0) {
+                        previewCard.style.display = 'none';
+                        n_precio = 0;
                         return;
                     }
 
-
-                    // Cálculo del nuevo precio
+                    // Cálculo del precio en USD
                     let precioFinal = precioValor / tasaValor;
                     if (impuesto === 'iva') {
                         precioFinal += precioFinal * 0.16;
                     }
 
                     const precioFinalRecortado = recortarADosDecimales(precioFinal);
-                    n_precio = precioFinalRecortado
+                    n_precio = precioFinalRecortado;
 
-                    // Establecer clases visuales según la variación
-                    divPrecio.classList.remove('text-success', 'text-danger', 'text-muted');
-
-                    divPrecio.classList.add('text-success');
-                    divPrecio.innerHTML = `Precio de compra → $${formatNumber(precioFinalRecortado)}`;
+                    // Mostrar resultado
+                    resultadoEl.textContent = `$${formatNumber(precioFinalRecortado)} USD`;
+                    previewCard.style.display = 'block';
                 }
 
                 document.getElementById('btn-actualizar').addEventListener('click', function() {
                     if (n_precio != 0) {
-                        document.getElementById('precioMonedaOrigen').value = n_precio
-                        document.getElementById('precio_proveedor').value = ''
-                        const divPrecio = document.getElementById('vista_previa_precio');
-                        divPrecio.innerHTML = '';
-                        divPrecio.className = ''; // Limpiar clases anteriores
+                        const inputPrecio = document.getElementById('precioMonedaOrigen');
+                        inputPrecio.value = n_precio;
+                        inputPrecio.dispatchEvent(new Event('keyup'));
+                        if (typeof calcularPrecioVenta === 'function') {
+                            calcularPrecioVenta();
+                        }
+                        document.getElementById('precio_proveedor').value = '';
+                        const previewCard = document.getElementById('vista_previa_precio');
+                        previewCard.style.display = 'none';
+                        n_precio = 0;
                         modalContainer.classList.remove("active");
                     }
                 })
 
             })
+
+            // Photo upload preview
+            document.getElementById('np-photo-input').addEventListener('change', function() {
+                if (!this.files[0]) return;
+                const file = this.files[0];
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('La foto no debe superar 5 MB');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('np-preview-img').src = e.target.result;
+                    document.getElementById('np-photo-placeholder').style.display = 'none';
+                    document.getElementById('np-photo-preview').style.display = '';
+                };
+                reader.readAsDataURL(file);
+            });
+
+            function npClearPhoto() {
+                document.getElementById('np-photo-input').value = '';
+                document.getElementById('np-photo-placeholder').style.display = '';
+                document.getElementById('np-photo-preview').style.display = 'none';
+            }
+
+            const npDropzone = document.getElementById('np-photo-dropzone');
+            npDropzone.addEventListener('dragover', e => {
+                e.preventDefault();
+                npDropzone.style.borderColor = '#2dd4a0';
+            });
+            npDropzone.addEventListener('dragleave', () => {
+                npDropzone.style.borderColor = '#2e353e';
+            });
+            npDropzone.addEventListener('drop', e => {
+                e.preventDefault();
+                npDropzone.style.borderColor = '#2e353e';
+                if (e.dataTransfer.files.length) {
+                    document.getElementById('np-photo-input').files = e.dataTransfer.files;
+                    document.getElementById('np-photo-input').dispatchEvent(new Event('change'));
+                }
+            });
         </script>
     </body>
 

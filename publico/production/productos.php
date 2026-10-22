@@ -29,6 +29,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <title>Productos</title>
         <?php require_once('includes/headers.php'); ?>
         <link rel="stylesheet" href="theme.css">
+        <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
 
     </head>
 
@@ -52,7 +53,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             // Ejecutar actualización cada segundo
                             $(document).ready(function() {
                                 ['precioMonedaOrigen', 'cantidad', 'porcentaje'].forEach(element => {
-                                    document.getElementById(element).addEventListener('keyup', () => realizarCalculos())
+                                    const el = document.getElementById(element);
+                                    // Solo dígitos y un punto decimal (la coma se normaliza a punto)
+                                    el.addEventListener('input', () => {
+                                        const partes = el.value.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.');
+                                        el.value = partes.length > 2 ? partes.shift() + '.' + partes.join('') : partes.join('.');
+                                    });
+                                    el.addEventListener('keyup', () => realizarCalculos())
                                 });
 
                                 document.getElementById('origenProducto').addEventListener('change', () => realizarCalculos())
@@ -123,7 +130,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <section id="section_edit" class="hide w-100">
                             <form id='form-data' class='form-horizontal form-label-left'>
                                 <div class='row'>
-                                    <div class='col-md-6 col-sm-6 '>
+                                    <div class='col-lg-6 '>
                                         <div class='x_panel'>
                                             <div class='x_title'>
                                                 <h2>Datos del Producto <small>* obligatorio</small></h2>
@@ -220,6 +227,35 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     </div>
                                                 </div>
 
+                                                <div class='form-group mb-3'>
+                                                    <label class='form-label'>Categoría del producto</label>
+                                                    <select name="categoria" id="categoria_select" class="form-select" style="width: 100%;">
+                                                        <option value="">Seleccione una categoría</option>
+                                                        <?php
+                                                        $stmtCat = $conexion->prepare("SELECT id, nombre, slug, grupo FROM categorias_producto WHERE bss_id = 0 OR bss_id = ? ORDER BY grupo ASC, nombre ASC");
+                                                        if ($stmtCat) {
+                                                            $stmtCat->bind_param("i", $bss_id);
+                                                            $stmtCat->execute();
+                                                            $catResult = $stmtCat->get_result();
+                                                            $grupoActual = '';
+                                                            if ($catResult && $catResult->num_rows > 0) {
+                                                                while ($cat = $catResult->fetch_assoc()) {
+                                                                    $grupo = $cat['grupo'] ?? 'Otros';
+                                                                    if ($grupo !== $grupoActual) {
+                                                                        if ($grupoActual !== '') echo '</optgroup>';
+                                                                        echo '<optgroup label="' . htmlspecialchars($grupo) . '">';
+                                                                        $grupoActual = $grupo;
+                                                                    }
+                                                                    echo '<option value="' . (int)$cat['id'] . '">' . htmlspecialchars($cat['nombre']) . '</option>';
+                                                                }
+                                                                if ($grupoActual !== '') echo '</optgroup>';
+                                                            }
+                                                            $stmtCat->close();
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                </div>
+
                                                 <div class='ln_solid'></div>
 
                                                 <div class='d-flex justify-content-between'>
@@ -237,30 +273,41 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <div class='clearfix'></div>
                                             </div>
                                             <div class='x_content'>
-                                                <br />
-                                                <form class='form-label-left input_mask'>
-
-                                                    <div class='form-group '>
-                                                        <label class='form-label '>Precio de Compra ($USD)</label>
-                                                        <input type='text' class='form-control' readonly='readonly' name='resultado' id='resultado'>
+                                                <div class="price-card muted">
+                                                    <div class="pc-icon"><ion-icon name="pricetag-outline"></ion-icon></div>
+                                                    <div class="pc-info">
+                                                        <span class="pc-label">Precio de Compra</span>
+                                                        <span class="pc-sub">Costo unitario &middot; USD</span>
                                                     </div>
+                                                    <input type='text' class='pc-value' readonly='readonly' name='resultado' id='resultado'>
+                                                </div>
 
-                                                    <div class='form-group row'>
-                                                        <label class='form-label'>Precio de Venta ($USD)</label>
-                                                        <input type='text' class='form-control' readonly='readonly' name='resultado2' id='resultado2'>
+                                                <div class="price-card highlight">
+                                                    <div class="pc-icon"><ion-icon name="cash-outline"></ion-icon></div>
+                                                    <div class="pc-info">
+                                                        <span class="pc-label">Precio de Venta</span>
+                                                        <span class="pc-sub">D&oacute;lares &middot; USD</span>
                                                     </div>
+                                                    <input type='text' class='pc-value' readonly='readonly' name='resultado2' id='resultado2'>
+                                                </div>
 
-                                                    <div class='form-group row'>
-                                                        <label class='form-label'>Precio de Venta (COP)</label>
-                                                        <input type='text' class='form-control' readonly='readonly' name='resultado3' id='resultado3'>
+                                                <div class="price-card">
+                                                    <div class="pc-icon"><ion-icon name="logo-usd"></ion-icon></div>
+                                                    <div class="pc-info">
+                                                        <span class="pc-label">Precio de Venta</span>
+                                                        <span class="pc-sub">Pesos colombianos &middot; COP</span>
                                                     </div>
+                                                    <input type='text' class='pc-value' readonly='readonly' name='resultado3' id='resultado3'>
+                                                </div>
 
-                                                    <div class='form-group row'>
-                                                        <label class='form-label'>Precio de Venta (BS)
-                                                        </label>
-                                                        <input class='date-picker form-control' type='text' readonly='readonly' name='resultado4' id='resultado4'>
+                                                <div class="price-card">
+                                                    <div class="pc-icon"><ion-icon name="cash-outline"></ion-icon></div>
+                                                    <div class="pc-info">
+                                                        <span class="pc-label">Precio de Venta</span>
+                                                        <span class="pc-sub">Bol&iacute;vares &middot; BS</span>
                                                     </div>
-                                                </form>
+                                                    <input type='text' class='pc-value' readonly='readonly' name='resultado4' id='resultado4'>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -297,7 +344,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             <table id="datatable-responsive" class="table " style="width:100%">
                                                 <thead>
                                                     <tr class="headings">
-                                                        <th>#</th>
+                                                        <th></th>
                                                         <th>Nombre </th>
                                                         <th>Compra</small></th>
                                                         <th>Cant.</th>
@@ -330,24 +377,165 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             </div>
 
 
+            <?php require('../assets/templates/modal.html'); ?>
+
             <!-- jQuery -->
             <script src="../vendors/jquery/dist/jquery.min.js"></script>
+            <!-- Select2 -->
+            <script src='../vendors/select2/dist/js/select2.full.min.js'></script>
             <!-- Bootstrap -->
             <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
             <!-- FastClick -->
             <!-- DataTables core -->
-            <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+            <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
             <!-- Buttons extension -->
-            <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-            <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-            <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-            <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+            <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
+            <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
+            <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
             <!-- PDF export -->
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-            <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+            <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
+            <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
+            <script src="../vendors/datatables/buttons.html5.min.js"></script>
             <script src="../build/js/custom.js"></script>
+            <script src="../build/js/modal.js"></script>
             <script src="js/nombre_pagina.js"></script>
+
+
+            <script>
+                // ── Modal Calcular Precio (mismo comportamiento y estilo que nuevoProducto.php) ──
+                const tasas = {
+                    'cop': "<?php echo $pesoDolar ?>",
+                    'bs': "<?php echo $bcv ?>"
+                };
+
+                $(document).ready(function() {
+                    const modal_body = document.getElementById('modal-body')
+                    modal_body.style.cssText = 'overflow: visible !important; padding: 20px 22px 14px 22px !important; height: auto !important; max-height: none !important;'
+                    modal_body.innerHTML = `
+                        <div style="margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between;">
+                            <div>
+                                <h5 style="margin:0 0 2px;font-weight:600;display:flex;align-items:center;gap:8px;font-size:15px;color:#e8edf2;">
+                                    Calcular precio de compra
+                                </h5>
+                                <p style="margin:0;font-size:12px;color:#8a9ab5;">
+                                    Convierte el precio del proveedor a d&oacute;lares
+                                </p>
+                            </div>
+                            <button type="button" onclick="modalContainer.classList.remove('active');" style="background:none;border:none;color:#8a9ab5;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;" title="Cerrar">&times;</button>
+                        </div>
+                        <hr style="border-color:#2e353e;margin:0 0 14px 0;">
+
+                        <div style="margin-bottom:10px;">
+                            <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="moneda">Moneda del proveedor</label>
+                            <select id="moneda" class="form-control" style="font-size:13px;height:38px;">
+                                <option value="">— Seleccione la moneda —</option>
+                                <option value="bs">Bolívares (Bs.)</option>
+                                <option value="cop">Pesos colombianos (COP)</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom:10px;">
+                            <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="tasa_proveedor">Tasa de cambio</label>
+                            <input type="number" step="any" id="tasa_proveedor" class="form-control" style="font-size:13px;height:38px;" placeholder="Ej: 36.50">
+                        </div>
+
+                        <div style="margin-bottom:10px;">
+                            <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="precio_proveedor">Precio del proveedor</label>
+                            <input type="number" step="any" id="precio_proveedor" class="form-control" style="font-size:13px;height:38px;" placeholder="Monto en la moneda seleccionada">
+                        </div>
+
+                        <div style="margin-bottom:10px;">
+                            <label class="form-label fw-semibold mb-1" style="font-size:12px;color:#e8edf2;" for="impuesto">IVA / Impuesto</label>
+                            <select id="impuesto" class="form-control" style="font-size:13px;height:38px;">
+                                <option value="">— Sin impuesto —</option>
+                                <option value="exento">Exento</option>
+                                <option value="iva">Incluir IVA (16%)</option>
+                            </select>
+                        </div>
+
+                        <div id="vista_previa_precio" style="display:none;margin-top:10px;padding:10px 14px;border-radius:8px;background:rgba(45,212,160,0.08);border:1px solid rgba(45,212,160,0.25);">
+                            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#2dd4a0;font-weight:600;">Precio de compra calculado</div>
+                            <div id="resultado_calculo" style="font-size:20px;font-weight:700;color:#e8edf2;margin-top:2px;">— USD</div>
+                        </div>`
+
+                    const modalContent = document.getElementById('modal')
+                    if (modalContent) {
+                        modalContent.style.cssText = 'height: auto !important; max-height: none !important; overflow: visible !important;'
+                    }
+
+                    const modal_footer = document.getElementById('modal-footer')
+                    modal_footer.classList.remove('hide')
+                    modal_footer.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 22px 18px 22px;border-top:1px solid #2e353e;height:auto !important;'
+                    modal_footer.innerHTML = `
+                        <button class="btn btn-sm btn-secondary" onclick='modalContainer.classList.remove("active");'>Cancelar</button>
+                        <button class="btn btn-sm btn-success" id="btn-actualizar" style="background:#2dd4a0;border-color:#2dd4a0;color:#0b1310;font-weight:600;">
+                            <i class="bx bx-check"></i> Usar este precio
+                        </button>`
+
+                    const modal = document.getElementById('w-modal')
+                    modal.classList.remove('w-50', 'h-60')
+                    modal.classList.add('modal-calc-precio')
+                    modal.style.cssText = 'width: 95% !important; max-width: 440px !important; height: auto !important; max-height: none !important; overflow: visible !important; padding: 0 !important; border-radius: 14px !important;'
+
+                    var n_precio = 0;
+
+                    // Cambiar la tasa automáticamente al elegir moneda
+                    document.getElementById('moneda').addEventListener('change', function() {
+                        document.getElementById('tasa_proveedor').value = tasas[this.value] || '';
+                        calcularPrecio();
+                    })
+                    document.getElementById('precio_proveedor').addEventListener('input', function() {
+                        calcularPrecio();
+                    })
+                    document.getElementById('tasa_proveedor').addEventListener('input', function() {
+                        calcularPrecio();
+                    })
+                    document.getElementById('impuesto').addEventListener('change', function() {
+                        calcularPrecio();
+                    })
+
+                    function calcularPrecio() {
+                        const previewCard = document.getElementById('vista_previa_precio');
+                        const resultadoEl = document.getElementById('resultado_calculo');
+                        const tasaValor = parseFloat(document.getElementById('tasa_proveedor').value);
+                        const precioValor = parseFloat(document.getElementById('precio_proveedor').value);
+                        const impuesto = document.getElementById('impuesto').value;
+
+                        if (isNaN(tasaValor) || isNaN(precioValor) || tasaValor <= 0 || precioValor <= 0) {
+                            previewCard.style.display = 'none';
+                            n_precio = 0;
+                            return;
+                        }
+
+                        let precioFinal = precioValor / tasaValor;
+                        if (impuesto === 'iva') {
+                            precioFinal += precioFinal * 0.16;
+                        }
+
+                        const precioFinalRecortado = recortarADosDecimales(precioFinal);
+                        n_precio = precioFinalRecortado;
+
+                        resultadoEl.textContent = `$${formatNumber(precioFinalRecortado)} USD`;
+                        previewCard.style.display = 'block';
+                    }
+
+                    document.getElementById('btn-actualizar').addEventListener('click', function() {
+                        if (n_precio != 0) {
+                            const inputPrecio = document.getElementById('precioMonedaOrigen');
+                            inputPrecio.value = n_precio;
+                            inputPrecio.dispatchEvent(new Event('keyup'));
+                            if (typeof realizarCalculos === 'function') {
+                                realizarCalculos();
+                            }
+                            document.getElementById('precio_proveedor').value = '';
+                            const previewCard = document.getElementById('vista_previa_precio');
+                            previewCard.style.display = 'none';
+                            n_precio = 0;
+                            modalContainer.classList.remove("active");
+                        }
+                    })
+                })
+            </script>
 
 
             <script>
@@ -376,6 +564,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         origen: form.origenProducto.value,
                         proveedor: form.proveedor.value,
                         codigo_barra: form.codigo_barra.value,
+                        categoria: form.categoria.value,
                         sucursal: document.getElementById('sucursal-selector').value,
                         sucursal_a_editar: document.getElementById('sucursal_a_editar').value
                     };
@@ -480,16 +669,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     // Limpia la tabla antes de insertar nuevos datos
                                     tabla.clear();
 
-                                    let contador = 1;
                                     // Agrega fila por fila
                                     data.data.forEach(row => {
                                         productos[row.id] = row
 
                                         const rest = (row.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : row.stock)
 
+                                        const hasFoto = !!row.imagen;
+
                                         tabla.row.add([
-                                            contador++,
-                                            row.nombre,
+                                            `<div class="foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}"><ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon></div>`,
+                                            row.nombre + `<br><small class="${row.categoria_nombre ? 'text-muted' : 'text-danger'}">${row.categoria_nombre || 'Sin categoría'}</small>`,
                                             row.precio_compra,
                                             row.cantidad_unidades,
                                             row.porcentaje,
@@ -511,6 +701,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         tabla.column(4).visible(true);
                                     }
 
+                                    // En teléfono la tabla de 12 columnas no cabe: se queda con
+                                    // la foto, el nombre, el precio en dólares y las acciones.
+                                    if (window.innerWidth <= 768) {
+                                        const aOcultar = [2, 3, 4, 5, 7, 8];
+                                        if (window.innerWidth <= 400) aOcultar.push(0); // ni la miniatura cabe
+                                        aOcultar.forEach(i => tabla.column(i).visible(false));
+                                    } else {
+                                        [0, 2, 3, 5, 7, 8].forEach(i => tabla.column(i).visible(true));
+                                    }
+
                                 } else {
                                     console.error("Error:", data.message);
                                 }
@@ -527,9 +727,74 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 $(document).ready(function() {
                     cargarProductos($('#sucursal-selector').val());
-                    // Filtro por sucursal (opcional)
                     $('#sucursal-selector').on('change', function() {
                         cargarProductos(this.value);
+                    });
+
+                    $('#categoria_select').select2({
+                        tags: true,
+                        placeholder: 'Seleccione o escriba una categoría',
+                        allowClear: true,
+                        createTag: function(params) {
+                            var term = $.trim(params.term);
+                            if (term === '') return null;
+                            var slug = term.toLowerCase()
+                                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                                .replace(/[^a-z0-9]+/g, '-')
+                                .replace(/(^-|-$)/g, '');
+                            return {
+                                id: slug,
+                                text: term,
+                                newTag: true
+                            };
+                        },
+                        templateResult: function(data) {
+                            if (data.children) return null;
+                            return data.text;
+                        },
+                        matcher: function(params, data) {
+                            if ($.trim(params.term) === '') return data;
+                            if (data.children) {
+                                var matches = [];
+                                data.children.forEach(function(child) {
+                                    if (child.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                                        matches.push(child);
+                                    }
+                                });
+                                if (matches.length > 0) return {
+                                    text: data.text,
+                                    children: matches
+                                };
+                                return null;
+                            }
+                            if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) return data;
+                            return null;
+                        }
+                    });
+
+                    $('#categoria_select').on('select2:select', function(e) {
+                        if (e.params.data.newTag) {
+                            var $select = $(this);
+                            var tempId = e.params.data.id;
+                            var text = e.params.data.text;
+                            fetch('../../configurar/guardar_categoria.php', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: 'nombre=' + encodeURIComponent(text)
+                                })
+                                .then(function(r) {
+                                    return r.json();
+                                })
+                                .then(function(data) {
+                                    if (data.success) {
+                                        $select.find('option[value="' + tempId + '"]').remove();
+                                        var opt = new Option(text, data.id, true, true);
+                                        $select.append(opt).trigger('change');
+                                    }
+                                });
+                        }
                     });
                 });
 
@@ -579,9 +844,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <strong class="text-info">Modificar precio general del producto</strong><br>
                                     <em>Define el precio base por defecto.</em>
                                 </div>
-                                <div class="swal-option" data-option="porcentaje" style="cursor: pointer;">
+                                <div class="swal-option" data-option="porcentaje" style="margin-bottom: 15px; cursor: pointer;">
                                     <strong class="text-info">Modificar porcentaje por sucursal</strong><br>
                                     <em>Define la ganancia por cada sucursal.</em>
+                                </div>
+                                <div class="swal-option" data-option="foto" style="cursor: pointer;">
+                                    <strong class="text-info">Agregar/Modificar foto del producto</strong><br>
+                                    <em>Sube o selecciona una imagen para el producto.</em>
                                 </div>
                             </div>`,
                             didOpen: () => {
@@ -590,8 +859,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     div.addEventListener('click', () => {
                                         const opcion = div.getAttribute('data-option');
                                         Swal.close(); // Cierra el SweetAlert
-                                        cargarDatosForm(productos[id], opcion)
-
+                                        if (opcion === 'foto') {
+                                            abrirFoto(productos[id].id)
+                                        } else {
+                                            cargarDatosForm(productos[id], opcion)
+                                        }
                                     });
                                 });
                             }
@@ -666,11 +938,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     // Asignación de valores
                     document.getElementById('nombre').value = datos.nombre;
-                    document.getElementById('precioMonedaOrigen').value = datos.precio_compra;
+                    // El backend formatea los miles con coma: se quitan para dejar solo el punto decimal
+                    document.getElementById('precioMonedaOrigen').value = String(datos.precio_compra).replace(/,/g, '');
                     document.getElementById('cantidad').value = datos.cantidad_unidades;
 
                     const porcentajeLimpio = typeof datos.porcentaje === 'string' ?
-                        datos.porcentaje.replace('%', '').trim() :
+                        datos.porcentaje.replace('%', '').replace(/,/g, '').trim() :
                         datos.porcentaje;
                     document.getElementById('porcentaje').value = porcentajeLimpio;
 
@@ -683,6 +956,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     document.getElementById('origenProducto').value = datos.origen;
                     document.getElementById('proveedor').value = datos.proveedor;
                     document.getElementById('codigo_barra').value = datos.codigo_barras;
+                    document.getElementById('categoria_select').value = datos.categoria || '';
+                    $('#categoria_select').trigger('change');
 
                     // Mostrar formulario de edición
                     document.getElementById('section_edit').classList.remove('hide');
@@ -695,7 +970,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         porcentaje: document.getElementById('porcentaje'),
                         origen: document.getElementById('origenProducto'),
                         proveedor: document.getElementById('proveedor'),
-                        codigo_barra: document.getElementById('codigo_barra')
+                        codigo_barra: document.getElementById('codigo_barra'),
+                        categoria: document.getElementById('categoria_select')
                     };
 
                     const sucursalSection = document.getElementById('sucursal_section');
@@ -710,6 +986,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         campos.nombre.disabled = true;
                         campos.proveedor.disabled = true;
                         campos.codigo_barra.disabled = true;
+                        campos.categoria.disabled = true;
 
                     } else if (opcion === 'porcentaje') {
                         // Desactivar todos excepto porcentaje
@@ -718,6 +995,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         campos.cantidad.disabled = true;
                         campos.origen.disabled = true;
                         campos.proveedor.disabled = true;
+                        campos.categoria.disabled = true;
 
                         // Manejo de sucursales
                         if (sucursalSelector.value === '') {
@@ -802,6 +1080,876 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         });
                 }
                 //   
+            </script>
+
+            <style>
+                /* Indicador de foto en la tabla */
+                .foto-check {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 8px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1rem;
+                }
+
+                .foto-check.has-foto {
+                    background: rgba(45, 212, 160, 0.12);
+                    color: var(--dash-mint);
+                }
+
+                .foto-check.no-foto {
+                    background: var(--dash-bg);
+                    color: var(--dash-border);
+                    border: 1px dashed var(--dash-border);
+                }
+
+                /* ── Precios de venta: tarjetas de resumen ── */
+                .price-card {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 14px 16px;
+                    margin-bottom: 12px;
+                    background: rgba(255, 255, 255, 0.02);
+                    border: 1px solid var(--dash-border, #2e353e);
+                    border-radius: 12px;
+                }
+
+                .price-card .pc-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 40px;
+                    height: 40px;
+                    flex-shrink: 0;
+                    font-size: 20px;
+                    color: var(--dash-text-muted, #8892a0);
+                    background: rgba(255, 255, 255, 0.04);
+                    border-radius: 10px;
+                }
+
+                .price-card .pc-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1px;
+                    min-width: 0;
+                }
+
+                .price-card .pc-label {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--dash-text, #e8edf2);
+                }
+
+                .price-card .pc-sub {
+                    font-size: 11px;
+                    letter-spacing: .04em;
+                    text-transform: uppercase;
+                    color: var(--dash-text-muted, #8892a0);
+                }
+
+                .price-card .pc-value {
+                    margin-left: auto;
+                    min-width: 0;
+                    width: 45%;
+                    padding: 0;
+                    font-size: 18px;
+                    font-weight: 700;
+                    text-align: right;
+                    color: var(--dash-text, #e8edf2);
+                    background: transparent;
+                    border: none;
+                }
+
+                .price-card .pc-value:focus {
+                    outline: none;
+                }
+
+                .price-card.highlight {
+                    border-color: rgba(45, 212, 160, 0.45);
+                    background: linear-gradient(135deg, rgba(45, 212, 160, 0.12), rgba(45, 212, 160, 0.03));
+                }
+
+                .price-card.highlight .pc-icon {
+                    color: var(--dash-mint, #2dd4a0);
+                    background: rgba(45, 212, 160, 0.15);
+                }
+
+                .price-card.highlight .pc-value {
+                    color: var(--dash-mint, #2dd4a0);
+                }
+
+                .price-card.muted .pc-value {
+                    font-size: 16px;
+                    color: var(--dash-text-muted, #8892a0);
+                }
+
+                /* ── Modal Calcular Precio compacto sin scroll ── */
+                #w-modal.modal-calc-precio {
+                    width: 95% !important;
+                    max-width: 440px !important;
+                    height: auto !important;
+                    max-height: none !important;
+                    padding: 0 !important;
+                    overflow: visible !important;
+                    border-radius: 14px !important;
+                    background: #181b22 !important;
+                    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+                }
+
+                #w-modal.modal-calc-precio #modal {
+                    height: auto !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                }
+
+                #w-modal.modal-calc-precio #modal-body {
+                    height: auto !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                }
+
+                /* ── Foto Modal ────────────────────────────────────────────── */
+                .foto-modal {
+                    position: relative;
+                    z-index: 1051;
+                    pointer-events: auto;
+                    background: var(--dash-card);
+                    border: 1px solid var(--dash-border);
+                    border-radius: 20px;
+                    overflow: hidden;
+                    box-shadow: 0 25px 80px rgba(0, 0, 0, .35), 0 0 0 1px rgba(255, 255, 255, .04) inset;
+                }
+
+                .fm-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 1.5rem 1.75rem 1rem;
+                }
+
+                .fm-header-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                }
+
+                .fm-product-icon {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 14px;
+                    background: linear-gradient(135deg, var(--dash-mint), #3bb8a0);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #1a1e24;
+                    font-size: 1.3rem;
+                    box-shadow: 0 4px 20px rgba(45, 212, 160, .3);
+                }
+
+                .fm-title {
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: var(--dash-text);
+                }
+
+                .fm-subtitle {
+                    font-size: .8rem;
+                    color: var(--dash-text-muted);
+                    margin-top: 2px;
+                }
+
+                .fm-close {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 10px;
+                    border: 1px solid var(--dash-border);
+                    background: transparent;
+                    color: var(--dash-text-muted);
+                    font-size: 1.1rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all .2s;
+                }
+
+                .fm-close:hover {
+                    background: rgba(239, 90, 111, .1);
+                    border-color: var(--dash-danger);
+                    color: var(--dash-danger);
+                }
+
+                .fm-tabs {
+                    display: flex;
+                    gap: .25rem;
+                    padding: 0 1.75rem;
+                    border-bottom: 1px solid var(--dash-border);
+                }
+
+                .fm-tab {
+                    padding: .7rem 1.2rem;
+                    font-size: .8rem;
+                    font-weight: 600;
+                    color: var(--dash-text-muted);
+                    background: transparent;
+                    border: none;
+                    border-bottom: 2px solid transparent;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all .2s;
+                    position: relative;
+                    bottom: -1px;
+                }
+
+                .fm-tab:hover {
+                    color: var(--dash-text);
+                }
+
+                .fm-tab.active {
+                    color: var(--dash-mint);
+                    border-bottom-color: var(--dash-mint);
+                }
+
+                .fm-tab ion-icon {
+                    font-size: 1rem;
+                }
+
+                .fm-body {
+                    padding: 1.25rem 1.75rem 1.75rem;
+                    min-height: 380px;
+                }
+
+                .fm-panel {
+                    display: none;
+                }
+
+                .fm-panel.active {
+                    display: block;
+                    animation: fmFadeIn .25s ease;
+                }
+
+                @keyframes fmFadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(6px);
+                    }
+
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .fm-search-wrap {
+                    position: relative;
+                    margin-bottom: 1rem;
+                }
+
+                .fm-search-icon {
+                    position: absolute;
+                    left: 14px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    font-size: 1rem;
+                    color: var(--dash-text-muted);
+                    pointer-events: none;
+                }
+
+                .fm-search-input {
+                    width: 100%;
+                    padding: 12px 80px 12px 42px;
+                    background: var(--dash-bg);
+                    border: 1px solid var(--dash-border);
+                    border-radius: 12px;
+                    font-size: .85rem;
+                    color: var(--dash-text);
+                    transition: all .25s;
+                }
+
+                .fm-search-input:focus {
+                    outline: none;
+                    border-color: var(--dash-mint);
+                    box-shadow: 0 0 0 3px rgba(45, 212, 160, .1);
+                }
+
+                .fm-search-count {
+                    position: absolute;
+                    right: 14px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    font-size: .7rem;
+                    color: var(--dash-text-muted);
+                    font-weight: 600;
+                    background: var(--dash-card);
+                    padding: 2px 8px;
+                    border-radius: 6px;
+                    border: 1px solid var(--dash-border);
+                }
+
+                .fm-results {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+                    gap: .6rem;
+                    max-height: 300px;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--dash-border) transparent;
+                }
+
+                .fm-results::-webkit-scrollbar {
+                    width: 5px;
+                }
+
+                .fm-results::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+                .fm-results::-webkit-scrollbar-thumb {
+                    background: var(--dash-border);
+                    border-radius: 10px;
+                }
+
+                .fm-result-card {
+                    border-radius: 12px;
+                    overflow: hidden;
+                    cursor: pointer;
+                    border: 2px solid transparent;
+                    transition: all .25s cubic-bezier(.4, 0, .2, 1);
+                    position: relative;
+                    background: var(--dash-bg);
+                }
+
+                .fm-result-card:hover {
+                    border-color: var(--dash-mint);
+                    transform: translateY(-3px);
+                    box-shadow: 0 8px 25px rgba(45, 212, 160, .15);
+                }
+
+                .fm-result-card img {
+                    width: 100%;
+                    aspect-ratio: 1;
+                    object-fit: cover;
+                    display: block;
+                }
+
+                .fm-result-card .fm-result-name {
+                    padding: 6px 8px;
+                    font-size: .65rem;
+                    font-weight: 600;
+                    color: var(--dash-text);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    text-align: center;
+                }
+
+                .fm-result-card.selected {
+                    border-color: var(--dash-mint);
+                    box-shadow: 0 0 0 3px rgba(45, 212, 160, .2);
+                }
+
+                .fm-result-card.selected::after {
+                    content: '';
+                    position: absolute;
+                    top: 6px;
+                    right: 6px;
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    background: var(--dash-mint);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231a1e24' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+                }
+
+                .fm-empty {
+                    grid-column: 1 / -1;
+                    text-align: center;
+                    padding: 3rem 1rem;
+                    color: var(--dash-text-muted);
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .fm-empty ion-icon {
+                    font-size: 2.5rem;
+                    margin: 0.75rem auto;
+                    display: block;
+                    opacity: .4;
+                }
+
+                .fm-empty p {
+                    font-size: .85rem;
+                }
+
+                .fm-upload-zone {
+                    border: 2px dashed var(--dash-border);
+                    border-radius: 16px;
+                    padding: 3rem 2rem;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all .3s;
+                }
+
+                .fm-upload-zone:hover,
+                .fm-upload-zone.dragover {
+                    border-color: var(--dash-mint);
+                    background: rgba(45, 212, 160, .04);
+                }
+
+                .fm-upload-icon {
+                    font-size: 2.8rem;
+                    color: var(--dash-border);
+                    margin-bottom: .75rem;
+                    transition: color .3s;
+                }
+
+                .fm-upload-zone:hover .fm-upload-icon {
+                    color: var(--dash-mint);
+                }
+
+                .fm-upload-title {
+                    font-size: .95rem;
+                    font-weight: 700;
+                    color: var(--dash-text);
+                    margin-bottom: .25rem;
+                }
+
+                .fm-upload-hint {
+                    font-size: .8rem;
+                    color: var(--dash-text-muted);
+                    margin-bottom: 1rem;
+                }
+
+                .fm-upload-btn {
+                    padding: 10px 24px;
+                    border-radius: 10px;
+                    border: none;
+                    cursor: pointer;
+                    font-size: .8rem;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, var(--dash-mint), #3bb8a0);
+                    color: #1a1e24;
+                    transition: all .2s;
+                    box-shadow: 0 4px 15px rgba(45, 212, 160, .25);
+                }
+
+                .fm-upload-btn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 20px rgba(45, 212, 160, .35);
+                }
+
+                .fm-upload-formats {
+                    font-size: .7rem;
+                    color: var(--dash-text-muted);
+                    margin-top: .75rem;
+                }
+
+                .fm-upload-preview {
+                    text-align: center;
+                }
+
+                .fm-upload-preview img {
+                    max-width: 100%;
+                    max-height: 260px;
+                    border-radius: 12px;
+                    border: 1px solid var(--dash-border);
+                    margin-bottom: 1rem;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, .15);
+                }
+
+                .fm-preview-actions {
+                    display: flex;
+                    gap: .5rem;
+                    justify-content: center;
+                }
+
+                .fm-btn-primary {
+                    padding: 10px 24px;
+                    border-radius: 10px;
+                    border: none;
+                    cursor: pointer;
+                    font-size: .8rem;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, var(--dash-mint), #3bb8a0);
+                    color: #1a1e24;
+                    transition: all .2s;
+                }
+
+                .fm-btn-primary:hover {
+                    box-shadow: 0 4px 15px rgba(45, 212, 160, .3);
+                }
+
+                .fm-btn-secondary {
+                    padding: 10px 24px;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-size: .8rem;
+                    font-weight: 600;
+                    background: transparent;
+                    border: 1px solid var(--dash-border);
+                    color: var(--dash-text-muted);
+                    transition: all .2s;
+                }
+
+                .fm-btn-secondary:hover {
+                    border-color: var(--dash-text);
+                    color: var(--dash-text);
+                }
+
+                .fm-selected-bar {
+                    display: none;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: .75rem 1.75rem;
+                    border-top: 1px solid var(--dash-border);
+                    background: rgba(45, 212, 160, .04);
+                }
+
+                .fm-selected-bar.show {
+                    display: flex;
+                }
+
+                .fm-selected-info {
+                    font-size: .8rem;
+                    color: var(--dash-text);
+                    font-weight: 600;
+                }
+
+                .fm-selected-info span {
+                    color: var(--dash-mint);
+                }
+
+                .fm-apply-btn {
+                    padding: 10px 28px;
+                    border-radius: 10px;
+                    border: none;
+                    cursor: pointer;
+                    font-size: .8rem;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, var(--dash-mint), #3bb8a0);
+                    color: #1a1e24;
+                    transition: all .2s;
+                    box-shadow: 0 4px 15px rgba(45, 212, 160, .25);
+                }
+
+                .fm-apply-btn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 20px rgba(45, 212, 160, .35);
+                }
+
+                /* Fix z-index above #navbar (9999) */
+                #modalFoto {
+                    z-index: 10000;
+                }
+
+                #modalFoto .modal-backdrop {
+                    z-index: 9999;
+                }
+
+                #modalFoto .modal-dialog {
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+
+                /* ── Móvil: la tabla se queda con las columnas útiles (ver cargarProductos) ── */
+                @media (max-width: 768px) {
+
+                    #datatable-responsive thead th,
+                    #datatable-responsive tbody td {
+                        padding: 10px 8px;
+                    }
+
+                    /* Espacio de dedo para editar / ver / borrar */
+                    #datatable-responsive td a {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 36px;
+                        height: 36px;
+                    }
+
+                    .foto-check {
+                        width: 34px;
+                        height: 34px;
+                    }
+                }
+            </style>
+
+            <!-- Modal: Selector de Foto -->
+            <div class="modal fade" id="modalFoto" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="foto-modal">
+                        <div class="fm-header">
+                            <div class="fm-header-left">
+                                <div class="fm-product-icon">
+                                    <ion-icon name="camera"></ion-icon>
+                                </div>
+                                <div>
+                                    <div class="fm-title" id="fm-title">Seleccionar imagen</div>
+                                    <div class="fm-subtitle" id="fm-subtitle">Busca, sube o selecciona una foto para tu producto</div>
+                                </div>
+                            </div>
+                            <button type="button" class="fm-close" data-dismiss="modal">
+                                <ion-icon name="close"></ion-icon>
+                            </button>
+                        </div>
+
+                        <div class="fm-tabs">
+                            <button class="fm-tab active" data-tab="buscar" onclick="fmSwitchTab('buscar', this)">
+                                <ion-icon name="search"></ion-icon> Buscar imagen
+                            </button>
+                            <button class="fm-tab" data-tab="subir" onclick="fmSwitchTab('subir', this)">
+                                <ion-icon name="cloud-upload"></ion-icon> Subir archivo
+                            </button>
+                        </div>
+
+                        <div class="fm-body">
+                            <div class="fm-panel active" id="fm-panel-buscar">
+                                <div class="fm-search-wrap">
+                                    <ion-icon name="search" class="fm-search-icon"></ion-icon>
+                                    <input type="text" id="fm-search" class="fm-search-input" placeholder="Escribe el nombre del producto...">
+                                    <span class="fm-search-count" id="fm-count"></span>
+                                </div>
+                                <div class="fm-results" id="fm-results">
+                                    <div class="fm-empty">
+                                        <ion-icon name="images-outline"></ion-icon>
+                                        <p>Escribe para buscar imágenes de productos</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="fm-panel" id="fm-panel-subir">
+                                <div class="fm-upload-zone" id="fm-dropzone">
+                                    <input type="file" id="fm-file-input" accept="image/jpeg,image/png,image/webp" hidden>
+                                    <div class="fm-upload-icon">
+                                        <ion-icon name="cloud-upload-outline"></ion-icon>
+                                    </div>
+                                    <p class="fm-upload-title">Arrastra una imagen aquí</p>
+                                    <p class="fm-upload-hint">o haz clic para seleccionar</p>
+                                    <button class="fm-upload-btn" onclick="document.getElementById('fm-file-input').click()">
+                                        Seleccionar archivo
+                                    </button>
+                                    <p class="fm-upload-formats">JPEG, PNG o WebP — Máx. 1.5MB</p>
+                                </div>
+                                <div class="fm-upload-preview" id="fm-upload-preview" style="display:none;">
+                                    <img id="fm-preview-img" src="" alt="Preview">
+                                    <div class="fm-preview-actions">
+                                        <button class="fm-btn-secondary" onclick="fmClearPreview()">Cambiar</button>
+                                        <button class="fm-btn-primary" onclick="fmUploadPhoto()">Usar esta foto</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fm-selected-bar" id="fm-selected-bar">
+                            <div class="fm-selected-info"></div>
+                            <button class="fm-apply-btn" onclick="fmApplySelected()">Aplicar imagen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script src="../vendors/fuse/fuse.min.js"></script>
+            <script>
+                /* ── Selector de foto (mismo componente que tienda_productos.php) ── */
+                const FOTO_API = 'db/tienda_productos_api.php';
+                let fmSelectedImage = null;
+                let fmProductos = [];
+                let fmFuse = null;
+                let fmProductoActual = null;
+
+                fetch('../../iseller_store/img_sitema/productos.json')
+                    .then(r => r.json())
+                    .then(data => {
+                        fmProductos = data;
+                        fmFuse = new Fuse(data, {
+                            threshold: 0.35,
+                            distance: 50,
+                            includeScore: true
+                        });
+                    })
+                    .catch(() => {});
+
+                function abrirFoto(productoId) {
+                    fmProductoActual = productoId;
+                    fmSelectedImage = null;
+                    fmClearPreview();
+
+                    const nombre = (productos[productoId] && productos[productoId].nombre) || '';
+                    document.getElementById('fm-title').textContent = nombre || 'Seleccionar imagen';
+                    document.getElementById('fm-subtitle').textContent = 'Busca, sube o selecciona una foto para tu producto';
+
+                    const searchInput = document.getElementById('fm-search');
+                    searchInput.value = nombre;
+                    fmDoSearch(nombre);
+
+                    fmSwitchTab('buscar', document.querySelector('.fm-tab[data-tab="buscar"]'));
+                    $('#modalFoto').modal('show');
+                }
+
+                function fmSwitchTab(tab, btn) {
+                    document.querySelectorAll('.fm-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.fm-panel').forEach(p => p.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById(`fm-panel-${tab}`).classList.add('active');
+                }
+
+                function fmDoSearch(query) {
+                    const container = document.getElementById('fm-results');
+                    const countEl = document.getElementById('fm-count');
+
+                    if (!query || !fmFuse) {
+                        container.innerHTML = `<div class="fm-empty text-center">
+                            <ion-icon name="images-outline"></ion-icon>
+                            <p>Escribe para buscar imágenes de productos</p>
+                        </div>`;
+                        countEl.textContent = '';
+                        return;
+                    }
+
+                    const results = fmFuse.search(query);
+                    countEl.textContent = `${results.length} resultado${results.length !== 1 ? 's' : ''}`;
+
+                    if (results.length === 0) {
+                        container.innerHTML = `<div class="fm-empty">
+                            <ion-icon name="search-outline"></ion-icon>
+                            <p>No se encontraron imágenes para "<strong>${query}</strong>"</p>
+                        </div>`;
+                        return;
+                    }
+
+                    container.innerHTML = results.map(r => {
+                        const nombre = r.item;
+                        const fileName = nombre.replace(/\s+/g, '-').toLowerCase();
+                        return `<div class="fm-result-card" onclick="fmSelectImage('${fileName}', this)" title="${nombre}">
+                            <img src="../../iseller_store/img_sitema/${fileName}.webp" alt="${nombre}"
+                                 onerror="this.parentElement.style.display='none'">
+                            <div class="fm-result-name">${nombre}</div>
+                        </div>`;
+                    }).join('');
+                }
+
+                function fmSelectImage(fileName, el) {
+                    document.querySelectorAll('.fm-result-card').forEach(c => c.classList.remove('selected'));
+                    el.classList.add('selected');
+                    fmSelectedImage = fileName;
+
+                    const bar = document.querySelector('.fm-selected-bar');
+                    bar.classList.add('show');
+                    bar.querySelector('.fm-selected-info').innerHTML = `Seleccionado: <span>${fileName.replace(/-/g, ' ')}</span>`;
+                }
+
+                function fmApplySelected() {
+                    if (!fmSelectedImage || !fmProductoActual) return;
+                    Alerta.toast('info', 'Aplicando imagen…');
+
+                    fetch(`../../iseller_store/img_sitema/${fmSelectedImage}.webp`)
+                        .then(r => {
+                            if (!r.ok) throw new Error('Imagen no encontrada');
+                            return r.blob();
+                        })
+                        .then(blob => {
+                            const file = new File([blob], `${fmSelectedImage}.webp`, {
+                                type: 'image/webp'
+                            });
+                            const fd = new FormData();
+                            fd.append('action', 'upload_foto');
+                            fd.append('producto_id', fmProductoActual);
+                            fd.append('foto', file);
+
+                            return fetch(FOTO_API, {
+                                method: 'POST',
+                                body: fd
+                            });
+                        })
+                        .then(r => r.json())
+                        .then(r => {
+                            if (!r.ok) {
+                                Alerta.toast('error', 'Error: ' + r.msg);
+                                return;
+                            }
+                            Alerta.toast('success', 'Foto aplicada con éxito');
+                            $('#modalFoto').modal('hide');
+                            cargarProductos(document.getElementById('sucursal-selector').value);
+                        })
+                        .catch(() => Alerta.toast('error', 'Error al aplicar imagen'));
+                }
+
+                function fmClearPreview() {
+                    document.getElementById('fm-upload-preview').style.display = 'none';
+                    document.getElementById('fm-dropzone').style.display = '';
+                    document.getElementById('fm-file-input').value = '';
+                }
+
+                document.getElementById('fm-search')?.addEventListener('input', function() {
+                    clearTimeout(this._debounce);
+                    this._debounce = setTimeout(() => fmDoSearch(this.value), 200);
+                });
+
+                document.getElementById('fm-file-input')?.addEventListener('change', function() {
+                    if (!this.files[0]) return;
+                    const file = this.files[0];
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        document.getElementById('fm-preview-img').src = e.target.result;
+                        document.getElementById('fm-dropzone').style.display = 'none';
+                        document.getElementById('fm-upload-preview').style.display = '';
+                    };
+                    reader.readAsDataURL(file);
+                });
+
+                function fmUploadPhoto() {
+                    const input = document.getElementById('fm-file-input');
+                    if (!input.files[0] || !fmProductoActual) return;
+
+                    const fd = new FormData();
+                    fd.append('action', 'upload_foto');
+                    fd.append('producto_id', fmProductoActual);
+                    fd.append('foto', input.files[0]);
+                    Alerta.toast('info', 'Subiendo foto…');
+
+                    fetch(FOTO_API, {
+                            method: 'POST',
+                            body: fd
+                        })
+                        .then(r => r.json())
+                        .then(r => {
+                            if (!r.ok) {
+                                Alerta.toast('error', 'Error: ' + r.msg);
+                                return;
+                            }
+                            Alerta.toast('success', 'Foto guardada con éxito');
+                            $('#modalFoto').modal('hide');
+                            cargarProductos(document.getElementById('sucursal-selector').value);
+                        });
+                }
+
+                const fmDropzone = document.getElementById('fm-dropzone');
+                if (fmDropzone) {
+                    fmDropzone.addEventListener('dragover', e => {
+                        e.preventDefault();
+                        fmDropzone.classList.add('dragover');
+                    });
+                    fmDropzone.addEventListener('dragleave', () => fmDropzone.classList.remove('dragover'));
+                    fmDropzone.addEventListener('drop', e => {
+                        e.preventDefault();
+                        fmDropzone.classList.remove('dragover');
+                        if (e.dataTransfer.files.length) {
+                            document.getElementById('fm-file-input').files = e.dataTransfer.files;
+                            document.getElementById('fm-file-input').dispatchEvent(new Event('change'));
+                        }
+                    });
+                }
             </script>
     </body>
 

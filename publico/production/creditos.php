@@ -32,8 +32,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <title>Control de Créditos</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
     <style>
       .right_col {
         background: var(--dash-bg);
@@ -289,11 +289,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
+    <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
+    <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
+    <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
+    <script src="../vendors/datatables/buttons.html5.min.js"></script>
     <script src="../build/js/custom.js"></script>
     <script src="../build/js/global-loader.js"></script>
     <script src="js/nombre_pagina.js"></script>

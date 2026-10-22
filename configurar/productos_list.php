@@ -1,5 +1,5 @@
 <?php
-//header('Content-Type: application/json');
+header('Content-Type: application/json');
 require_once 'configuracion.php'; // Asegúrate de conectar a tu base de datos
 require_once 'session.php'; // Asegúrate de conectar a tu base de datos
 require("_tasas_cambio.php");
@@ -56,11 +56,28 @@ $select = !$filtro
 
 $where = !$filtro
     ? "S.bss_id = $bss_id"
-    : "S.id_sucursal = $filtro";
+    : "S.id_sucursal = $filtro AND S.bss_id = $bss_id";
 
-$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo
+// Verificar si la tabla categorias_producto y la columna categoria existen
+$hasCatTable = $conexion->query("SHOW TABLES LIKE 'categorias_producto'")->num_rows > 0;
+$hasCatCol = false;
+if ($hasCatTable) {
+    $cols = $conexion->query("SHOW COLUMNS FROM productos LIKE 'categoria'");
+    $hasCatCol = $cols && $cols->num_rows > 0;
+}
+
+$catJoin = $hasCatTable && $hasCatCol
+    ? "LEFT JOIN categorias_producto AS C ON C.id = P.categoria"
+    : "";
+$catSelect = $hasCatTable && $hasCatCol
+    ? ", P.categoria, C.nombre AS categoria_nombre"
+    : ", NULL AS categoria, NULL AS categoria_nombre";
+
+$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo, MAX(NP.foto_url) AS foto_url $catSelect
 FROM stock AS S
 LEFT JOIN productos AS P ON P.id = S.id_producto
+LEFT JOIN negocio_productos AS NP ON NP.producto_id = P.id AND NP.negocio_id = $bss_id
+$catJoin
 WHERE $where AND P.activo = 0
 GROUP BY id_producto
 ORDER BY id ASC";
@@ -68,12 +85,39 @@ ORDER BY id ASC";
 
 $result = $conexion->query($sql);
 
+// Imágenes disponibles: un solo escaneo de directorios (misma lógica que ventas.php)
+$imgRoot = dirname(__DIR__) . '/iseller_store';
+$listarArchivos = function ($dir) {
+    $set = [];
+    if (is_dir($dir)) {
+        foreach ((array) @scandir($dir) as $f) {
+            if ($f !== '.' && $f !== '..') $set[$f] = true;
+        }
+    }
+    return $set;
+};
+$setOptimized = $listarArchivos($imgRoot . '/assets/img/stock/optimized');
+$setStock     = $listarArchivos($imgRoot . '/assets/img/stock');
+$setTienda    = $listarArchivos($imgRoot . '/assets/img/tiendas/' . (int) $bss_id);
+
 $datos = [];
 
 while ($row = $result->fetch_assoc()) {
 
     if ($row["cantidad_unidades"] != 0 && $row["precio_compra"] != 0) {
         $precios = $calculadora->calcularPrecios($row);
+
+        // Resolver la imagen igual que ventas.php: foto del negocio → stock optimizado → stock
+        $pid = $row["producto_id"];
+        $fotoUrl = trim($row['foto_url'] ?? '');
+        $imgRef = '';
+        if ($fotoUrl !== '' && isset($setTienda[basename($fotoUrl)])) {
+            $imgRef = $fotoUrl;
+        } elseif (isset($setOptimized[$pid . '.webp'])) {
+            $imgRef = 'assets/img/stock/optimized/' . $pid . '.webp';
+        } elseif (isset($setStock[$pid . '.png'])) {
+            $imgRef = 'assets/img/stock/' . $pid . '.png';
+        }
 
         $datos[] = [
             "id" => $row["producto_id"],
@@ -91,6 +135,10 @@ while ($row = $result->fetch_assoc()) {
             "proveedor" =>  $row['proveedor'],
             "activo" =>  $row['activo'],
             "mayor" =>  $row['mayor'],
+            "categoria" =>  $row['categoria'],
+            "categoria_nombre" =>  $row['categoria_nombre'],
+            "foto_url" =>  $row['foto_url'],
+            "imagen" =>  $imgRef,
 
         ];
     }

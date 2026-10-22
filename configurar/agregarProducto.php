@@ -63,15 +63,15 @@ try {
 
   // Insertar en productos
   $query = "INSERT INTO productos (
-      nombre, precio_compra, cantidad_unidades, porcentaje, codigo_barras, origen, proveedor, bss_id
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      nombre, precio_compra, cantidad_unidades, porcentaje, codigo_barras, origen, proveedor, bss_id, categoria
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   $stmt = $conexion->prepare($query);
   if (!$stmt) {
     throw new Exception('Error al preparar la consulta de productos.');
   }
 
-  $stmt->bind_param("sdddsssi", $nombre, $precio, $cantidad, $porcentaje, $c_barras, $origenProducto, $proveedor, $bss_id);
+  $stmt->bind_param("sdddsssis", $nombre, $precio, $cantidad, $porcentaje, $c_barras, $origenProducto, $proveedor, $bss_id, $categoria);
   if (!$stmt->execute()) {
     throw new Exception('No se pudo registrar el producto.');
   }
@@ -100,6 +100,31 @@ try {
     }
   }
   $stmt_o->close();
+
+  // Subir foto del producto si se proporcionó
+  if (isset($_FILES['foto_producto']) && $_FILES['foto_producto']['error'] === UPLOAD_ERR_OK) {
+    $file = $_FILES['foto_producto'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allow = ['jpg', 'jpeg', 'png', 'webp'];
+
+    if (in_array($ext, $allow) && $file['size'] <= 5 * 1024 * 1024) {
+      $dir = __DIR__ . '/../iseller_store/assets/img/tiendas/' . $bss_id . '/';
+      if (!is_dir($dir)) mkdir($dir, 0775, true);
+
+      $filename = $id_registro . '_' . time() . '.' . $ext;
+      if (move_uploaded_file($file['tmp_name'], $dir . $filename)) {
+        $foto_url = "assets/img/tiendas/{$bss_id}/{$filename}";
+        $stmt_foto = $conexion->prepare(
+          "INSERT INTO negocio_productos (negocio_id, producto_id, foto_url, estado_publicacion)
+           VALUES (?, ?, ?, 0)
+           ON DUPLICATE KEY UPDATE foto_url = VALUES(foto_url)"
+        );
+        $stmt_foto->bind_param("iis", $bss_id, $id_registro, $foto_url);
+        $stmt_foto->execute();
+        $stmt_foto->close();
+      }
+    }
+  }
 
   // Confirmar transacción
   $conexion->commit();

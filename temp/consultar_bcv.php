@@ -1,19 +1,4 @@
 <?php
-/*
-$usuario = 'userseller';
-$contrasena = 'B9f(FbTR=sMd';
-$baseDeDatos = 'iseller';
-
-DB_USER=userseller
-DB_PASS=B9f(FbTR=sMd
-DB_NAME=iseller
-API_KEY=afa5859e067e3a9f96886ebc
-
-*/
-
-//$usuario = 'root';
-$contrasena = '';
-//$baseDeDatos = 'iseller';
 
 
 function cargarDotEnv($ruta)
@@ -67,7 +52,6 @@ $stmt->close();
 // Obtener el valor
 function obtenerTasaDeApi(&$internetError)
 {
-    // $api_key = "afa5859e067e3a9f96886ebc";
     global $apiKey;
     $url = "https://v6.exchangerate-api.com/v6/$apiKey/pair/USD/VES";
 

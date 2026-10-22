@@ -62,6 +62,10 @@ function cargarInfo() {
                     case 'Dólares':
                         monto = '$ ' + row.total_price;
                         break;
+                    case 'Fraccionado':
+                        // Pago dividido entre medios; se muestra el total en USD
+                        monto = '$ ' + row.total_price;
+                        break;
                     case 'Pesos':
                         monto = row.total_price_cop + ' Cop';
                         break;
@@ -77,6 +81,7 @@ function cargarInfo() {
                     row.usuario,
                     row.created,
                     monto,
+                    row.cobrado || '-',
                     row.total_price_cop || '-',
                     row.total_price_bs || '-',
                     row.cliente,
@@ -123,7 +128,7 @@ function verDetalles(id) {
 
                 Swal.fire({
                     title: '<h1><i class="bx bx-receipt"></i> Detalles de la Venta</h1>',
-                    html: `<div class="text-start" style="font-size: 14px;">${content.innerHTML}</div>`,
+                    html: `<div class="text-start" style="font-size: 14px; overflow-x: auto;">${content.innerHTML}</div>`,
                     width: "80%",
                     showCloseButton: true,
                     showDenyButton: true,

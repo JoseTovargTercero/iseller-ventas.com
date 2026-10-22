@@ -126,19 +126,35 @@ if ($extraCond != '' && isset($input['usuario']) && $input['usuario'] != 'todos'
     $user_cond = " AND o.usuario = $usuario";
 }
 
-// Determinar periodo de tiempo y columna a filtrar
+// Determinar periodo de tiempo. Se filtra siempre por la fecha real de la venta
+// (orden.created); no por modified/fecha/semana para que todos los reportes cuadren.
+$filtroPeriodo = '';
 switch ($periodo_tiempo) {
     case 'dia':
-        $today = empty($filtro_fecha) ? date('Y-m-d') : $filtro_fecha;
-        $tipoFiltroColumna = 'modified';
+        $fechaDia = trim((string) $filtro_fecha);
+        $objFecha = DateTime::createFromFormat('Y-m-d', $fechaDia);
+        if (!$objFecha || $objFecha->format('Y-m-d') !== $fechaDia) {
+            $fechaDia = date('Y-m-d');
+        }
+        $today = $fechaDia;
+        $filtroPeriodo = "DATE(o.created) = '$today'";
         break;
     case 'semana':
-        $today = empty($filtro_fecha) ? date('Y-Y') : date('Y') . '-' . $filtro_fecha;
-        $tipoFiltroColumna = 'semana';
+        // El selector manda el número de semana (ej. "5"). Se usa año-semana ISO.
+        $semanaNum = (int) $filtro_fecha;
+        if ($semanaNum < 1 || $semanaNum > 53) {
+            $semanaNum = (int) date('W');
+        }
+        $today = date('o') . '-' . str_pad($semanaNum, 2, '0', STR_PAD_LEFT);
+        $filtroPeriodo = "DATE_FORMAT(o.created, '%x-%v') = '$today'";
         break;
     case 'mes':
-        $today = empty($filtro_fecha) ? date('Y-m') : date('Y') . '-' . $filtro_fecha;
-        $tipoFiltroColumna = 'fecha';
+        $mesNum = (int) $filtro_fecha;
+        if ($mesNum < 1 || $mesNum > 12) {
+            $mesNum = (int) date('m');
+        }
+        $today = date('Y') . '-' . str_pad($mesNum, 2, '0', STR_PAD_LEFT);
+        $filtroPeriodo = "DATE_FORMAT(o.created, '%Y-%m') = '$today'";
         break;
     default:
         echo json_encode(['status' => 'error', 'mensaje' => 'No se indico un periodo de tiempo']);
@@ -161,7 +177,7 @@ $totalesPago = [
 $sqlTotalesPago = "
     SELECT o.tipoPago, SUM(o.total_price) as sum_usd, SUM(o.total_price_bs) as sum_bs, SUM(o.total_price_cop) as sum_cop
     FROM orden o
-    WHERE o.$tipoFiltroColumna = '$today' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
+    WHERE $filtroPeriodo AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
     GROUP BY o.tipoPago
 ";
 $resultTotales = $conexion->query($sqlTotalesPago);
@@ -193,6 +209,31 @@ if ($resultTotales) {
     }
 }
 
+// Fraccionado (tipoPago = 8): cada fracción suma a su medio de pago / moneda
+$sqlFracciones = "
+    SELECT
+        SUM(f.punto) AS punto,
+        SUM(f.pagoMovil) AS pagoMovil,
+        SUM(f.transferencia) AS transferencia,
+        SUM(f.bioPago) AS bioPago,
+        SUM(f.efectivo) AS efectivo,
+        SUM(f.pesos) AS pesos,
+        SUM(f.dolares) AS dolares
+    FROM fracciones f
+    INNER JOIN orden o ON o.id = f.id_order
+    WHERE $filtroPeriodo AND o.status IN ('1', '4') AND o.tipoPago = 8 AND o.bss_id = '$bss_id' $extraCond $user_cond
+";
+$resFracciones = $conexion->query($sqlFracciones);
+if ($resFracciones && ($rowFrac = $resFracciones->fetch_assoc())) {
+    $totalesPago['Punto']         += (float) $rowFrac['punto'];
+    $totalesPago['Pmovil']        += (float) $rowFrac['pagoMovil'];
+    $totalesPago['Transferencia'] += (float) $rowFrac['transferencia'];
+    $totalesPago['Efectivo']      += (float) $rowFrac['efectivo'];
+    $totalesPago['Biopago']       += (float) $rowFrac['bioPago'];
+    $totalesPago['Dolares']       += (float) $rowFrac['dolares'];
+    $totalesPago['Pesos']         += (float) $rowFrac['pesos'];
+}
+
 // -------------------------------------------------------------------
 // 2. OBTENER TOTALES DE VENTAS POR STATUS (Detal = 1,3 / Mayor = 4)
 // -------------------------------------------------------------------
@@ -202,13 +243,14 @@ $total_mayor = 0;
 $sqlVentasStatus = "
     SELECT o.status, SUM(o.total_price) as total_usd
     FROM orden o
-    WHERE o.$tipoFiltroColumna = '$today' AND o.status IN ('1', '3', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
+    WHERE $filtroPeriodo AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
     GROUP BY o.status
 ";
 $resultVentasStatus = $conexion->query($sqlVentasStatus);
 if ($resultVentasStatus) {
     while ($row = $resultVentasStatus->fetch_assoc()) {
-        if (in_array($row['status'], ['1', '3'])) {
+        // El status 3 es descuento de stock, no una venta: se reporta en su vista aparte.
+        if ($row['status'] == '1') {
             $total_detal += $row['total_usd'];
         } elseif ($row['status'] == '4') {
             $total_mayor += $row['total_usd'];
@@ -219,7 +261,7 @@ if ($resultVentasStatus) {
 // -------------------------------------------------------------------
 // 3. CALCULAR GANANCIAS POR TIPO DE VENTA (Detal y Mayor)
 // -------------------------------------------------------------------
-function obtenerGananciasPorTipoVenta($conexion, $tipo, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond)
+function obtenerGananciasPorTipoVenta($conexion, $tipo, $filtroPeriodo, $bss_id, $extraCond, $user_cond)
 {
     $sql = "
         SELECT SUM(
@@ -228,29 +270,40 @@ function obtenerGananciasPorTipoVenta($conexion, $tipo, $today, $tipoFiltroColum
         ) AS ganancia
         FROM orden o
         JOIN orden_articulos oa ON oa.order_id = o.id
-        WHERE o.$tipoFiltroColumna = '$today' AND o.status = '$tipo' AND o.bss_id = '$bss_id' $extraCond $user_cond
+        WHERE $filtroPeriodo AND o.status = '$tipo' AND o.bss_id = '$bss_id' $extraCond $user_cond
     ";
     $res = $conexion->query($sql);
     $row = $res ? $res->fetch_assoc() : ['ganancia' => 0];
     return $row['ganancia'] ? (float) $row['ganancia'] : 0;
 }
 
-$ganancia_detal = obtenerGananciasPorTipoVenta($conexion, '1', $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond);
-$ganancia_mayor = obtenerGananciasPorTipoVenta($conexion, '4', $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond);
+$ganancia_detal = obtenerGananciasPorTipoVenta($conexion, '1', $filtroPeriodo, $bss_id, $extraCond, $user_cond);
+$ganancia_mayor = obtenerGananciasPorTipoVenta($conexion, '4', $filtroPeriodo, $bss_id, $extraCond, $user_cond);
 
 // -------------------------------------------------------------------
 // 4. CALCULAR GANANCIAS POR MONEDA
 // -------------------------------------------------------------------
-function obtenerGananciasPorMoneda($conexion, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond)
+function obtenerGananciasPorMoneda($conexion, $filtroPeriodo, $bss_id, $extraCond, $user_cond)
 {
     // Calculamos las ventas y costos en una sola consulta para todas las monedas
     $sql = "
         SELECT o.tipoPago, o.total_price_bs, o.total_price_cop, o.total_price,
                COALESCE((SELECT SUM(oa.bolivar * oa.quantity) FROM orden_articulos oa WHERE oa.order_id = o.id), 0) as costo_bolivar,
                COALESCE((SELECT SUM(oa.peso * oa.quantity) FROM orden_articulos oa WHERE oa.order_id = o.id), 0) as costo_peso,
-               COALESCE((SELECT SUM(oa.precio * oa.quantity) FROM orden_articulos oa WHERE oa.order_id = o.id), 0) as costo_dolar
+               COALESCE((SELECT SUM(oa.precio * oa.quantity) FROM orden_articulos oa WHERE oa.order_id = o.id), 0) as costo_dolar,
+               COALESCE(fr.frac_bs, 0) as frac_bs,
+               COALESCE(fr.frac_cop, 0) as frac_cop,
+               COALESCE(fr.frac_usd, 0) as frac_usd
         FROM orden o
-        WHERE o.$tipoFiltroColumna = '$today' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
+        LEFT JOIN (
+            SELECT id_order,
+                   SUM(efectivo + punto + pagoMovil + transferencia + bioPago) AS frac_bs,
+                   SUM(pesos) AS frac_cop,
+                   SUM(dolares) AS frac_usd
+            FROM fracciones
+            GROUP BY id_order
+        ) fr ON fr.id_order = o.id
+        WHERE $filtroPeriodo AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' $extraCond $user_cond
     ";
 
     $res = $conexion->query($sql);
@@ -268,12 +321,34 @@ function obtenerGananciasPorMoneda($conexion, $today, $tipoFiltroColumna, $bss_i
             if ($tipoPago == '5') {
                 $ganancias['Dolar'] += ($row['total_price'] - $row['costo_dolar']);
             }
+            if ($tipoPago == '8') {
+                // Pago fraccionado: se reparte el costo total entre las monedas según
+                // la fracción que cada una aportó a la cobertura, normalizada. Así el
+                // costo asignado nunca supera el costo real ni queda parte sin asignar.
+                $totalBs  = (float) $row['total_price_bs'];
+                $totalCop = (float) $row['total_price_cop'];
+                $totalUsd = (float) $row['total_price'];
+                $fracBs   = (float) $row['frac_bs'];
+                $fracCop  = (float) $row['frac_cop'];
+                $fracUsd  = (float) $row['frac_usd'];
+
+                $covBs  = $totalBs > 0 ? $fracBs / $totalBs : 0;
+                $covCop = $totalCop > 0 ? $fracCop / $totalCop : 0;
+                $covUsd = $totalUsd > 0 ? $fracUsd / $totalUsd : 0;
+                $covTotal = $covBs + $covCop + $covUsd;
+
+                if ($covTotal > 0) {
+                    $ganancias['Bolivar'] += $fracBs - ((float) $row['costo_bolivar'] * ($covBs / $covTotal));
+                    $ganancias['Peso']    += $fracCop - ((float) $row['costo_peso'] * ($covCop / $covTotal));
+                    $ganancias['Dolar']   += $fracUsd - ((float) $row['costo_dolar'] * ($covUsd / $covTotal));
+                }
+            }
         }
     }
     return $ganancias;
 }
 
-$gananciasMoneda = obtenerGananciasPorMoneda($conexion, $today, $tipoFiltroColumna, $bss_id, $extraCond, $user_cond);
+$gananciasMoneda = obtenerGananciasPorMoneda($conexion, $filtroPeriodo, $bss_id, $extraCond, $user_cond);
 
 // -------------------------------------------------------------------
 // 5. OBTENER DATOS DE LA TABLA DE VENTAS
@@ -286,11 +361,19 @@ $queryTabla = "
            (SELECT GROUP_CONCAT(CONCAT(oa.quantity, ' ', p.nombre) SEPARATOR ', ')
             FROM orden_articulos oa 
             JOIN productos p ON oa.product_id = p.id 
-            WHERE oa.order_id = o.id) as productosTexto
+            WHERE oa.order_id = o.id) as productosTexto,
+           fr.punto, fr.pagoMovil, fr.transferencia, fr.bioPago, fr.efectivo, fr.pesos, fr.dolares
     FROM orden o
     LEFT JOIN usuarios u ON o.usuario = u.id
+    LEFT JOIN (
+        SELECT id_order,
+               SUM(punto) AS punto, SUM(pagoMovil) AS pagoMovil, SUM(transferencia) AS transferencia,
+               SUM(bioPago) AS bioPago, SUM(efectivo) AS efectivo, SUM(pesos) AS pesos, SUM(dolares) AS dolares
+        FROM fracciones
+        GROUP BY id_order
+    ) fr ON fr.id_order = o.id
     WHERE (o.status = '1' OR o.status = '2' OR o.status = '4') 
-      AND o.$tipoFiltroColumna = '$today'
+      AND $filtroPeriodo
       AND o.bss_id = '$bss_id' 
       $extraCond $user_cond
     ORDER BY o.id DESC
@@ -318,6 +401,29 @@ if ($resultTabla) {
         $tVenta = $row['status'] == '4' ? 'M' : 'V';
         $productosTexto = htmlspecialchars($row['productosTexto'] ?? '');
 
+        // "Cobrado": para fraccionado se muestra el desglose real; para el resto,
+        // el monto completo en la moneda del medio de pago.
+        $cobrado = '';
+        if ($row['status'] == '2') {
+            $cobrado = 'Crédito (pendiente)';
+        } elseif ($row['tipoPago'] == '8') {
+            $partesCobro = [];
+            if ((float) ($row['punto'] ?? 0) > 0) $partesCobro[] = 'Bs ' . number_format((float) $row['punto'], 2, ',', '.');
+            if ((float) ($row['efectivo'] ?? 0) > 0) $partesCobro[] = 'Bs efectivo ' . number_format((float) $row['efectivo'], 2, ',', '.');
+            if ((float) ($row['pagoMovil'] ?? 0) > 0) $partesCobro[] = 'Bs pago móvil ' . number_format((float) $row['pagoMovil'], 2, ',', '.');
+            if ((float) ($row['transferencia'] ?? 0) > 0) $partesCobro[] = 'Bs transferencia ' . number_format((float) $row['transferencia'], 2, ',', '.');
+            if ((float) ($row['bioPago'] ?? 0) > 0) $partesCobro[] = 'Bs BioPago ' . number_format((float) $row['bioPago'], 2, ',', '.');
+            if ((float) ($row['dolares'] ?? 0) > 0) $partesCobro[] = 'USD ' . number_format((float) $row['dolares'], 2, ',', '.');
+            if ((float) ($row['pesos'] ?? 0) > 0) $partesCobro[] = 'COP ' . number_format((float) $row['pesos'], 0, ',', '.');
+            $cobrado = implode(' + ', $partesCobro);
+        } elseif ($row['tipoPago'] == '5') {
+            $cobrado = '$ ' . number_format((float) $row['total_price'], 2, ',', '.');
+        } elseif ($row['tipoPago'] == '6') {
+            $cobrado = number_format((float) $row['total_price_cop'], 0, ',', '.') . ' Cop';
+        } else {
+            $cobrado = number_format((float) $row['total_price_bs'], 2, ',', '.') . ' Bs';
+        }
+
         $tabla[] = [
             'contador' => $contador++,
             'tVenta' => $tVenta,
@@ -327,6 +433,7 @@ if ($resultTabla) {
             'total_price' => number_format($row['total_price'], 2, ',', '.'),
             'total_price_cop' => number_format($row['total_price_cop'], 0, ',', '.'),
             'total_price_bs' => number_format($row['total_price_bs'], 2, ',', '.'),
+            'cobrado' => $cobrado,
             'id' => $orderId,
             'cliente' => $row['cliente'],
             'productosTexto' => $productosTexto

@@ -79,12 +79,15 @@ try {
     $stmt->close();
 
     // Actualizar orden
+    // dia también se mueve a la fecha de pago: los reportes semanales agrupan
+    // por esta columna y, si no se actualiza, la venta aparece en un día anterior.
+    $diaPago = date('N');
     $stmt = $conexion->prepare("UPDATE orden 
         SET status = ?, created = ?, modified = ?, fecha = ?, semana = ?, ano = ?, 
-            total_price_bs = ?, total_price_cop = ?, tipoPago = ? 
+            total_price_bs = ?, total_price_cop = ?, tipoPago = ?, dia = ?
         WHERE id = ?");
     $stmt->bind_param(
-        "ssssssdssi",
+        "ssssssdssii",
         $tipo,
         $date1,
         $date2,
@@ -94,6 +97,7 @@ try {
         $precioBsVenta,
         $precioPesoVenta,
         $pagoTipo,
+        $diaPago,
         $id
     );
     $stmt->execute();

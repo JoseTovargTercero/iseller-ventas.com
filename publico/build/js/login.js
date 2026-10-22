@@ -38,7 +38,7 @@ document
         }
 
         if (data.status === true) {
-          window.location.href = "publico/production/ventas.php";
+          window.location.href = data.redirect || "publico/production/ventas.php";
         } else {
           if (data.msg === "Usuario inactivo por incumplimiento de pago") {
             Swal.fire({

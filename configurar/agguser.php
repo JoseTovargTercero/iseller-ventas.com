@@ -22,6 +22,11 @@ if (!$nombre || !$user || !$contrasena || !$nivel) {
    exit;
 }
 
+if (!filter_var($user, FILTER_VALIDATE_EMAIL)) {
+   echo json_encode(['tipo' => 'error', 'mensaje' => 'El correo electrónico no es válido.']);
+   exit;
+}
+
 if ($contrasena !== $conf_contrasena) {
    echo json_encode(['tipo' => 'error', 'mensaje' => 'Las contraseñas no coinciden.']);
    exit;

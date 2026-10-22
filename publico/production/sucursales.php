@@ -71,59 +71,150 @@ if ($_SESSION['nivel'] == 1) {
 
 
 
-      .dash-table-wrap {
-        overflow-x: auto;
-        padding: 0 16px 16px;
+      /* ── Tarjetas de sucursal ─────────────────────────────────────── */
+      .suc-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 12px;
+        padding: 18px 20px 20px;
       }
 
-      .dash-table {
+      .suc-card {
+        position: relative;
+        padding: 16px;
+        border: 1px solid var(--dash-border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, .02);
+        transition: all .2s ease;
+      }
+
+      .suc-card:hover {
+        border-color: rgba(45, 212, 160, .25);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+      }
+
+      .suc-card-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .suc-logo {
+        position: relative;
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(45, 212, 160, .1);
+        overflow: hidden;
+      }
+
+      .suc-logo ion-icon {
+        font-size: 22px;
+        color: var(--dash-mint);
+      }
+
+      /* El logo tapa el icono; si no existe, onerror lo quita y queda el icono */
+      .suc-logo img {
+        position: absolute;
+        inset: 0;
         width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
+        height: 100%;
+        object-fit: cover;
       }
 
-      .dash-table thead th {
-        padding: 12px 14px;
-        text-align: left;
+      .suc-head {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .suc-head h6 {
+        margin: 0;
+        font-size: 14px;
         font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: .4px;
-        color: var(--dash-text-muted);
-        border-bottom: 1px solid var(--dash-border);
-        background: transparent;
-      }
-
-      .dash-table tbody tr {
-        transition: background .15s ease;
-        border-bottom: 1px solid rgba(46, 53, 62, .4);
-      }
-
-      .dash-table tbody tr:last-child {
-        border-bottom: none;
-      }
-
-      .dash-table tbody tr:hover {
-        background: rgba(45, 212, 160, .03);
-      }
-
-      .dash-table tbody td {
-        padding: 12px 14px;
         color: var(--dash-text);
-        vertical-align: middle;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .dash-table .text-center {
+      .suc-tipo {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 2px 9px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--dash-mint);
+        background: rgba(45, 212, 160, .1);
+      }
+
+      .suc-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(46, 53, 62, .6);
+      }
+
+      .suc-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        padding: 7px 4px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, .02);
         text-align: center;
       }
 
-      .dash-table .avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        object-fit: cover;
-        background: rgba(255, 255, 255, .04);
-        display: block;
+      .suc-stat ion-icon {
+        font-size: 15px;
+        color: var(--dash-text-muted);
+      }
+
+      .suc-stat b {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--dash-text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .suc-stat span {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--dash-text-muted);
+      }
+
+      .suc-empty {
+        grid-column: 1 / -1;
+        padding: 46px 20px;
+        text-align: center;
+        color: var(--dash-text-muted);
+      }
+
+      .suc-empty ion-icon {
+        font-size: 38px;
+        opacity: .35;
+      }
+
+      .suc-empty h6 {
+        margin: 10px 0 4px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--dash-text);
+      }
+
+      .suc-empty p {
+        margin: 0;
+        font-size: 12.5px;
       }
 
       .btn-edit-icon {
@@ -311,6 +402,51 @@ if ($_SESSION['nivel'] == 1) {
       .hide {
         display: none !important;
       }
+
+      /* ── Móvil (WebView de la app) ────────────────────────────────── */
+      @media (max-width: 768px) {
+        .right_col {
+          padding: 14px 12px !important;
+        }
+
+        .dash-panel .panel-header {
+          padding: 14px 16px 12px;
+        }
+
+        /* El botón de agregar pasa a su propia fila, a lo ancho */
+        .btn-dash-action {
+          width: 100%;
+          justify-content: center;
+          padding: 11px 18px;
+        }
+
+        /* Una sucursal por fila */
+        .suc-grid {
+          grid-template-columns: 1fr;
+          padding: 14px;
+          gap: 10px;
+        }
+
+        .suc-card {
+          padding: 14px;
+        }
+
+        .btn-edit-icon {
+          width: 36px;
+          height: 36px;
+        }
+
+        /* Los botones del formulario de edición, mitad y mitad */
+        #section_edit .d-flex {
+          gap: 10px;
+        }
+
+        #section_edit .btn-dash-primary,
+        #section_edit .btn-dash-secondary {
+          flex: 1;
+          justify-content: center;
+        }
+      }
     </style>
   </head>
 
@@ -359,28 +495,16 @@ if ($_SESSION['nivel'] == 1) {
           <div id="section_tabla">
             <div class="dash-panel">
               <div class="panel-header d-flex justify-content-between">
-                <h6><ion-icon name="business-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Sucursales registradas</h6>
+                <div>
+                  <h6><ion-icon name="business-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Sucursales registradas</h6>
+                  <small id="sucursal-count" style="color:var(--dash-text-muted);font-size:11px;">Cargando…</small>
+                </div>
                 <button type="button" class="btn-dash-action" id="btn-add-sucursal">
                   <ion-icon name="add-outline"></ion-icon> Agregar
                 </button>
               </div>
               <div class="panel-body p-0">
-                <div class="dash-table-wrap">
-                  <table id="datatable-responsive" class="dash-table">
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th>Tipo</th>
-                        <th>Nombre</th>
-                        <th class="text-center">Usuarios</th>
-                        <th class="text-center">Productos</th>
-                        <th class="text-center">Stock mínimo</th>
-                        <th class="text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
+                <div class="suc-grid" id="sucursales-grid"></div>
               </div>
             </div>
           </div>
@@ -479,6 +603,16 @@ if ($_SESSION['nivel'] == 1) {
       let sucursales = [];
       let sucursal_editar;
 
+      // Nombre y tipo los escribe el usuario: se escapan antes de meterlos en el HTML
+      const esc = s => (s === null || s === undefined ? '' : String(s)).replace(
+        /[&<>"']/g, c => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[c]);
+
       const $addModal = $('#addModal');
 
       $(document).ready(function() {
@@ -555,25 +689,42 @@ if ($_SESSION['nivel'] == 1) {
           .then(text => {
             try {
               const data = JSON.parse(text);
-              const $tbody = $('#datatable-responsive tbody');
-              $tbody.empty();
-              if (data.length > 0) {
-                data.forEach(item => {
+              const lista = Array.isArray(data) ? data : [];
+              const $grid = $('#sucursales-grid').empty();
+              $('#sucursal-count').text(lista.length === 1 ? '1 sucursal' : `${lista.length} sucursales`);
+
+              if (lista.length > 0) {
+                lista.forEach(item => {
                   sucursales[item.id] = item;
-                  $tbody.append(`
-            <tr>
-              <td><img class="avatar" src="images/sucursal_logo/${item.id}.png" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27rgba(255,255,255,0.25)%27 stroke-width=%271.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%274%27 y=%2710%27 width=%2716%27 height=%2711%27 rx=%272%27/%3E%3Cpath d=%27M12 21v-6%27/%3E%3Cpath d=%27M2 10l10-8 10 8%27/%3E%3C/svg%3E';"></td>
-              <td>${item.tipo}</td>
-              <td>${item.nombre}</td>
-              <td class="text-center">${item.usuarios}</td>
-              <td class="text-center">${item.productos}</td>
-              <td class="text-center">${item.stockCritico}</td>
-              <td class="text-center"><a data-id="${item.id}" class="btn-edit-icon" title="Editar"><ion-icon name="create-outline"></ion-icon></a></td>
-            </tr>
+                  $grid.append(`
+            <article class="suc-card">
+              <div class="suc-card-top">
+                <div class="suc-logo">
+                  <ion-icon name="storefront-outline"></ion-icon>
+                  <img src="images/sucursal_logo/${item.id}.png" alt="" onerror="this.remove()">
+                </div>
+                <div class="suc-head">
+                  <h6 title="${esc(item.nombre)}">${esc(item.nombre)}</h6>
+                  <span class="suc-tipo">${esc(item.tipo) || 'Sin tipo'}</span>
+                </div>
+                <a data-id="${item.id}" class="btn-edit-icon" title="Editar"><ion-icon name="create-outline"></ion-icon></a>
+              </div>
+              <div class="suc-stats">
+                <div class="suc-stat"><ion-icon name="people-outline"></ion-icon><b>${item.usuarios}</b><span>Usuarios</span></div>
+                <div class="suc-stat"><ion-icon name="cube-outline"></ion-icon><b>${item.productos}</b><span>Productos</span></div>
+                <div class="suc-stat"><ion-icon name="alert-circle-outline"></ion-icon><b>${item.stockCritico}</b><span>Stock mín.</span></div>
+              </div>
+            </article>
           `);
                 });
               } else {
-                $tbody.append('<tr><td colspan="7" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">Sin resultados</td></tr>');
+                $grid.append(`
+            <div class="suc-empty">
+              <ion-icon name="storefront-outline"></ion-icon>
+              <h6>Aún no hay sucursales</h6>
+              <p>Usa el botón "Agregar" para crear tu primer punto de venta.</p>
+            </div>
+          `);
               }
             } catch (e) {
               console.error("Error al parsear JSON:", e, "\nTexto:", text);

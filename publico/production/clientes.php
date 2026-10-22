@@ -57,6 +57,46 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         .table-info>th {
             background-color: #bee5eb0f !important;
         }
+
+        /* ── Móvil (WebView de la app) ───────────────────────────────── */
+        @media (max-width: 768px) {
+            .right_col {
+                padding: 14px 12px !important;
+            }
+
+            .x_panel {
+                padding: 10px;
+            }
+
+            /* El contador de filas no aporta en el teléfono */
+            #datatable th:first-child,
+            #datatable td:first-child {
+                display: none;
+            }
+
+            #datatable {
+                font-size: 12.5px;
+            }
+
+            #datatable th,
+            #datatable td {
+                padding: 10px 8px;
+            }
+
+            #datatable td:last-child {
+                white-space: nowrap;
+            }
+
+            /* Editar / borrar con tamaño de dedo */
+            #datatable .btn {
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
     </style>
 
     <!-- Modal -->
@@ -178,16 +218,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <!-- Bootstrap -->
                 <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
                 <!-- DataTables core -->
-                <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+                <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
                 <!-- Buttons extension -->
-                <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-                <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-                <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-                <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+                <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
+                <script src="../vendors/jquery/jquery-3.7.1.min.js"></script>
+                <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
+                <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
                 <!-- PDF export -->
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-                <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+                <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
+                <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
+                <script src="../vendors/datatables/buttons.html5.min.js"></script>
                 <script src='../build/js/custom.js'></script>
                 <script src='../build/js/global-loader.js'></script>
                 <script src="js/nombre_pagina.js"></script>

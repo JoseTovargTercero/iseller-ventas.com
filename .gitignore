@@ -1,2 +1,5 @@
 # Carpeta de herramientas/credenciales de agentes (local)
 .agents/
+
+# Credenciales locales (se cargan desde fuera del proyecto)
+.env

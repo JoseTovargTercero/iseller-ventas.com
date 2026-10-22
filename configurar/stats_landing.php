@@ -16,7 +16,7 @@ try {
         $stmt->close();
     }
     $fecha = date('Y-m-d');
-    $stmt = $conexion->prepare("SELECT COUNT(*) AS c FROM orden WHERE modified = '$fecha'");
+    $stmt = $conexion->prepare("SELECT COUNT(*) AS c FROM orden WHERE DATE(created) = '$fecha'");
     if ($stmt) {
         $stmt->execute();
         $ventas_hoy = (int)$stmt->get_result()->fetch_assoc()['c'] * 2;

@@ -1,6 +1,17 @@
 <?php
-require_once('lib/pdf/mpdf.php');
+require_once('TCPDF-main/tcpdf.php');
 require_once('../../../configurar/configuracion.php');
+require_once('../../../configurar/session.php');
+
+$bss_id = (int) ($_SESSION['bss_id'] ?? 0);
+$sucursal_id = (int) ($_SESSION['sucursal'] ?? 0);
+if ($bss_id <= 0) {
+    header('Location: ../login.php');
+    exit;
+}
+$filtroSucursalSub = $sucursal_id > 0 ? " AND id_sucursal = $sucursal_id" : "";
+$subOrden = "(SELECT * FROM " . "orden WHERE bss_id = $bss_id $filtroSucursalSub) orden";
+$subArticulos = "(SELECT * FROM " . "orden_articulos WHERE bss_id = $bss_id $filtroSucursalSub) orden_articulos";
 
 
 $query22222222 = "SELECT * FROM mail WHERE id=1";
@@ -19,18 +30,18 @@ $mesConsulta = date('Y-m');
 
 function ventasAno($mesC)
 {
-    global $conexion;
+    global $conexion, $subOrden, $subArticulos, $bss_id;
 
 
 
 
-    $query00000000 = "SELECT * FROM orden WHERE fecha='$mesC'  AND status!='5' AND status!='5.2'";
+    $query00000000 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$mesC'  AND status!='5' AND status!='5.2'";
     $buscarAlumnos00000000 = $conexion->query($query00000000);
     if ($buscarAlumnos00000000->num_rows > 0) {
         while ($filaAlumnos00000000 = $buscarAlumnos00000000->fetch_assoc()) {
             $ordenId = $filaAlumnos00000000['id'];
 
-            $query000000000 = "SELECT * FROM orden_articulos WHERE order_id='$ordenId'";
+            $query000000000 = "SELECT * FROM $subArticulos WHERE order_id='$ordenId'";
             $buscarAlumnos000000000 = $conexion->query($query000000000);
             if ($buscarAlumnos000000000->num_rows > 0) {
                 while ($filaAlumnos000000000 = $buscarAlumnos000000000->fetch_assoc()) {
@@ -52,7 +63,7 @@ function ventasAno($mesC)
 
 
 
-    $query9999 = "SELECT * FROM orden WHERE fecha='$mesC' AND status='1' OR fecha='$mesC' AND status='4'";
+    $query9999 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$mesC' AND status='1' OR DATE_FORMAT(created, '%Y-%m')='$mesC' AND status='4'";
     $buscarAlumnos9999 = $conexion->query($query9999);
     if ($buscarAlumnos9999->num_rows > 0) {
         while ($filaAlumnos9999 = $buscarAlumnos9999->fetch_assoc()) {
@@ -73,13 +84,13 @@ function ventasAno($mesC)
     /////////////////////////////////////////////////////////////   
 
 
-    $queryAAAAA3 = "SELECT * FROM orden WHERE fecha='$mesC' AND status='1' OR fecha='$mesC' AND status='4'";
+    $queryAAAAA3 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$mesC' AND status='1' OR DATE_FORMAT(created, '%Y-%m')='$mesC' AND status='4'";
     $buscarAlumnosAAAAA3 = $conexion->query($queryAAAAA3);
     if ($buscarAlumnosAAAAA3->num_rows > 0) {
         while ($filaAlumnosAAAAA3 = $buscarAlumnosAAAAA3->fetch_assoc()) {
             $VentaA = $filaAlumnosAAAAA3['id'];
             $VentasSeA += $filaAlumnosAAAAA3['total_price'];
-            $queryAAAAAA33 = "SELECT * FROM orden_articulos WHERE order_id='$VentaA'";
+            $queryAAAAAA33 = "SELECT * FROM $subArticulos WHERE order_id='$VentaA'";
             $buscarAlumnosAAAAAA33 = $conexion->query($queryAAAAAA33);
             if ($buscarAlumnosAAAAAA33->num_rows > 0) {
                 while ($filaAlumnosAAAAAA33 = $buscarAlumnosAAAAAA33->fetch_assoc()) {
@@ -172,7 +183,7 @@ function ventasAno($mesC)
     }
     $mesaPasadaProcesada = $mesaPasada[0] . $mesaPasadaProce;
 
-    $query1111161 = "SELECT * FROM orden WHERE fecha='$mesaPasadaProcesada' AND status='1' OR fecha='$mesaPasadaProcesada' AND status='4'";
+    $query1111161 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$mesaPasadaProcesada' AND status='1' OR DATE_FORMAT(created, '%Y-%m')='$mesaPasadaProcesada' AND status='4'";
     $buscarAlumnos1111161 = $conexion->query($query1111161);
     if ($buscarAlumnos1111161->num_rows > 0) {
         while ($filaAlumnos1111161 = $buscarAlumnos1111161->fetch_assoc()) {
@@ -259,7 +270,7 @@ function ventasAno($mesC)
 ////////////////
 function DetalleMoneda($mesCou)
 {
-    global $conexion;
+    global $conexion, $subOrden, $subArticulos, $bss_id;
     $lahora =  str_split($mesCou, 1);
     $horaDef =  $lahora[5] . $lahora[6];
 
@@ -314,14 +325,14 @@ function DetalleMoneda($mesCou)
     }
 
     ///////////////////GANANCIAS DEL DOLARES///////////////////////
-    $query2222234 = "SELECT * FROM orden WHERE fecha='$mesCou' AND status='1' AND tipoPago='5' OR fecha='$mesCou' AND status='4' AND tipoPago='5'";
+    $query2222234 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='5' OR DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='5'";
     $buscarAlumnos2222234 = $conexion->query($query2222234);
     if ($buscarAlumnos2222234->num_rows > 0) {
         while ($filaAlumnos2222234 = $buscarAlumnos2222234->fetch_assoc()) {
             $Venta24 = $filaAlumnos2222234['id'];
             $VentasSe24 += $filaAlumnos2222234['total_price'];
 
-            $query2222223344 = "SELECT * FROM orden_articulos WHERE order_id='$Venta24'";
+            $query2222223344 = "SELECT * FROM $subArticulos WHERE order_id='$Venta24'";
             $buscarAlumnos2222223344 = $conexion->query($query2222223344);
             if ($buscarAlumnos2222223344->num_rows > 0) {
                 while ($filaAlumnos2222223344 = $buscarAlumnos2222223344->fetch_assoc()) {
@@ -339,17 +350,17 @@ function DetalleMoneda($mesCou)
         }
     }
     ///////////////////GANANCIAS BOLIVAR//////////////////////////
-    $query3333334 = "SELECT * FROM orden WHERE
-fecha='$mesCou' AND status='1' AND tipoPago='1' OR
-fecha='$mesCou' AND status='4' AND tipoPago='1' OR
-fecha='$mesCou' AND status='1' AND tipoPago='2' OR 
-fecha='$mesCou' AND status='4' AND tipoPago='2' OR 
-fecha='$mesCou' AND status='1' AND tipoPago='3' OR 
-fecha='$mesCou' AND status='4' AND tipoPago='3' OR 
-fecha='$mesCou' AND status='1' AND tipoPago='4' OR 
-fecha='$mesCou' AND status='4' AND tipoPago='4' OR
-fecha='$mesCou' AND status='1' AND tipoPago='7' OR
-fecha='$mesCou' AND status='4' AND tipoPago='7' 
+    $query3333334 = "SELECT * FROM $subOrden WHERE
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='1' OR
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='1' OR
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='2' OR 
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='2' OR 
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='3' OR 
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='3' OR 
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='4' OR 
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='4' OR
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='7' OR
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='7' 
 ";
     $buscarAlumnos3333334 = $conexion->query($query3333334);
     if ($buscarAlumnos3333334->num_rows > 0) {
@@ -357,7 +368,7 @@ fecha='$mesCou' AND status='4' AND tipoPago='7'
             $Venta34 = $filaAlumnos3333334['id'];
             $VentasSe34 += $filaAlumnos3333334['total_price_bs'];
 
-            $query3333333344 = "SELECT * FROM orden_articulos WHERE order_id='$Venta34'";
+            $query3333333344 = "SELECT * FROM $subArticulos WHERE order_id='$Venta34'";
             $buscarAlumnos3333333344 = $conexion->query($query3333333344);
             if ($buscarAlumnos3333333344->num_rows > 0) {
                 while ($filaAlumnos3333333344 = $buscarAlumnos3333333344->fetch_assoc()) {
@@ -376,9 +387,9 @@ fecha='$mesCou' AND status='4' AND tipoPago='7'
     }
 
     ///////////////////GANANCIAS  PESOS//////////////////////////
-    $query4444434 = "SELECT * FROM orden WHERE 
-fecha='$mesCou' AND status='1' AND tipoPago='6' OR
-fecha='$mesCou' AND status='4' AND tipoPago='6'";
+    $query4444434 = "SELECT * FROM $subOrden WHERE 
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='1' AND tipoPago='6' OR
+DATE_FORMAT(created, '%Y-%m')='$mesCou' AND status='4' AND tipoPago='6'";
 
     $buscarAlumnos4444434 = $conexion->query($query4444434);
     if ($buscarAlumnos4444434->num_rows > 0) {
@@ -386,7 +397,7 @@ fecha='$mesCou' AND status='4' AND tipoPago='6'";
             $Venta44 = $filaAlumnos4444434['id'];
             $VentasSe44 += $filaAlumnos4444434['total_price_cop'];
 
-            $query4444443344 = "SELECT * FROM orden_articulos WHERE order_id='$Venta44'";
+            $query4444443344 = "SELECT * FROM $subArticulos WHERE order_id='$Venta44'";
             $buscarAlumnos4444443344 = $conexion->query($query4444443344);
             if ($buscarAlumnos4444443344->num_rows > 0) {
                 while ($filaAlumnos4444443344 = $buscarAlumnos4444443344->fetch_assoc()) {
@@ -425,7 +436,7 @@ fecha='$mesCou' AND status='4' AND tipoPago='6'";
     /////////////////////////////////////////////////////////////////////////////////   
     /////////////////////////////////////////////////////////////////////////////////  
     ///////////////////GANANCIAS DEL DOLARES///////////////////////
-    $query1313234 = "SELECT * FROM orden WHERE fecha='$Mespasado' AND status='1' AND tipoPago='5' OR fecha='$Mespasado' AND status='4' AND tipoPago='5'";
+    $query1313234 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='5' OR DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='5'";
     $buscarAlumnos1313234 = $conexion->query($query1313234);
     if ($buscarAlumnos1313234->num_rows > 0) {
         while ($filaAlumnos1313234 = $buscarAlumnos1313234->fetch_assoc()) {
@@ -433,17 +444,17 @@ fecha='$mesCou' AND status='4' AND tipoPago='6'";
         }
     }
     ///////////////////GANANCIAS BOLIVAR//////////////////////////
-    $query1515154 = "SELECT * FROM orden WHERE
-fecha='$Mespasado' AND status='1' AND tipoPago='1' OR
-fecha='$Mespasado' AND status='4' AND tipoPago='1' OR
-fecha='$Mespasado' AND status='1' AND tipoPago='2' OR 
-fecha='$Mespasado' AND status='4' AND tipoPago='2' OR 
-fecha='$Mespasado' AND status='1' AND tipoPago='3' OR 
-fecha='$Mespasado' AND status='4' AND tipoPago='3' OR 
-fecha='$Mespasado' AND status='1' AND tipoPago='4' OR 
-fecha='$Mespasado' AND status='4' AND tipoPago='4' OR
-fecha='$Mespasado' AND status='1' AND tipoPago='7' OR
-fecha='$Mespasado' AND status='4' AND tipoPago='7' 
+    $query1515154 = "SELECT * FROM $subOrden WHERE
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='1' OR
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='1' OR
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='2' OR 
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='2' OR 
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='3' OR 
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='3' OR 
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='4' OR 
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='4' OR
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='7' OR
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='7' 
 ";
 
     $buscarAlumnos1515154 = $conexion->query($query1515154);
@@ -455,9 +466,9 @@ fecha='$Mespasado' AND status='4' AND tipoPago='7'
 
     ///////////////////GANANCIAS  PESOS//////////////////////////
 
-    $query55434 = "SELECT * FROM orden WHERE 
-fecha='$Mespasado' AND status='1' AND tipoPago='6' OR
-fecha='$Mespasado' AND status='4' AND tipoPago='6'";
+    $query55434 = "SELECT * FROM $subOrden WHERE 
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='1' AND tipoPago='6' OR
+DATE_FORMAT(created, '%Y-%m')='$Mespasado' AND status='4' AND tipoPago='6'";
 
     $buscarAlumnos55434 = $conexion->query($query55434);
     if ($buscarAlumnos55434->num_rows > 0) {
@@ -590,7 +601,7 @@ fecha='$Mespasado' AND status='4' AND tipoPago='6'";
 function VentaProductos($mesCoun)
 {
     $arreglo = array();
-    global $conexion;
+    global $conexion, $subOrden, $subArticulos, $subFracciones, $bss_id;
     $lahora =  str_split($mesCoun, 1);
     $horaDef =  $lahora[5] . $lahora[6];
 
@@ -644,7 +655,7 @@ function VentaProductos($mesCoun)
             break;
     }
 
-    $query2222234 = "SELECT * FROM productos";
+    $query2222234 = "SELECT * FROM productos WHERE bss_id = $bss_id";
     $buscarAlumnos2222234 = $conexion->query($query2222234);
     if ($buscarAlumnos2222234->num_rows > 0) {
         while ($filaAlumnos2222234 = $buscarAlumnos2222234->fetch_assoc()) {
@@ -652,13 +663,13 @@ function VentaProductos($mesCoun)
             $id = $filaAlumnos2222234['id'];
 
 
-            $query3333334 = "SELECT * FROM orden WHERE fecha='$mesCoun' AND status='1' OR fecha='$mesCoun' AND status='4'";
+            $query3333334 = "SELECT * FROM $subOrden WHERE DATE_FORMAT(created, '%Y-%m')='$mesCoun' AND status='1' OR DATE_FORMAT(created, '%Y-%m')='$mesCoun' AND status='4'";
             $buscarAlumnos3333334 = $conexion->query($query3333334);
             if ($buscarAlumnos3333334->num_rows > 0) {
                 while ($filaAlumnos3333334 = $buscarAlumnos3333334->fetch_assoc()) {
                     $Venta34 = $filaAlumnos3333334['id'];
 
-                    $query3333333344 = "SELECT * FROM orden_articulos WHERE order_id='$Venta34' AND product_id='$id'";
+                    $query3333333344 = "SELECT * FROM $subArticulos WHERE order_id='$Venta34' AND product_id='$id'";
                     $buscarAlumnos3333333344 = $conexion->query($query3333333344);
                     if ($buscarAlumnos3333333344->num_rows > 0) {
                         while ($filaAlumnos3333333344 = $buscarAlumnos3333333344->fetch_assoc()) {
@@ -872,11 +883,27 @@ if ($_SESSION['nivel'] != "1") {
 
 
 
-$mpdf = new mPDF('c', 'A4');
-$css = file('style.css');
-$mpdf->writeHTML($css, 1);
-$mpdf->writeHTML($html);
-$mpdf->Output('AVANCE_MESUAL.pdf', '' . $modoDescarga . '');
+$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+$pdf->SetCreator('i-SELLER');
+$pdf->SetAuthor($_SESSION['nombre'] ?? '');
+$pdf->SetTitle('Avance Anual');
+// Desactivar cabeceras y pies de página automáticos para usar el HTML personalizado
+$pdf->setPrintHeader(false);
+$pdf->setPrintFooter(false);
+$pdf->SetMargins(10, 10, 10);
+$pdf->SetAutoPageBreak(TRUE, 15);
+$pdf->AddPage();
+
+if (file_exists('style.css')) {
+    $html = '<style>' . file_get_contents('style.css') . '</style>' . $html;
+}
+$pdf->writeHTML($html, true, false, true, false, '');
+
+if ($modoDescarga == "I") {
+    $pdf->Output('AVANCE_MESUAL.pdf', 'I');
+} else {
+    $pdf->Output('AVANCE_MESUAL.pdf', 'F');
+}
 
 
 
@@ -941,7 +968,7 @@ if ($modoDescarga == "F" && $cierre == "1") {
               </script>;";
         }
     }
-} else {
+} elseif ($modoDescarga == "F") {
     echo "<script>
 			  window.open('../../production/consultaHistorica.php?accion=correo', '_self');
               </script>;";

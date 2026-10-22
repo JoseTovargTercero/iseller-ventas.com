@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once('../configurar/configuracion.php');
 header('Content-Type: application/json');
 
@@ -62,7 +62,23 @@ if ($result->num_rows === 1) {
         if ($usuario['nivel'] == 2) {
             $_SESSION['sucursal'] = $usuario['id_sucursal'];
         } else {
-            unset($_SESSION['sucursal']);
+            // Si el negocio solo tiene 1 sucursal, asignarla por defecto a la sesión
+            $stmtSucUnica = $conexion->prepare("SELECT id FROM sucursales WHERE bss_id = ?");
+            if ($stmtSucUnica) {
+                $userBssId = (int)$usuario['bss_id'];
+                $stmtSucUnica->bind_param("i", $userBssId);
+                $stmtSucUnica->execute();
+                $resSucUnica = $stmtSucUnica->get_result();
+                if ($resSucUnica && $resSucUnica->num_rows === 1) {
+                    $rowSucUnica = $resSucUnica->fetch_assoc();
+                    $_SESSION['sucursal'] = (int)$rowSucUnica['id'];
+                } else {
+                    unset($_SESSION['sucursal']);
+                }
+                $stmtSucUnica->close();
+            } else {
+                unset($_SESSION['sucursal']);
+            }
         }
 
         if ($usuario['darkMode'] == 1) {
@@ -111,12 +127,28 @@ if ($result->num_rows === 1) {
             }
             $stmt_2->close();
             $_SESSION['permisos'] = $permisos;
+
+            // Determinar página de inicio según los permisos del usuario
+            if (!in_array('ventas.php', $permisos)) {
+                $primerPermiso = reset($permisos);
+                if ($primerPermiso) {
+                    $redirect = 'publico/production/' . $primerPermiso;
+                }
+            }
+        }
+
+        // ── Verificación de Membresía ──
+        require_once('../configurar/MembresiaHelper.php');
+        $estadoMembresia = MembresiaHelper::obtenerEstado($conexion, $usuario['bss_id']);
+
+        if ($estadoMembresia['esta_vencida']) {
+            $redirect = 'publico/production/membresia_renovacion.php';
         }
 
         // Puedes registrar el login exitoso en logs si deseas
         registrarIntentoLogin($conexion, $doc, 1, $usuario['nivel'], 'Login exitoso');
-        // Redireccionar según nivel
-        echo json_encode(['status' => true, 'msg' => 'ok']);
+        // Redireccionar según nivel, permisos y membresía
+        echo json_encode(['status' => true, 'msg' => 'ok', 'redirect' => $redirect ?? 'publico/production/ventas.php']);
         exit();
     } else {
         // Contraseña incorrecta

@@ -40,27 +40,76 @@ try {
         $cantidad = $rowArticulo['quantity'];
         $id_sucursal = $rowArticulo["id_sucursal"];
 
-        // Obtener stock actual?
-        $stmtProducto = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ?");
-        $stmtProducto->bind_param("ii", $productId, $id_sucursal);
-        $stmtProducto->execute();
-        $resultProducto = $stmtProducto->get_result();
+        // Verificar si el producto es un combo para devolver stock a cada producto hijo
+        $stmtCombo = $conexion->prepare("SELECT producto_id, cantidad FROM combo_items WHERE combo_producto_id = ? AND bss_id = ?");
+        $stmtCombo->bind_param("ii", $productId, $bss_id);
+        $stmtCombo->execute();
+        $resCombo = $stmtCombo->get_result();
 
-        if ($producto = $resultProducto->fetch_assoc()) {
-            $nuevoStock = $producto['stock'] + $cantidad;
+        if ($resCombo && $resCombo->num_rows > 0) {
+            while ($hijo = $resCombo->fetch_assoc()) {
+                $idHijo = (int)$hijo['producto_id'];
+                $cantDevolver = (float)$cantidad * (float)$hijo['cantidad'];
 
-            // Actualizar stock
-            $stmtUpdateStock = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ?");
-            $stmtUpdateStock->bind_param("iii", $nuevoStock, $productId, $id_sucursal);
+                $stmtProdHijo = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ?");
+                $stmtProdHijo->bind_param("ii", $idHijo, $id_sucursal);
+                $stmtProdHijo->execute();
+                $resProdHijo = $stmtProdHijo->get_result();
+                if ($prodH = $resProdHijo->fetch_assoc()) {
+                    $nuevoStockH = (float)$prodH['stock'] + $cantDevolver;
+                    $stmtUpdH = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ?");
+                    $stmtUpdH->bind_param("sii", $nuevoStockH, $idHijo, $id_sucursal);
+                    $stmtUpdH->execute();
+                    $stmtUpdH->close();
+                }
+                $stmtProdHijo->close();
+            }
+            $stmtCombo->close();
+            continue;
+        }
+        $stmtCombo->close();
+
+        // Venta al mayor: la cantidad vendida son pacas/cajas, pero el stock físico vive
+        // en el producto base enlazado por id_stock; se devuelve por cantidad_unidades.
+        $stmtMayor = $conexion->prepare("
+            SELECT p.mayor, p.cantidad_unidades, s.id_stock
+              FROM productos p
+             INNER JOIN stock s ON s.id_producto = p.id AND s.id_sucursal = ? AND s.bss_id = ?
+             WHERE p.id = ? AND p.bss_id = ?
+             LIMIT 1");
+        $stmtMayor->bind_param("iiii", $id_sucursal, $bss_id, $productId, $bss_id);
+        $stmtMayor->execute();
+        $prodMayor = $stmtMayor->get_result()->fetch_assoc();
+        $stmtMayor->close();
+
+        if ($prodMayor && $prodMayor['mayor'] == '1') {
+            $unidades = (float) $prodMayor['cantidad_unidades'];
+            $idStock = (int) $prodMayor['id_stock'];
+            if ($idStock > 0 && $unidades > 0) {
+                $stmtUpdMayor = $conexion->prepare("UPDATE stock SET stock = stock + ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
+                $cantDevolver = (float) $cantidad * $unidades;
+                $stmtUpdMayor->bind_param("diii", $cantDevolver, $idStock, $id_sucursal, $bss_id);
+                $stmtUpdMayor->execute();
+                $stmtUpdMayor->close();
+            }
+        } else {
+            $stmtUpdateStock = $conexion->prepare("UPDATE stock SET stock = stock + ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+            $stmtUpdateStock->bind_param("diii", $cantidad, $productId, $id_sucursal, $bss_id);
             $stmtUpdateStock->execute();
             $stmtUpdateStock->close();
         }
-
-        $stmtProducto->close();
     }
 
     $stmtArticulos->close();
 
+
+    // Eliminar el desglose de pago fraccionado asociado (si existe)
+    $stmtDeleteFrac = $conexion->prepare("DELETE FROM fracciones WHERE id_order = ?");
+    if ($stmtDeleteFrac) {
+        $stmtDeleteFrac->bind_param("i", $orderId);
+        $stmtDeleteFrac->execute();
+        $stmtDeleteFrac->close();
+    }
 
     // Eliminar la orden
     $stmtDeleteOrden = $conexion->prepare("DELETE FROM orden WHERE id = ?");

@@ -147,6 +147,128 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       padding: 8px 14px;
       background: rgba(255,255,255,.015);
     }
+
+    /* ── Móvil (WebView de la app) ──────────────────────────────────── */
+    @media (max-width: 768px) {
+      .right_col {
+        padding: 14px 12px !important;
+      }
+
+      .dash-panel .panel-header {
+        padding: 14px 16px 12px;
+      }
+
+      /* Fecha y sucursal a lo ancho */
+      .filter-bar {
+        width: 100%;
+      }
+
+      .filter-bar > div {
+        flex: 1 1 100%;
+      }
+
+      .filter-bar .dash-date-input,
+      .filter-bar .dash-select {
+        width: 100%;
+      }
+
+      .dash-table-wrap {
+        padding: 0 10px 12px;
+      }
+
+      /* La tabla de 9 columnas no cabe: cada usuario pasa a ser una tarjeta.
+         El nombre de la columna viaja en cada celda (data-label). */
+      #tabla-cortes thead {
+        display: none;
+      }
+
+      #tabla-cortes,
+      #tabla-cortes tbody {
+        display: block;
+        width: 100%;
+      }
+
+      #tabla-cortes tbody.datos {
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid var(--dash-border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .02);
+      }
+
+      #tabla-cortes tbody:empty,
+      #tabla-cortes tfoot:empty {
+        display: none;
+      }
+
+      #tabla-cortes tr {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px 6px;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid rgba(46, 53, 62, .5);
+      }
+
+      #tabla-cortes tr:last-child {
+        padding-bottom: 0;
+        margin-bottom: 0;
+        border-bottom: none;
+      }
+
+      #tabla-cortes td {
+        display: block;
+        border-radius: 8px;
+      }
+
+      #tabla-cortes td.usuario,
+      #tabla-cortes td.concepto {
+        grid-column: 1 / -1;
+      }
+
+      #tabla-cortes td.usuario {
+        padding: 0 0 6px;
+        min-width: 0 !important;
+        text-align: left !important;
+        background: transparent;
+        border-bottom: none !important;
+      }
+
+      /* El título de cada bloque (Apertura, Cierre, Sistema...) */
+      #tabla-cortes td.concepto {
+        padding: 6px 8px;
+        font-size: 12.5px;
+        text-align: left !important;
+        background: rgba(255, 255, 255, .03);
+      }
+
+      /* Los números: nombre de la columna encima del valor */
+      #tabla-cortes td.valor {
+        padding: 5px 6px;
+        font-size: 12.5px;
+        text-align: left !important;
+      }
+
+      #tabla-cortes td.valor::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--dash-text-muted);
+      }
+
+      /* Las celdas que en escritorio van con "-" no aportan en el teléfono */
+      #tabla-cortes td.vacio {
+        display: none;
+      }
+
+      /* El tinte va en el título del bloque, no en cada número */
+      #tabla-cortes td.table-info-cell,
+      #tabla-cortes td.table-warning-cell {
+        background: transparent;
+      }
+    }
   </style>
 </head>
 <body class="nav-md">
@@ -237,9 +359,12 @@ function cargarCortes() {
     }
 
     const tbody = document.getElementById('tbody-cortes');
+    const tabla = document.getElementById('tabla-cortes');
     const tfoot = document.getElementById('tfoot-cortes');
     tbody.innerHTML = '';
     tfoot.innerHTML = '';
+    // Tarjetas de la carga anterior (en móvil cada usuario es una tarjeta)
+    tabla.querySelectorAll('tbody.datos').forEach(tb => tb.remove());
 
     if (!data.cortes || data.cortes.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding:40px 0;color:var(--dash-text-muted);font-size:13px;">No hay cortes de caja registrados para esta fecha.</td></tr>';
@@ -262,62 +387,69 @@ function cargarCortes() {
         fondo_dejado: { efectivo_bs: 0, dolares: 0, pesos: 0 }
       };
 
-      tbody.innerHTML += `
+      const inicio = (u.apertura && u.apertura.hora_apertura) ?
+        `<small style="display:block;color:var(--dash-text-muted);font-size:11px;margin-top:2px;">Inicio ${u.apertura.hora_apertura}</small>` : '';
+      const vacio = (label) => `<td class="valor text-end vacio" data-label="${label}" style="color:var(--dash-text-muted);">-</td>`;
+
+      const tb = document.createElement('tbody');
+      tb.className = 'datos';
+      tb.innerHTML = `
       <tr>
-        <td rowspan="5" class="align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;min-width:140px;">
+        <td rowspan="5" class="usuario align-middle text-center" style="border-bottom:2px solid var(--dash-border);vertical-align:middle;min-width:140px;">
           <strong>${u.nombre}</strong>
-          <small style="display:block;color:var(--dash-text-muted);font-size:11px;margin-top:2px;">Inicio ${u.apertura.hora_apertura}</small>
+          ${inicio}
           ${obs}
         </td>
-        <td><strong>Apertura (Fondo Recibido)</strong></td>
-        <td class="text-end">${fmt(ape.efectivo_bs)} Bs</td>
-        <td class="text-end">${fmt(ape.dolares)} $</td>
-        <td class="text-end">${fmt(ape.pesos, 0)} COP</td>
-        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
-        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
-        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
-        <td class="text-end" style="color:var(--dash-text-muted);">-</td>
+        <td class="concepto"><strong>Apertura (Fondo Recibido)</strong></td>
+        <td class="valor text-end" data-label="Bs">${fmt(ape.efectivo_bs)} Bs</td>
+        <td class="valor text-end" data-label="USD">${fmt(ape.dolares)} $</td>
+        <td class="valor text-end" data-label="Pesos">${fmt(ape.pesos, 0)} COP</td>
+        ${vacio('Punto')}
+        ${vacio('P.Móvil')}
+        ${vacio('Transfer.')}
+        ${vacio('Biopago')}
       </tr>
       <tr>
-        <td class="table-info-cell"><strong>Cierre (Contado)</strong></td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.efectivo_bs)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.dolares)} $</td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.pesos, 0)} COP</td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.punto)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.pago_movil)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.transferencia)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.contado.biopago)} Bs</td>
+        <td class="concepto table-info-cell"><strong>Cierre (Contado)</strong></td>
+        <td class="valor text-end table-info-cell" data-label="Bs">${fmt(cie.contado.efectivo_bs)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="USD">${fmt(cie.contado.dolares)} $</td>
+        <td class="valor text-end table-info-cell" data-label="Pesos">${fmt(cie.contado.pesos, 0)} COP</td>
+        <td class="valor text-end table-info-cell" data-label="Punto">${fmt(cie.contado.punto)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="P.Móvil">${fmt(cie.contado.pago_movil)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="Transfer.">${fmt(cie.contado.transferencia)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="Biopago">${fmt(cie.contado.biopago)} Bs</td>
       </tr>
       <tr>
-        <td class="table-info-cell">Sistema</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.efectivo_bs)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.dolares)} $</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.pesos, 0)} COP</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.punto)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.pago_movil)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.transferencia)} Bs</td>
-        <td class="text-end table-info-cell">${fmt(cie.sistema.biopago)} Bs</td>
+        <td class="concepto table-info-cell">Sistema</td>
+        <td class="valor text-end table-info-cell" data-label="Bs">${fmt(cie.sistema.efectivo_bs)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="USD">${fmt(cie.sistema.dolares)} $</td>
+        <td class="valor text-end table-info-cell" data-label="Pesos">${fmt(cie.sistema.pesos, 0)} COP</td>
+        <td class="valor text-end table-info-cell" data-label="Punto">${fmt(cie.sistema.punto)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="P.Móvil">${fmt(cie.sistema.pago_movil)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="Transfer.">${fmt(cie.sistema.transferencia)} Bs</td>
+        <td class="valor text-end table-info-cell" data-label="Biopago">${fmt(cie.sistema.biopago)} Bs</td>
       </tr>
       <tr>
-        <td class="table-info-cell"><strong>Diferencia</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.efectivo_bs)}"><strong>${fmt(cie.diferencia.efectivo_bs)} Bs</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.dolares)}"><strong>${fmt(cie.diferencia.dolares)} $</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.pesos)}"><strong>${fmt(cie.diferencia.pesos, 0)} COP</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.punto)}"><strong>${fmt(cie.diferencia.punto)} Bs</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.pago_movil)}"><strong>${fmt(cie.diferencia.pago_movil)} Bs</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.transferencia)}"><strong>${fmt(cie.diferencia.transferencia)} Bs</strong></td>
-        <td class="text-end table-info-cell ${colorDif(cie.diferencia.biopago)}"><strong>${fmt(cie.diferencia.biopago)} Bs</strong></td>
+        <td class="concepto table-info-cell"><strong>Diferencia</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.efectivo_bs)}" data-label="Bs"><strong>${fmt(cie.diferencia.efectivo_bs)} Bs</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.dolares)}" data-label="USD"><strong>${fmt(cie.diferencia.dolares)} $</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.pesos)}" data-label="Pesos"><strong>${fmt(cie.diferencia.pesos, 0)} COP</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.punto)}" data-label="Punto"><strong>${fmt(cie.diferencia.punto)} Bs</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.pago_movil)}" data-label="P.Móvil"><strong>${fmt(cie.diferencia.pago_movil)} Bs</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.transferencia)}" data-label="Transfer."><strong>${fmt(cie.diferencia.transferencia)} Bs</strong></td>
+        <td class="valor text-end table-info-cell ${colorDif(cie.diferencia.biopago)}" data-label="Biopago"><strong>${fmt(cie.diferencia.biopago)} Bs</strong></td>
       </tr>
-      <tr style="border-bottom:2px solid var(--dash-border);">
-        <td class="table-warning-cell"><strong>Fondo Dejado (Cierre)</strong></td>
-        <td class="text-end table-warning-cell">${fmt(cie.fondo_dejado.efectivo_bs)} Bs</td>
-        <td class="text-end table-warning-cell">${fmt(cie.fondo_dejado.dolares)} $</td>
-        <td class="text-end table-warning-cell">${fmt(cie.fondo_dejado.pesos, 0)} COP</td>
-        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
-        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
-        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
-        <td class="text-end table-warning-cell" style="color:var(--dash-text-muted);">-</td>
+      <tr>
+        <td class="concepto table-warning-cell"><strong>Fondo Dejado (Cierre)</strong></td>
+        <td class="valor text-end table-warning-cell" data-label="Bs">${fmt(cie.fondo_dejado.efectivo_bs)} Bs</td>
+        <td class="valor text-end table-warning-cell" data-label="USD">${fmt(cie.fondo_dejado.dolares)} $</td>
+        <td class="valor text-end table-warning-cell" data-label="Pesos">${fmt(cie.fondo_dejado.pesos, 0)} COP</td>
+        ${vacio('Punto')}
+        ${vacio('P.Móvil')}
+        ${vacio('Transfer.')}
+        ${vacio('Biopago')}
       </tr>`;
+      tabla.appendChild(tb);
     });
   })
   .catch(err => {

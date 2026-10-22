@@ -12,8 +12,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   <title>Control de Créditos — <?= htmlspecialchars($cliente) ?></title>
   <?php require_once('includes/headers.php'); ?>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
   <style>
     .right_col {
       background: var(--dash-bg);
@@ -154,6 +154,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     .dash-btn-pagar-sm {
       font-size: 11px;
       padding: 4px 12px;
+    }
+
+    .dash-btn-eliminar {
+      background: rgba(239,90,111,.12);
+      border: 1px solid rgba(239,90,111,.35);
+      color: #ef5a6f;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      transition: all .2s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    .dash-btn-eliminar:hover {
+      background: rgba(239,90,111,.22);
     }
 
     .dash-input {
@@ -440,6 +459,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 <script>
 const cliente = <?php echo json_encode($cliente); ?>;
+let creditosCount = null;
+let abonosCount = 0;
+let deudaActual = null;
 
 async function cargarCreditos() {
   const tbody = document.querySelector('#tabla-creditos tbody');
@@ -453,6 +475,7 @@ async function cargarCreditos() {
     if (!res.ok) throw new Error('Error al obtener datos');
     const data = await res.json();
     tbody.innerHTML = '';
+    creditosCount = data.ordenes.length;
     if (data.ordenes.length === 0) { window.location.href = 'creditos.php'; }
 
     data.ordenes.forEach(ord => {
@@ -495,6 +518,7 @@ async function cargarCreditos() {
             <span class="total_inicial hide">${ts_inicial_b}</span>
             <small>Bs</small></b>
             <button data-tipoCompra="${ord.tipoCompra}" data-precioPesoVenta="${ts.cop}" data-precioBsVenta="${ts.bs}" data-id_credito="${ord.id_credito}" data-id="${ord.id}" class="dash-btn-pagar dash-btn-pagar-sm btn-pagar hide" style="margin-left:8px;">Pagar</button>
+            <button data-id="${ord.id}" class="dash-btn-eliminar" title="Eliminar crédito y venta" onclick="eliminarCredito(${ord.id})"><ion-icon name="trash-outline"></ion-icon></button>
           </td>
         </tr>`);
     });
@@ -576,6 +600,8 @@ async function cargarDeuda() {
 
     const abonos_div = document.querySelector('#abonos-list');
     const abonos = data.abonos || [];
+    abonosCount = abonos.length;
+    deudaActual = data.deuda_restante;
     abonos_div.innerHTML = '';
     abonos.forEach(abns => {
       abonos_div.insertAdjacentHTML('beforeend', `
@@ -658,6 +684,72 @@ function formatearMiles(n) {
   const num = parseFloat(n);
   if (isNaN(num)) return n;
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function eliminarCredito(orderId) {
+  const esUltimo = creditosCount === 1;
+  let aviso = '';
+  if (deudaActual) {
+    aviso += `<p style="margin:10px 0 0;font-size:12px;">Deuda actual con abonos aplicados:
+      <b>${deudaActual.usd.toFixed(2)} $</b> ·
+      <b>${deudaActual.cop.toLocaleString('es-CO')} Cop</b> ·
+      <b>${deudaActual.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</b></p>`;
+  }
+  if (esUltimo) {
+    aviso += `<p style="margin:10px 0 0;color:#ef5a6f;"><b>Atención:</b> es el último crédito del cliente; al borrarlo se cerrará su cuenta.</p>`;
+    if (abonosCount > 0) {
+      aviso += `<p style="margin:6px 0 0;color:#ef5a6f;">Al quedar la deuda en cero, los abonos registrados (${abonosCount}) también se eliminarán.</p>`;
+    }
+  }
+
+  Swal.fire({
+    title: `Eliminar crédito #${orderId}`,
+    html: `<p>Se eliminará el crédito y la venta asociada.</p><p>¿Deseas regresar los productos al stock?</p>${aviso}`,
+    icon: 'warning',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Sí, devolver stock',
+    denyButtonText: 'No, borrar sin stock',
+    cancelButtonText: 'Cancelar',
+    denyButtonColor: '#ef5a6f'
+  }).then(result => {
+    if (!result.isConfirmed && !result.isDenied) return;
+    ejecutarEliminarCredito(orderId, result.isConfirmed ? 1 : 0);
+  });
+}
+
+async function ejecutarEliminarCredito(orderId, devolverStock) {
+  document.getElementById('cargando').style.display = 'grid';
+  try {
+    const res = await fetch('../../configurar/eliminar_credito.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `order_id=${encodeURIComponent(orderId)}&devolver_stock=${devolverStock}`
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'No se pudo eliminar el crédito');
+
+    if (data.cuenta_cerrada) {
+      await Swal.fire({
+        title: 'Cuenta cerrada',
+        text: data.abonos_eliminados > 0
+          ? `Crédito y venta eliminados. Se eliminaron ${data.abonos_eliminados} abono(s) porque lo pagado superaba la deuda.`
+          : 'Crédito y venta eliminados. El cliente ya no tiene créditos pendientes.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar'
+      });
+      window.location.href = 'creditos.php';
+      return;
+    }
+
+    Alerta.toast('success', 'Crédito y venta eliminados correctamente');
+    await Promise.all([cargarCreditos(), cargarDeuda()]);
+  } catch (error) {
+    console.error(error);
+    Alerta.toast('error', error.message || 'Error al eliminar el crédito');
+  } finally {
+    document.getElementById('cargando').style.display = 'none';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', cargarCreditos);

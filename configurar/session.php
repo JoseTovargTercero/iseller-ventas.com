@@ -23,11 +23,43 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 
-if (empty($_SESSION["bss_id"])) {
-    define('PAGINA_INICIO', '../../index.php');
-    header('Location: ' . PAGINA_INICIO);
+if (empty($_SESSION["bss_id"]) || empty($_SESSION["id"])) {
+    // Sin login real de panel no se entra. Se calcula la raíz del proyecto para
+    // que el redirect funcione tanto desde /configurar/ como desde /publico/production/...
+    $__scriptAuth = $_SERVER['SCRIPT_NAME'] ?? '';
+    $__corteAuth  = strpos($__scriptAuth, '/publico/');
+    if ($__corteAuth === false) {
+        $__corteAuth = strpos($__scriptAuth, '/configurar/');
+    }
+    $__raizAuth = $__corteAuth === false ? '' : substr($__scriptAuth, 0, $__corteAuth);
+    header('Location: ' . $__raizAuth . '/index.php');
+    exit;
 } else {
     $bss_id = $_SESSION["bss_id"];
+}
+
+// ── Interceptor de Membresía Vencida (centralizado para páginas y endpoints AJAX) ──
+if (!empty($_SESSION['bss_id'])) {
+    if (!isset($conexion)) {
+        require_once(__DIR__ . '/configuracion.php');
+    }
+    require_once(__DIR__ . '/MembresiaHelper.php');
+    $__estadoMembresia = MembresiaHelper::obtenerEstado($conexion, $_SESSION['bss_id']);
+    $__paginasExentas = ['membresia_renovacion.php', 'salir.php'];
+    if (!empty($__estadoMembresia['esta_vencida']) && !in_array(basename($_SERVER['PHP_SELF'] ?? ''), $__paginasExentas, true)) {
+        // Destino absoluto desde la raíz del sitio, válido tanto desde /publico/production/ como desde /configurar/
+        $__script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $__posProd = strpos($__script, 'publico/production/');
+        if ($__posProd !== false) {
+            $__destino = substr($__script, 0, $__posProd) . 'publico/production/membresia_renovacion.php';
+        } else {
+            $__posCfg = strpos($__script, '/configurar/');
+            $__destino = ($__posCfg !== false ? substr($__script, 0, $__posCfg) : '') . '/publico/production/membresia_renovacion.php';
+        }
+        header('Location: ' . $__destino);
+        exit;
+    }
+    unset($__estadoMembresia, $__paginasExentas, $__script, $__posProd, $__posCfg, $__destino);
 }
 
 

@@ -56,8 +56,8 @@ $stmt = $conexion->prepare(
      JOIN orden_articulos oa ON oa.order_id = o.id
      WHERE s.bss_id       = ?
        AND oa.product_id  = ?
-       AND o.modified    >= ?
-       AND o.modified    <= ?
+       AND DATE(o.created) >= ?
+       AND DATE(o.created) <= ?
        AND o.status      IN (1, 4)
      GROUP BY s.id, s.nombre
      ORDER BY s.nombre"

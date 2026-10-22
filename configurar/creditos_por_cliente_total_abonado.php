@@ -199,7 +199,9 @@ function aplicarAbonos($productos, $abonos)
 */
 
                 foreach ($montos as $m => $monto) {
-                    $producto['total_' . $m] -= $monto;
+                    // Las conversiones se redondean por moneda; sin el max() un abono
+                    // completo deja céntimos negativos en el producto.
+                    $producto['total_' . $m] = max(0, $producto['total_' . $m] - $monto);
                 }
 
                 $abonosDisponibles[$moneda] = 0;
@@ -221,6 +223,16 @@ function aplicarAbonos($productos, $abonos)
     }
 
     unset($producto); // buena práctica
+
+    // Si en dólares ya no queda deuda, lo que sobre en Bs/Cop son residuos de
+    // redondeo de las conversiones: se muestran en cero, no como deuda pendiente.
+    if (round($restantes['usd'], 2) <= 0) {
+        $restantes = ['usd' => 0, 'cop' => 0, 'bs' => 0];
+        foreach ($productos as &$producto) {
+            $producto['total_usd'] = $producto['total_cop'] = $producto['total_bs'] = 0;
+        }
+        unset($producto);
+    }
 
     return [$productos, $restantes];
 }

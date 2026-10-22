@@ -36,7 +36,7 @@ $fecha = date('Y-m-d');
 $sqlTotalesPago = "
     SELECT o.tipoPago, SUM(o.total_price) as sum_usd, SUM(o.total_price_bs) as sum_bs, SUM(o.total_price_cop) as sum_cop
     FROM orden o
-    WHERE o.modified = '$fecha' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' AND usuario = '$usuario_id'
+    WHERE DATE(o.created) = '$fecha' AND o.status IN ('1', '4') AND o.bss_id = '$bss_id' AND usuario = '$usuario_id'
     GROUP BY o.tipoPago
 ";
 
@@ -55,6 +55,34 @@ if ($resultTotales) {
             case 7: $totalesPago['Biopago'] += $row['sum_bs']; break;
         }
     }
+}
+
+// -------------------------------------------------------------------
+// 2. PAGOS FRACCIONADOS (tipoPago = 8): sumar cada fracción a su medio
+// -------------------------------------------------------------------
+$sqlFracciones = "
+    SELECT
+        SUM(f.punto) AS punto,
+        SUM(f.pagoMovil) AS pagoMovil,
+        SUM(f.transferencia) AS transferencia,
+        SUM(f.bioPago) AS bioPago,
+        SUM(f.efectivo) AS efectivo,
+        SUM(f.pesos) AS pesos,
+        SUM(f.dolares) AS dolares
+    FROM fracciones f
+    INNER JOIN orden o ON o.id = f.id_order
+    WHERE DATE(o.created) = '$fecha' AND o.tipoPago = 8 AND o.status IN ('1', '4')
+      AND o.bss_id = '$bss_id' AND o.usuario = '$usuario_id'
+";
+$resFracciones = $conexion->query($sqlFracciones);
+if ($resFracciones && ($rowF = $resFracciones->fetch_assoc())) {
+    $totalesPago['Punto']         += (float) $rowF['punto'];
+    $totalesPago['Pmovil']        += (float) $rowF['pagoMovil'];
+    $totalesPago['Transferencia'] += (float) $rowF['transferencia'];
+    $totalesPago['Biopago']       += (float) $rowF['bioPago'];
+    $totalesPago['Efectivo']      += (float) $rowF['efectivo'];
+    $totalesPago['Pesos']         += (float) $rowF['pesos'];
+    $totalesPago['Dolares']       += (float) $rowF['dolares'];
 }
 
 	

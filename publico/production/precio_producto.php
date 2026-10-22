@@ -12,7 +12,9 @@ $response = [
 $sucursal = $_SESSION["nivel"] == 2 ? $_SESSION["sucursal"] : (@$_POST["sucursal"] ?? null);
 
 if ($sucursal == null) {
-    throw new Exception("No se recibió la sucursal", 1);
+    header('Content-Type: application/json');
+    $response['error'] = 'No se recibió la sucursal';
+    echo json_encode($response);
     exit;
 }
 

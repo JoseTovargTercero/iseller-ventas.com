@@ -21,23 +21,23 @@
 <script src='js/jquery.min.js'></script>
 
 <link href='../build/css/custom.min.dark-mode.css' rel='stylesheet'>
-<link rel="stylesheet" href="../build/css/global-styles.css">
+<link rel="stylesheet" href="../build/css/global-styles.css?v=<?php echo @filemtime(__DIR__ . '/../../build/css/global-styles.css'); ?>">
 
 <link rel="stylesheet" href="../../iseller.es/css/animate.css">
 <!-- Simple Line Icons -->
 <link rel="stylesheet" href="../../iseller.es/css/simple-line-icons.css">
 
-<script src="../assets/sweetalert.min.js"></script>
+<script src="../assets/sweetalert.min.js" defer></script>
 <script src="../assets/sweetalert2.all.min.js"></script>
 
-<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+<link href='../vendors/boxicons/css/boxicons.min.css' rel='stylesheet'>
+<link rel='stylesheet' href='../vendors/bootstrap-icons/bootstrap-icons.min.css'>
 
-<script src="../assets/sweetalert2.all.min.js"></script>
-
-<script src="js/alerta.js"></script>
-<script src="js/menu.js"></script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons+Round">
-<script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+<script src="js/alerta.js" defer></script>
+<script src="js/menu.js" defer></script>
+<link rel="stylesheet" href="../vendors/fonts/fonts.css">
+<script type="module" src="../vendors/ionicons/ionicons.esm.js"></script>
+<script nomodule src="../vendors/ionicons/ionicons.js" defer></script>
 
 <style>
     @view-transition {

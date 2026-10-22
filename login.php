@@ -2,6 +2,8 @@
 <html lang="es">
 
 <head>
+    <?php $auth_base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/') . '/'; ?>
+    <base href="<?php echo htmlspecialchars($auth_base, ENT_QUOTES); ?>">
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Iniciar sesión — iSeller</title>
@@ -10,12 +12,10 @@
     <link rel="icon" href="publico/production/images/favicon.ico" type="image/ico">
 
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="publico/assets/sweetalert2.all.min.js"></script>
 
     <!-- Google Fonts — same as landing -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="publico/vendors/fonts/fonts.css" rel="stylesheet">
 
     <style>
         /* ============================================================
@@ -162,7 +162,7 @@
         .left-eyebrow .dot {
             width: 5px;
             height: 5px;
-            background: var(--brand-blue);
+            background: #49dead;
             border-radius: 50%;
             animation: pulse-dot 2s ease-in-out infinite;
         }
@@ -194,7 +194,7 @@
 
         .left-headline em {
             font-style: normal;
-            color: var(--text-primary);
+            color: #49dead;
         }
 
         .left-subtext {
@@ -236,7 +236,7 @@
             font-family: 'Sora', sans-serif;
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--text-primary);
+            color: #49dead;
             letter-spacing: -0.02em;
             line-height: 1;
         }
@@ -260,8 +260,8 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(16, 185, 129, 0.04);
-            border: 1px solid rgba(16, 185, 129, 0.15);
+            background: rgba(73, 222, 173, 0.04);
+            border: 1px solid rgba(73, 222, 173, 0.15);
             border-radius: 100px;
             padding: 6px 14px 6px 8px;
             margin-top: 14px;
@@ -271,9 +271,9 @@
         .status-dot {
             width: 8px;
             height: 8px;
-            background: #10b981;
+            background: #49dead;
             border-radius: 50%;
-            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+            box-shadow: 0 0 6px rgba(73, 222, 173, 0.6);
         }
 
         .status-text {
@@ -282,7 +282,7 @@
         }
 
         .status-text strong {
-            color: #10b981;
+            color: #49dead;
             font-weight: 600;
         }
 
@@ -785,7 +785,7 @@
     </div>
 
     <!-- External JS -->
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="publico/vendors/jquery/jquery-3.7.1.min.js"></script>
     <script src="publico/build/js/login.js"></script>
 
     <script>

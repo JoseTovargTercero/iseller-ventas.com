@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once('includes/requires.php');
 
 
@@ -68,7 +68,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <title>Inicio </title>
         <?php require_once('includes/headers.php'); ?>
         <link rel="stylesheet" href="theme.css">
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script src="../vendors/apexcharts/apexcharts.min.js"></script>
 
 
     </head>
@@ -433,6 +433,121 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         color: var(--dash-text-muted);
                         font-size: 13px;
                     }
+
+                    /* Contenedores de gráficos: reservan alto mientras Apex renderiza */
+                    .chart-box {
+                        min-height: 380px;
+                    }
+
+                    .chart-box--md {
+                        min-height: 340px;
+                    }
+
+                    .chart-box--sm {
+                        min-height: 320px;
+                    }
+
+                    /* ═══ Responsive: WebView de la app (teléfono / tablet) ═══ */
+                    @media (max-width: 991px) {
+                        .right_col {
+                            padding: 16px 14px !important;
+                        }
+
+                        .kpi-row {
+                            grid-template-columns: repeat(2, 1fr);
+                            gap: 14px;
+                            margin-bottom: 20px;
+                        }
+
+                        .chart-box {
+                            min-height: 320px;
+                        }
+
+                        .chart-box--md {
+                            min-height: 300px;
+                        }
+
+                        .chart-box--sm {
+                            min-height: 280px;
+                        }
+                    }
+
+                    @media (max-width: 640px) {
+                        .right_col {
+                            padding: 14px 12px !important;
+                        }
+
+                        /* Una tarjeta por fila: en el teléfono las 3 columnas aplastan el título y el icono */
+                        .kpi-row {
+                            grid-template-columns: 1fr;
+                            gap: 12px;
+                            margin-bottom: 16px;
+                        }
+
+                        .kpi-card {
+                            padding: 18px 18px 14px;
+                        }
+
+                        .kpi-value {
+                            font-size: 24px;
+                        }
+
+                        .kpi-icon-circle {
+                            width: 42px;
+                            height: 42px;
+                        }
+
+                        .kpi-icon-circle ion-icon {
+                            font-size: 19px;
+                        }
+
+                        .dash-header {
+                            margin-bottom: 16px;
+                            flex-direction: column;
+                            align-items: stretch;
+                        }
+
+                        .btn-dash-filter {
+                            width: 100%;
+                            justify-content: center;
+                            padding: 11px 18px;
+                        }
+
+                        .dash-panel .panel-header {
+                            padding: 14px 16px 12px;
+                        }
+
+                        .chart-box {
+                            min-height: 260px;
+                        }
+
+                        .chart-box--md {
+                            min-height: 240px;
+                        }
+
+                        .chart-box--sm {
+                            min-height: 230px;
+                        }
+
+                        .info-item,
+                        .rank-item {
+                            padding: 12px 16px;
+                        }
+
+                        /* Modal de filtro: cerrar y confirmar con área táctil cómoda */
+                        #exampleModalCenter .modal-header .close {
+                            font-size: 30px;
+                            line-height: 1;
+                            padding: 0;
+                            width: 40px;
+                            height: 40px;
+                        }
+
+                        #exampleModalCenter .modal-footer .btn {
+                            width: 100%;
+                            padding: 11px 18px;
+                        }
+                    }
                 </style>
                 <!-- top navigation -->
                 <?php echo $topnav ?>
@@ -614,7 +729,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class="panel-header">
                                     <h6><ion-icon name="storefront-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Información de la sucursal</h6>
                                 </div>
-                                <div class="panel-body" id="informacion_interes" style="min-height:380px;">
+                                <div class="panel-body chart-box" id="informacion_interes">
                                 </div>
                             </div>
                         </div>
@@ -633,7 +748,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </button>
                                     </div>
                                 </div>
-                                <div class="panel-body p-0" id="apex_chart_1" style="min-height:380px;">
+                                <div class="panel-body p-0 chart-box" id="apex_chart_1">
                                 </div>
                             </div>
                         </div>
@@ -660,7 +775,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </span>
                                     </div>
                                 </div>
-                                <div class="panel-body p-0" id="apex_chart_creditos" style="min-height:340px;">
+                                <div class="panel-body p-0 chart-box chart-box--md" id="apex_chart_creditos">
                                 </div>
                             </div>
                         </div>
@@ -732,7 +847,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </span>
                                     </div>
                                 </div>
-                                <div class="panel-body p-0" id="apex_chart_horas" style="min-height:320px;">
+                                <div class="panel-body p-0 chart-box chart-box--sm" id="apex_chart_horas">
                                 </div>
                             </div>
                         </div>
@@ -747,6 +862,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="js/nombre_pagina.js"></script>
 
         <script>
+            // En el WebView de la app manda el ancho real del teléfono
+            const esMovil = window.innerWidth < 640;
+            let esMovilPrev = esMovil;
+
             // Mapeo de iconos para indicadores
             const iconMap = {
                 creditosHoy: 'card-outline',
@@ -860,7 +979,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     data: []
                 }],
                 chart: {
-                    height: 340,
+                    height: esMovil ? 260 : 340,
                     type: 'line',
                     background: 'transparent',
                     zoom: {
@@ -948,7 +1067,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     data: []
                 }],
                 chart: {
-                    height: 300,
+                    height: esMovil ? 240 : 300,
                     type: 'bar',
                     background: 'transparent',
                     toolbar: {
@@ -1019,7 +1138,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             var sucursalPieOptions = {
                 series: [],
                 chart: {
-                    height: 300,
+                    height: esMovil ? 260 : 300,
                     type: 'pie',
                     background: 'transparent',
                     toolbar: {
@@ -1098,7 +1217,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     data: []
                 }],
                 chart: {
-                    height: 280,
+                    height: esMovil ? 220 : 280,
                     type: 'bar',
                     background: 'transparent',
                     toolbar: {
@@ -1143,12 +1262,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 },
                 xaxis: {
                     categories: horasLabels,
+                    tickAmount: esMovil ? 6 : undefined,
                     labels: {
                         style: {
                             colors: '#8892a0',
-                            fontSize: '10px'
+                            fontSize: esMovil ? '9px' : '10px'
                         },
-                        rotate: -45
+                        rotate: esMovil ? 0 : -45
                     },
                     axisBorder: {
                         show: false
@@ -1179,6 +1299,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             var apex_horas = new ApexCharts(document.querySelector("#apex_chart_horas"), horasOptions);
             apex_horas.render();
+
+            // Al girar el teléfono cambia el alto útil: se ajustan los gráficos
+            window.addEventListener('resize', function() {
+                var ahora = window.innerWidth < 640;
+                if (ahora === esMovilPrev) return;
+                esMovilPrev = ahora;
+                [
+                    [apex_chart, 340, 260],
+                    [apex_creditos, 300, 240],
+                    [apex_ventas_sucursal, 300, 260],
+                    [apex_horas, 280, 220]
+                ].forEach(function(par) {
+                    par[0].updateOptions({
+                        chart: {
+                            height: ahora ? par[2] : par[1]
+                        }
+                    });
+                });
+            });
 
             function renderResumenSucursal(data) {
                 const container = document.getElementById('resumenSucursalContainer');
@@ -1223,7 +1362,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 let html = '';
                 data.forEach((item, i) => {
                     const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-                    const icon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+                    const icon = i === 0 ? '<ion-icon name="trophy-outline"></ion-icon>' : i === 1 ? '<ion-icon name="medal-outline"></ion-icon>' : i === 2 ? '<ion-icon name="ribbon-outline"></ion-icon>' : (i + 1);
                     html += `
                         <div class="rank-item">
                             <div class="rank-badge ${badgeClass}" style="width:28px;height:28px;font-size:11px;">${icon}</div>
@@ -1247,7 +1386,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 let html = '';
                 data.forEach((item, i) => {
                     const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-                    const icon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+                    const icon = i === 0 ? '<ion-icon name="trophy-outline"></ion-icon>' : i === 1 ? '<ion-icon name="medal-outline"></ion-icon>' : i === 2 ? '<ion-icon name="ribbon-outline"></ion-icon>' : (i + 1);
                     html += `
                         <div class="rank-item">
                             <div class="rank-badge ${badgeClass}">${icon}</div>

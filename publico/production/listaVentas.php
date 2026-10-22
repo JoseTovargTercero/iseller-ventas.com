@@ -18,14 +18,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   }
   $stmt->close();
 
-  $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ?");
+  $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ? AND status = 0");
   $stmt->bind_param('s', $bss_id);
   $stmt->execute();
   $result = $stmt->get_result();
-  if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-      $usuarios[] = $row;
-    }
+  $usuarios = [];
+  while ($row = $result->fetch_assoc()) {
+    $usuarios[] = $row;
   }
   $stmt->close();
 ?>
@@ -36,8 +35,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <title>Lista de Ventas</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
     <style>
       .right_col {
         background: var(--dash-bg);
@@ -656,6 +655,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                           <th>Usuario</th>
                           <th>Fecha</th>
                           <th>Monto</th>
+                          <th>Cobrado</th>
                           <th>COP</th>
                           <th>Bs</th>
                           <th>Cliente</th>
@@ -816,11 +816,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
+    <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
+    <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
+    <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
+    <script src="../vendors/datatables/buttons.html5.min.js"></script>
     <script src="../build/js/custom.js"></script>
     <script src="../build/js/global-loader.js"></script>
     <script src="js/nombre_pagina.js"></script>

@@ -10,13 +10,20 @@ require_once('../../../configurar/configuracion.php');
 require("../../../configurar/_tasas_cambio.php");
 
 $stockCritico  = 10;
-$today = date('Y-m-d');
 $userName = $_SESSION['nombre'] ?? 'Sistema';
-$bs_id = $_SESSION['bss_id'] ?? '';
+$bss_id = (int) ($_SESSION['bss_id'] ?? 0);
+$sucursal_id = (int) ($_SESSION['sucursal'] ?? 0);
 
-if ($bs_id == '') {
+if ($bss_id <= 0) {
     header('Location: ../login.php');
     exit;
+}
+
+// Fecha del reporte: validada (nunca interpolada sin control).
+$today = trim((string) ($_GET['fecha'] ?? date('Y-m-d')));
+$objFecha = DateTime::createFromFormat('Y-m-d', $today);
+if (!$objFecha || $objFecha->format('Y-m-d') !== $today) {
+    $today = date('Y-m-d');
 }
 
 // 2. INICIALIZACIÓN DE TOTALES
@@ -51,8 +58,18 @@ $residuos = [
 $ordenes = [];
 
 // 3. PROCESAMIENTO DE ÓRDENES
-$ordersQuery = "SELECT * FROM orden WHERE modified = '$today' AND bss_id = '$bs_id' AND status IN ('1', '4')";
-$ordersResult = $conexion->query($ordersQuery);
+$sqlOrders = "SELECT * FROM orden WHERE DATE(created) = ? AND bss_id = ? AND status IN ('1', '4')";
+if ($sucursal_id > 0) {
+    $sqlOrders .= " AND id_sucursal = ?";
+}
+$ordersStmt = $conexion->prepare($sqlOrders);
+if ($sucursal_id > 0) {
+    $ordersStmt->bind_param("sii", $today, $bss_id, $sucursal_id);
+} else {
+    $ordersStmt->bind_param("si", $today, $bss_id);
+}
+$ordersStmt->execute();
+$ordersResult = $ordersStmt->get_result();
 
 $ordersList = [];
 if ($ordersResult->num_rows > 0) {
@@ -77,11 +94,30 @@ if ($ordersResult->num_rows > 0) {
             case '5': $paymentTotals['dolares'] += $order['total_price']; break;
             case '6': $paymentTotals['pesos'] += $order['total_price_cop']; break;
             case '7': $paymentTotals['bioPago'] += $order['total_price_bs']; break;
+            case '8':
+                // Pago fraccionado: sumar cada fracción a su medio de pago
+                $stmtFracDia = $conexion->prepare("SELECT punto, pagoMovil, transferencia, bioPago, efectivo, pesos, dolares FROM fracciones WHERE id_order = ? LIMIT 1");
+                $stmtFracDia->bind_param("i", $orderId);
+                $stmtFracDia->execute();
+                $fracDia = $stmtFracDia->get_result()->fetch_assoc();
+                $stmtFracDia->close();
+                if ($fracDia) {
+                    $paymentTotals['punto']         += (float) $fracDia['punto'];
+                    $paymentTotals['pagoMovil']     += (float) $fracDia['pagoMovil'];
+                    $paymentTotals['transferencia'] += (float) $fracDia['transferencia'];
+                    $paymentTotals['bioPago']       += (float) $fracDia['bioPago'];
+                    $paymentTotals['efectivoBs']    += (float) $fracDia['efectivo'];
+                    $paymentTotals['pesos']         += (float) $fracDia['pesos'];
+                    $paymentTotals['dolares']       += (float) $fracDia['dolares'];
+                }
+                break;
         }
 
         if ($order['status'] != '2') {
-            $itemsQuery = "SELECT * FROM orden_articulos WHERE order_id = '$orderId'";
-            $itemsResult = $conexion->query($itemsQuery);
+            $itemsStmt = $conexion->prepare("SELECT * FROM orden_articulos WHERE order_id = ? AND bss_id = ?");
+            $itemsStmt->bind_param("ii", $orderId, $bss_id);
+            $itemsStmt->execute();
+            $itemsResult = $itemsStmt->get_result();
             
             $costoTotalOrderBs = 0;
             $costoTotalOrderUsd = 0;
@@ -93,17 +129,21 @@ if ($ordersResult->num_rows > 0) {
                 $costoTotalOrderUsd += $item['precio'] * $item['quantity'];
                 $costoTotalOrderCop += $item['peso'] * $item['quantity'];
             }
+            $itemsStmt->close();
 
            
         }
     }
 }
+$ordersStmt->close();
 
 // 4. PRODUCTOS MAS VENDIDOS
+$ordenesSeguros = implode(',', array_map('intval', $ordenes)) ?: '0';
 $articulosVendidosQuery = "SELECT oa.product_id, oa.quantity, oa.id_sucursal, p.nombre, s.nombre as sucursal FROM orden_articulos as oa 
 INNER JOIN productos as p ON oa.product_id = p.id 
 INNER JOIN sucursales as s ON oa.id_sucursal = s.id
-WHERE order_id IN ('" . implode("','", $ordenes) . "')";
+WHERE oa.order_id IN ($ordenesSeguros) AND oa.bss_id = $bss_id" .
+    ($sucursal_id > 0 ? " AND oa.id_sucursal = $sucursal_id" : "");
 $articulosVendidosResult = $conexion->query($articulosVendidosQuery);
 
 $agrupadosPorSucursal = [];
@@ -147,10 +187,12 @@ foreach ($agrupadosPorSucursal as $id_sucursal => $productos) {
 // 4.1 Obetener stock actual de cada producto vendido
 
 function obtener_stock_actual($id_producto, $id_sucursal) {
-    global $conexion;
+    global $conexion, $bss_id;
     $stockActualProductos = [];
-    $stockActualProductosQuery = "SELECT stock FROM stock WHERE id_producto = '$id_producto' AND id_sucursal = '$id_sucursal'";
-    $stockActualProductosResult = $conexion->query($stockActualProductosQuery);
+    $stockStmt = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+    $stockStmt->bind_param("iii", $id_producto, $id_sucursal, $bss_id);
+    $stockStmt->execute();
+    $stockActualProductosResult = $stockStmt->get_result();
     if ($stockActualProductosResult->num_rows > 0) {
         while ($stockActualProductos = $stockActualProductosResult->fetch_assoc()) {
             return $stockActualProductos['stock'];
@@ -173,7 +215,7 @@ foreach ($articulosVendidosList as $key => $value) {
 
 
 
-$stats['cantidadCritica'] = contar("SELECT COUNT(*) FROM productos WHERE stock <= '$stockCritico' AND activo = '0'");
+$stats['cantidadCritica'] = contar("SELECT COUNT(*) FROM productos WHERE stock <= '$stockCritico' AND activo = '0' AND bss_id = $bss_id");
 
 // 5. GENERACIÓN DE HTML
 $html = '
@@ -238,7 +280,7 @@ $userIds = array_unique(array_column($ordersList, 'usuario'));
 $userNamesMap = [];
 if (!empty($userIds)) {
     $userIdsStr = implode("','", $userIds);
-    $uQuery = "SELECT id, nombre FROM usuarios WHERE id IN ('$userIdsStr')";
+    $uQuery = "SELECT id, nombre FROM usuarios WHERE id IN ('$userIdsStr') AND bss_id = $bss_id";
     $uRes = $conexion->query($uQuery);
     while ($u = $uRes->fetch_assoc()) {
         $userNamesMap[$u['id']] = $u['nombre'];
@@ -248,11 +290,11 @@ if (!empty($userIds)) {
 $orderIds = array_column($ordersList, 'id');
 $itemsMap = [];
 if (!empty($orderIds)) {
-    $orderIdsStr = implode("','", $orderIds);
+    $orderIdsStr = implode("','", array_map('intval', $orderIds));
     $iQuery = "SELECT oa.order_id, p.nombre, oa.quantity 
                FROM orden_articulos oa 
                JOIN productos p ON oa.product_id = p.id 
-               WHERE oa.order_id IN ('$orderIdsStr')";
+               WHERE oa.order_id IN ('$orderIdsStr') AND oa.bss_id = $bss_id";
     $iRes = $conexion->query($iQuery);
     while ($item = $iRes->fetch_assoc()) {
         $itemsMap[$item['order_id']][] = $item['quantity'] . " " . $item['nombre'];
@@ -335,7 +377,7 @@ $html .= ' </tbody></table>
         </thead>
         <tbody>';
 
-$critQuery = "SELECT nombre, stock, precio_compra, cantidad_unidades FROM productos WHERE stock <= '$stockCritico' AND activo = '0' ORDER BY nombre ASC";
+$critQuery = "SELECT nombre, stock, precio_compra, cantidad_unidades FROM productos WHERE stock <= '$stockCritico' AND activo = '0' AND bss_id = $bss_id ORDER BY nombre ASC";
 $critResult = $conexion->query($critQuery);
 while ($p = $critResult->fetch_assoc()) {
     $html .= '

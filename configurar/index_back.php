@@ -31,19 +31,19 @@ try {
   $stockCritico = 10;
 
   $hoy = date('Y-m-d');
-  $semana = date('Y-W');
+  $semana = date('o-W'); // Año-semana ISO, igual que la fecha real de la venta
   $mes = date('Y-m');
   $ano = date('Y');
   $dia_ant = date('Y-m-d', strtotime('-1 day'));
-  $semana_ant = date('Y-W', strtotime('-1 week'));
+  $semana_ant = date('o-W', strtotime('-1 week'));
   $mes_ant = date('Y-m', strtotime('first day of -1 month'));
 
   // Periodo filter for client ranking
   $periodCond = '';
   if ($periodo === 'semana') {
-    $periodCond = " AND o.semana = '$semana'";
+    $periodCond = " AND DATE_FORMAT(o.created, '%x-%v') = '$semana'";
   } else {
-    $periodCond = " AND o.fecha = '$mes'";
+    $periodCond = " AND DATE_FORMAT(o.created, '%Y-%m') = '$mes'";
   }
 
   // Top compradores optimizado
@@ -82,11 +82,11 @@ SELECT
   // Periodo filter for ventas por sucursal pie chart
   $periodCondPie = '';
   if ($periodoPie === 'dia') {
-    $periodCondPie = " AND o.modified = '$hoy'";
+    $periodCondPie = " AND DATE(o.created) = '$hoy'";
   } elseif ($periodoPie === 'semana') {
-    $periodCondPie = " AND o.semana = '$semana'";
+    $periodCondPie = " AND DATE_FORMAT(o.created, '%x-%v') = '$semana'";
   } else {
-    $periodCondPie = " AND o.fecha = '$mes'";
+    $periodCondPie = " AND DATE_FORMAT(o.created, '%Y-%m') = '$mes'";
   }
 
   // Ventas por sucursal (pie chart)
@@ -150,11 +150,11 @@ ORDER BY total DESC
   // Periodo filter for top productos
   $periodCondProductos = '';
   if ($periodoProductos === 'dia') {
-    $periodCondProductos = " AND o.modified = '$hoy'";
+    $periodCondProductos = " AND DATE(o.created) = '$hoy'";
   } elseif ($periodoProductos === 'semana') {
-    $periodCondProductos = " AND o.semana = '$semana'";
+    $periodCondProductos = " AND DATE_FORMAT(o.created, '%x-%v') = '$semana'";
   } else {
-    $periodCondProductos = " AND o.fecha = '$mes'";
+    $periodCondProductos = " AND DATE_FORMAT(o.created, '%Y-%m') = '$mes'";
   }
 
   // Top 5 productos más vendidos optimizado
@@ -201,26 +201,23 @@ ORDER BY total DESC
   function contar2($sql)
   {
     global $conexion, $extraCond, $bss_id;
-    $res = $conexion->query(str_replace('##COND##', "bss_id = $bss_id $extraCond ", $sql));
+    // Las consultas de conteo no usan alias "o"; se quita el prefijo del filtro.
+    $cond = str_replace('o.', '', $extraCond);
+    $res = $conexion->query(str_replace('##COND##', "bss_id = $bss_id $cond ", $sql));
     return $res ? (int)$res->fetch_row()[0] : 0;
   }
 
   function obtenerImportes($tabla, $columna, $valor)
   {
     global $conexion, $bss_id, $extraCond;
-    $sql = "SELECT SUM(importe) AS total FROM $tabla WHERE $columna = '$valor' AND bss_id = $bss_id $extraCond";
+    $cond = str_replace('o.', '', $extraCond);
+    $sql = "SELECT SUM(importe) AS total FROM $tabla WHERE $columna = '$valor' AND bss_id = $bss_id $cond";
     $res = $conexion->query($sql);
     return $res ? (float)$res->fetch_assoc()['total'] : 0;
   }
 
-  // Ventas por dia de la semana
+  // Ventas por dia de la semana (se calcula dentro de obtenerVentas() -> por_dia_semana)
   $diasSemana = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miercoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sabado', 7 => 'Domingo'];
-  $arraySemana = array_fill_keys($diasSemana, 0);
-  $res = $conexion->query("SELECT dia, total_price FROM orden AS o WHERE semana = '$semana' AND status IN (1,4) AND bss_id = $bss_id $extraCond $user_cond");
-  while ($row = $res->fetch_assoc()) {
-    $dia = (int)$row['dia'];
-    if (isset($diasSemana[$dia])) $arraySemana[$diasSemana[$dia]] += (float)$row['total_price'];
-  }
   // OPTIMIZADO
 
   function obtenerVentas($bss_id, $extraCond)
@@ -245,14 +242,11 @@ ORDER BY total DESC
     $sql = "
         SELECT 
             o.total_price, 
-            o.modified, 
-            o.semana, 
-            o.fecha, 
-            o.dia,
+            o.created,
             COALESCE(SUM(oa.precio * oa.quantity), 0) AS costo_total
         FROM orden o
         LEFT JOIN orden_articulos oa ON o.id = oa.order_id
-        WHERE (o.fecha = '$mes' OR o.fecha = '$mes_ant') 
+        WHERE DATE_FORMAT(o.created, '%Y-%m') IN ('$mes', '$mes_ant')
           AND o.bss_id = " . (int)$bss_id . " 
           AND o.status IN (1,4) 
           $extraCond $userCondO
@@ -260,16 +254,17 @@ ORDER BY total DESC
     ";
     $res = $conexion->query($sql);
 
-    // 2. Procesamos todo en un único bucle
+    // 2. Procesamos todo en un único bucle (fecha real de la venta = created)
     if ($res) {
       while ($row = $res->fetch_assoc()) {
         $precio = (float)$row['total_price'];
         $costo = (float)$row['costo_total'];
 
-        $mod = $row['modified'];
-        $sem = $row['semana'];
-        $fec = $row['fecha'];
-        $diaN = (int)$row['dia'];
+        $tsVenta = strtotime((string)$row['created']);
+        $mod = date('Y-m-d', $tsVenta);
+        $sem = date('o-W', $tsVenta);
+        $fec = date('Y-m', $tsVenta);
+        $diaN = (int)date('N', $tsVenta);
 
         // Evaluaciones Diarias
         if ($mod === $hoy) {
@@ -347,8 +342,8 @@ ORDER BY total DESC
 
   // 2. Ejecutar conteos múltiples mediante una sola consulta (si la arquitectura lo permite)
   // O al menos simplificar las llamadas existentes:
-  $ventas = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' $user_cond AND status IN (1,4) AND ##COND##");
-  $credit = contar2("SELECT COUNT(*) FROM orden WHERE modified = '$hoy' $user_cond AND status = 2 AND ##COND##");
+  $ventas = contar2("SELECT COUNT(*) FROM orden WHERE DATE(created) = '$hoy' $user_cond AND status IN (1,4) AND ##COND##");
+  $credit = contar2("SELECT COUNT(*) FROM orden WHERE DATE(created) = '$hoy' $user_cond AND status = 2 AND ##COND##");
   $stockCritCond = $sucursal !== "" ? ' AND S.id_sucursal = ' . (int)$sucursal : '';
   $resCrit = $conexion->query("SELECT COUNT(*) AS total FROM stock S INNER JOIN productos P ON S.id_producto = P.id WHERE S.stock <= $stockCritico AND P.activo = 0 AND P.bss_id = $bss_id $stockCritCond");
   $cantidadCritica = $resCrit ? (int)$resCrit->fetch_assoc()['total'] : 0;
@@ -356,12 +351,12 @@ ORDER BY total DESC
   // 3. Despachados en una sola consulta (combinando condiciones si es posible)
   $resDespachos = $conexion->query("
     SELECT 
-        SUM(CASE WHEN o.status NOT IN ('5','5.2') THEN oa.quantity ELSE 0 END) as despachados_hoy,
-        SUM(CASE WHEN o.status = '3' AND o.fecha = '$mes' THEN oa.quantity ELSE 0 END) as despachados_mes
+        SUM(CASE WHEN o.status NOT IN ('5','5.2') AND DATE(o.created) = '$hoy' THEN oa.quantity ELSE 0 END) as despachados_hoy,
+        SUM(CASE WHEN o.status = '3' AND DATE_FORMAT(o.created, '%Y-%m') = '$mes' THEN oa.quantity ELSE 0 END) as despachados_mes
     FROM orden_articulos oa
     INNER JOIN orden o ON oa.order_id = o.id
     WHERE o.bss_id = $bss_id $extraCond $userCondO 
-    AND (o.modified = '$hoy' OR o.fecha = '$mes')
+    AND (DATE(o.created) = '$hoy' OR DATE_FORMAT(o.created, '%Y-%m') = '$mes')
 ");
   $rowD = $resDespachos ? $resDespachos->fetch_assoc() : [];
   $despachados = (int)($rowD['despachados_hoy'] ?? 0);
@@ -376,13 +371,12 @@ ORDER BY total DESC
     }
   }
 
-  // 5. Análisis por semanas (Mover lógica a consulta única)
+  // 5. Ventas reales por semana (sparklines de semana/mes del dashboard)
   $arraSemanas = [];
-  $res = $conexion->query("SELECT semana FROM orden WHERE bss_id = $bss_id $extraCond $user_cond GROUP BY semana ORDER BY semana ASC");
+  $res = $conexion->query("SELECT DATE_FORMAT(o.created, '%x-%v') AS semana, SUM(o.total_price) AS total FROM orden o WHERE o.bss_id = $bss_id $extraCond $user_cond AND o.status IN (1, 4) GROUP BY semana ORDER BY semana ASC");
   if ($res) {
     while ($row = $res->fetch_assoc()) {
-      $s = $row['semana'];
-      $arraSemanas[$s] = [10, 10, obtenerImportes('gastos', 'semana', $s)]; // Manteniendo tus valores dummy
+      $arraSemanas[$row['semana']] = [(float) $row['total']];
     }
   }
 

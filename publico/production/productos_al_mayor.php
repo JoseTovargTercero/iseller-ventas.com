@@ -7,7 +7,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     $topnav = topnav();
 
-
+    // Listado de productos al mayor de todas las sucursales del negocio
+    $stmtMayor = $conexion->prepare("
+        SELECT p.id, p.nombre, p.codigo_barras, p.cantidad_unidades, p.precio_compra, p.porcentaje,
+               COUNT(DISTINCT s.id_sucursal) AS num_sucursales,
+               COALESCE(SUM(s.stock + 0), 0) AS stock_total
+        FROM productos p
+        LEFT JOIN stock s ON s.id_producto = p.id AND s.mayor = 1
+        WHERE p.mayor = 1 AND p.bss_id = ?
+        GROUP BY p.id
+        ORDER BY p.nombre ASC
+    ");
+    $stmtMayor->bind_param('i', $bss_id);
+    $stmtMayor->execute();
+    $productosMayor = $stmtMayor->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtMayor->close();
 
 ?>
     <!DOCTYPE html>
@@ -17,6 +31,55 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <title>Agregar Producto</title>
         <?php require_once('includes/headers.php'); ?>
         <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
+        <style>
+            .mayor-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+            }
+
+            .mayor-toolbar .mayor-filtro {
+                flex: 1;
+                min-width: 220px;
+            }
+
+            .mayor-count {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 24px;
+                height: 24px;
+                padding: 0 8px;
+                margin-left: 8px;
+                border-radius: 12px;
+                background: rgba(45, 212, 160, 0.15);
+                color: #2dd4a0;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .mayor-empty {
+                text-align: center;
+                padding: 32px 12px !important;
+                color: var(--dash-text-muted, #8892a0);
+            }
+
+            .mayor-alert {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 16px;
+                padding: 12px 16px;
+                border-radius: 8px;
+                background: rgba(45, 212, 160, 0.1);
+                border: 1px solid rgba(45, 212, 160, 0.25);
+                color: #2dd4a0;
+                font-size: 13px;
+                font-weight: 600;
+            }
+        </style>
     </head>
 
 
@@ -109,6 +172,68 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             return valor.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                         }
                     </script>
+
+                    <!-- Listado de productos al mayor -->
+                    <div id="listaMayor">
+                        <?php if (isset($_GET['creado'])): ?>
+                            <div class="mayor-alert">
+                                <ion-icon name="checkmark-circle-outline" style="font-size:18px;"></ion-icon>
+                                Producto al mayor registrado correctamente.
+                            </div>
+                        <?php endif; ?>
+
+                        <div class='x_panel'>
+                            <div class='x_title'>
+                                <h2>Productos al Mayor <span class="mayor-count"><?= count($productosMayor) ?></span></h2>
+                                <div class='clearfix'></div>
+                            </div>
+                            <div class='x_content'>
+                                <div class="mayor-toolbar">
+                                    <input type="text" id="filtroMayor" class="form-control mayor-filtro" placeholder="Filtrar por nombre o código de barras...">
+                                    <button type="button" class="btn btn-success" onclick="mostrarFormulario()">
+                                        <ion-icon name="add-outline"></ion-icon> Registrar producto al mayor
+                                    </button>
+                                </div>
+                                <div class="card-box table-responsive">
+                                    <table class="table" id="tablaMayor">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Código</th>
+                                                <th class="text-center">Unid./Bulto</th>
+                                                <th class="text-right">Precio compra</th>
+                                                <th class="text-center">%</th>
+                                                <th class="text-center">Sucursales</th>
+                                                <th class="text-right">Stock total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (empty($productosMayor)): ?>
+                                                <tr>
+                                                    <td colspan="7" class="mayor-empty">Aún no has registrado productos al mayor.</td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($productosMayor as $pm): ?>
+                                                    <tr>
+                                                        <td><?= htmlspecialchars($pm['nombre']) ?></td>
+                                                        <td><?= htmlspecialchars($pm['codigo_barras'] ?? '') ?: '—' ?></td>
+                                                        <td class="text-center"><?= (int)$pm['cantidad_unidades'] ?></td>
+                                                        <td class="text-right">$<?= number_format((float)$pm['precio_compra'], 2, '.', ',') ?></td>
+                                                        <td class="text-center"><?= htmlspecialchars($pm['porcentaje'] ?? '') ?>%</td>
+                                                        <td class="text-center"><?= (int)$pm['num_sucursales'] ?></td>
+                                                        <td class="text-right"><?= (int)$pm['stock_total'] ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de registro -->
+                    <div id="formMayor" style="display:none;">
                     <form id='form-data' action='../../configurar/agregarProducto.php' method='post' class='form-horizontal form-label-left   fadeInUp animated'>
                         <div class='row'>
                             <div class='col-lg-6 '>
@@ -235,8 +360,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         </div>
 
                                         <div class='ln_solid'></div>
-                                        <div class="w-100 d-flex justify-content-end">
-                                            <button type="submit" class="btn btn-success actualizar">Siguiente</button>
+                                        <div class="w-100 d-flex justify-content-end" style="gap:10px;">
+                                            <button type="button" class="btn btn-secondary" onclick="mostrarListado()">Volver al listado</button>
+                                            <button type="submit" class="btn btn-success actualizar">Guardar producto</button>
                                         </div>
                                     </div>
                                 </div>
@@ -275,6 +401,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 </div>
             </div>
             </form>
+                    </div>
+                    <!-- /#formMayor -->
 
         </div>
         </div>
@@ -420,7 +548,31 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 return seleccionadas;
             }
 
-            // este codigo me regresa: Uncaught TypeError: form.querySelectorAll is not a function
+            // Alternar entre listado y formulario
+            function mostrarFormulario() {
+                document.getElementById('listaMayor').style.display = 'none';
+                document.getElementById('formMayor').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function mostrarListado() {
+                document.getElementById('formMayor').style.display = 'none';
+                document.getElementById('listaMayor').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            // Filtro del listado
+            document.addEventListener('DOMContentLoaded', function() {
+                const filtro = document.getElementById('filtroMayor');
+                if (filtro) {
+                    filtro.addEventListener('input', function() {
+                        const q = this.value.trim().toLowerCase();
+                        document.querySelectorAll('#tablaMayor tbody tr').forEach(function(tr) {
+                            tr.style.display = tr.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+                        });
+                    });
+                }
+            });
 
             // Enviar el producto al back
             document.getElementById('form-data').addEventListener('submit', function(e) {
@@ -454,8 +606,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             return;
                         }
 
-                        this.reset();
+                        formElement.reset();
                         Alerta.toast(json.tipo, json.mensaje);
+                        if (json.tipo === 'success') {
+                            setTimeout(function() {
+                                window.location.href = 'productos_al_mayor.php?creado=1';
+                            }, 1200);
+                        }
                     })
 
             });

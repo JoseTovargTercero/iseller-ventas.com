@@ -1,6 +1,21 @@
 <?php
 require_once('includes/requires.php');
 
+if (empty($_SESSION['sucursal']) && !empty($_SESSION['bss_id']) && isset($conexion)) {
+    $stmtSucAuto = $conexion->prepare("SELECT id FROM sucursales WHERE bss_id = ?");
+    if ($stmtSucAuto) {
+        $bssIdVal = (int)$_SESSION['bss_id'];
+        $stmtSucAuto->bind_param("i", $bssIdVal);
+        $stmtSucAuto->execute();
+        $resSucAuto = $stmtSucAuto->get_result();
+        if ($resSucAuto && $resSucAuto->num_rows === 1) {
+            $rowSucAuto = $resSucAuto->fetch_assoc();
+            $_SESSION['sucursal'] = (int)$rowSucAuto['id'];
+        }
+        $stmtSucAuto->close();
+    }
+}
+
 if (empty($_SESSION['sucursal'])) {
     define('PAGINA_INICIO', 'seleccion_sucursal.php');
     header('Location: ' . PAGINA_INICIO);
@@ -146,7 +161,7 @@ echo '</pre>';
     <title>Ventas </title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+    <script src="../vendors/fuse/fuse.min.js"></script>
 </head>
 <script>
     var productos = <?php echo json_encode($data); ?>;
@@ -453,7 +468,7 @@ echo '</pre>';
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+        <script src="../vendors/bootstrap5/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <!-- FastClick -->
         <script>
             const base_url = '../../configurar/';

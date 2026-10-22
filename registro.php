@@ -1,13 +1,12 @@
 <?php
-$plan = '';
-if (isset($_GET['plan'])) {
-    $plan = $_GET['plan'];
-}
+$plan = in_array($_GET['plan'] ?? '', ['mensual', 'anual'], true) ? $_GET['plan'] : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
+    <?php $auth_base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/') . '/'; ?>
+    <base href="<?php echo htmlspecialchars($auth_base, ENT_QUOTES); ?>">
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Registro — iSeller</title>
@@ -16,12 +15,10 @@ if (isset($_GET['plan'])) {
     <link rel="icon" href="publico/production/images/favicon.ico" type="image/ico">
 
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="publico/assets/sweetalert2.all.min.js"></script>
 
     <!-- Google Fonts — same as landing -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="publico/vendors/fonts/fonts.css" rel="stylesheet">
 
     <style>
         /* ============================================================
@@ -139,7 +136,6 @@ if (isset($_GET['plan'])) {
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             padding: 48px 0;
         }
 
@@ -147,9 +143,9 @@ if (isset($_GET['plan'])) {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.15);
-            color: var(--success);
+            background: rgba(73, 222, 173, 0.08);
+            border: 1px solid rgba(73, 222, 173, 0.18);
+            color: #49dead;
             font-size: 0.72rem;
             font-weight: 600;
             padding: 5px 12px;
@@ -163,7 +159,7 @@ if (isset($_GET['plan'])) {
         .trial-badge .dot {
             width: 5px;
             height: 5px;
-            background: var(--success);
+            background: #49dead;
             border-radius: 50%;
         }
 
@@ -180,7 +176,7 @@ if (isset($_GET['plan'])) {
 
         .left-headline em {
             font-style: normal;
-            color: var(--text-primary);
+            color: #49dead;
         }
 
         .left-subtext {
@@ -213,8 +209,8 @@ if (isset($_GET['plan'])) {
             width: 22px;
             height: 22px;
             border-radius: 50%;
-            background: rgba(16, 185, 129, 0.12);
-            border: 1px solid rgba(16, 185, 129, 0.25);
+            background: rgba(73, 222, 173, 0.12);
+            border: 1px solid rgba(73, 222, 173, 0.25);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -225,7 +221,7 @@ if (isset($_GET['plan'])) {
         .benefit-check svg {
             width: 11px;
             height: 11px;
-            color: var(--success);
+            color: #49dead;
         }
 
         .benefit-text {
@@ -354,15 +350,15 @@ if (isset($_GET['plan'])) {
         }
 
         .step-dot .dot.active {
-            background: var(--accent-primary);
-            color: var(--accent-on-primary);
+            background: #49dead;
+            color: #000;
             border-color: transparent;
         }
 
         .step-dot .dot.done {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(73, 222, 173, 0.15);
+            color: #49dead;
+            border-color: rgba(73, 222, 173, 0.3);
         }
 
         .step-dot .step-label {
@@ -386,7 +382,7 @@ if (isset($_GET['plan'])) {
         }
 
         .step-line.done {
-            background: var(--success);
+            background: #49dead;
         }
 
         /* Form title */
@@ -495,6 +491,50 @@ if (isset($_GET['plan'])) {
             padding-left: 14px;
         }
 
+        /* Combobox Tipo de negocio */
+        .combobox {
+            position: relative;
+        }
+
+        .combo-list {
+            display: none;
+            position: absolute;
+            z-index: 30;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            max-height: 240px;
+            overflow-y: auto;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        }
+
+        .combo-list.open {
+            display: block;
+        }
+
+        .combo-item {
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .combo-item:hover,
+        .combo-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--text-primary);
+        }
+
+        .combo-empty {
+            padding: 10px 14px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
         /* Toggle password */
         .toggle-pass {
             position: absolute;
@@ -518,12 +558,6 @@ if (isset($_GET['plan'])) {
 
         .toggle-pass:hover {
             color: var(--text-secondary);
-        }
-
-        /* Otro tipo wrap */
-        .otro-tipo-wrap {
-            display: none;
-            margin-bottom: 18px;
         }
 
         /* Strength bar */
@@ -591,6 +625,7 @@ if (isset($_GET['plan'])) {
             font-family: 'Inter', sans-serif;
             font-size: 0.875rem;
             font-weight: 500;
+            white-space: nowrap;
             color: var(--text-secondary);
             cursor: pointer;
             transition: var(--transition);
@@ -606,15 +641,14 @@ if (isset($_GET['plan'])) {
         .btn-submit {
             width: 100%;
             padding: 13px;
-            background: var(--accent-primary);
+            background: #49dead;
             border: none;
             border-radius: var(--radius-sm);
-            color: var(--accent-on-primary);
+            color: #080A0C;
             font-family: 'Inter', sans-serif;
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 8px;
             transition: var(--transition);
             letter-spacing: 0.01em;
         }
@@ -622,7 +656,8 @@ if (isset($_GET['plan'])) {
         .btn-next:hover,
         .btn-submit:hover {
             transform: scale(0.98);
-            background: #E4E4E7;
+            background: #3ec6a0;
+            color: #080A0C;
         }
 
         .btn-next:active,
@@ -708,6 +743,130 @@ if (isset($_GET['plan'])) {
             padding: 4px 10px;
             border-radius: 100px;
             margin-bottom: 16px;
+        }
+
+        /* ── Estilos Selector de Planes (Paso 3) ── */
+        .plan-cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .plan-choice-card {
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            text-align: left;
+        }
+
+        .plan-choice-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .plan-choice-card.selected {
+            border-color: var(--accent-1);
+            background: rgba(59, 130, 246, 0.07);
+        }
+
+        .plan-choice-badge {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            background: #10b981;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 100px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .plan-choice-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .plan-choice-price {
+            display: flex;
+            align-items: baseline;
+            gap: 2px;
+            margin-bottom: 6px;
+        }
+
+        .plan-choice-price .currency {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .plan-choice-price .amount {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .plan-choice-price .period {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .plan-choice-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.35;
+        }
+
+        .plan-choice-beneficio {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 9px;
+            border-top: 1px dashed rgba(16, 185, 129, 0.35);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #059669;
+            line-height: 1.35;
+        }
+
+        .plan-choice-beneficio svg {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .trial-info-box {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .trial-info-box svg {
+            color: #10b981;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .trial-info-text {
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            line-height: 1.4;
+        }
+
+        .trial-info-text strong {
+            color: #34d399;
         }
 
         /* ── Responsive ── */
@@ -855,6 +1014,13 @@ if (isset($_GET['plan'])) {
                         <div class="dot" id="dot-2">2</div>
                         <span class="step-label" id="label-2">Tu cuenta</span>
                     </div>
+                    <?php if (empty($plan)): ?>
+                        <div class="step-line" id="line-2"></div>
+                        <div class="step-dot">
+                            <div class="dot" id="dot-3">3</div>
+                            <span class="step-label" id="label-3">Tu plan</span>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Título dinámico -->
@@ -869,31 +1035,10 @@ if (isset($_GET['plan'])) {
                     <div id="step-1" class="step-section active">
 
                         <label for="tipo_negocio">Tipo de negocio</label>
-                        <div class="field-group no-icon">
-                            <select id="tipo_negocio" name="tipo_negocio" required>
-                                <option value="" disabled selected>Selecciona un tipo</option>
-                                <option value="minimarket">Minimarket</option>
-                                <option value="farmacia">Farmacia</option>
-                                <option value="restaurante">Restaurante</option>
-                                <option value="ferreteria">Ferretería</option>
-                                <option value="tienda_ropa">Tienda de Ropa</option>
-                                <option value="tecnologia">Tecnología</option>
-                                <option value="otro">Otro (Especificar)</option>
-                            </select>
-                        </div>
-
-                        <!-- Campo condicional -->
-                        <div class="otro-tipo-wrap" id="otro_tipo_container">
-                            <label for="otro_tipo">Especifica el tipo de negocio</label>
-                            <div class="field-group">
-                                <span class="field-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 20h9" />
-                                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-                                    </svg>
-                                </span>
-                                <input type="text" id="otro_tipo" name="otro_tipo" placeholder="Ej: Librería, Panadería...">
-                            </div>
+                        <div class="field-group no-icon combobox" id="tipo-negocio-wrap">
+                            <input type="text" id="tipo_negocio" name="tipo_negocio"
+                                placeholder="Selecciona o escribe tu tipo" required autocomplete="off">
+                            <div class="combo-list" id="tipo-negocio-list"></div>
                         </div>
 
                         <label for="nombre_negocio">Nombre del negocio</label>
@@ -993,12 +1138,89 @@ if (isset($_GET['plan'])) {
                                 </svg>
                                 Atrás
                             </button>
-                            <button type="submit" class="btn-submit" id="btnSubmit">
-                                Crear cuenta
-                            </button>
+                            <?php if (!empty($plan)): ?>
+                                <button type="submit" class="btn-submit" id="btnSubmit">
+                                    Crear cuenta
+                                </button>
+                            <?php else: ?>
+                                <button type="button" class="btn-next" onclick="nextStep(3)">
+                                    Siguiente
+                                    <svg style="display:inline;margin-left:6px;vertical-align:middle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M5 12h14M12 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            <?php endif; ?>
                         </div>
 
                     </div><!-- /step-2 -->
+
+                    <?php if (empty($plan)): ?>
+                        <!-- ════════════════════════ -->
+                        <!--  PASO 3 — Selección Plan -->
+                        <!-- ════════════════════════ -->
+                        <div id="step-3" class="step-section">
+
+                            <input type="hidden" id="selected_plan" name="plan" value="mensual">
+
+                            <div class="trial-info-box">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                </svg>
+                                <div class="trial-info-text">
+                                    <strong>¡1 mes de prueba gratis incluido!</strong><br>
+                                    No pagarás nada hoy. Tu primer mes es 100% libre de costo. Elige el plan con el que deseas continuar cuando finalice tu tiempo de prueba.
+                                </div>
+                            </div>
+
+                            <div class="plan-cards-grid">
+                                <!-- Plan Mensual -->
+                                <div class="plan-choice-card selected" id="card-mensual" onclick="selectPlan('mensual')">
+                                    <div class="plan-choice-title">Plan Mensual</div>
+                                    <div class="plan-choice-price">
+                                        <span class="currency">$</span>
+                                        <span class="amount">8</span>
+                                        <span class="period">/ mes</span>
+                                    </div>
+                                    <div class="plan-choice-desc">
+                                        Pago mes a mes después de tus 30 días gratis. Sin compromisos.
+                                    </div>
+                                </div>
+
+                                <!-- Plan Anual -->
+                                <div class="plan-choice-card" id="card-anual" onclick="selectPlan('anual')">
+                                    <div class="plan-choice-badge">Ahorra 58%</div>
+                                    <div class="plan-choice-title">Plan Anual</div>
+                                    <div class="plan-choice-price">
+                                        <span class="currency">$</span>
+                                        <span class="amount">40</span>
+                                        <span class="period">/ año</span>
+                                    </div>
+                                    <div class="plan-choice-desc">
+                                        Equivale a solo $3.33/mes al terminar tu prueba gratuita.
+                                    </div>
+                                    <div class="plan-choice-beneficio">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                        Incluye 5 días de publicidad en Facebook Ads (media de ~4.000 vistas diarias) al configurar tu tienda virtual
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="btn-row">
+                                <button type="button" class="btn-back" onclick="prevStep(2)">
+                                    <svg style="display:inline;margin-right:4px;vertical-align:middle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M19 12H5M12 5l-7 7 7 7" />
+                                    </svg>
+                                    Atrás
+                                </button>
+                                <button type="submit" class="btn-submit" id="btnSubmit">
+                                    Empezar mi mes gratis
+                                </button>
+                            </div>
+
+                        </div><!-- /step-3 -->
+                    <?php endif; ?>
 
                 </form>
 
@@ -1031,10 +1253,10 @@ if (isset($_GET['plan'])) {
     </form>
 
     <!-- External JS -->
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="publico/vendors/jquery/jquery-3.7.1.min.js"></script>
 
     <script>
-        const plan = "<?php echo $plan; ?>";
+        const plan = <?php echo json_encode($plan); ?>;
 
         /* ── Step metadata ────────────────────────────── */
         const stepMeta = {
@@ -1045,16 +1267,25 @@ if (isset($_GET['plan'])) {
             2: {
                 title: 'Crea tu cuenta',
                 sub: 'Completa tus datos de acceso al sistema.'
+            },
+            3: {
+                title: 'Selecciona tu plan',
+                sub: 'Empiezas con 1 mes gratis. Elige el plan para cuando termine tu prueba.'
             }
         };
 
-        function updateStepUI(step) {
-            document.getElementById('form-title').textContent = stepMeta[step].title;
-            document.getElementById('form-subtitle').textContent = stepMeta[step].sub;
+        const totalSteps = plan ? 2 : 3;
 
-            [1, 2].forEach(n => {
+        function updateStepUI(step) {
+            if (stepMeta[step]) {
+                document.getElementById('form-title').textContent = stepMeta[step].title;
+                document.getElementById('form-subtitle').textContent = stepMeta[step].sub;
+            }
+
+            for (let n = 1; n <= totalSteps; n++) {
                 const dot = document.getElementById('dot-' + n);
                 const label = document.getElementById('label-' + n);
+                if (!dot || !label) continue;
                 dot.classList.remove('active', 'done');
                 label.classList.remove('active');
                 if (n < step) {
@@ -1067,18 +1298,104 @@ if (isset($_GET['plan'])) {
                     dot.textContent = n;
                 }
                 if (n === step) label.classList.add('active');
-            });
+            }
 
-            const line = document.getElementById('line-1');
-            step > 1 ? line.classList.add('done') : line.classList.remove('done');
+            const line1 = document.getElementById('line-1');
+            if (line1) step > 1 ? line1.classList.add('done') : line1.classList.remove('done');
+
+            const line2 = document.getElementById('line-2');
+            if (line2) step > 2 ? line2.classList.add('done') : line2.classList.remove('done');
         }
+
+        /* ── Selector de Plan (Paso 3) ────────────────── */
+        function selectPlan(planVal) {
+            const hidden = document.getElementById('selected_plan');
+            if (hidden) hidden.value = planVal;
+
+            document.querySelectorAll('.plan-choice-card').forEach(c => c.classList.remove('selected'));
+            const selectedCard = document.getElementById('card-' + planVal);
+            if (selectedCard) selectedCard.classList.add('selected');
+        }
+
+        /* ── Combobox Tipo de negocio ─────────────────── */
+        const TIPOS_NEGOCIO = [
+            'Minimarket', 'Supermercado', 'Bodega / Almacén', 'Farmacia', 'Óptica',
+            'Restaurante', 'Cafetería', 'Panadería', 'Heladería', 'Ferretería',
+            'Tienda de Ropa', 'Boutique', 'Calzado', 'Tecnología / Celulares',
+            'Electrodomésticos', 'Librería / Papelería', 'Juguetes',
+            'Perfumería / Cosméticos', 'Pet Shop / Veterinaria', 'Reparto automotriz',
+            'Distribuidora / Mayorista', 'Floristería', 'Gimnasio / Deportes',
+            'Salón de belleza', 'Farmacia veterinaria', 'Lavandería', 'Peluquería'
+        ];
+        const tipoInput = document.getElementById('tipo_negocio');
+        const tipoList = document.getElementById('tipo-negocio-list');
+        let comboActive = -1;
+
+        const normCombo = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+        function renderCombo(filter) {
+            const f = normCombo(filter.trim());
+            const items = TIPOS_NEGOCIO.filter(t => !f || normCombo(t).includes(f));
+            tipoList.innerHTML = items.length ?
+                items.map(t => '<div class="combo-item" data-v="' + t + '">' + t + '</div>').join('') :
+                '<div class="combo-empty">Sin coincidencias — puedes dejar escrito tu tipo personalizado</div>';
+            comboActive = -1;
+        }
+
+        function openCombo() {
+            renderCombo(tipoInput.value);
+            tipoList.classList.add('open');
+        }
+
+        function closeCombo() {
+            tipoList.classList.remove('open');
+            comboActive = -1;
+        }
+
+        tipoInput.addEventListener('focus', openCombo);
+        tipoInput.addEventListener('input', openCombo);
+        tipoInput.addEventListener('keydown', function(e) {
+            const its = tipoList.querySelectorAll('.combo-item');
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!tipoList.classList.contains('open')) openCombo();
+                const list = tipoList.querySelectorAll('.combo-item');
+                if (!list.length) return;
+                comboActive = e.key === 'ArrowDown' ?
+                    Math.min(comboActive + 1, list.length - 1) :
+                    Math.max(comboActive - 1, 0);
+                list.forEach(el => el.classList.remove('active'));
+                list[comboActive].classList.add('active');
+                list[comboActive].scrollIntoView({
+                    block: 'nearest'
+                });
+            } else if (e.key === 'Enter') {
+                if (tipoList.classList.contains('open') && comboActive > -1 && its[comboActive]) {
+                    e.preventDefault();
+                    tipoInput.value = its[comboActive].dataset.v;
+                    closeCombo();
+                }
+            } else if (e.key === 'Escape') {
+                closeCombo();
+            }
+        });
+        tipoList.addEventListener('mousedown', function(e) {
+            const item = e.target.closest('.combo-item');
+            if (item) {
+                e.preventDefault();
+                tipoInput.value = item.dataset.v;
+                closeCombo();
+            }
+        });
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#tipo-negocio-wrap')) closeCombo();
+        });
 
         /* ── Navigation ───────────────────────────────── */
         function nextStep(step) {
             if (step === 2) {
-                const tipo = document.getElementById('tipo_negocio').value;
+                const tipo = document.getElementById('tipo_negocio').value.trim();
                 const nombre = document.getElementById('nombre_negocio').value.trim();
-                const otro = document.getElementById('otro_tipo').value.trim();
 
                 if (!tipo) {
                     Swal.fire({
@@ -1090,21 +1407,47 @@ if (isset($_GET['plan'])) {
                     });
                     return;
                 }
-                if (tipo === 'otro' && !otro) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Falta información',
-                        text: 'Por favor especifica el tipo de negocio.',
-                        background: '#101216',
-                        color: '#f0f4ff'
-                    });
-                    return;
-                }
                 if (!nombre) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Falta información',
                         text: 'Por favor ingresa el nombre del negocio.',
+                        background: '#101216',
+                        color: '#f0f4ff'
+                    });
+                    return;
+                }
+            } else if (step === 3) {
+                const nombres = document.getElementById('nombres').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+                const confirmar = document.getElementById('confirmar_password').value;
+
+                if (!nombres || !email) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Falta información',
+                        text: 'Por favor completa tu nombre y correo electrónico.',
+                        background: '#101216',
+                        color: '#f0f4ff'
+                    });
+                    return;
+                }
+                if (password.length < 5) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Contraseña débil',
+                        text: 'La contraseña debe tener al menos 5 caracteres.',
+                        background: '#101216',
+                        color: '#f0f4ff'
+                    });
+                    return;
+                }
+                if (password !== confirmar) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No coinciden',
+                        text: 'Las contraseñas no coinciden.',
                         background: '#101216',
                         color: '#f0f4ff'
                     });
@@ -1121,12 +1464,6 @@ if (isset($_GET['plan'])) {
             document.getElementById('step-' + step).classList.add('active');
             updateStepUI(step);
         }
-
-        /* ── Otro tipo toggle ─────────────────────────── */
-        document.getElementById('tipo_negocio').addEventListener('change', function() {
-            document.getElementById('otro_tipo_container').style.display =
-                this.value === 'otro' ? 'block' : 'none';
-        });
 
         /* ── Toggle passwords ─────────────────────────── */
         function makeToggle(btnId, inputId, iconId) {
@@ -1228,7 +1565,8 @@ if (isset($_GET['plan'])) {
             btn.textContent = 'Creando cuenta...';
 
             const formData = new FormData(this);
-            formData.append('plan', plan);
+            const chosenPlan = plan || (document.getElementById('selected_plan') ? document.getElementById('selected_plan').value : 'mensual');
+            formData.set('plan', chosenPlan);
 
             fetch('configurar/register_process.php', {
                     method: 'POST',

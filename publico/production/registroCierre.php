@@ -13,7 +13,7 @@ $today = date('Y-m-d');
 // Obtener semana de consulta
 $semana = isset($_POST['fechaSolic']) && !empty($_POST['fechaSolic'])
     ? $_POST['fechaSolic']
-    : date('Y-W');
+    : date('o-W');
 
 // Contar registros de cierres para la semana
 $registrosSemana = contar("SELECT COUNT(*) FROM cierres WHERE semana='$semana'");
@@ -153,7 +153,7 @@ if ($totalDolares < $totalVentasSemana) {
             <form action="" method="post">
                 <p>
                     <select class="form-control" required='required' name="fechaSolic" onchange="capturar()" division()>
-                        <option value="<?php echo date('Y-W') ?>"> <?php echo date('Y-W') ?> (actual)</option>
+                        <option value="<?php echo date('o-W') ?>"> <?php echo date('o-W') ?> (actual)</option>
                         <?php
                         $semanaPasada = date('W') - 1;
                         while ($semanaPasada >= 3) {
@@ -199,7 +199,7 @@ if ($totalDolares < $totalVentasSemana) {
                         <div class='col-lg-9'>
                             <div class='x_panel ' style="min-height: 500px;">
                                 <div class='x_title'>
-                                    <h2>Detalles <small>Semana consultada: <strong><?php echo $semana ?></strong> / Semana actual: <strong><?php echo date('Y-W') ?></strong></small> </h2>
+                                    <h2>Detalles <small>Semana consultada: <strong><?php echo $semana ?></strong> / Semana actual: <strong><?php echo date('o-W') ?></strong></small> </h2>
                                     <span style="float: right;">
 
 
@@ -694,16 +694,16 @@ if ($totalDolares < $totalVentasSemana) {
         <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
 
         <!-- DataTables core -->
-        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+        <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
         <!-- Buttons extension -->
-        <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-        <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+        <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
+        <script src="../vendors/jquery/jquery-3.7.1.min.js"></script>
+        <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
+        <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
         <!-- PDF export -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-        <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+        <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
+        <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
+        <script src="../vendors/datatables/buttons.html5.min.js"></script>
         <!-- Custom Theme Scripts -->
         <script src='../build/js/custom.js'></script>
 </body>

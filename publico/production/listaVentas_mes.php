@@ -22,14 +22,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   }
   $stmt->close();
 
-  $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ?");
+  $stmt = mysqli_prepare($conexion, "SELECT id, nombre, id_sucursal FROM `usuarios` WHERE bss_id = ? AND status = 0");
   $stmt->bind_param('s', $bss_id);
   $stmt->execute();
   $result = $stmt->get_result();
-  if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-      $usuarios[] = $row;
-    }
+  $usuarios = [];
+  while ($row = $result->fetch_assoc()) {
+    $usuarios[] = $row;
   }
   $stmt->close();
 ?>
@@ -40,8 +39,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <title>Lista de Ventas - Mes</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
     <style>
       .right_col {
         background: var(--dash-bg);
@@ -610,6 +609,82 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       .table-warning-cell {
         background: rgba(245, 180, 91, .08);
       }
+
+      /* ── Móvil: en el teléfono la tabla de 10 columnas no cabe ───────── */
+      @media (max-width: 768px) {
+        .right_col {
+          padding: 14px 12px !important;
+        }
+
+        .dash-header {
+          margin-bottom: 16px;
+        }
+
+        .btn-dash-action {
+          width: 100%;
+          justify-content: center;
+          padding: 11px 18px;
+        }
+
+        .dash-panel .panel-header {
+          padding: 14px 16px 12px;
+        }
+
+        .dash-panel .panel-header>.dash-select {
+          width: 100%;
+        }
+
+        .dash-table-wrap {
+          padding: 0 10px 12px;
+        }
+
+        .dash-table {
+          font-size: 12px;
+        }
+
+        .dash-table thead th,
+        .dash-table tbody td {
+          padding: 10px 8px;
+        }
+
+        /* Se dejan #, pago, monto, cliente y detalles. Usuario, fecha, COP y Bs
+           siguen disponibles en el botón Detalles. */
+        .dash-table th:nth-child(2),
+        .dash-table td:nth-child(2),
+        .dash-table th:nth-child(4),
+        .dash-table td:nth-child(4),
+        .dash-table th:nth-child(5),
+        .dash-table td:nth-child(5),
+        .dash-table th:nth-child(8),
+        .dash-table td:nth-child(8),
+        .dash-table th:nth-child(9),
+        .dash-table td:nth-child(9) {
+          display: none;
+        }
+
+        /* Lista de métodos de pago: el icono de 46px apretaba el texto */
+        .info-item {
+          padding: 12px 14px;
+        }
+
+        .info-item:hover {
+          padding-left: 16px;
+        }
+
+        .info-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+        }
+
+        .info-text h6 {
+          font-size: 12.5px;
+        }
+
+        .info-value {
+          font-size: 15px;
+        }
+      }
     </style>
   </head>
 
@@ -674,6 +749,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                           <th>Usuario</th>
                           <th>Fecha</th>
                           <th>Monto</th>
+                          <th>Cobrado</th>
                           <th>COP</th>
                           <th>Bs</th>
                           <th>Cliente</th>
@@ -836,11 +912,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
+    <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
+    <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
+    <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
+    <script src="../vendors/datatables/buttons.html5.min.js"></script>
     <script src="../build/js/custom.js"></script>
     <script src="../build/js/global-loader.js"></script>
     <script src="js/nombre_pagina.js"></script>
@@ -1001,7 +1077,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
       document.getElementById('fechaSolic').addEventListener('change', function() {
         _totalesUsuariosCargado = false;
-        if (document.getElementById('pane-usuarios').classList.contains('show')) {
+        const paneUsuarios = document.getElementById('pane-usuarios');
+        if (paneUsuarios && paneUsuarios.classList.contains('show')) {
           cargarTotalesUsuarios(true);
         }
       });
@@ -1073,4 +1150,4 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   define('PAGINA_INICIO', '../../index.php');
   header('Location: ' . PAGINA_INICIO);
 }
-?>
+?>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            

@@ -40,7 +40,6 @@ class CalculadoraPrecios
 
         // Precio de venta en dólares
         $precioDolarVenta = $precioDolarCompra + ($precioDolarCompra * $porcentaje / 100);
-        $precioDolarVisible = number_format($precioDolarVenta, 2, '.', ',');
 
         // Precio en pesos (dólar → pesos)
         $precioPesoVenta = $this->formatPeso($precioDolarVenta * $this->pesoDolar);
@@ -67,8 +66,12 @@ class CalculadoraPrecios
 
 
 
-        // Determinar precio visible en dólares
-        $precioDolar = isset($this->data_monedas['precio_dolar_visible']) ? $precioDolarVisible : number_format($precio_bolivar_dolar, 2, '.', ',');
+        // Determinar precio visible en dólares.
+        // Se redondea el número, no el texto: number_format() agrega comas de miles y
+        // castear "1,234.56" a float devolvía 1.00 en productos de más de $999.99.
+        $precioDolar = isset($this->data_monedas['precio_dolar_visible'])
+            ? round($precioDolarVenta, 2)
+            : round($precio_bolivar_dolar, 2);
 
         return [
             'precio_venta_dolar' => (float) $precioDolar,
@@ -90,130 +93,112 @@ class CalculadoraPrecios
             return $resultado;
         } // si no exta se retorna el array con valores 0
 
-        // Caso 1 - Si la moneda origen es dolar y el producto es venezonlano
+        // Caso 1 - Si la moneda origen es dolar y el producto es venezolano
         if ($monedaOrigen === 'usd' && $origen != 'c') {
 
-            // ** Precio en dólares
-            $dolares = $monto; // Monto en dólares
+            $resultado['usd'] = round($monto, 2);
 
-            $resultado['usd'] = round($dolares, 2);
-
-
-
-            // ** Precio en bolívares (dólar → bolívares)
-            $bolivares = $monto * $this->dolarBolivar;
+            // El bolívar del producto venezolano siempre es dólar * dolarBolivar; si el carrito
+            // muestra el dólar por BCV (precio_bolivar_dolar), ése es el dólar visible.
+            $bolivares = isset($this->data_monedas['precio_dolar_visible'])
+                ? $monto * $this->dolarBolivar
+                : $monto * $this->bcv;
             $resultado['bs'] = round($bolivares, 2);
 
-
-
-            // ** Precio en pesos (dólar → pesos)
-            $pesos = $monto * $this->pesoDolar;
-
-            // Para los pesos depende de la configuracion
-            $valorPesos = isset($this->data_monedas['precio_peso_visible'])
-                ? $pesos
-                : ($bolivares * $this->bolivar_peso) * 1000;
-
-            $resultado['cop'] = $valorPesos;
+            // Los pesos salen de la base en dólares o directo del bolívar.
+            if (isset($this->data_monedas['precio_peso_visible'])) {
+                // Con precio_dolar_visible el monto YA es el dólar base; si no, se deriva del bolívar.
+                $usdBase = isset($this->data_monedas['precio_dolar_visible'])
+                    ? $monto
+                    : $bolivares / $this->dolarBolivar;
+                $resultado['cop'] = $usdBase * $this->pesoDolar;
+            } else {
+                $resultado['cop'] = ($bolivares * $this->bolivar_peso) * 1000;
+            }
         } // REVISADO
 
         // Caso 2 - Si la moneda origen es dolares y el producto es colombiano
         if ($monedaOrigen === 'usd' && $origen === 'c') {
 
-            // ** Precio en pesos (dólar → pesos)
-            $pesos = $monto * $this->pesoDolar;
-            $resultado['cop'] = $pesos;
-
-            // ** Precio en bolívares (dólar → bolívares)
-            $bolivares = ($pesos / $this->peso_bolivar) / 1000;
-            $resultado['bs'] = round($bolivares, 2);
-
-            // ** Precio en dólares
             $resultado['usd'] = round($monto, 2);
+
+            if (isset($this->data_monedas['precio_dolar_visible'])) {
+                // ** Pesos directos y de ahí a bolívares
+                $pesos = $monto * $this->pesoDolar;
+                $bolivares = ($pesos / $this->peso_bolivar) / 1000;
+            } else {
+                // Dólar mostrado = bolívares / BCV
+                $bolivares = $monto * $this->bcv;
+                $pesos = ($bolivares * $this->peso_bolivar) * 1000;
+            }
+
+            $resultado['cop'] = $pesos;
+            $resultado['bs'] = round($bolivares, 2);
         } // REVISADO
 
         // Caso 3 - Si la moneda origen es bolívares y el producto es venezolano
         if ($monedaOrigen === 'bs' && $origen != 'c') {
 
-            // ** Precio en dólares
-            // Para los dolares dependiendo de la configuracion
-            $valorDolares =  $monto / $this->dolarBolivar;
-
-            $resultado['usd'] = round($valorDolares, 2);
-
-
-
-            // ** Precio en bolívares (dólar → bolívares)
             $resultado['bs'] = round($monto, 2);
 
+            // Base en dólares del producto venezolano: siempre bolívares / dolarBolivar.
+            $usdBase = $monto / $this->dolarBolivar;
+            $resultado['usd'] = round(
+                isset($this->data_monedas['precio_dolar_visible']) ? $usdBase : ($monto / $this->bcv),
+                2
+            );
 
-
-            // ** Precio en pesos (bolivar → pesos)
-            $pesos = $valorDolares * $this->pesoDolar;
-
-            // Para los pesos depende de la configuracion
-            $valorPesos = isset($this->data_monedas['precio_peso_visible'])
-                ? $pesos
-                : ($monto * $this->bolivar_peso) * 1000;
-
-            $resultado['cop'] = $valorPesos;
+            $resultado['cop'] = isset($this->data_monedas['precio_peso_visible'])
+                ? ($usdBase * $this->pesoDolar)
+                : (($monto * $this->bolivar_peso) * 1000);
         } // REVISADO
 
         // Caso 4 - Si la moneda origen es bolivares y el producto es colombiano
         if ($monedaOrigen === 'bs' && $origen === 'c') { // primero se debe llevar a pesos y luego a dolares
 
-            // ** Precio en pesos (bolivar → pesos)
+            $resultado['bs'] = round($monto, 2);
+
             $pesos = ($monto * $this->peso_bolivar) * 1000;
             $resultado['cop'] = $pesos;
 
-
-            // ** Precio en dólares
-            $valorDolares = $pesos / $this->pesoDolar;
-            $resultado['usd'] = round($valorDolares, 2);
-
-
-            // ** Precio en bolívares (dólar → bolívares)
-            $resultado['bs'] = round($monto, 2);
+            $resultado['usd'] = round(
+                isset($this->data_monedas['precio_dolar_visible']) ? ($pesos / $this->pesoDolar) : ($monto / $this->bcv),
+                2
+            );
         } // REVISADO
 
         // Caso 5 - Si la moneda origen es pesos y el producto es venezolano
         if ($monedaOrigen === 'cop' && $origen != 'c') {
 
-            if (isset($this->data_monedas['precio_bolivar_peso'])) { // TODO: HERE
-                // ** Precio en bolívares (peso → bolívares)
-                $bolivares = ($monto / $this->bolivar_peso) / 1000;
-                $resultado['bs'] = round($bolivares, 2);
-
-                // ** Precio en dólares
-                $valorDolares = $bolivares / $this->bcv;
-                $resultado['usd'] = round($valorDolares, 2);
-            } else {
-                // ** Precio en dólares
-                $dolares = $monto / $this->pesoDolar;
-                $resultado['usd'] = round($dolares, 2);
-
-                // ** Precio en bolívares (dólar → bolívares)
-                $bolivares = $dolares * $this->dolarBolivar;
-                $resultado['bs'] = round($bolivares, 2);
-            }
-
-            // ** Precio en pesos
             $resultado['cop'] = round($monto, 0); // Monto en pesos ya que es la moneda de origen
+
+            if (isset($this->data_monedas['precio_bolivar_peso'])) {
+                // Pesos → bolívares por la tasa Bs/Peso del negocio
+                $bolivares = ($monto / $this->bolivar_peso) / 1000;
+            } else {
+                // Pesos → dólares base → bolívares
+                $bolivares = ($monto / $this->pesoDolar) * $this->dolarBolivar;
+            }
+            $resultado['bs'] = round($bolivares, 2);
+
+            $resultado['usd'] = round(
+                isset($this->data_monedas['precio_dolar_visible']) ? ($bolivares / $this->dolarBolivar) : ($bolivares / $this->bcv),
+                2
+            );
         } // REVISADO
 
         // Caso 6 - Si la moneda origen es pesos y el producto es colombiano
         if ($monedaOrigen === 'cop' && $origen === 'c') {
 
-            // ** Precio en pesos
             $resultado['cop'] = round($monto, 0); // Monto en pesos ya que es la moneda de origen
 
-            // ** Precio en dólares
-            $dolares = $monto / $this->pesoDolar;
-            $resultado['usd'] = round($dolares, 2);
-
-            // ** Precio en bolívares (peso → bolívares)
             $bolivares = ($monto / $this->peso_bolivar) / 1000;
             $resultado['bs'] = round($bolivares, 2);
+
+            $resultado['usd'] = round(
+                isset($this->data_monedas['precio_dolar_visible']) ? ($monto / $this->pesoDolar) : ($bolivares / $this->bcv),
+                2
+            );
         }
         return $resultado;
     }

@@ -211,6 +211,44 @@ if ($_SESSION['nivel'] == 1) {
                 color: var(--dash-text-muted);
                 font-weight: 500;
             }
+
+            /* ═══ Responsive: WebView de la app (teléfono) ═══ */
+            @media (max-width: 991px) {
+                .right_col {
+                    padding: 16px 14px !important;
+                }
+            }
+
+            @media (max-width: 640px) {
+                .right_col {
+                    padding: 14px 12px !important;
+                }
+
+                .page-head {
+                    margin-bottom: 18px;
+                }
+
+                .dash-panel .panel-header {
+                    padding: 14px 16px 12px;
+                }
+
+                /* Una sucursal por fila, ocupando todo el ancho del panel */
+                .branch-grid {
+                    grid-template-columns: 1fr;
+                    padding: 14px;
+                    gap: 10px;
+                }
+
+                .branch-card {
+                    padding: 14px;
+                    gap: 12px;
+                }
+
+                .branch-icon {
+                    width: 38px;
+                    height: 38px;
+                }
+            }
         </style>
     </head>
 

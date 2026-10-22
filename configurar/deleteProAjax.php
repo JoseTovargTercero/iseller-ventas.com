@@ -27,24 +27,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conexion->begin_transaction();
 
             if ($modo == 'p' || $sucursales <= 2) {
-                // DELETE productos
-                $stmt = $conexion->prepare("DELETE FROM productos WHERE id = ?");
+                // DELETE productos — solo del negocio del usuario
+                $stmt = $conexion->prepare("DELETE FROM productos WHERE id = ? AND bss_id = ?");
                 if (!$stmt) {
                     throw new Exception("Error al preparar el DELETE: " . $conexion->error);
                 }
-                $stmt->bind_param("i", $id);
+                $stmt->bind_param("ii", $id, $bss_id);
                 if (!$stmt->execute()) {
                     throw new Exception("Error al ejecutar el DELETE: " . $stmt->error);
                 }
                 $stmt->close();
             }
 
-            // DELETE stock
-            $stmt2 = $conexion->prepare("DELETE FROM stock WHERE id_producto = ?");
+            // DELETE stock — solo del negocio del usuario
+            $stmt2 = $conexion->prepare("DELETE FROM stock WHERE id_producto = ? AND bss_id = ?");
             if (!$stmt2) {
                 throw new Exception("Error al preparar el DELETE: " . $conexion->error);
             }
-            $stmt2->bind_param("i", $id);
+            $stmt2->bind_param("ii", $id, $bss_id);
             if (!$stmt2->execute()) {
                 throw new Exception("Error al ejecutar el DELETE: " . $stmt2->error);
             }

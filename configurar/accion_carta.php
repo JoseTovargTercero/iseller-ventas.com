@@ -155,6 +155,8 @@ function procesarCarritos()
         $productos = $pedido['productos'];
         $idPedido = $pedido['id'];
         $cliente = $pedido['datosCliente'] ?? []; // Cliente puede ser un array vacío si no se proporciona información
+        $pagosFraccionados = $pedido['pagosFraccionados'] ?? null; // Desglose del pago fraccionado (tipoPago 8)
+        $fechaVentaPedido = $pedido['fechaVenta'] ?? null; // Fecha real de la venta (también si se sincroniza offline después)
 
         if (empty($productos)) {
             $errores[] = "El pedido con método de pago '$metodoPago' no tiene productos.";
@@ -181,7 +183,9 @@ function procesarCarritos()
             $valorFinalBs,
             $valorFinalCop,
             $cliente,
-            $idPedido
+            $idPedido,
+            $pagosFraccionados,
+            $fechaVentaPedido
         );
         if (!$respuesta['status']) {
             $errores[$idPedido] = $respuesta['data'];
@@ -253,7 +257,7 @@ function es_venta_mayor($cart)
  * @param float $precioCop Precio en pesos colombianos.
  */
 
-function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = ['nombre' => '', 'cedula' => '', 'telefono' => ''], $idPedido = null)
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = ['nombre' => '', 'cedula' => '', 'telefono' => ''], $idPedido = null, $pagosFraccionados = null, $fechaVentaPedido = null)
 {
     global $id_sucursal, $bss_id, $registro_clientes;
 
@@ -266,8 +270,31 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
 
     try {
         // Datos base
-        $fechaVenta = date('Y-m-d');
-        $precioCop = formatPeso($precioCop ?? 0);
+        $precioCopRaw = (float) ($precioCop ?? 0);
+        $precioCop = formatPeso($precioCopRaw);
+
+        // Fecha real de la venta: el POS la envía; si es un pedido viejo de offline
+        // sin ese campo, se recupera del timestamp con el que se generó su id.
+        $tsVenta = false;
+        if (is_string($fechaVentaPedido) && trim($fechaVentaPedido) !== '') {
+            $tsVenta = strtotime($fechaVentaPedido);
+        }
+        if (($tsVenta === false || $tsVenta <= 0) && !empty($idPedido) && preg_match('/^(\d{10,13})/', (string) $idPedido, $mId)) {
+            $tsVenta = strlen($mId[1]) > 10 ? (int) ($mId[1] / 1000) : (int) $mId[1];
+        }
+        if ($tsVenta === false || $tsVenta <= 0) {
+            $tsVenta = time();
+        }
+        // Reloj del dispositivo adelantado: no permitir fechas de venta futuras.
+        if ($tsVenta > time() + 86400) {
+            $tsVenta = time();
+        }
+        $createdVenta = date('Y-m-d H:i:s', $tsVenta);
+        $fechaVenta = date('Y-m-d', $tsVenta);
+        $mes = date('Y-m', $tsVenta);
+        $ano = date('Y', $tsVenta);
+        $semana = date('o-W', $tsVenta);
+        $dia = date('N', $tsVenta);
 
         $valorFinalVenta = $cart->total();
         $compraTipo = 1; // Detal por defecto
@@ -285,6 +312,45 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             }
         }
 
+        // Pago fraccionado: normaliza y valida el desglose antes de tocar la BD.
+        // La cobertura se mide contra los mismos totales que usa el POS: cada
+        // moneda con su total completo vale por el 100% del carrito.
+        $pf = [];
+        if ((string) $pagoTipo === '8') {
+            if (!is_array($pagosFraccionados)) {
+                throw new Exception('Falta el desglose del pago fraccionado.');
+            }
+            $clavesFraccion = ['punto', 'pagoMovil', 'transferencia', 'bioPago', 'efectivo', 'dolares', 'pesos'];
+            $sumaBs = 0;
+            $sumaCop = 0;
+            $sumaUsd = 0;
+            foreach ($clavesFraccion as $clave) {
+                $valor = $pagosFraccionados[$clave] ?? 0;
+                if (!is_numeric($valor) || !is_finite((float) $valor) || (float) $valor < 0) {
+                    throw new Exception("Monto inválido en el pago fraccionado ($clave).");
+                }
+                $pf[$clave] = (float) $valor;
+            }
+            $sumaBs = $pf['punto'] + $pf['pagoMovil'] + $pf['transferencia'] + $pf['bioPago'] + $pf['efectivo'];
+            $sumaCop = $pf['pesos'];
+            $sumaUsd = $pf['dolares'];
+            if (($sumaBs + $sumaCop + $sumaUsd) <= 0) {
+                throw new Exception('El pago fraccionado no tiene montos.');
+            }
+
+            $totalBs = (float) $precioBs;
+            $totalCop = $precioCopRaw;
+            $totalUsd = (float) $valorFinalVenta;
+            $cobertura = 0;
+            if ($totalBs > 0) $cobertura += $sumaBs / $totalBs;
+            if ($totalCop > 0) $cobertura += $sumaCop / $totalCop;
+            if ($totalUsd > 0) $cobertura += $sumaUsd / $totalUsd;
+
+            if ((1 - $cobertura) * $totalUsd > 0.02) {
+                throw new Exception('El pago fraccionado no cubre el total de la venta.');
+            }
+        }
+
         $cedula = $cliente['cedula'];
 
         // Registra los datos del cliente si no existe
@@ -292,7 +358,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         if ($registro_clientes == 1 || $tipo === 'credito') {
             $query = "SELECT * FROM clientes WHERE cedula = ? AND bss_id = ?";
             $stmt = $conexion->prepare($query);
-            $stmt->bind_param("s", $cliente['cedula']);
+            $stmt->bind_param("si", $cliente['cedula'], $bss_id); // Fix: bss_id faltaba como segundo parámetro
             $stmt->execute();
             $result = $stmt->get_result();
             $stmt->close();
@@ -307,58 +373,23 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             }
         }
 
-
-        $mes = date('Y-m');
-        $ano = date('Y');
-        $semana = date('Y-W');
-        $dia = date('N');
-
-        //TODO: Validar que no exista una venta identica con los mismos montos, el mismo cliente, la misma fechaVenta, el mismo tipo_pago, id_sucursal, bss_id
-
-        //=========================================================================
-        // PROCESADO: Validación preventiva de venta idéntica (Evita doble envío)
-        //=========================================================================
-        $queryCheck = "SELECT id FROM orden 
-                       WHERE total_price = ? 
-                         AND total_price_bs = ? 
-                         AND total_price_cop = ? 
-                         AND cliente = ? 
-                         AND fecha = ? 
-                         AND tipoPago = ? 
-                         AND id_sucursal = ? 
-                         AND bss_id = ? 
-                       LIMIT 1";
-
-        $stmtCheck = $conexion->prepare($queryCheck);
-        if (!$stmtCheck) {
-            throw new Exception("Error al preparar la validación de duplicados: " . $conexion->error);
+        // Idempotencia de sincronización: el id_pedido es único. Si el POS reintenta
+        // un pedido offline que ya se guardó, se responde éxito sin duplicarlo.
+        if (!empty($idPedido)) {
+            $stmtDup = $conexion->prepare("SELECT id FROM orden WHERE id_pedido = ? LIMIT 1");
+            if (!$stmtDup) {
+                throw new Exception("Error al preparar la validación de duplicados: " . $conexion->error);
+            }
+            $stmtDup->bind_param("s", $idPedido);
+            $stmtDup->execute();
+            $duplicado = $stmtDup->get_result()->fetch_assoc();
+            $stmtDup->close();
+            if ($duplicado) {
+                $conexion->rollback();
+                $cart->destroy();
+                return ['status' => true];
+            }
         }
-
-        // Mapeo de tipos correlativos al bind_param de inserción original
-        $stmtCheck->bind_param(
-            "sddsssii",
-            $valorFinalVenta,
-            $precioBs,
-            $precioCop,
-            $cedula,
-            $fechaVenta,
-            $pagoTipo,
-            $id_sucursal,
-            $bss_id
-        );
-
-        $stmtCheck->execute();
-        $resCheck = $stmtCheck->get_result();
-        $stmtCheck->close();
-
-        if ($resCheck->num_rows > 0) {
-            // Si la venta idéntica ya existe, revertimos la transacción actual
-            $conexion->rollback();
-            $cart->destroy(); // Limpiamos el carrito local para dar por cerrado el flujo
-            return ['status' => true];
-        }
-        //=========================================================================
-
 
         // Registrar orden
         $stmt = $conexion->prepare("
@@ -366,7 +397,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             status, usuario, total_price, created, modified, fecha,
             semana, ano, total_price_bs, total_price_cop,  tipoPago,
             dia, id_sucursal, bss_id, id_pedido, cliente
-        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
         if (!$stmt) {
@@ -374,10 +405,11 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         }
 
         $stmt->bind_param(
-            "iisssssddsiiiss",
+            "iissssssddsiiiss",
             $tipoVenta,
             $_SESSION['id'],
             $valorFinalVenta,
+            $createdVenta,
             $fechaVenta,
             $mes,
             $semana,
@@ -394,10 +426,10 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
 
         if (!$stmt->execute()) {
             if ($conexion->errno == 1062) {
-                // Error de clave duplicada
+                // Ya se había sincronizado (id_pedido UNIQUE): se cierra sin duplicar.
                 $stmt->close();
-                // Retornamos éxito para que el cliente piense que se procesó, 
-                // ya que en realidad YA SE había procesado.
+                $conexion->rollback();
+                $cart->destroy();
                 return ['status' => true];
             }
             $error = $stmt->error;
@@ -431,6 +463,8 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         $updateStmtMayor = $conexion->prepare("UPDATE stock SET stock = ? WHERE id = ? AND id_sucursal = ? AND bss_id = ?");
         // para actualizar la cantidad actual
         $stmtStockParaMayor = $conexion->prepare("SELECT stock FROM stock WHERE id = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1");
+        // Consulta para productos que pertenecen a un combo
+        $stmtComboItems = $conexion->prepare("SELECT producto_id, cantidad FROM combo_items WHERE combo_producto_id = ? AND bss_id = ?");
 
 
         foreach ($cart->contents() as $item) {
@@ -453,6 +487,38 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             // VALIDACIÓN AQUÍ:
             if (!$insertStmt->execute()) {
                 throw new Exception("Error al insertar artículo de la orden: " . $insertStmt->error);
+            }
+
+            // Verificar si el producto vendido es un combo
+            $esCombo = false;
+            if ($stmtComboItems) {
+                $idProdCombo = (int)$item['id'];
+                $stmtComboItems->bind_param("ii", $idProdCombo, $bss_id);
+                $stmtComboItems->execute();
+                $resCombo = $stmtComboItems->get_result();
+                if ($resCombo && $resCombo->num_rows > 0) {
+                    $esCombo = true;
+                    while ($hijo = $resCombo->fetch_assoc()) {
+                        $idHijo = (int)$hijo['producto_id'];
+                        $cantHijo = (float)$hijo['cantidad'] * (float)$item['qty'];
+
+                        $stmtStock->bind_param("iii", $idHijo, $id_sucursal, $bss_id);
+                        if (!$stmtStock->execute()) {
+                            throw new Exception("Error al consultar stock de producto del combo: " . $stmtStock->error);
+                        }
+                        $resStockHijo = $stmtStock->get_result()->fetch_assoc();
+                        $stockNuevoHijo = max(0, (float)($resStockHijo['stock'] ?? 0) - $cantHijo);
+
+                        $updateStmt->bind_param("siii", $stockNuevoHijo, $idHijo, $id_sucursal, $bss_id);
+                        if (!$updateStmt->execute()) {
+                            throw new Exception("Error al descontar stock de producto del combo: " . $updateStmt->error);
+                        }
+                    }
+                }
+            }
+
+            if ($esCombo) {
+                continue;
             }
 
             if ($item['mayor'] == '1') {
@@ -502,6 +568,9 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         $stmtStock->close();
         $updateStmt->close();
         $updateStmtMayor->close();
+        if ($stmtComboItems) {
+            $stmtComboItems->close();
+        }
 
         // Guardar artículos
 
@@ -519,6 +588,44 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             $stmtC->bind_param("idssssiii", $orderID, $valorFinalVenta, $precioBs, $precioCop, $nombreC, $compraTipo, $bss_id, $id_sucursal, $cedulaC);
             $stmtC->execute();
             $stmtC->close();
+        }
+
+        // Si el pago es fraccionado, guardar el desglose por medio de pago
+        if ($pagoTipo == '8' && !empty($pf)) {
+            $fracPunto         = $pf['punto'];
+            $fracPagoMovil     = $pf['pagoMovil'];
+            $fracTransferencia = $pf['transferencia'];
+            $fracBioPago       = $pf['bioPago'];
+            $fracEfectivo      = $pf['efectivo'];
+            $fracPesos         = $pf['pesos'];
+            $fracDolares       = $pf['dolares'];
+
+            $stmtFrac = $conexion->prepare("
+                INSERT INTO fracciones (id_order, punto, pagoMovil, transferencia, bioPago, efectivo, pesos, dolares, id_sucursal, bss_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            if (!$stmtFrac) {
+                throw new Exception("Error al preparar el desglose fraccionado: " . $conexion->error);
+            }
+            $stmtFrac->bind_param(
+                "idddddddii",
+                $orderID,
+                $fracPunto,
+                $fracPagoMovil,
+                $fracTransferencia,
+                $fracBioPago,
+                $fracEfectivo,
+                $fracPesos,
+                $fracDolares,
+                $id_sucursal,
+                $bss_id
+            );
+            if (!$stmtFrac->execute()) {
+                $errFrac = $stmtFrac->error;
+                $stmtFrac->close();
+                throw new Exception("Error al guardar el desglose fraccionado: " . $errFrac);
+            }
+            $stmtFrac->close();
         }
 
         $conexion->commit(); // Éxito
