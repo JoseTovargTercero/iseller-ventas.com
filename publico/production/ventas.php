@@ -1805,22 +1805,22 @@ $stmt->close();
                     <div class="pt-1">
                         <ul class="nav nav-tabs" id="myTab" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="home-tab" data-bs-toggle="tab"
-                                    data-bs-target="#home" type="button" role="tab" aria-controls="home"
+                                <button class="nav-link active" id="home-tab" data-toggle="tab"
+                                    data-target="#home" type="button" role="tab" aria-controls="home"
                                     aria-selected="true">Carrito activo</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile"
+                                <button class="nav-link" id="profile-tab" data-toggle="tab" data-target="#profile"
                                     type="button" role="tab" aria-controls="profile" aria-selected="false">No guardados
                                     <span id="cantidad-no-enviada"></span> </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact"
+                                <button class="nav-link" id="contact-tab" data-toggle="tab" data-target="#contact"
                                     type="button" role="tab" aria-controls="contact" aria-selected="false">Reservados
                                     <span id="cantidad-reservados"></span></button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="enviados-tab" data-bs-toggle="tab" data-bs-target="#enviados"
+                                <button class="nav-link" id="enviados-tab" data-toggle="tab" data-target="#enviados"
                                     type="button" role="tab" aria-controls="enviados" aria-selected="false">Enviados
                                     <span id="cantidad-enviados"></span></button>
                             </li>
@@ -2749,7 +2749,7 @@ $stmt->close();
                                             <i class="line icon-printer"></i>
                                         </button>
                                         <div class="btn-group" role="group">
-                                            <button id="btnGroupDrop1" type="button" class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <button id="btnGroupDrop1" type="button" class="btn btn-sm btn-success dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                             </button>
                                             <ul class="dropdown-menu" aria-labelledby="btnGroupDrop1">
                                             <li><a class="dropdown-item" onclick="print(${orden.id}, 'USD')">Imprimir en dolares</a></li>
