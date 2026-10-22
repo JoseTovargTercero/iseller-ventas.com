@@ -8,7 +8,8 @@ DirectorySlash Off
 RewriteRule ^inven?tario/?$ landing.php [L]
 
 # La app POS se sirve bajo /inventario/ (mismas rutas que la raíz del proyecto)
-RewriteRule ^inventario/(.+)$ $1 [L,QSA]
+# Se acepta también la variante con typo /invetario/ que ya usa la portada.
+RewriteRule ^inven?tario/(.+)$ $1 [L,QSA]
 
 # Rutas de autenticación (antes del router de slugs de tiendas)
 RewriteRule ^login/?$ login.php [L,QSA]
