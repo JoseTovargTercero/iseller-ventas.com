@@ -59,6 +59,9 @@ class CalculadoraPrecios
         $porcentaje = (float) $producto["porcentaje"];
         $mayor = $producto["mayor"];
         $cantidad_por_precio = ($mayor == '1' ? 1 : $cantidadUnidad);
+        if ($cantidad_por_precio <= 0) {
+            $cantidad_por_precio = 1;
+        }
 
         // verifica si $this->recompensas esta vacio
         if (empty($this->recompensas)) {
@@ -290,7 +293,7 @@ class CalculadoraPrecios
             return 100;
         }
 
-        $residuo = $valor % 100;
+        $residuo = fmod($valor, 100);
 
         if ($residuo >= 50) {
             return ceil($valor / 100) * 100; // Redondear hacia la siguiente centena
