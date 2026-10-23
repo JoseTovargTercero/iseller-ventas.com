@@ -194,6 +194,44 @@ ORDER BY total DESC
     ];
   }
 
+  // Top 5 productos más rentables (mayor ganancia) en el mismo período
+  $topProductosRentables = [];
+  $sqlRent = "
+    SELECT 
+        t.product_id,
+        COALESCE(p.nombre, CONCAT('Producto #', t.product_id)) AS producto,
+        t.total_vendido AS cantidad,
+        t.ingreso_total AS ingreso,
+        t.ganancia_total AS ganancia
+    FROM (
+        SELECT 
+            oa.product_id,
+            SUM(CAST(oa.quantity AS DECIMAL(10,2))) AS total_vendido,
+            SUM(CAST(oa.quantity AS DECIMAL(10,2)) * CAST(oa.precio_venta_dolar AS DECIMAL(10,2))) AS ingreso_total,
+            SUM(CAST(oa.quantity AS DECIMAL(10,2)) * (CAST(oa.precio_venta_dolar AS DECIMAL(10,2)) - CAST(oa.precio AS DECIMAL(10,2)))) AS ganancia_total
+        FROM orden_articulos oa
+        INNER JOIN orden o ON oa.order_id = o.id
+        WHERE o.bss_id = $bss_id
+          AND o.status IN (1,4)
+          $extraCond $userCondO $periodCondProductos
+        GROUP BY oa.product_id
+        ORDER BY ganancia_total DESC
+        LIMIT 5
+    ) t
+    LEFT JOIN productos p ON t.product_id = p.id
+    ORDER BY t.ganancia_total DESC
+  ";
+
+  $resRent = $conexion->query($sqlRent);
+  while ($resRent && $row = $resRent->fetch_assoc()) {
+    $topProductosRentables[] = [
+      'producto' => $row['producto'],
+      'cantidad' => (int)$row['cantidad'],
+      'ingreso'  => (float)$row['ingreso'],
+      'ganancia' => (float)$row['ganancia']
+    ];
+  }
+
 
 
 
@@ -415,7 +453,8 @@ ORDER BY total DESC
     'topClientes' => $topClientes,
     'ventasPorSucursal' => $ventasPorSucursal,
     'ventasPorHora' => $ventasPorHora,
-    'topProductos' => $topProductos
+    'topProductos' => $topProductos,
+    'topProductosRentables' => $topProductosRentables
   ]);
   ob_end_flush();
 } catch (Throwable $e) {

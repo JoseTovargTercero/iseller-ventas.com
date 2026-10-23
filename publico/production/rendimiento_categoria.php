@@ -477,6 +477,17 @@ if ($tipo_u === 1) {
             gap: 20px;
         }
 
+        .analytics-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 0;
+        }
+
+        .analytics-col .dash-panel {
+            margin-bottom: 0;
+        }
+
         @media (max-width: 1024px) {
             .kpi-row-3 {
                 grid-template-columns: 1fr;
@@ -656,14 +667,28 @@ if ($tipo_u === 1) {
                     </div>
 
                     <!-- Clasificacion Top 5 -->
-                    <div class="dash-panel">
-                        <div class="panel-header">
-                            <h6>Top 5 Productos Más Vendidos</h6>
-                            <span class="panel-badge">Esta semana</span>
+                    <div class="analytics-col">
+                        <div class="dash-panel">
+                            <div class="panel-header">
+                                <h6>Top 5 Productos Más Vendidos</h6>
+                                <span class="panel-badge">Esta semana</span>
+                            </div>
+                            <div class="panel-body p-0">
+                                <div class="rank-list" id="contenedorTopProductos">
+                                    <!-- Filas cargadas dinamicamente -->
+                                </div>
+                            </div>
                         </div>
-                        <div class="panel-body p-0">
-                            <div class="rank-list" id="contenedorTopProductos">
-                                <!-- Filas cargadas dinamicamente -->
+
+                        <div class="dash-panel">
+                            <div class="panel-header">
+                                <h6>Top 5 Productos Más Rentables</h6>
+                                <span class="panel-badge">Por ganancia · Esta semana</span>
+                            </div>
+                            <div class="panel-body p-0">
+                                <div class="rank-list" id="contenedorTopRentables">
+                                    <!-- Filas cargadas dinamicamente -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -814,6 +839,46 @@ if ($tipo_u === 1) {
                 container.innerHTML = html;
             }
 
+            function renderTopRentables(topList) {
+                const container = document.getElementById('contenedorTopRentables');
+                if (!container) return;
+
+                if (!topList || topList.length === 0) {
+                    container.innerHTML = `
+                        <div class="rank-empty">
+                            No se registran ventas para esta categoría durante la semana actual.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                topList.forEach((item, index) => {
+                    const posNumber = String(index + 1).padStart(2, '0');
+                    const unidadesLabel = Number(item.unidades) === 1 ? '1 unidad' : `${item.unidades} unidades`;
+                    const ganancia = Number(item.ganancia) || 0;
+
+                    html += `
+                        <div class="rank-item">
+                            <div class="rank-index">${posNumber}</div>
+                            <div class="rank-info">
+                                <h6 title="${item.nombre}">${item.nombre}</h6>
+                                <small>
+                                    Vendido: <span>${unidadesLabel}</span>
+                                    Stock: <span>${item.stock}</span>
+                                </small>
+                            </div>
+                            <div class="rank-financials">
+                                <div class="rank-total" style="color:${ganancia >= 0 ? 'var(--dash-mint)' : 'var(--dash-danger)'};">${ganancia >= 0 ? '+' : '-'}${formatMoney(Math.abs(ganancia))}</div>
+                                <div class="rank-profit" style="color:var(--dash-text-muted);">${formatMoney(item.ingreso)} venta</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            }
+
             function cargarDatos() {
                 const selectCat = document.getElementById('selectCategoria');
                 const selectSuc = document.getElementById('selectSucursal');
@@ -887,6 +952,7 @@ if ($tipo_u === 1) {
 
                         // 5. Actualizar Clasificacion de Productos
                         renderTopProductos(data.top_productos);
+                        renderTopRentables(data.top_productos_rentables);
                     })
                     .catch(err => {
                         if (btnRef) btnRef.classList.remove('spinning');

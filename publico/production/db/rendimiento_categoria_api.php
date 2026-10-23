@@ -252,7 +252,8 @@ if ($resChart) {
     }
 }
 
-// 7. Top 5 productos más vendidos de la categoría en la semana actual
+// 7. Productos vendidos de la categoría en la semana actual.
+// De la misma lista se generan dos rankings: más vendidos y más rentables.
 $sqlTop = "
     SELECT 
         p.id AS producto_id,
@@ -270,16 +271,13 @@ $sqlTop = "
       $extraCondOrden
     GROUP BY p.id, p.nombre
     ORDER BY unidades_vendidas DESC, total_ingreso DESC
-    LIMIT 5
 ";
 
-$topProductos = [];
+$productosSemana = [];
 $resTop = $conexion->query($sqlTop);
 if ($resTop && $resTop->num_rows > 0) {
-    $product_ids = [];
     while ($rowT = $resTop->fetch_assoc()) {
-        $product_ids[] = (int)$rowT['producto_id'];
-        $topProductos[] = [
+        $productosSemana[] = [
             'id' => (int)$rowT['producto_id'],
             'nombre' => $rowT['producto_nombre'],
             'unidades' => (float)$rowT['unidades_vendidas'],
@@ -288,8 +286,9 @@ if ($resTop && $resTop->num_rows > 0) {
             'stock' => 0
         ];
     }
-    
-    // Obtener stock actual de los productos top de forma independiente (evitando joins duplicados)
+
+    // Obtener stock actual de los productos vendidos (evitando joins duplicados)
+    $product_ids = array_map('intval', array_column($productosSemana, 'id'));
     if (!empty($product_ids)) {
         $inIds = implode(',', $product_ids);
         $sqlProdStock = "SELECT id_producto, COALESCE(SUM(CAST(stock AS DECIMAL(10,2))), 0) AS total_stock FROM stock s WHERE id_producto IN ($inIds) AND bss_id = $bss_id $extraCondStock GROUP BY id_producto";
@@ -300,12 +299,28 @@ if ($resTop && $resTop->num_rows > 0) {
                 $stockMap[(int)$rowS['id_producto']] = (float)$rowS['total_stock'];
             }
         }
-        foreach ($topProductos as &$itemP) {
+        foreach ($productosSemana as &$itemP) {
             $itemP['stock'] = $stockMap[$itemP['id']] ?? 0;
         }
         unset($itemP);
     }
 }
+
+// Top 5 por unidades vendidas
+$topProductos = $productosSemana;
+usort($topProductos, function ($a, $b) {
+    $cmp = $b['unidades'] <=> $a['unidades'];
+    return $cmp !== 0 ? $cmp : ($b['ingreso'] <=> $a['ingreso']);
+});
+$topProductos = array_slice($topProductos, 0, 5);
+
+// Top 5 por ganancia generada
+$topProductosRentables = $productosSemana;
+usort($topProductosRentables, function ($a, $b) {
+    $cmp = $b['ganancia'] <=> $a['ganancia'];
+    return $cmp !== 0 ? $cmp : ($b['ingreso'] <=> $a['ingreso']);
+});
+$topProductosRentables = array_slice($topProductosRentables, 0, 5);
 
 // 8. Responder JSON con toda la estructura
 echo json_encode([
@@ -339,5 +354,6 @@ echo json_encode([
         'ventas' => array_values($diasVentas),
         'ganancias' => array_values($diasGanancias)
     ],
-    'top_productos' => $topProductos
+    'top_productos' => $topProductos,
+    'top_productos_rentables' => $topProductosRentables
 ], JSON_UNESCAPED_UNICODE);

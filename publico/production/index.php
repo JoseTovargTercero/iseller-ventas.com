@@ -835,7 +835,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 mb-3 d-flex">
+                        <div class="col-lg-4 mb-3">
                             <div class="dash-panel w-100 d-flex flex-column">
                                 <div class="panel-header">
                                     <h6><ion-icon name="flame-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Top 5 productos más vendidos</h6>
@@ -848,6 +848,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                 </div>
                                 <div class="panel-body p-0 flex-fill" id="topProductosContainer" style="max-height:380px;overflow-y:auto;">
+                                    <div style="padding:30px 22px;text-align:center;color:var(--dash-text-muted);font-size:13px;">Cargando...</div>
+                                </div>
+                            </div>
+
+                            <div class="dash-panel w-100">
+                                <div class="panel-header">
+                                    <h6><ion-icon name="trending-up-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Top 5 productos más rentables</h6>
+                                    <div class="chart-controls">
+                                        <span class="date-badge" style="font-size:11px;">Por ganancia</span>
+                                    </div>
+                                </div>
+                                <div class="panel-body p-0" id="topRentablesContainer" style="max-height:380px;overflow-y:auto;">
                                     <div style="padding:30px 22px;text-align:center;color:var(--dash-text-muted);font-size:13px;">Cargando...</div>
                                 </div>
                             </div>
@@ -1396,6 +1408,37 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 container.innerHTML = html;
             }
 
+            function renderTopRentables(data) {
+                const container = document.getElementById('topRentablesContainer');
+                if (!container) return;
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="rank-empty">Sin datos</div>';
+                    return;
+                }
+                let html = '';
+                data.forEach((item, i) => {
+                    const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                    const icon = i === 0 ? '<ion-icon name="trophy-outline"></ion-icon>' : i === 1 ? '<ion-icon name="medal-outline"></ion-icon>' : i === 2 ? '<ion-icon name="ribbon-outline"></ion-icon>' : (i + 1);
+                    const ganancia = Number(item.ganancia) || 0;
+                    const gananciaTxt = '$' + Math.abs(ganancia).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+                    const ingreso = Number(item.ingreso).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+                    html += `
+                        <div class="rank-item">
+                            <div class="rank-badge ${badgeClass}" style="width:28px;height:28px;font-size:11px;">${icon}</div>
+                            <div class="rank-info">
+                                <h6>${item.producto}</h6>
+                                <small>${item.cantidad} vendidos · $${ingreso} en ventas</small>
+                            </div>
+                            <div class="rank-financials">
+                                <div class="rank-total" style="font-size:14px;color:${ganancia >= 0 ? 'var(--dash-mint)' : 'var(--dash-danger)'};">${ganancia >= 0 ? '+' : '-'}${gananciaTxt}</div>
+                                <div class="rank-profit" style="color:var(--dash-text-muted);">ganancia</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+
             function renderTopClientes(data) {
                 const container = document.getElementById('topClientesContainer');
                 if (!data || data.length === 0) {
@@ -1591,6 +1634,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         }
 
                         renderTopProductos(json.topProductos);
+                        renderTopRentables(json.topProductosRentables);
                         renderTopClientes(json.topClientes);
                         renderInformacionInteres(json);
 
