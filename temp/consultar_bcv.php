@@ -1,16 +1,16 @@
 <?php
 
-
 function cargarDotEnv($ruta)
 {
     if (!file_exists($ruta)) {
-        echo error_log("Archivo .env no encontrado en $ruta");
+        error_log("Archivo .env no encontrado en $ruta");
         return;
     }
 
     $lineas = file($ruta, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lineas as $linea) {
         if (strpos(trim($linea), '#') === 0) continue; // Ignorar comentarios
+        if (strpos($linea, '=') === false) continue;
 
         list($nombre, $valor) = explode('=', $linea, 2);
         $nombre = trim($nombre);
@@ -23,17 +23,48 @@ function cargarDotEnv($ruta)
     }
 }
 
-cargarDotEnv(dirname(__DIR__) . '/env');
+// Busca .env en la carpeta del script, la del proyecto o dos niveles arriba.
+$envFile = null;
+foreach ([__DIR__, dirname(__DIR__), dirname(__DIR__, 2), dirname(__DIR__, 3)] as $dir) {
+    foreach (['.env', 'env'] as $nombre) {
+        $candidato = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $nombre;
+        if (is_file($candidato) && is_readable($candidato)) {
+            $envFile = $candidato;
+            break 2;
+        }
+    }
+}
+if ($envFile === null) {
+    fwrite(STDERR, "No se encontró el archivo .env" . PHP_EOL);
+    exit(1);
+}
+cargarDotEnv($envFile);
+
+if (!isset($_ENV['DB_USER'], $_ENV['DB_PASS'], $_ENV['DB_NAME'])) {
+    fwrite(STDERR, "Faltan DB_USER, DB_PASS o DB_NAME en el .env" . PHP_EOL);
+    exit(1);
+}
+
 $usuario = $_ENV['DB_USER'];
 $contrasena = $_ENV['DB_PASS'];
 $baseDeDatos = $_ENV['DB_NAME'];
-$apiKey = $_ENV['API_KEY'];
+$apiKey = $_ENV['API_KEY'] ?? '';
 
+mysqli_report(MYSQLI_REPORT_OFF);
 $conexion = new mysqli('localhost', $usuario, $contrasena, $baseDeDatos);
 $conexion->set_charset('utf8');
 
 if ($conexion->connect_error) {
-    die('Error de conexion: ' . $conexion->connect_error);
+    fwrite(STDERR, 'Error de conexión: ' . $conexion->connect_error . PHP_EOL);
+    exit(1);
+}
+
+// Modo de verificación: no consulta el BCV ni modifica datos.
+if (in_array('--check', $argv ?? [], true)) {
+    $check = $conexion->query("SELECT DATABASE() AS db, COUNT(*) AS historico FROM cambios_bcv_historico");
+    $data = $check ? $check->fetch_assoc() : ['db' => null, 'historico' => null];
+    echo 'DB OK: ' . json_encode($data) . PHP_EOL;
+    exit(0);
 }
 
 $internetError = false;
@@ -49,25 +80,76 @@ $ultima_actualizacion = new DateTime(
 
 $stmt->close();
 
+
+
 // Obtener el valor
 function obtenerTasaDeApi(&$internetError)
 {
-    global $apiKey;
-    $url = "https://v6.exchangerate-api.com/v6/$apiKey/pair/USD/VES";
 
-    try {
-        $response = @file_get_contents($url);
-        if ($response === false) {
-            $internetError = true;
-            return 0;
-        }
-        $data = json_decode($response, true);
-        return $data['conversion_rate'];
-    } catch (Exception $e) {
-        $internetError = true;
-        return 0;
-    }
+// 1. Desactivar temporalmente la verificación estricta de SSL para esta petición
+// Recuerda que el BCV suele fallar con sus certificados.
+$contexto = stream_context_create([
+    "ssl" => [
+        "verify_peer" => false,
+        "verify_peer_name" => false,
+    ],
+    "http" => [
+        "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+    ]
+]);
+
+$url = "https://www.bcv.org.ve/";
+
+// 2. Descargar el HTML de la página
+$html = @file_get_contents($url, false, $contexto);
+
+if ($html === false) {
+   $internetError = true;
+
+   return false;
 }
+
+// 3. Cargar el HTML en el parser de PHP
+$doc = new DOMDocument();
+// El @ evita que PHP lance advertencias por errores de HTML interno del BCV
+@$doc->loadHTML($html);
+$xpath = new DOMXPath($doc);
+
+// 4. Buscar los contenedores por su ID usando XPath
+// En el HTML del BCV, el valor está dentro de un <strong> dentro del div #dolar o #euro
+$query_usd = '//div[@id="dolar"]//strong';
+$query_eur = '//div[@id="euro"]//strong';
+
+$node_usd = $xpath->query($query_usd);
+$node_eur = $xpath->query($query_eur);
+
+$tasas = ['USD' => null, 'EUR' => null];
+
+if ($node_usd->length > 0) {
+    $valor_usd = trim($node_usd->item(0)->nodeValue);
+    // Convertir formato coma (45,50) a punto (45.50)
+    $tasas['USD'] = (float)str_replace(',', '.', $valor_usd);
+}
+
+if ($node_eur->length > 0) {
+    $valor_eur = trim($node_eur->item(0)->nodeValue);
+    $tasas['EUR'] = (float)str_replace(',', '.', $valor_eur);
+}
+
+// 5. PROCESAR LOS DATOS
+if ($tasas['USD']) {
+   $internetError = false;
+
+  return $tasas['USD'];
+} else {
+   $internetError = true;
+   return false;
+}
+}
+
+
+
+
 
 $tasa = obtenerTasaDeApi($internetError);
 
@@ -120,3 +202,4 @@ if ($result->num_rows > 0) {
 }
 $stmt->close();
 $stmt2->close();
+
