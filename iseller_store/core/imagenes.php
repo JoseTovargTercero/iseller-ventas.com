@@ -43,9 +43,6 @@ function imagen_guardar_webp(
     // El MIME detectado por el contenido debe coincidir con el de getimagesize().
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mimeReal = $finfo ? (string)finfo_file($finfo, $tmp) : '';
-    if ($finfo) {
-        finfo_close($finfo);
-    }
     if ($mimeReal !== $mime) {
         return null;
     }
@@ -75,7 +72,6 @@ function imagen_guardar_webp(
 
     $destinoImg = imagecreatetruecolor($nuevoAncho, $nuevoAlto);
     if (!$destinoImg) {
-        imagedestroy($origen);
         return null;
     }
     if ($mime === 'image/png' || $mime === 'image/webp') {
@@ -85,17 +81,14 @@ function imagen_guardar_webp(
         imagefilledrectangle($destinoImg, 0, 0, $nuevoAncho, $nuevoAlto, $transparente);
     }
     imagecopyresampled($destinoImg, $origen, 0, 0, 0, 0, $nuevoAncho, $nuevoAlto, $ancho, $alto);
-    imagedestroy($origen);
 
     if (!is_dir($directorio) && !mkdir($directorio, 0775, true)) {
-        imagedestroy($destinoImg);
         return null;
     }
 
     $nombre = $prefijo . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.webp';
     $ruta = rtrim($directorio, '/\\') . DIRECTORY_SEPARATOR . $nombre;
     $ok = imagewebp($destinoImg, $ruta, 85);
-    imagedestroy($destinoImg);
 
     return $ok ? $nombre : null;
 }

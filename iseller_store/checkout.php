@@ -85,7 +85,7 @@ if (@$getUserLevel) {
     $stmtFoto->close();
 }
 
-$nombreCompleto = htmlspecialchars(getUserName());
+$nombreCompleto = htmlspecialchars(getUserName() ?? '');
 $primerNombre = explode(" ", $nombreCompleto)[0];
 $primerNombre = ucfirst(strtolower($primerNombre));
 

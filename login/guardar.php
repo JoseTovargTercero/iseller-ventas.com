@@ -34,12 +34,13 @@ if ($result->num_rows === 1) {
         // Regenerar ID de sesión por seguridad
         if (session_status() === PHP_SESSION_NONE) {
             $duracion = 10800;
+            $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
             session_set_cookie_params([
                 'lifetime' => $duracion, // Hasta que se cierre el navegador
                 'path' => '/',
                 'domain' => '',
-                'secure' => true,       // Solo con HTTPS
+                'secure' => $esHttps,       // Solo con HTTPS
                 'httponly' => true,     // No accesible desde JS
                 'samesite' => 'Strict'  // Previene CSRF
             ]);
@@ -48,7 +49,6 @@ if ($result->num_rows === 1) {
 
             ini_set('session.gc_maxlifetime', $duracion);
             ini_set('session.cookie_lifetime', $duracion);
-            session_set_cookie_params($duracion);
 
 
             session_start();

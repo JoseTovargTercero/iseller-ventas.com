@@ -7,9 +7,6 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Importante para obtener la re
 // Ejecutar la solicitud y obtener la respuesta como string
 $response = curl_exec($ch);
 
-// Cerrar cURL
-curl_close($ch);
-
 // Verificar si hubo error
 if ($response === false) {
     die("Error al obtener datos");
@@ -51,8 +48,6 @@ if (curl_errno($ch)) {
     die("Error al conectar a la URL: " . curl_error($ch));
 }
 
-// Cerrar cURL
-curl_close($ch);
 print_r($response);
 
 // Guardar el contenido HTML en un archivo para inspección

@@ -10,8 +10,8 @@ if (!isset($_SESSION['nivel']) || $_SESSION['nivel'] != 1) {
 
 
 // Obtener y validar los datos del formulario
-$nombre = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
-$user = filter_input(INPUT_POST, 'user', FILTER_SANITIZE_STRING);
+$nombre = htmlspecialchars(strip_tags((string) filter_input(INPUT_POST, 'name', FILTER_UNSAFE_RAW)), ENT_QUOTES, 'UTF-8');
+$user = htmlspecialchars(strip_tags((string) filter_input(INPUT_POST, 'user', FILTER_UNSAFE_RAW)), ENT_QUOTES, 'UTF-8');
 $contrasena = filter_input(INPUT_POST, 'password', FILTER_DEFAULT);
 $conf_contrasena = filter_input(INPUT_POST, 'password2', FILTER_DEFAULT);
 $nivel = filter_input(INPUT_POST, 'nivel', FILTER_VALIDATE_INT);

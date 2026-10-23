@@ -33,7 +33,6 @@
                     }
                 }
 
-                curl_close($ch);
             }
 
             obtenerTiposDeCambio()

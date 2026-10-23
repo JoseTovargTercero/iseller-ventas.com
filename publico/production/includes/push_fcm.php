@@ -99,7 +99,6 @@ if (!function_exists('push_habilitado')) {
             $resp = curl_exec($ch);
             $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err  = curl_error($ch);
-            curl_close($ch);
 
             return ['status' => $code, 'body' => $resp === false ? $err : $resp];
         }

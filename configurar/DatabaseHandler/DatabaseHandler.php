@@ -24,7 +24,7 @@ class DatabaseHandler
      * @throws Exception Si hay un error al preparar o ejecutar la consulta.
      * @return string Resultado de la consulta en formato JSON, con los datos seleccionados.
      */
-    public function select($columnas = ['*'], $nombre_tabla, $condicion = "", $order_by = [], $join = [])
+    public function select($columnas, $nombre_tabla, $condicion = "", $order_by = [], $join = [])
     {
         $data = [];
 

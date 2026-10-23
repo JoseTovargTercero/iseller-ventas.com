@@ -58,6 +58,7 @@ $contrasena = $_ENV['DB_PASS'];
 $baseDeDatos = $_ENV['DB_NAME'];
 
 
+mysqli_report(MYSQLI_REPORT_OFF);
 $conexion = new mysqli('localhost', $usuario, $contrasena, $baseDeDatos);
 $conexion->set_charset('utf8');
 

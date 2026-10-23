@@ -1,5 +1,5 @@
 <?php
-require_once('lib/pdf/mpdf.php');
+require_once('TCPDF-main/tcpdf.php');
 require_once('../../../configurar/configuracion.php');
 require("../../../configurar/_tasas_cambio.php");
 
@@ -29,7 +29,6 @@ $html = '   <head>
 
 $query6 = $conexion->query("SELECT * FROM productos WHERE activo=0 ORDER BY nombre ASC");
 if ($query6->num_rows > 0) {
-  echo "hola mundo";
   $contador = 1;
   while ($row6 = $query6->fetch_assoc()) {
     $cantidadUnidad = $row6["cantidad_unidades"];
@@ -80,8 +79,12 @@ $html .= '    </tbody>
 
 
 
-$mpdf = new mPDF('c', 'A4');
-$css = file('style.css');
-$mpdf->writeHTML($css, 1);
-$mpdf->writeHTML($html);
-$mpdf->Output('Etiquetas.pdf', 'I')
+$pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+$pdf->setPrintHeader(false);
+$pdf->setPrintFooter(false);
+$pdf->SetMargins(10, 10, 10);
+$pdf->SetAutoPageBreak(true, 10);
+$pdf->AddPage();
+$css = file_get_contents('style.css');
+$pdf->writeHTML('<style>' . $css . '</style>' . $html, true, false, true, false, '');
+$pdf->Output('Etiquetas.pdf', 'I');

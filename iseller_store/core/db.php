@@ -59,6 +59,7 @@ $baseDeDatos = $_ENV['DB_NAME'];
 $baseDeDatos_store = isset($_ENV['DB_NAME_STORE']) ? $_ENV['DB_NAME_STORE'] : $_ENV['DB_NAME'];
 
 
+mysqli_report(MYSQLI_REPORT_OFF);
 $conexion = new mysqli('localhost', $usuario, $contrasena, $baseDeDatos);
 $conexion->set_charset('utf8');
 

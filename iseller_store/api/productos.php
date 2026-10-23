@@ -41,8 +41,6 @@ function optimizeImage($srcPath, $destPath, $maxWidth = 400, $quality = 75) {
     }
     imagecopyresampled($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
     imagewebp($thumb, $destPath, $quality);
-    imagedestroy($image);
-    imagedestroy($thumb);
     return true;
 }
 

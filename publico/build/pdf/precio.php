@@ -1,5 +1,5 @@
 <?php
-require_once('lib/pdf/mpdf.php');
+require_once('TCPDF-main/tcpdf.php');
 require_once('../../../configurar/configuracion.php');
 
 
@@ -62,8 +62,12 @@ if ($buscarAlumnos22->num_rows > 0) {
                 ';
 }
 
-$mpdf = new mPDF('c', 'A4');
-$css = file('style.css');
-$mpdf->writeHTML($css, 1);
-$mpdf->writeHTML($html);
-$mpdf->Output('Etiquetas.pdf', 'I')
+$pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+$pdf->setPrintHeader(false);
+$pdf->setPrintFooter(false);
+$pdf->SetMargins(10, 10, 10);
+$pdf->SetAutoPageBreak(true, 10);
+$pdf->AddPage();
+$css = file_get_contents('style.css');
+$pdf->writeHTML('<style>' . $css . '</style>' . $html, true, false, true, false, '');
+$pdf->Output('Etiquetas.pdf', 'I');

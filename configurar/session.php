@@ -2,12 +2,13 @@
 if (session_status() === PHP_SESSION_NONE) {
 
     $duracion = 10800;
+    $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
     session_set_cookie_params([
         'lifetime' => $duracion, // Hasta que se cierre el navegador
         'path' => '/',
         'domain' => '',
-        'secure' => true,       // Solo con HTTPS
+        'secure' => $esHttps,       // Solo con HTTPS
         'httponly' => true,     // No accesible desde JS
         'samesite' => 'Strict'  // Previene CSRF
     ]);
@@ -16,7 +17,6 @@ if (session_status() === PHP_SESSION_NONE) {
     // Ajustar parámetros de la sesión
     ini_set('session.gc_maxlifetime', $duracion);
     ini_set('session.cookie_lifetime', $duracion);
-    session_set_cookie_params($duracion);
 
 
     session_start();

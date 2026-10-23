@@ -2367,7 +2367,7 @@ if ($es_tienda_individual && $negocio_data) {
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title text-white fw-bold"><i class="bi bi-geo-alt-fill me-2"></i> <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre'], ENT_QUOTES) ?></h5>
+                    <h5 class="modal-title text-white fw-bold"><i class="bi bi-geo-alt-fill me-2"></i> <?= htmlspecialchars(($negocio_data['nombre_visible'] ?? '') ?: ($negocio_data['nombre'] ?? ''), ENT_QUOTES) ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
@@ -2432,7 +2432,7 @@ if ($es_tienda_individual && $negocio_data) {
                 </div>
                 <div class="modal-body p-0">
                     <div class="p-3 border-bottom bg-light">
-                        <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars(getUserName()); ?></h6>
+                        <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars(getUserName() ?? ''); ?></h6>
                     </div>
                     <div class="list-group list-group-flush">
                         <a href="perfil.php" class="list-group-item list-group-item-action py-3">

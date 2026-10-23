@@ -37,9 +37,9 @@ function fechaEnTexto($fecha, $formato24h = false)
     $timestamp = strtotime($fecha);
 
     // Obtener partes de la fecha
-    $dia = strftime('%d', $timestamp);
+    $dia = date('d', $timestamp);
     $mes = $meses[date('n', $timestamp)];
-    $anio = strftime('%Y', $timestamp);
+    $anio = date('Y', $timestamp);
 
     if ($formato24h) {
         $hora = date('H:i', $timestamp);

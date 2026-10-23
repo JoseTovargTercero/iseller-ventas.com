@@ -930,31 +930,32 @@ if ($modoDescarga == "F" && $cierre == "1") {
 
 
 
-    require 'phpmailer/class.phpmailer.php';
-    require 'phpmailer/class.smtp.php'; //incluimos la clase para envíos por SMTP
-    $mail = new PHPMailer();
+    require 'phpmailer/src/Exception.php';
+    require 'phpmailer/src/PHPMailer.php';
+    require 'phpmailer/src/SMTP.php';
+    $mail = new \PHPMailer\PHPMailer\PHPMailer();
 
     $mail->From     = $Email;
     $mail->FromName = $Nombre;
-    $mail->AddAddress("$correo"); // Dirección a la que llegaran los mensajes.
+    $mail->addAddress("$correo"); // Dirección a la que llegaran los mensajes.
 
 
 
     // Aquí van los datos que apareceran en el correo que reciba
 
     $mail->WordWrap = 50;
-    $mail->IsHTML(true);
+    $mail->isHTML(true);
     $mail->Subject  =  "Contacto";
     $mail->Body     =  "MOTIVO: $Nombre \n<br />" .
         "REMITENTE: $Email \n<br />" .
         "NOTA: $Mensaje \n<br />";
-    //$mail->AddAttachment($archivo['tmp_name'], $archivo['name']);   
-    $mail->AddAttachment($archivo);
+    //$mail->addAttachment($archivo['tmp_name'], $archivo['name']);   
+    $mail->addAttachment($archivo);
 
 
     // Datos del servidor SMTP
 
-    $mail->IsSMTP();
+    $mail->isSMTP();
     $mail->CharSet = 'UTF-8';
     $mail->SMTPAuth = true;
     $mail->SMTPSecure = "ssl";
@@ -964,7 +965,7 @@ if ($modoDescarga == "F" && $cierre == "1") {
     $mail->Password = 'jose272727';
     $mail->FromName = 'MI TIENDA'; // 
     $mail->From = 'mtienda81@gmail.com'; //email de remitente desde donde se envía el correo, este caso para evitar spam es el mismo que tu correo gmail
-    if ($mail->Send()) {
+    if ($mail->send()) {
 
         if (unlink('AVANCE_MESUAL.pdf')) {
 

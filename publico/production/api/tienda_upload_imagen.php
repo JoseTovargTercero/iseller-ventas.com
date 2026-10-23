@@ -36,8 +36,6 @@ function optimizeImage($srcPath, $destPath, $maxWidth = 400, $quality = 75) {
     
     imagecopyresampled($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
     $result = imagewebp($thumb, $destPath, $quality);
-    imagedestroy($image);
-    imagedestroy($thumb);
     return $result;
 }
 
@@ -127,7 +125,6 @@ if ($file['size'] > $max_size) {
 // Validar MIME real
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
 $mime = finfo_file($finfo, $file['tmp_name']);
-finfo_close($finfo);
 $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
 if (!in_array($mime, $allowed_mimes)) {
     http_response_code(400);
