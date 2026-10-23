@@ -26,6 +26,7 @@ set_exception_handler(function () {
 });
 
 require_once __DIR__ . '/../configurar/configuracion.php';
+require_once __DIR__ . '/../iseller_store/core/estados_orden.php';
 
 function salir(int $code, array $body): void
 {
@@ -127,6 +128,9 @@ try {
     $stmt->bind_param('ii', $ordenId, $bssId);
     $stmt->execute();
     $stmt->close();
+
+    // Historial: hora exacta en que la app marcó el pedido como entregado
+    registrar_estado_orden($conexion, $ordenId, $bssId, 4, 'app');
 
     // Réplica al historial del cliente, para que vea el pedido entregado
     $stmt = $conexion->prepare("UPDATE tienda_compras_por_usuarios SET estatus = 'entregada', estado = 'entregada' WHERE compra_id = ?");

@@ -22,15 +22,18 @@ ob_start();
     $estadoMemMenu = MembresiaHelper::obtenerEstado($conexion, $bss_id);
 
     $tiene_tienda = 0;
+    $tienda_creada = false;
     $pendientes = 0;
     if ($bss_id > 0) {
-      $stmtTienda = mysqli_prepare($conexion, "SELECT tiene_tienda_virtual FROM negocio WHERE id = ?");
+      $stmtTienda = mysqli_prepare($conexion, "SELECT tiene_tienda_virtual, slug FROM negocio WHERE id = ?");
       if ($stmtTienda) {
         $stmtTienda->bind_param("i", $bss_id);
         $stmtTienda->execute();
         $resTienda = $stmtTienda->get_result();
         if ($rowTienda = $resTienda->fetch_assoc()) {
           $tiene_tienda = (int)$rowTienda['tiene_tienda_virtual'];
+          // Con slug ya se creó la tienda alguna vez (aunque esté desactivada).
+          $tienda_creada = trim((string)($rowTienda['slug'] ?? '')) !== '';
         }
         $stmtTienda->close();
       }
@@ -59,9 +62,12 @@ ob_start();
         $cat_lower = strtolower($row['categoria'] ?? '');
         $is_tienda_cat = ($cat_lower === 'tienda virtual' || $cat_lower === 'tienda online');
 
-        // Si es de tienda y el negocio aún no tiene tienda activa, no cargamos los subitems normales
+        // Tienda activa: se muestran todos los subitems. Desactivada (pero ya
+        // creada): solo Configuración, que es desde donde se reactiva.
         if ($is_tienda_cat && !$tiene_tienda) {
-          continue;
+          if (!($tienda_creada && $row['dir'] === 'tienda_configuracion.php')) {
+            continue;
+          }
         }
 
         // Si no tiene enlace o es un permiso interno sin ruta de menú, no mostrar en el menú
@@ -106,7 +112,7 @@ ob_start();
     $stmt->close();
 
     // Si el negocio NO tiene tienda virtual y es admin (nivel 1), mostrar opción para crearla
-    if (!$tiene_tienda && $_SESSION["nivel"] == 1) {
+    if (!$tiene_tienda && !$tienda_creada && $_SESSION["nivel"] == 1) {
       $menu_list['Tienda Online'] = [
         "tipo"      => "categoria",
         "categoria" => "Tienda Online",

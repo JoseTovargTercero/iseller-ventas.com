@@ -1,6 +1,7 @@
 <?php
 require_once('../../../configurar/configuracion.php');
 require_once('../../../configurar/session.php');
+require_once('../../../iseller_store/core/estados_orden.php');
 
 if (!isset($_SESSION['bss_id'])) {
     http_response_code(403);
@@ -10,6 +11,10 @@ if (!isset($_SESSION['bss_id'])) {
 
 $bss_id = $_SESSION['bss_id'] ?? null;
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
+
+// La tabla de planes es utf8mb4; con la conexión en utf8 (3 bytes) un nombre
+// con emoji falla en hosting con sql_mode estricto.
+$conexion->set_charset('utf8mb4');
 
 header('Content-Type: application/json');
 
@@ -126,6 +131,9 @@ if ($action === 'cambiar_estado') {
         $stmt->execute();
         $stmt->close();
 
+        // 1b. Historial: hora exacta del cambio de estado (misma transacción)
+        registrar_estado_orden($conexion, $id, (int)$bss_id, $status, 'panel');
+
         // 2. Replicar estatus al historial del cliente
         $stmt = $conexion->prepare("UPDATE tienda_compras_por_usuarios SET estatus = ?, estado = ? WHERE compra_id = ?");
         $stmt->bind_param("ssi", $estatus_cliente, $estatus_cliente, $id);
@@ -234,7 +242,7 @@ function generarCodigoPlan(mysqli $conexion): string {
 }
 
 if ($action === 'crear_plan_entrega') {
-    $nombre  = trim($_POST['nombre'] ?? '');
+    $nombre  = trim((string)($_POST['nombre'] ?? ''));
     $user_id = (int)($_SESSION['id'] ?? 0);
     $bss_val = (int)$bss_id;
 
@@ -242,24 +250,64 @@ if ($action === 'crear_plan_entrega') {
         echo json_encode(['ok' => false, 'msg' => 'El nombre del plan es obligatorio']);
         exit;
     }
-
-    $codigo = generarCodigoPlan($conexion);
-    $stmt = $conexion->prepare("INSERT INTO tienda_planes_entrega (bss_id, user_id, nombre, codigo) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("iiss", $bss_val, $user_id, $nombre, $codigo);
-    if (!$stmt->execute()) {
-        $stmt->close();
-        echo json_encode(['ok' => false, 'msg' => 'No se pudo crear el plan de entrega']);
+    if (mb_strlen($nombre) > 120) {
+        echo json_encode(['ok' => false, 'msg' => 'El nombre del plan no puede superar los 120 caracteres']);
         exit;
     }
-    $plan_id = (int)$stmt->insert_id;
-    $stmt->close();
 
-    echo json_encode([
-        'ok'      => true,
-        'plan_id' => $plan_id,
-        'nombre'  => $nombre,
-        'codigo'  => $codigo
-    ]);
+    try {
+        $plan_id = 0;
+        $codigo = '';
+        // Reintenta si el código aleatorio choca con el índice UNIQUE.
+        for ($intento = 0; $intento < 3; $intento++) {
+            $stmt = null;
+            try {
+                $codigo = generarCodigoPlan($conexion);
+                $stmt = $conexion->prepare("INSERT INTO tienda_planes_entrega (bss_id, user_id, nombre, codigo) VALUES (?, ?, ?, ?)");
+                if (!$stmt) {
+                    throw new RuntimeException('prepare: ' . $conexion->error);
+                }
+                $stmt->bind_param("iiss", $bss_val, $user_id, $nombre, $codigo);
+                $ok = $stmt->execute();
+                $errno = (int)$conexion->errno;
+                $error = $conexion->error;
+                $insertId = (int)$conexion->insert_id;
+                $stmt->close();
+                $stmt = null;
+
+                if ($ok) {
+                    $plan_id = $insertId;
+                    break;
+                }
+                if ($errno === 1062) {
+                    continue; // código duplicado: regenerar
+                }
+                throw new RuntimeException('insert: ' . $error);
+            } catch (Throwable $e) {
+                if ($stmt instanceof mysqli_stmt) {
+                    $stmt->close();
+                }
+                if ((int)$conexion->errno === 1062) {
+                    continue; // código duplicado: regenerar
+                }
+                throw $e;
+            }
+        }
+
+        if (!$plan_id) {
+            throw new RuntimeException('No se pudo generar un código único para el plan');
+        }
+
+        echo json_encode([
+            'ok'      => true,
+            'plan_id' => $plan_id,
+            'nombre'  => $nombre,
+            'codigo'  => $codigo
+        ]);
+    } catch (Throwable $e) {
+        error_log('crear_plan_entrega: ' . $e->getMessage());
+        echo json_encode(['ok' => false, 'msg' => 'No se pudo crear el plan de entrega']);
+    }
     exit;
 }
 
@@ -399,20 +447,31 @@ if ($action === 'guardar_pedidos_plan') {
     $conexion->begin_transaction();
     try {
         $stmtDel = $conexion->prepare("DELETE FROM tienda_planes_entrega_pedidos WHERE plan_id = ?");
+        if (!$stmtDel) {
+            throw new RuntimeException('prepare delete: ' . $conexion->error);
+        }
         $stmtDel->bind_param("i", $plan_id);
-        $stmtDel->execute();
+        if (!$stmtDel->execute()) {
+            throw new RuntimeException('delete: ' . $conexion->error);
+        }
         $stmtDel->close();
 
         $stmtIns = $conexion->prepare("INSERT INTO tienda_planes_entrega_pedidos (plan_id, orden_id) VALUES (?, ?)");
+        if (!$stmtIns) {
+            throw new RuntimeException('prepare insert: ' . $conexion->error);
+        }
         foreach ($pedidosValidos as $p) {
             $oid = (int)$p['id'];
             $stmtIns->bind_param("ii", $plan_id, $oid);
-            $stmtIns->execute();
+            if (!$stmtIns->execute()) {
+                throw new RuntimeException('insert orden ' . $oid . ': ' . $conexion->error);
+            }
         }
         $stmtIns->close();
         $conexion->commit();
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $conexion->rollback();
+        error_log('guardar_pedidos_plan: ' . $e->getMessage());
         echo json_encode(['ok' => false, 'msg' => 'Error al guardar los pedidos del plan']);
         exit;
     }

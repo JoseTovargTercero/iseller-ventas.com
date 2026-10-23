@@ -822,6 +822,14 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
             return (Math.floor(Math.round(parseFloat(n) * 1e6) / 1e4) / 100).toFixed(2);
         }
 
+        function parseJsonResponse(res) {
+            var ct = res.headers.get('content-type') || '';
+            if (ct.indexOf('application/json') === -1) {
+                throw new Error('SESSION');
+            }
+            return res.json();
+        }
+
         function getStatusText(status) {
             status = parseInt(status);
             var map = {
@@ -978,9 +986,7 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                     method: 'POST',
                     body: fd
                 })
-                .then(function(res) {
-                    return res.json();
-                })
+                .then(parseJsonResponse)
                 .then(function(data) {
                     btn.prop('disabled', false);
                     if (!data.ok) {
@@ -997,9 +1003,13 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                     setPasoPlanUI(2);
                     cargarPedidosDeliveryDisponibles();
                 })
-                .catch(function() {
+                .catch(function(err) {
                     btn.prop('disabled', false);
-                    alert('Error de conexión al crear el plan.');
+                    if (err && err.message === 'SESSION') {
+                        alert('Tu sesión expiró o la membresía requiere renovación. Recarga la página e inicia sesión nuevamente.');
+                    } else {
+                        alert('Error de conexión al crear el plan.');
+                    }
                 });
         }
 

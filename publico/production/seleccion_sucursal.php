@@ -290,13 +290,13 @@ if ($_SESSION['nivel'] == 1) {
         <script src="../vendors/fastclick/lib/fastclick.js"></script>
         <script src="../vendors/nprogress/nprogress.js"></script>
         <script src="../build/js/custom.js"></script>
-        <script src="js/tablas.js"></script>
-        <script src="../build/js/global-loader.js?v=2"></script>
+        <script src="js/tablas.js?v=2"></script>
+        <script src="../build/js/global-loader.js?v=3"></script>
         <script src="js/nombre_pagina.js"></script>
 
         <script>
             function cargarSucursales() {
-                const loader = new TablaLoader('../../configurar/DatabaseHandler/_DBH-select.php');
+                const loader = new TablaLoader('../../configurar/DatabaseHandler/_DBH-select.php', true);
                 loader.cargar('sucursales', '_sucursales').then(data => {
                     if (!Array.isArray(data) || data.length === 0) {
                         window.location.href = 'sucursales.php';
@@ -325,8 +325,34 @@ if ($_SESSION['nivel'] == 1) {
 
                     getSucursalActivada();
                     document.getElementById('cargando').style.display = 'none';
+
+                    // Cierra cualquier "Cargando..." de SweetAlert que haya quedado
+                    // pegado por la carrera del loader global.
+                    setTimeout(cerrarLoaderPegado, 150);
                 });
             }
+
+            function cerrarLoaderPegado() {
+                if (typeof solicitudesActivas !== 'undefined' && solicitudesActivas > 0) return;
+                document.querySelectorAll('.swal2-container').forEach(el => {
+                    if (/Cargando/i.test(el.innerText || '')) {
+                        el.remove();
+                    }
+                });
+                if (!document.querySelector('.swal2-container')) {
+                    document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+                }
+            }
+
+            // Red de seguridad: si el loader global se abre tarde y queda huérfano,
+            // se retira en cuanto no haya peticiones activas.
+            const loaderWatcher = new MutationObserver(() => {
+                if (typeof solicitudesActivas !== 'undefined' && solicitudesActivas > 0) return;
+                cerrarLoaderPegado();
+            });
+            loaderWatcher.observe(document.body, { childList: true, subtree: true });
+            setTimeout(() => loaderWatcher.disconnect(), 10000);
+            [500, 1500, 3000].forEach(ms => setTimeout(cerrarLoaderPegado, ms));
 
             function seleccionar(id) {
                 fetch('../../configurar/seleccion_sucursal.php', {
@@ -349,7 +375,9 @@ if ($_SESSION['nivel'] == 1) {
 
             async function getSucursalActivada() {
                 try {
-                    const res = await fetch('../../configurar/seleccion_sucursal_activada.php');
+                    // Consulta de fondo: no debe mostrar el loader global.
+                    const fetchSeguro = window.fetchSilencioso || window.fetch;
+                    const res = await fetchSeguro('../../configurar/seleccion_sucursal_activada.php');
                     if (res.status === 204) return;
                     const {
                         ok,

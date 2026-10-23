@@ -1,11 +1,14 @@
 class TablaLoader {
-  constructor(endpoint) {
+  constructor(endpoint, silencioso = false) {
     this.endpoint = endpoint;
+    this.silencioso = silencioso;
   }
 
   async cargar(tabla, config) {
     try {
-      const response = await fetch(this.endpoint, {
+      // En páginas con su propio loader (o cargas de fondo) se evita el overlay global.
+      const fetcher = this.silencioso && window.fetchSilencioso ? window.fetchSilencioso : fetch;
+      const response = await fetcher(this.endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

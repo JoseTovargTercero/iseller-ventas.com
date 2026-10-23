@@ -1,6 +1,6 @@
 {
-    "sha256":  "ffd544bc17e7135dfc88fe3fef7c1dde8092b02a9d8c26223fd4abcc0aff409f",
+    "sha256":  "56420bc0e2482f64c7817f8f1afd5715c37dcbe9f620f1e159974b63f0859a49",
     "archivo":  "pos_update.zip",
-    "version":  "1.0.0",
-    "notas":  "Version inicial del POS nativo."
+    "version":  "1.0.1",
+    "notas":  "Tasas al iniciar sesión, tasas y versión en la barra inferior, catálogo por sucursal."
 }

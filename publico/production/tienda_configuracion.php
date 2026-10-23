@@ -16,6 +16,21 @@ if ((string)($_SESSION['nivel'] ?? '') !== '1') {
 $topnav = topnav();
 $bss_id = $_SESSION["bss_id"];
 
+// Activar / desactivar la tienda. Todo el front de la tienda comprueba
+// tiene_tienda_virtual = 1, así que basta con apagar el flag: los clientes
+// dejan de verla. No borra nada (productos, pedidos y configuración siguen
+// ahí) y se puede reactivar desde esta misma pantalla.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['accion'] ?? '', ['desactivar_tienda', 'reactivar_tienda'], true)) {
+    $nuevo_estado = $_POST['accion'] === 'reactivar_tienda' ? 1 : 0;
+    $stmtOff = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = ? WHERE id = ?");
+    $stmtOff->bind_param("ii", $nuevo_estado, $bss_id);
+    $stmtOff->execute();
+    $stmtOff->close();
+
+    header("Location: tienda_configuracion.php?success=1");
+    exit;
+}
+
 $bancos_venezuela = [
     "0102" => "Banco de Venezuela",
     "0104" => "Venezolano de Credito",
@@ -185,10 +200,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($logo_url) {
-        $stmt = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = 1, slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
         $stmt->bind_param("ssssssssssssi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
     } else {
-        $stmt = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = 1, slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
         $stmt->bind_param("sssssssssssi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
     }
 
@@ -214,10 +229,14 @@ $result = $stmt->get_result();
 $tienda = $result->fetch_assoc();
 $stmt->close();
 
-if (!$tienda || $tienda['tiene_tienda_virtual'] == 0) {
+// Si nunca se creó la tienda (sin slug) se manda al onboarding. Si está
+// desactivada se deja entrar, para poder reactivarla sin perder la configuración.
+if (!$tienda || ((int)$tienda['tiene_tienda_virtual'] === 0 && trim((string)$tienda['slug']) === '')) {
     header("Location: tienda_onboarding.php");
     exit;
 }
+
+$tienda_activa = (int)$tienda['tiene_tienda_virtual'] === 1;
 
 $conf_delivery = json_decode($tienda['config_delivery'] ?? '{}', true);
 $conf_bancos   = json_decode($tienda['datos_bancarios'] ?? '{}', true);
@@ -1015,6 +1034,7 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                             Chat de Compra
                         </div>
 
+                        <?php if ($tienda_activa): ?>
                         <div class="sidebar-divider"></div>
                         <p class="sidebar-title">Accesos</p>
                         <ul class="sidebar-links">
@@ -1037,6 +1057,7 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                                 </a>
                             </li>
                         </ul>
+                        <?php endif; ?>
                     </aside>
 
                     <!-- MAIN CONTENT -->
@@ -1548,6 +1569,38 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                             </div>
 
                         </form>
+
+                        <!-- Zona de peligro: activar / desactivar la tienda -->
+                        <div class="dash-panel" style="border-color: <?= $tienda_activa ? 'rgba(239,90,111,0.25)' : 'rgba(45,212,160,0.25)' ?>;">
+                            <div class="panel-header">
+                                <h6 style="color:<?= $tienda_activa ? 'var(--dash-danger)' : 'var(--dash-mint)' ?>;">
+                                    <ion-icon name="power-outline" style="color:inherit;"></ion-icon>
+                                    <?= $tienda_activa ? 'Desactivar tienda' : 'Reactivar tienda' ?>
+                                </h6>
+                            </div>
+                            <div class="panel-body">
+                                <p class="field-hint" style="margin-top:0;">
+                                    <?php if ($tienda_activa): ?>
+                                        Tu tienda dejará de ser visible para los clientes: el enlace
+                                        <b>iseller-tiendas.com/<?= htmlspecialchars($tienda['slug']) ?></b> mostrará
+                                        "Tienda no encontrada". No se borra nada (productos, pedidos y configuración
+                                        se conservan) y puedes reactivarla aquí mismo.
+                                    <?php else: ?>
+                                        Tu tienda está <b>desactivada</b>: los clientes no pueden verla ni hacer pedidos.
+                                        Al reactivarla vuelve a estar disponible en
+                                        <b>iseller-tiendas.com/<?= htmlspecialchars($tienda['slug']) ?></b> con la misma
+                                        configuración y productos.
+                                    <?php endif; ?>
+                                </p>
+                                <form method="POST" id="formFlagTienda">
+                                    <input type="hidden" name="accion" value="<?= $tienda_activa ? 'desactivar_tienda' : 'reactivar_tienda' ?>">
+                                    <button type="submit" class="btn <?= $tienda_activa ? 'btn-danger' : 'btn-success' ?>">
+                                        <ion-icon name="power-outline"></ion-icon>
+                                        <?= $tienda_activa ? 'Desactivar mi tienda' : 'Reactivar mi tienda' ?>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </main>
 
                 </div>
@@ -1729,6 +1782,42 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                     if (payTab) switchTab(payTab);
                 }
             });
+
+            // Confirmación antes de activar/desactivar la tienda
+            const formFlagTienda = document.getElementById('formFlagTienda');
+            if (formFlagTienda) {
+                formFlagTienda.addEventListener('submit', function(e) {
+                    if (this.dataset.confirmado === '1') return;
+                    e.preventDefault();
+                    const form = this;
+                    const desactivar = form.querySelector('input[name="accion"]').value === 'desactivar_tienda';
+                    const enviar = () => {
+                        form.dataset.confirmado = '1';
+                        form.submit();
+                    };
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: desactivar ? 'warning' : 'question',
+                            title: desactivar ? '¿Desactivar la tienda?' : '¿Reactivar la tienda?',
+                            text: desactivar ?
+                                'Dejará de ser visible para tus clientes hasta que la reactives.' :
+                                'Volverá a estar visible para tus clientes.',
+                            showCancelButton: true,
+                            confirmButtonText: desactivar ? 'Sí, desactivar' : 'Sí, reactivar',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: desactivar ? '#ef5a6f' : '#2dd4a0',
+                            background: '#181b22',
+                            color: '#e8edf2'
+                        }).then(function(r) {
+                            if (r.isConfirmed) enviar();
+                        });
+                    } else if (confirm(desactivar ?
+                            '¿Desactivar la tienda? Dejará de ser visible para tus clientes.' :
+                            '¿Reactivar la tienda? Volverá a estar visible para tus clientes.')) {
+                        enviar();
+                    }
+                });
+            }
 
             // Schedule tipo turno toggle
             document.querySelectorAll('.schedule-tipo').forEach(select => {

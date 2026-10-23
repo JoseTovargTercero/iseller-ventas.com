@@ -3,25 +3,33 @@ let solicitudesActivas = 0;
 let loaderVisible = false;
 
 function mostrarLoader() {
-  if (!loaderVisible) {
-    loaderVisible = true;
-    Swal.fire({
-      title: "Cargando...",
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      backdrop: true,
-      didOpen: () => Swal.showLoading(),
-      willClose: () => {
-        loaderVisible = false;
-      }, // reset
-    });
-  }
+  if (loaderVisible) return;
+  loaderVisible = true;
+  Swal.fire({
+    title: "Cargando...",
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    backdrop: true,
+    didOpen: () => {
+      // Si la petición ya terminó mientras Swal se abría, se cierra al abrir.
+      if (!loaderVisible) {
+        Swal.close();
+        return;
+      }
+      Swal.showLoading();
+    },
+    willClose: () => {
+      loaderVisible = false;
+    },
+  });
 }
 
 function ocultarLoader() {
-  if (loaderVisible) {
-    Swal.close(); // solo se cierra si fue el loader
-  }
+  if (!loaderVisible) return;
+  // Se marca cerrado antes de Swal.close(): si el modal todavía se está
+  // abriendo, didOpen lo cierra y no queda "Cargando..." pegado.
+  loaderVisible = false;
+  Swal.close();
 }
 
 // FETCH global

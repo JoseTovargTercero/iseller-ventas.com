@@ -13,7 +13,9 @@ exigirApiKey();
 limitar('version', 30, 60);
 
 $archivo = __DIR__ . '/pos_version.json';
-$data = is_file($archivo) ? json_decode((string)file_get_contents($archivo), true) : null;
+// Se tolera el BOM: editores como Notepad lo agregan y json_decode lo rechaza.
+$texto = is_file($archivo) ? (string)file_get_contents($archivo) : '';
+$data = json_decode(ltrim($texto, "\xEF\xBB\xBF \t\n\r"), true);
 
 if (!is_array($data) || empty($data['version'])) {
     salir(404, ['ok' => false, 'error' => 'Versión no configurada']);
