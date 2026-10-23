@@ -122,9 +122,13 @@ if ($file['size'] > $max_size) {
     exit;
 }
 
-// Validar MIME real
-$finfo = finfo_open(FILEINFO_MIME_TYPE);
-$mime = finfo_file($finfo, $file['tmp_name']);
+// Validar MIME real (fileinfo si está disponible; getimagesize como respaldo)
+$info = @getimagesize($file['tmp_name']);
+$mime = $info['mime'] ?? '';
+if (function_exists('finfo_open')) {
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = $finfo ? finfo_file($finfo, $file['tmp_name']) : '';
+}
 $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
 if (!in_array($mime, $allowed_mimes)) {
     http_response_code(400);

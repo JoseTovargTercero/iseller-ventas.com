@@ -41,8 +41,11 @@ function imagen_guardar_webp(
     }
 
     // El MIME detectado por el contenido debe coincidir con el de getimagesize().
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeReal = $finfo ? (string)finfo_file($finfo, $tmp) : '';
+    $mimeReal = $mime;
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeReal = $finfo ? (string)finfo_file($finfo, $tmp) : '';
+    }
     if ($mimeReal !== $mime) {
         return null;
     }
