@@ -36,6 +36,15 @@ class CalculadoraPrecios
             $cantidad_por_precio = 1;
         }
 
+        // Sin tasas válidas no se puede calcular; evitar división por cero.
+        if ($this->peso_bolivar <= 0 || $this->bcv <= 0) {
+            return [
+                'precio_venta_dolar' => 0.0,
+                'precio_venta_bs' => 0.0,
+                'precio_venta_peso' => 0.0
+            ];
+        }
+
         // Precio en dólares por unidad
 
         $precioDolarCompra = $precioCompra / $cantidad_por_precio;
