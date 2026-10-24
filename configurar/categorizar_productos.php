@@ -149,7 +149,7 @@ function urlPagina(int $p, string $q, string $filtro): string
             <span class="chip">Sin coincidencia <b><?= $dudosas ?></b></span>
             <span class="chip">Filtrados <b><?= count($filtrados) ?></b></span>
         </div>
-        <button id="btnTodas" class="primary" <?= $pendientes ? '' : 'disabled' ?>>Aplicar todas las sugerencias (<?= $pendientes ?>)</button>
+        <button id="btnTodas" class="primary" <?= $visibles ? '' : 'disabled' ?>>Aplicar todas las visibles (<?= count($visibles) ?>)</button>
         <a class="chip" href="?export=1" style="text-decoration:none">Descargar JSON</a>
     </div>
 
@@ -265,14 +265,16 @@ function urlPagina(int $p, string $q, string $filtro): string
 
     document.getElementById('btnTodas').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        const total = btn.textContent.match(/\d+/)?.[0] || '';
-        if (!confirm(`Se guardará la categoría sugerida en ${total} productos sin categoría. ¿Continuar?`)) return;
+        const items = [...document.querySelectorAll('#filas tr[data-id]')]
+            .map(tr => ({ id: Number(tr.dataset.id), categoria: Number(tr.querySelector('select.sel').value) }))
+            .filter(i => i.categoria > 0);
+        if (!items.length) { alert('No hay categorías seleccionadas.'); return; }
+        if (!confirm(`Se guardará la categoría elegida en ${items.length} productos de esta página. ¿Continuar?`)) return;
         btn.disabled = true;
         btn.textContent = 'Aplicando…';
         try {
-            const d = await guardar({ todas: true });
+            const d = await guardar({ items });
             if (!d.ok) throw new Error(d.message || 'Error al aplicar');
-            if (d.sin_categoria > 0) alert('Quedaron ' + d.sin_categoria + ' productos sin categoría.');
             location.reload();
         } catch (err) {
             alert(err.message);

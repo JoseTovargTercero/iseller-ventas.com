@@ -1,7 +1,6 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
-require_once('_categorizar_reglas.php');
 header('Content-Type: application/json; charset=utf-8');
 
 $bss_id = (int) $bss_id;
@@ -10,33 +9,31 @@ if (!is_array($entrada)) $entrada = [];
 
 // Categorías válidas para el negocio (globales + propias)
 $validas = [];
-$slugs = [];
-$res = $conexion->query("SELECT id, nombre, slug FROM categorias_producto WHERE bss_id = 0 OR bss_id = $bss_id");
+$res = $conexion->query("SELECT id, nombre FROM categorias_producto WHERE bss_id = 0 OR bss_id = $bss_id");
 while ($r = $res->fetch_assoc()) {
     $validas[(int) $r['id']] = $r['nombre'];
-    if ($r['slug'] !== '') $slugs[$r['slug']] = (int) $r['id'];
 }
-$otros = $slugs['otros'] ?? 0;
 
-// Aplicar todas las sugerencias a los productos que aún no tienen categoría
-if (!empty($entrada['todas'])) {
-    $res = $conexion->query("SELECT id, nombre FROM productos WHERE bss_id = $bss_id AND categoria IS NULL");
+// Aplicar los valores elegidos en el front a los productos visibles de la página
+if (!empty($entrada['items']) && is_array($entrada['items'])) {
     $upd = $conexion->prepare("UPDATE productos SET categoria = ? WHERE id = ? AND bss_id = ?");
     $n = 0;
-    while ($r = $res->fetch_assoc()) {
-        $slug = cat_sugerir($r['nombre']);
-        $cat = $slug !== null ? ($slugs[$slug] ?? 0) : $otros;
-        if ($cat <= 0) continue;
-        $upd->bind_param('iii', $cat, $r['id'], $bss_id);
-        if ($upd->execute()) $n += $upd->affected_rows;
+    $omitidos = 0;
+    foreach (array_slice($entrada['items'], 0, 200) as $item) {
+        $id = (int) ($item['id'] ?? 0);
+        $cat = (int) ($item['categoria'] ?? 0);
+        if ($id <= 0 || !isset($validas[$cat])) {
+            $omitidos++;
+            continue;
+        }
+        $upd->bind_param('iii', $cat, $id, $bss_id);
+        if ($upd->execute()) {
+            $n++;
+        } else {
+            $omitidos++;
+        }
     }
-    $quedan = (int) $conexion->query("SELECT COUNT(*) FROM productos WHERE bss_id = $bss_id AND categoria IS NULL")->fetch_row()[0];
-    echo json_encode([
-        'ok' => true,
-        'actualizados' => $n,
-        'sin_categoria' => $quedan,
-        'bss_id' => $bss_id,
-    ]);
+    echo json_encode(['ok' => true, 'procesados' => $n, 'omitidos' => $omitidos, 'bss_id' => $bss_id]);
     exit;
 }
 
