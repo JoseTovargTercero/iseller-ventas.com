@@ -18,7 +18,7 @@ $sucursal = null;
 
 // Lógica de enrutamiento basada en la URL (si no se usa .htaccess para pasar $_GET)
 $request_uri = $_SERVER['REQUEST_URI'];
-$path = trim(parse_url($request_uri, PHP_URL_PATH), '/');
+$path = trim((string) parse_url($request_uri, PHP_URL_PATH), '/');
 // Quitar el subdirectorio del proyecto (ej: /iseller-tiendas.com en local) para quedarnos con el slug
 $base_dir = trim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 if ($base_dir !== '' && ($path === $base_dir || strpos($path, $base_dir . '/') === 0)) {
