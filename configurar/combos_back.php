@@ -35,7 +35,15 @@ if ($sucursal_id <= 0) {
 
 function normalizarOrigen($origen): string
 {
-    return (strtolower(trim((string)$origen)) === 'c') ? 'c' : 'v';
+    $origen = strtolower(trim((string)$origen));
+    return in_array($origen, ['c', 'm'], true) ? $origen : 'v';
+}
+
+function etiquetaOrigen(string $origen): string
+{
+    if ($origen === 'c') return 'Colombiano';
+    if ($origen === 'm') return 'Mixto';
+    return 'Venezolano';
 }
 
 if ($accion === 'listar_productos') {
@@ -74,7 +82,7 @@ if ($accion === 'listar_productos') {
             'nombre' => $row['nombre'],
             'codigo_barras' => $row['codigo_barras'] ?? '',
             'origen' => $origenNorm,
-            'origen_label' => $origenNorm === 'c' ? 'Colombiano' : 'Venezolano',
+            'origen_label' => etiquetaOrigen($origenNorm),
             'stock' => (float)$row['stock'],
             'costo_unitario' => $costoUnit,
             'porcentaje' => $pct,
@@ -198,7 +206,7 @@ if ($accion === 'listar_combos') {
             'id'                 => $comboId,
             'nombre'             => $row['nombre'],
             'origen'             => $origenNorm,
-            'origen_label'       => $origenNorm === 'c' ? 'Colombiano' : 'Venezolano',
+            'origen_label'       => etiquetaOrigen($origenNorm),
             'costo_registrado'   => $costoReg,
             'costo_actual_hijos' => $costoActualHijos,
             'diff_costo_total'   => $diffCostoTotal,
@@ -285,7 +293,7 @@ if ($accion === 'guardar_combo') {
     $stmtC->execute();
     $resC = $stmtC->get_result();
 
-    $origenDetectado = null;
+    $origenesDetectados = [];
     $costoTotalCompra = 0.0;
     $itemsParaInsertar = [];
 
@@ -293,17 +301,7 @@ if ($accion === 'guardar_combo') {
         $pid = (int)$rowP['id'];
         $qty = $cantidadesPorProd[$pid];
         $orig = normalizarOrigen($rowP['origen']);
-
-        if ($origenDetectado === null) {
-            $origenDetectado = $orig;
-        } elseif ($origenDetectado !== $orig) {
-            $stmtC->close();
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'No se pueden mezclar productos de origen Venezolano y Colombiano en un mismo combo.'
-            ]);
-            exit;
-        }
+        $origenesDetectados[$orig] = true;
 
         $unidades  = max(1, (float)$rowP['cantidad_unidades']);
         $costoUnit = round((float)$rowP['precio_compra'] / $unidades, 4);
@@ -319,6 +317,10 @@ if ($accion === 'guardar_combo') {
         ];
     }
     $stmtC->close();
+
+    $origenDetectado = (count($origenesDetectados) === 1)
+        ? (string)array_key_first($origenesDetectados)
+        : 'm';
 
     if (count($itemsParaInsertar) !== count($cantidadesPorProd)) {
         echo json_encode(['status' => 'error', 'message' => 'Uno o más productos seleccionados no son válidos.']);
@@ -373,7 +375,7 @@ if ($accion === 'guardar_combo') {
                 INSERT INTO productos (nombre, precio_compra, cantidad_unidades, porcentaje, origen, bss_id, activo, mayor, es_combo)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmtIns->bind_param("ssisiiiii", $nombre, $costoStr, $cantUnidades, $pctStr, $origenDetectado, $bss_id, $activo, $mayor, $esCombo);
+            $stmtIns->bind_param("ssissiiii", $nombre, $costoStr, $cantUnidades, $pctStr, $origenDetectado, $bss_id, $activo, $mayor, $esCombo);
             if (!$stmtIns->execute()) {
                 throw new Exception("No se pudo crear el combo: " . $stmtIns->error);
             }

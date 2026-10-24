@@ -202,6 +202,12 @@ if ($tipo_u === 1) {
             border: 1px solid rgba(91, 156, 245, 0.25);
         }
 
+        .badge-origin.mix {
+            background: rgba(245, 180, 91, 0.15);
+            color: #f5b45b;
+            border: 1px solid rgba(245, 180, 91, 0.3);
+        }
+
         /* Resumen KPI dentro del creador */
         .combo-summary-grid {
             display: grid;
@@ -574,7 +580,7 @@ if ($tipo_u === 1) {
                                         <div class="mb-3">
                                             <div class="d-flex justify-content-between align-items-center mb-1 combo-field-head">
                                                 <label class="form-label-dash mb-0">Seleccionar productos del combo</label>
-                                                <small style="color:var(--dash-text-muted);font-size:11px;">No se mezclan orígenes Vzla/Col</small>
+                                                <small style="color:var(--dash-text-muted);font-size:11px;">Puedes combinar productos de ambos orígenes</small>
                                             </div>
                                             <input type="text" id="buscadorProductos" class="input-dash" placeholder="Buscar producto por nombre o código...">
                                             <div class="prod-search-list" id="listaResultadosProductos"></div>
@@ -676,7 +682,8 @@ if ($tipo_u === 1) {
 
         function obtenerOrigenActualCombo() {
             if (itemsSeleccionados.length === 0) return null;
-            return itemsSeleccionados[0].origen;
+            const primero = itemsSeleccionados[0].origen;
+            return itemsSeleccionados.every(i => i.origen === primero) ? primero : 'm';
         }
 
         function mostrarFormularioCombo() {
@@ -713,7 +720,6 @@ if ($tipo_u === 1) {
         function renderResultadosBusqueda() {
             const cont = document.getElementById('listaResultadosProductos');
             const q = (document.getElementById('buscadorProductos').value || '').trim().toLowerCase();
-            const origenCombo = obtenerOrigenActualCombo();
 
             const filtrados = catalogoProductos.filter(p => {
                 if (!q) return true;
@@ -726,11 +732,10 @@ if ($tipo_u === 1) {
             }
 
             cont.innerHTML = filtrados.map(p => {
-                const incompatible = origenCombo && origenCombo !== p.origen;
                 const badgeClass = p.origen === 'c' ? 'col' : 'ven';
                 const badgeText = p.origen === 'c' ? 'COL' : 'VEN';
                 return `
-                    <div class="prod-search-item ${incompatible ? 'disabled-origin' : ''}">
+                    <div class="prod-search-item">
                         <div style="min-width:0;flex:1;">
                             <div style="font-size:13px;font-weight:600;color:var(--dash-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 <span class="badge-origin ${badgeClass}" style="margin-right:6px;">${badgeText}</span>
@@ -751,17 +756,6 @@ if ($tipo_u === 1) {
         function agregarProductoAlCombo(prodId) {
             const prod = catalogoProductos.find(p => p.id === Number(prodId));
             if (!prod) return;
-
-            const origenCombo = obtenerOrigenActualCombo();
-            if (origenCombo && origenCombo !== prod.origen) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Origen incompatible',
-                    text: 'No se pueden mezclar productos de origen Venezolano y Colombiano en un mismo combo.',
-                    confirmButtonColor: '#2dd4a0'
-                });
-                return;
-            }
 
             const existente = itemsSeleccionados.find(i => i.producto_id === prod.id);
             if (existente) {
@@ -804,8 +798,8 @@ if ($tipo_u === 1) {
 
             if (origenCombo) {
                 badgeOrigen.style.display = 'inline-block';
-                badgeOrigen.className = 'badge-origin ' + (origenCombo === 'c' ? 'col' : 'ven');
-                badgeOrigen.textContent = origenCombo === 'c' ? 'Origen Colombiano' : 'Origen Venezolano';
+                badgeOrigen.className = 'badge-origin ' + (origenCombo === 'c' ? 'col' : (origenCombo === 'm' ? 'mix' : 'ven'));
+                badgeOrigen.textContent = origenCombo === 'c' ? 'Origen Colombiano' : (origenCombo === 'm' ? 'Origen Mixto' : 'Origen Venezolano');
             } else {
                 badgeOrigen.style.display = 'none';
             }
@@ -1027,8 +1021,8 @@ if ($tipo_u === 1) {
 
             let html = '';
             listaCombos.forEach(c => {
-                const badgeClass = c.origen === 'c' ? 'col' : 'ven';
-                const badgeText = c.origen === 'c' ? 'COL' : 'VEN';
+                const badgeClass = c.origen === 'c' ? 'col' : (c.origen === 'm' ? 'mix' : 'ven');
+                const badgeText = c.origen === 'c' ? 'COL' : (c.origen === 'm' ? 'MIX' : 'VEN');
 
                 let statusHtml = '<span class="status-pill ok"><ion-icon name="checkmark-circle-outline"></ion-icon> Al día</span>';
                 if (c.alerta_perdida) {
@@ -1145,7 +1139,7 @@ if ($tipo_u === 1) {
             itemsSeleccionados = combo.items.map(it => ({
                 producto_id: it.producto_id,
                 nombre: it.nombre,
-                origen: combo.origen,
+                origen: (catalogoProductos.find(p => p.id === Number(it.producto_id)) || {}).origen || combo.origen,
                 costo_unitario: Number(it.costo_actual),
                 venta_unitario: Number(it.venta_actual),
                 cantidad: Number(it.cantidad)
