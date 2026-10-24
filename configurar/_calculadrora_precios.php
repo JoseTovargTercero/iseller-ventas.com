@@ -59,6 +59,8 @@ class CalculadoraPrecios
         // Precio en bolívares según el origen
         if ($origen === 'c') {
             $precioBsVenta = ($precioPesoVenta / $this->peso_bolivar) / 1000;
+        } elseif ($origen === 'm') {
+            $precioBsVenta = $precioDolarVenta * $this->bcv;
         } else {
             $precioBsVenta = $precioDolarVenta * $this->dolarBolivar;
         }

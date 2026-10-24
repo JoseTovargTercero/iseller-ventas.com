@@ -686,6 +686,13 @@ if ($tipo_u === 1) {
             return itemsSeleccionados.every(i => i.origen === primero) ? primero : 'm';
         }
 
+        function valorItem(it, campo) {
+            const bcv = campo + '_bcv';
+            return (obtenerOrigenActualCombo() === 'm' && it[bcv] != null)
+                ? Number(it[bcv])
+                : Number(it[campo]);
+        }
+
         function mostrarFormularioCombo() {
             document.getElementById('seccionTablaCombos').style.display = 'none';
             document.getElementById('seccionFormularioCombo').style.display = 'flex';
@@ -734,6 +741,9 @@ if ($tipo_u === 1) {
             cont.innerHTML = filtrados.map(p => {
                 const badgeClass = p.origen === 'c' ? 'col' : 'ven';
                 const badgeText = p.origen === 'c' ? 'COL' : 'VEN';
+                const mixto = obtenerOrigenActualCombo() === 'm';
+                const costo = mixto ? p.costo_unitario_bcv : p.costo_unitario;
+                const venta = mixto ? p.venta_unitario_bcv : p.venta_unitario;
                 return `
                     <div class="prod-search-item">
                         <div style="min-width:0;flex:1;">
@@ -742,7 +752,7 @@ if ($tipo_u === 1) {
                                 ${p.nombre}
                             </div>
                             <small style="color:var(--dash-text-muted);font-size:11px;">
-                                Costo: ${fmtUsd(p.costo_unitario)} | Venta: ${fmtUsd(p.venta_unitario)} | Stock: ${p.stock}
+                                Costo: ${fmtUsd(costo)} | Venta: ${fmtUsd(venta)} | Stock: ${p.stock}
                             </small>
                         </div>
                         <button type="button" class="btn-ghost" style="padding:4px 10px;" onclick="agregarProductoAlCombo(${p.id})">
@@ -767,6 +777,8 @@ if ($tipo_u === 1) {
                     origen: prod.origen,
                     costo_unitario: Number(prod.costo_unitario),
                     venta_unitario: Number(prod.venta_unitario),
+                    costo_unitario_bcv: Number(prod.costo_unitario_bcv ?? prod.costo_unitario),
+                    venta_unitario_bcv: Number(prod.venta_unitario_bcv ?? prod.venta_unitario),
                     cantidad: 1
                 });
             }
@@ -816,14 +828,16 @@ if ($tipo_u === 1) {
             vacioItems.style.display = 'none';
 
             tbody.innerHTML = itemsSeleccionados.map(it => {
-                const subCosto = it.costo_unitario * it.cantidad;
-                const subVenta = it.venta_unitario * it.cantidad;
+                const costoUnit = valorItem(it, 'costo_unitario');
+                const ventaUnit = valorItem(it, 'venta_unitario');
+                const subCosto = costoUnit * it.cantidad;
+                const subVenta = ventaUnit * it.cantidad;
                 return `
                     <tr>
                         <td>
                             <div style="font-weight:600;font-size:12.5px;">${it.nombre}</div>
                             <small style="color:var(--dash-text-muted);font-size:11px;">
-                                Unit: C ${fmtUsd(it.costo_unitario)} / V ${fmtUsd(it.venta_unitario)}
+                                Unit: C ${fmtUsd(costoUnit)} / V ${fmtUsd(ventaUnit)}
                             </small>
                         </td>
                         <td style="text-align:center;">
@@ -850,8 +864,8 @@ if ($tipo_u === 1) {
 
             itemsSeleccionados.forEach(it => {
                 const q = Number(it.cantidad) || 0;
-                sumaCosto += it.costo_unitario * q;
-                sumaVenta += it.venta_unitario * q;
+                sumaCosto += valorItem(it, 'costo_unitario') * q;
+                sumaVenta += valorItem(it, 'venta_unitario') * q;
             });
 
             sumaCosto = Number(sumaCosto.toFixed(2));
@@ -876,7 +890,7 @@ if ($tipo_u === 1) {
         function evaluarAlertaPrecio() {
             let sumaCosto = 0;
             itemsSeleccionados.forEach(it => {
-                sumaCosto += (Number(it.costo_unitario) || 0) * (Number(it.cantidad) || 0);
+                sumaCosto += valorItem(it, 'costo_unitario') * (Number(it.cantidad) || 0);
             });
             sumaCosto = Number(sumaCosto.toFixed(2));
 
@@ -923,7 +937,7 @@ if ($tipo_u === 1) {
 
             let sumaCosto = 0;
             itemsSeleccionados.forEach(it => {
-                sumaCosto += it.costo_unitario * it.cantidad;
+                sumaCosto += valorItem(it, 'costo_unitario') * it.cantidad;
             });
             sumaCosto = Number(sumaCosto.toFixed(2));
 
@@ -1136,14 +1150,19 @@ if ($tipo_u === 1) {
             document.getElementById('textoBtnGuardar').textContent = 'Actualizar Combo y Sincronizar Costos';
             document.getElementById('btnCancelarEdicion').style.display = 'inline-block';
 
-            itemsSeleccionados = combo.items.map(it => ({
-                producto_id: it.producto_id,
-                nombre: it.nombre,
-                origen: (catalogoProductos.find(p => p.id === Number(it.producto_id)) || {}).origen || combo.origen,
-                costo_unitario: Number(it.costo_actual),
-                venta_unitario: Number(it.venta_actual),
-                cantidad: Number(it.cantidad)
-            }));
+            itemsSeleccionados = combo.items.map(it => {
+                const cat = catalogoProductos.find(p => p.id === Number(it.producto_id)) || {};
+                return {
+                    producto_id: it.producto_id,
+                    nombre: it.nombre,
+                    origen: cat.origen || combo.origen,
+                    costo_unitario: Number(cat.costo_unitario ?? it.costo_actual),
+                    venta_unitario: Number(cat.venta_unitario ?? it.venta_actual),
+                    costo_unitario_bcv: Number(cat.costo_unitario_bcv ?? it.costo_actual),
+                    venta_unitario_bcv: Number(cat.venta_unitario_bcv ?? it.venta_actual),
+                    cantidad: Number(it.cantidad)
+                };
+            });
 
             renderItemsSeleccionados();
             renderResultadosBusqueda();

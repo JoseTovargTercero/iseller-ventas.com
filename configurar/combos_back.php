@@ -1,6 +1,7 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
+require_once(__DIR__ . '/_calculadrora_precios.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -46,6 +47,67 @@ function etiquetaOrigen(string $origen): string
     return 'Venezolano';
 }
 
+function tasasCombo($conexion, int $bssId): array
+{
+    $tasas = ['pesoDolar' => 0.0, 'DolarBolivar' => 0.0, 'peso_bolivar' => 0.0, 'bolivar_peso' => 0.0, 'bcv' => 0.0];
+
+    $stmt = $conexion->prepare("SELECT pesoDolar, DolarBolivar, peso_bolivar, bolivar_peso FROM cambio WHERE bss_id = ? ORDER BY id DESC LIMIT 1");
+    if ($stmt) {
+        $stmt->bind_param('i', $bssId);
+        $stmt->execute();
+        if ($row = $stmt->get_result()->fetch_assoc()) {
+            foreach (['pesoDolar', 'DolarBolivar', 'peso_bolivar', 'bolivar_peso'] as $k) {
+                $tasas[$k] = (float)$row[$k];
+            }
+        }
+        $stmt->close();
+    }
+
+    $res = $conexion->query("SELECT valor FROM cambios_bcv_historico ORDER BY time DESC, id DESC LIMIT 1");
+    if ($res && ($row = $res->fetch_assoc())) {
+        $tasas['bcv'] = (float)$row['valor'];
+    }
+
+    return $tasas;
+}
+
+/**
+ * Convierte un precio nominal en USD a USD normalizado por BCV.
+ * Colombiano: USD -> COP -> Bs (/peso_bolivar) -> USD (/BCV).
+ * Manual: USD -> Bs (*DolarBolivar) -> USD (/BCV).
+ * Si faltan tasas, devuelve el valor nominal para no romper la pantalla.
+ */
+function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $ventaUnit, string $origen, array $tasas): array
+{
+    $nominal = ['costo' => round($costoUnit, 4), 'venta' => round($ventaUnit, 4)];
+    if ($tasas['bcv'] <= 0) {
+        return $nominal;
+    }
+
+    $base = ['cantidad_unidades' => 1, 'origen' => $origen, 'mayor' => 0];
+    $costo = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => 0]);
+    $venta = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => (($ventaUnit / max($costoUnit, 1e-9)) - 1) * 100]);
+
+    $costoBcv = round(((float)$costo['precio_venta_bs']) / $tasas['bcv'], 4);
+    $ventaBcv = round(((float)$venta['precio_venta_bs']) / $tasas['bcv'], 4);
+
+    if ($costoBcv <= 0 || $ventaBcv <= 0) {
+        return $nominal;
+    }
+
+    return ['costo' => $costoBcv, 'venta' => $ventaBcv];
+}
+
+$tasasCombo = tasasCombo($conexion, $bss_id);
+$calcCombo = new CalculadoraPrecios(
+    $tasasCombo['pesoDolar'],
+    $tasasCombo['peso_bolivar'],
+    $tasasCombo['DolarBolivar'],
+    $tasasCombo['bolivar_peso'],
+    $tasasCombo['bcv'],
+    []
+);
+
 if ($accion === 'listar_productos') {
     $sql = "SELECT 
                 p.id,
@@ -76,6 +138,7 @@ if ($accion === 'listar_productos') {
         $pct = (float)$row['porcentaje'];
         $ventaUnit = round($costoUnit * (1 + ($pct / 100)), 2);
         $origenNorm = normalizarOrigen($row['origen']);
+        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $origenNorm, $tasasCombo);
 
         $productos[] = [
             'id' => (int)$row['id'],
@@ -86,7 +149,9 @@ if ($accion === 'listar_productos') {
             'stock' => (float)$row['stock'],
             'costo_unitario' => $costoUnit,
             'porcentaje' => $pct,
-            'venta_unitario' => $ventaUnit
+            'venta_unitario' => $ventaUnit,
+            'costo_unitario_bcv' => $bcv['costo'],
+            'venta_unitario_bcv' => $bcv['venta']
         ];
     }
     $stmt->close();
@@ -161,6 +226,11 @@ if ($accion === 'listar_combos') {
             $costoAct = round((float)$it['precio_compra'] / $unidades, 4);
             $pctAct   = (float)$it['porcentaje'];
             $ventaAct = round($costoAct * (1 + ($pctAct / 100)), 2);
+            $bcvAct = preciosBcvCombo($calcCombo, $costoAct, $ventaAct, normalizarOrigen($it['origen']), $tasasCombo);
+            if ($origenNorm === 'm') {
+                $costoAct = $bcvAct['costo'];
+                $ventaAct = $bcvAct['venta'];
+            }
 
             $costoRef = (float)$it['costo_unitario_ref'];
             $ventaRef = (float)$it['venta_unitario_ref'];
@@ -307,13 +377,15 @@ if ($accion === 'guardar_combo') {
         $costoUnit = round((float)$rowP['precio_compra'] / $unidades, 4);
         $pctUnit   = (float)$rowP['porcentaje'];
         $ventaUnit = round($costoUnit * (1 + ($pctUnit / 100)), 2);
+        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $orig, $tasasCombo);
 
-        $costoTotalCompra += ($costoUnit * $qty);
         $itemsParaInsertar[] = [
             'producto_id' => $pid,
             'cantidad'    => $qty,
-            'costo_ref'   => $costoUnit,
-            'venta_ref'   => $ventaUnit
+            'costo_nominal' => $costoUnit,
+            'venta_nominal' => $ventaUnit,
+            'costo_bcv'     => $bcv['costo'],
+            'venta_bcv'     => $bcv['venta']
         ];
     }
     $stmtC->close();
@@ -321,6 +393,16 @@ if ($accion === 'guardar_combo') {
     $origenDetectado = (count($origenesDetectados) === 1)
         ? (string)array_key_first($origenesDetectados)
         : 'm';
+    $esMixto = ($origenDetectado === 'm');
+
+    $costoTotalCompra = 0.0;
+    foreach ($itemsParaInsertar as &$it) {
+        $it['costo_ref'] = $esMixto ? $it['costo_bcv'] : $it['costo_nominal'];
+        $it['venta_ref'] = $esMixto ? $it['venta_bcv'] : $it['venta_nominal'];
+        $costoTotalCompra += $it['costo_ref'] * $it['cantidad'];
+    }
+    unset($it);
+    $costoTotalCompra = round($costoTotalCompra, 4);
 
     if (count($itemsParaInsertar) !== count($cantidadesPorProd)) {
         echo json_encode(['status' => 'error', 'message' => 'Uno o más productos seleccionados no son válidos.']);

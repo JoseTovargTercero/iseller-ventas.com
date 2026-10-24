@@ -94,6 +94,9 @@ class CalculadoraPrecios
         if ($origen === 'c') {
             $precioBsVenta = ($precioPesoVenta / $this->peso_bolivar) / 1000;
             $precioBsCompra = ($precioPesoCompra / $this->peso_bolivar) / 1000;
+        } elseif ($origen === 'm') {
+            $precioBsVenta = $precioDolarVenta * $this->bcv;
+            $precioBsCompra = $precioDolarCompra * $this->bcv;
         } else {
             $precioBsVenta = $precioDolarVenta * $this->dolarBolivar;
             $precioBsCompra = $precioDolarCompra * $this->dolarBolivar;
