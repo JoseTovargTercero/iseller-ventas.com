@@ -28,24 +28,59 @@ if (!empty($entrada['todas'])) {
         $cat = $slug !== null ? ($slugs[$slug] ?? 0) : $otros;
         if ($cat <= 0) continue;
         $upd->bind_param('iii', $cat, $r['id'], $bss_id);
-        if ($upd->execute()) $n++;
+        if ($upd->execute()) $n += $upd->affected_rows;
     }
-    echo json_encode(['ok' => true, 'actualizados' => $n]);
+    $quedan = (int) $conexion->query("SELECT COUNT(*) FROM productos WHERE bss_id = $bss_id AND categoria IS NULL")->fetch_row()[0];
+    echo json_encode([
+        'ok' => true,
+        'actualizados' => $n,
+        'sin_categoria' => $quedan,
+        'bss_id' => $bss_id,
+    ]);
     exit;
 }
 
 $id = (int) ($entrada['id'] ?? 0);
 $cat = (int) ($entrada['categoria'] ?? 0);
 if ($id <= 0 || !isset($validas[$cat])) {
-    echo json_encode(['ok' => false, 'message' => 'Producto o categoría inválidos']);
+    echo json_encode(['ok' => false, 'message' => 'Producto o categoría inválidos', 'bss_id' => $bss_id]);
     exit;
 }
 
 $stmt = $conexion->prepare("UPDATE productos SET categoria = ? WHERE id = ? AND bss_id = ?");
 $stmt->bind_param('iii', $cat, $id, $bss_id);
 if (!$stmt->execute()) {
-    echo json_encode(['ok' => false, 'message' => 'No se pudo guardar']);
+    echo json_encode(['ok' => false, 'message' => 'No se pudo ejecutar el UPDATE: ' . $conexion->error, 'bss_id' => $bss_id]);
     exit;
 }
 
-echo json_encode(['ok' => true, 'id' => $id, 'categoria' => $cat, 'nombre' => $validas[$cat]]);
+// Confirmar leyendo de vuelta: sin esto un UPDATE que no toca filas parecería exitoso.
+$verif = $conexion->prepare("SELECT categoria FROM productos WHERE id = ? AND bss_id = ?");
+$verif->bind_param('ii', $id, $bss_id);
+$verif->execute();
+$fila = $verif->get_result()->fetch_assoc();
+
+if ($fila === null) {
+    echo json_encode([
+        'ok' => false,
+        'message' => "El producto #$id no existe en el negocio #$bss_id. Revisa que la sesión sea del negocio correcto.",
+        'bss_id' => $bss_id,
+    ]);
+    exit;
+}
+if ((int) $fila['categoria'] !== $cat) {
+    echo json_encode([
+        'ok' => false,
+        'message' => "La base no confirmó el cambio (guardó " . var_export($fila['categoria'], true) . ").",
+        'bss_id' => $bss_id,
+    ]);
+    exit;
+}
+
+echo json_encode([
+    'ok' => true,
+    'id' => $id,
+    'categoria' => $cat,
+    'nombre' => $validas[$cat],
+    'bss_id' => $bss_id,
+]);

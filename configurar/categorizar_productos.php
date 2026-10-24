@@ -21,6 +21,16 @@ $catOtros = $catPorSlug['otros'] ?? null;
 $nombresCat = [];
 foreach ($categorias as $c) $nombresCat[(int) $c['id']] = $c['nombre'];
 
+// Nombre del negocio (para dejar claro sobre cuál se está guardando)
+$negocioNombre = '';
+$stmtNeg = $conexion->prepare("SELECT nombre FROM negocio WHERE id = ?");
+if ($stmtNeg) {
+    $stmtNeg->bind_param('i', $bss_id);
+    $stmtNeg->execute();
+    $negocioNombre = (string) ($stmtNeg->get_result()->fetch_row()[0] ?? '');
+}
+$baseActual = (string) ($conexion->query("SELECT DATABASE()")->fetch_row()[0] ?? '');
+
 // Productos + sugerencia calculada por reglas de nombre
 $productos = [];
 $res = $conexion->query("SELECT id, nombre, categoria FROM productos WHERE bss_id = $bss_id ORDER BY nombre");
@@ -119,6 +129,7 @@ function urlPagina(int $p, string $q, string $filtro): string
     .dudosa { color:var(--alerta); font-size:12px; display:inline-block; margin-left:6px; }
     .estado { font-size:12px; color:var(--suave); min-width:70px; display:inline-block; }
     tr.guardado .estado { color:var(--ok); font-weight:600; }
+    .estado.error { color:#b42318; font-weight:600; }
     .pager { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:14px; font-size:13px; }
     .pager a { color:var(--acento); text-decoration:none; padding:5px 9px; border:1px solid var(--borde); border-radius:8px; background:#fff; }
     .vacio { padding:30px; text-align:center; color:var(--suave); }
@@ -127,8 +138,8 @@ function urlPagina(int $p, string $q, string $filtro): string
 </head>
 <body>
 <header>
-    <h1>Categorizar productos · Negocio #<?= $bss_id ?></h1>
-    <div class="sub">Revisa la sugerencia, cámbiala si hace falta y pulsa <b>Aceptar</b> para guardarla en la columna <code>categoria</code>.</div>
+    <h1>Categorizar productos · Negocio #<?= $bss_id ?><?= $negocioNombre !== '' ? ' · ' . htmlspecialchars($negocioNombre, ENT_QUOTES) : '' ?></h1>
+    <div class="sub">Los cambios se guardan en la columna <code>productos.categoria</code> de la base <b><?= htmlspecialchars($baseActual, ENT_QUOTES) ?></b> para este negocio. Revisa la sugerencia, cámbiala si hace falta y pulsa <b>Aceptar</b>.</div>
 </header>
 <main>
     <div class="barra">
@@ -233,16 +244,19 @@ function urlPagina(int $p, string $q, string $filtro): string
             const sel = fila.querySelector('select.sel');
             if (!sel.value) { alert('Elige una categoría.'); return; }
             btn.disabled = true;
-            fila.querySelector('.estado').textContent = 'Guardando…';
+            const estado = fila.querySelector('.estado');
+            estado.className = 'estado';
+            estado.textContent = 'Guardando…';
             try {
                 const d = await guardar({ id: Number(fila.dataset.id), categoria: Number(sel.value) });
                 if (!d.ok) throw new Error(d.message || 'Error al guardar');
                 fila.querySelector('.actual').textContent = d.nombre;
                 fila.classList.add('guardado');
-                fila.querySelector('.estado').textContent = '✓ Guardado';
+                estado.textContent = '✓ Guardado';
             } catch (e) {
-                fila.querySelector('.estado').textContent = '';
-                alert(e.message);
+                fila.classList.remove('guardado');
+                estado.className = 'estado error';
+                estado.textContent = '✗ ' + e.message;
             } finally {
                 btn.disabled = false;
             }
@@ -258,6 +272,7 @@ function urlPagina(int $p, string $q, string $filtro): string
         try {
             const d = await guardar({ todas: true });
             if (!d.ok) throw new Error(d.message || 'Error al aplicar');
+            if (d.sin_categoria > 0) alert('Quedaron ' + d.sin_categoria + ' productos sin categoría.');
             location.reload();
         } catch (err) {
             alert(err.message);
