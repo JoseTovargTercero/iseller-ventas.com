@@ -77,7 +77,7 @@ foreach ($productos as $p) {
 }
 
 $filtrados = array_values(array_filter($productos, function ($p) use ($q, $filtro) {
-    if ($filtro === 'pendientes' && $p['categoria'] !== null) return false;
+    if ($p['categoria'] !== null) return false; // ya categorizados: fuera de la lista
     if ($filtro === 'dudosas' && $p['coincide']) return false;
     if ($q !== '' && stripos($p['nombre'], $q) === false) return false;
     return true;
@@ -139,7 +139,7 @@ function urlPagina(int $p, string $q, string $filtro): string
 <body>
 <header>
     <h1>Categorizar productos · Negocio #<?= $bss_id ?><?= $negocioNombre !== '' ? ' · ' . htmlspecialchars($negocioNombre, ENT_QUOTES) : '' ?></h1>
-    <div class="sub">Los cambios se guardan en la columna <code>productos.categoria</code> de la base <b><?= htmlspecialchars($baseActual, ENT_QUOTES) ?></b> para este negocio. Revisa la sugerencia, cámbiala si hace falta y pulsa <b>Aceptar</b>.</div>
+    <div class="sub">Solo se listan productos <b>sin categoría</b>. Los cambios se guardan en la columna <code>productos.categoria</code> de la base <b><?= htmlspecialchars($baseActual, ENT_QUOTES) ?></b> para este negocio.</div>
 </header>
 <main>
     <div class="barra">
@@ -156,8 +156,7 @@ function urlPagina(int $p, string $q, string $filtro): string
     <form class="barra" method="get">
         <input type="search" name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" placeholder="Buscar producto…">
         <select name="filtro" onchange="this.form.submit()">
-            <option value="todas" <?= $filtro === 'todas' ? 'selected' : '' ?>>Todas</option>
-            <option value="pendientes" <?= $filtro === 'pendientes' ? 'selected' : '' ?>>Sin categoría</option>
+            <option value="todas" <?= $filtro === 'todas' ? 'selected' : '' ?>>Sin categoría</option>
             <option value="dudosas" <?= $filtro === 'dudosas' ? 'selected' : '' ?>>Sin coincidencia</option>
         </select>
         <button type="submit">Filtrar</button>
