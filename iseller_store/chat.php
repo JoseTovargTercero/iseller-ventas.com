@@ -264,6 +264,25 @@ if ($resCats) {
             align-items: center;
         }
 
+        .chat-back-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            border: 1px solid var(--border-color, #e5e7eb);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .chat-back-btn:active {
+            background: #f0f7f3;
+        }
+
         .chat-header-main {
             display: flex;
             align-items: center;
@@ -466,6 +485,26 @@ if ($resCats) {
         }
 
         @media(max-width:768px) {
+            /* Topbar: en móvil el logo y las acciones se centran en dos filas. */
+            .navbar-custom .container-fluid {
+                flex-direction: column !important;
+                gap: .5rem !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            .navbar-brand {
+                width: 100% !important;
+                margin: 0 !important;
+                justify-content: center !important;
+            }
+
+            .header-actions {
+                width: 100% !important;
+                justify-content: center !important;
+                gap: 1rem !important;
+            }
+
             .conv-sidebar {
                 width: 100%;
                 min-width: 100%;
@@ -476,6 +515,7 @@ if ($resCats) {
 
             .chat-page {
                 position: relative;
+                height: calc(100dvh - var(--topbar-h, 64px));
             }
 
             .chat-page.show-chat .conv-sidebar {
@@ -487,8 +527,50 @@ if ($resCats) {
                 z-index: 10;
             }
 
+            .chat-header {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .chat-back-btn {
+                display: inline-flex;
+            }
+
+            .chat-header-main {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .chat-header-badge {
+                flex-shrink: 0;
+            }
+
+            .chat-messages {
+                padding: 16px 14px;
+                gap: 10px;
+            }
+
+            .chat-input-bar {
+                padding: 10px 12px;
+            }
+
+            .chat-input-bar textarea {
+                font-size: 16px;
+            }
+
             .msg-bubble {
-                max-width: 80%;
+                max-width: 85%;
+            }
+        }
+
+        @media(max-width:480px) {
+            .chat-header-cat {
+                font-size: .68rem;
+            }
+
+            .chat-header-badge {
+                font-size: .58rem;
+                padding: 3px 7px;
             }
         }
 
@@ -768,7 +850,10 @@ if ($resCats) {
                 chatArea.innerHTML = '<div class="text-center py-5"><div class="spinner-border spinner-border-sm text-success"></div></div>';
                 var r = await fetch('api/chat/cliente_chat.php?action=mensajes&conversacion_id=' + c.id);
                 var d = await r.json();
-                if (!d.success) return;
+                if (!d.success) {
+                    chatPage.classList.remove('show-chat');
+                    return;
+                }
                 renderChat(c, d.data || []);
                 startPoll();
             }
@@ -785,7 +870,9 @@ if ($resCats) {
                       '<div class="chat-header-avatar" style="display:none">' + storeInitial + '</div>'
                     : '<div class="chat-header-avatar">' + storeInitial + '</div>';
                 chatArea.innerHTML =
-                    '<div class="chat-header"><div class="chat-header-main">' + storeAvatar +
+                    '<div class="chat-header">' +
+                    '<button type="button" class="chat-back-btn" id="chat-back" aria-label="Volver a mis chats"><i class="bi bi-arrow-left"></i></button>' +
+                    '<div class="chat-header-main">' + storeAvatar +
                     '<div style="min-width:0">' +
                     '<div class="chat-header-title">' + esc(storeName) + '</div>' +
                     '<div class="chat-header-cat"><i class="bi bi-tag-fill me-1" style="font-size:.6rem;"></i>' + esc(c.asunto) + ' &middot; ' + esc(c.categoria_nombre || 'General') + '</div>' +
@@ -796,6 +883,13 @@ if ($resCats) {
                         '<div class="closed-banner"><i class="bi bi-lock-fill me-1"></i>Esta conversaci&oacute;n ha sido cerrada</div>' :
                         '<div class="chat-input-bar"><textarea id="chat-input" rows="1" placeholder="Escribe tu mensaje..."></textarea>' +
                         '<button class="send-btn" id="chat-send"><i class="bi bi-send-fill"></i></button></div>');
+                var backBtn = document.getElementById('chat-back');
+                if (backBtn) {
+                    backBtn.addEventListener('click', function() {
+                        chatPage.classList.remove('show-chat');
+                        stopPoll();
+                    });
+                }
                 renderMsgs(msgs);
                 if (!isClosed) {
                     var input = document.getElementById('chat-input');

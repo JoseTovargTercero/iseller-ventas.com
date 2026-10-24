@@ -70,7 +70,7 @@ class SystemUserController
                 'nombre' => $usuario['nombre'],
                 'email' => $usuario['email'],
                 'session_id' => $usuario['session_id'] ?? null,
-                'redirect_url' => 'index.php'
+                'redirect_url' => '../../'
             ];
 
             $this->jsonResponse(true, 'Inicio de sesión exitoso.', $data, 200);
@@ -128,8 +128,8 @@ class SystemUserController
                 'session_id' => $user['session_id'],
                 'redirect_url' => 'index.php'
             ];*/
-            // redirige al index
-            header("Location: ../index.php");
+            // redirige al inicio de la tienda
+            header("Location: ../../");
             exit;
 
           //  $this->jsonResponse(true, 'Sesión restaurada con éxito.', $data, 200);

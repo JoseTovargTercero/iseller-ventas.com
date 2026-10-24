@@ -6,6 +6,7 @@
 
 require_once('core/db.php');
 require_once('core/session.php');
+require_once('core/venezuela_geo.php');
 
 // Si ya está logueado, redirigir
 if (isLoggedIn()) {
@@ -32,11 +33,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $password_confirm = $_POST['password_confirm'] ?? '';
     $nombre = trim($_POST['nombre'] ?? '');
-    $telefono = trim($_POST['telefono'] ?? '');
     $cart_exists = $_POST['cart_exists'] ?? '0';
-    
+
+    // Solo se aceptan combinaciones estado/municipio de la lista.
+    $geo = venezuela_estados_municipios();
+    $geo_estado = trim($_POST['geo_estado'] ?? '');
+    $geo_municipio = trim($_POST['geo_municipio'] ?? '');
+    if (!isset($geo[$geo_estado]) || !in_array($geo_municipio, $geo[$geo_estado], true)) {
+        $geo_estado = $geo_municipio = '';
+    }
+
     // Validaciones básicas
-    if (empty($email) || empty($password) || empty($nombre) || empty($telefono)) {
+    if (empty($email) || empty($password) || empty($nombre) || $geo_estado === '' || $geo_municipio === '') {
         $error = 'Todos los campos son obligatorios.';
     } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Por favor, ingrese un email válido.';
@@ -63,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $password_hash = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Insertar nuevo usuario
-                $stmt = $conexion_store->prepare("INSERT INTO tienda_usuarios (nombre, email, password, telefono, estado) VALUES (?, ?, ?, ?, 1)");
-                $stmt->bind_param("ssss", $nombre, $email, $password_hash, $telefono);
+                $stmt = $conexion_store->prepare("INSERT INTO tienda_usuarios (nombre, email, password, geo_estado, geo_municipio, estado) VALUES (?, ?, ?, ?, ?, 1)");
+                $stmt->bind_param("sssss", $nombre, $email, $password_hash, $geo_estado, $geo_municipio);
                 
                 if ($stmt->execute()) {
                 
@@ -113,7 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     }
                     $conexion_store->commit();
-                    $redirect_page = ($cart_exists === '1') ? 'checkout.php' : 'index.php';
+                    // Volver a la tienda (o portada) desde donde se registró
+                    $redirect_page = ($cart_exists === '1') ? 'checkout.php' : authReturnUrl('../');
                     redirect($redirect_page);
                 } else {
                     $error = 'Error al crear la cuenta. Por favor, intente nuevamente.';
@@ -309,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main class="login-main">
         <div class="login-wrap">
             <div class="login-brand">
-                <a href="index.php" class="text-decoration-none">
+                <a href="../" class="text-decoration-none">
                     <img src="assets/img/logo-tienda.png" alt="" class="login-brand-icon">
                     <h1>iSeller <span>Store</span></h1>
                 </a>
@@ -355,10 +364,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" required>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control login-input" id="telefono" name="telefono"
-                                placeholder="Tu número de teléfono" inputmode="numeric" autocomplete="tel" required>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="geo_estado" class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select login-input" id="geo_estado" name="geo_estado" required>
+                                    <option value="">Seleccione...</option>
+                                    <?php foreach (venezuela_estados_municipios() as $estado => $municipios): ?>
+                                        <option value="<?= htmlspecialchars($estado) ?>" <?= ($_POST['geo_estado'] ?? '') === $estado ? 'selected' : '' ?>><?= htmlspecialchars($estado) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="geo_municipio" class="form-label">Municipio <span class="text-danger">*</span></label>
+                                <select class="form-select login-input" id="geo_municipio" name="geo_municipio" required>
+                                    <option value="">Seleccione...</option>
+                                    <?php foreach ((venezuela_estados_municipios()[$_POST['geo_estado'] ?? ''] ?? []) as $municipio): ?>
+                                        <option value="<?= htmlspecialchars($municipio) ?>" <?= ($_POST['geo_municipio'] ?? '') === $municipio ? 'selected' : '' ?>><?= htmlspecialchars($municipio) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -431,29 +455,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
         
+        // Estado / Municipio
+        const GEO_VENEZUELA = <?= json_encode(venezuela_estados_municipios(), JSON_UNESCAPED_UNICODE) ?>;
+        const geoEstado = document.getElementById('geo_estado');
+        const geoMunicipio = document.getElementById('geo_municipio');
+        geoEstado.addEventListener('change', function() {
+            geoMunicipio.innerHTML = '<option value="">Seleccione...</option>';
+            (GEO_VENEZUELA[geoEstado.value] || []).forEach(function(m) {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                geoMunicipio.appendChild(opt);
+            });
+        });
+
         // Validación de confirmación de contraseña
         const form = document.getElementById('registerForm');
         const confirmPassword = document.getElementById('password_confirm');
-        const telefonoInput = document.getElementById('telefono');
 
-        telefonoInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 11) {
-                this.value = this.value.slice(0, 11);
-            }
-        });
-        
         form.addEventListener('submit', function(e) {
-            if (telefonoInput.value.length < 11) {
-                e.preventDefault();
-                telefonoInput.classList.add('is-invalid');
-                if (!document.querySelector('.invalid-feedback')) {
-                    const feedback = document.createElement('div');
-                    feedback.className = 'invalid-feedback';
-                    feedback.textContent = 'El teléfono debe tener al menos 11 dígitos';
-                    telefonoInput.parentNode.appendChild(feedback);
-                }
-            }
             if (passwordInput.value !== confirmPassword.value) {
                 e.preventDefault();
                 confirmPassword.classList.add('is-invalid');

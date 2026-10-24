@@ -14,7 +14,8 @@ function imagen_guardar_webp(
     string $prefijo,
     int $anchoMaximo = 400,
     int $bytesMaximos = 2097152,
-    int $pixelesMaximos = 25000000
+    int $pixelesMaximos = 25000000,
+    int $calidad = 85
 ): ?string {
     if (($archivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         return null;
@@ -91,7 +92,7 @@ function imagen_guardar_webp(
 
     $nombre = $prefijo . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.webp';
     $ruta = rtrim($directorio, '/\\') . DIRECTORY_SEPARATOR . $nombre;
-    $ok = imagewebp($destinoImg, $ruta, 85);
+    $ok = imagewebp($destinoImg, $ruta, max(1, min(100, $calidad)));
 
     return $ok ? $nombre : null;
 }

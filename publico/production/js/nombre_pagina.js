@@ -91,6 +91,10 @@ const configPaginas = {
     titulo: "Pedidos",
     subtitulo: "Pedidos de tu tienda virtual",
   },
+  "tienda_transportistas.php": {
+    titulo: "Mis transportistas",
+    subtitulo: "Transportistas habilitados para tus deliveries",
+  },
   "tienda_chat.php": {
     titulo: "Chat",
     subtitulo: "Conversaciones con tus clientes",

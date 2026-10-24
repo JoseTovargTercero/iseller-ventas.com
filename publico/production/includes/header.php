@@ -13,6 +13,11 @@ function topnav()
     require_once('../../configurar/MembresiaHelper.php');
     $estadoMem = MembresiaHelper::obtenerEstado($conexion, $bss_id);
 
+    // Alerta de renovación: solo una vez, en el primer panel tras iniciar sesión
+    $alertaDias = (int)($_SESSION['alerta_membresia_pendiente'] ?? 0);
+    unset($_SESSION['alerta_membresia_pendiente']);
+    $mostrarAlertaMembresia = $alertaDias > 0 && empty($estadoMem['esta_vencida']);
+
     ob_start();
 
 ?>
@@ -710,6 +715,224 @@ function topnav()
             })();
         </script>
 
+    <?php endif; ?>
+
+    <?php if ($mostrarAlertaMembresia): ?>
+        <style>
+            .mem-alert-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 200000;
+                background: rgba(6, 9, 12, .72);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+
+            .mem-alert-card {
+                position: relative;
+                width: 100%;
+                max-width: 430px;
+                background: var(--dash-card, #181b22);
+                border: 1px solid var(--dash-border, #2e353e);
+                border-radius: 18px;
+                padding: 30px 28px 24px;
+                text-align: center;
+                box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+                animation: memAlertIn .25s ease;
+            }
+
+            .mem-alert-close {
+                position: absolute;
+                top: 10px;
+                right: 12px;
+                width: 30px;
+                height: 30px;
+                border: 0;
+                border-radius: 8px;
+                background: transparent;
+                color: var(--dash-text-muted, #8892a0);
+                font-size: 20px;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background .15s, color .15s;
+            }
+
+            .mem-alert-close:hover {
+                background: rgba(255, 255, 255, .08);
+                color: var(--dash-text, #e8edf2);
+            }
+
+            .mem-alert-icon {
+                width: 60px;
+                height: 60px;
+                margin: 0 auto 16px;
+                border-radius: 50%;
+                background: rgba(245, 180, 91, .14);
+                color: var(--dash-warning, #f5b45b);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+            }
+
+            .mem-alert-card h3 {
+                margin: 0 0 8px;
+                font-size: 18px;
+                font-weight: 800;
+                color: var(--dash-text, #e8edf2);
+            }
+
+            .mem-alert-card p {
+                margin: 0 0 6px;
+                font-size: 13.5px;
+                line-height: 1.55;
+                color: var(--dash-text-muted, #8892a0);
+            }
+
+            .mem-alert-card p strong {
+                color: var(--dash-text, #e8edf2);
+            }
+
+            .mem-alert-date {
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--dash-warning, #f5b45b);
+            }
+
+            .mem-alert-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 20px;
+                flex-wrap: wrap;
+            }
+
+            .mem-alert-btn {
+                flex: 1;
+                min-width: 140px;
+                padding: 11px 16px;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                text-decoration: none;
+                cursor: pointer;
+                transition: transform .15s, box-shadow .15s, background .15s;
+            }
+
+            .mem-alert-btn.primary {
+                background: linear-gradient(135deg, #2dd4a0, #25b88a);
+                border: 0;
+                color: #04120d;
+            }
+
+            .mem-alert-btn.primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 8px 20px rgba(45, 212, 160, .3);
+                color: #04120d;
+                text-decoration: none;
+            }
+
+            .mem-alert-btn.ghost {
+                background: rgba(255, 255, 255, .05);
+                border: 1px solid var(--dash-border, #2e353e);
+                color: var(--dash-text, #e8edf2);
+            }
+
+            .mem-alert-btn.ghost:hover {
+                background: rgba(255, 255, 255, .1);
+                color: var(--dash-text, #e8edf2);
+            }
+
+            @keyframes memAlertIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px) scale(.98);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: none;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .mem-alert-actions {
+                    flex-direction: column;
+                }
+            }
+        </style>
+
+        <div class="mem-alert-overlay" id="memAlertOverlay" role="dialog" aria-modal="true" aria-labelledby="memAlertTitle">
+            <div class="mem-alert-card">
+                <button type="button" class="mem-alert-close" id="memAlertX" aria-label="Cerrar"><i class="bx bx-x"></i></button>
+                <div class="mem-alert-icon"><i class="bx bx-alarm-exclamation"></i></div>
+                <h3 id="memAlertTitle">Tu membresía está por finalizar</h3>
+                <p>
+                    Te quedan <strong><?= $alertaDias ?> <?= $alertaDias === 1 ? 'día' : 'días' ?></strong> de membresía.
+                    Renueva ahora para seguir usando tu sistema sin interrupciones.
+                </p>
+                <?php if (!empty($estadoMem['fecha_fin'])): ?>
+                    <p class="mem-alert-date">Vence el <?= date('d/m/Y', strtotime($estadoMem['fecha_fin'])) ?></p>
+                <?php endif; ?>
+                <div class="mem-alert-actions">
+                    <a href="membresia_renovacion.php" class="mem-alert-btn primary">
+                        <i class="bx bx-credit-card"></i> Renovar
+                    </a>
+                    <button type="button" class="mem-alert-btn ghost" id="memAlertClose">Continuar usando</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (function() {
+                var overlay = document.getElementById('memAlertOverlay');
+                if (!overlay) return;
+
+                function cerrar() {
+                    overlay.style.display = 'none';
+                }
+
+                var card = overlay.querySelector('.mem-alert-card');
+
+                // Clic fuera: no cierra, solo hace vibrar el modal para llamar la atención
+                overlay.addEventListener('click', function(e) {
+                    if (e.target !== overlay || !card || !card.animate) return;
+                    card.animate([{
+                            transform: 'translateX(0)'
+                        },
+                        {
+                            transform: 'translateX(-8px)'
+                        },
+                        {
+                            transform: 'translateX(8px)'
+                        },
+                        {
+                            transform: 'translateX(-5px)'
+                        },
+                        {
+                            transform: 'translateX(5px)'
+                        },
+                        {
+                            transform: 'translateX(0)'
+                        }
+                    ], {
+                        duration: 400,
+                        easing: 'ease'
+                    });
+                });
+
+                document.getElementById('memAlertClose').addEventListener('click', cerrar);
+                document.getElementById('memAlertX').addEventListener('click', cerrar);
+            })();
+        </script>
     <?php endif; ?>
 <?php
     return ob_get_clean();

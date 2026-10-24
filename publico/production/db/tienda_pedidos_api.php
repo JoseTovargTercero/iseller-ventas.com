@@ -2,6 +2,8 @@
 require_once('../../../configurar/configuracion.php');
 require_once('../../../configurar/session.php');
 require_once('../../../iseller_store/core/estados_orden.php');
+require_once(__DIR__ . '/../includes/push_fcm.php');
+require_once(__DIR__ . '/transportista_negocio.php');
 
 if (!isset($_SESSION['bss_id'])) {
     http_response_code(403);
@@ -39,6 +41,19 @@ if ($action === 'listar') {
     exit;
 }
 
+/* ─── 1b. Transportistas disponibles para asignar un delivery ─────────── */
+if ($action === 'listar_transportistas') {
+    // Solo los que el negocio agregó en "Mis transportistas" y pueden hacer deliveries.
+    $data = array_values(array_filter(
+        transportista_negocio_listar($conexion, (int)$bss_id),
+        function ($t) {
+            return (int)$t['activo'] === 1 && (int)$t['deliverys'] === 1;
+        }
+    ));
+    echo json_encode(['ok' => true, 'data' => $data]);
+    exit;
+}
+
 /* ─── 2. Detalle de Pedido ────────────────────────────────────────────── */
 if ($action === 'detalle') {
     $id = (int)($_GET['id'] ?? 0);
@@ -63,6 +78,12 @@ if ($action === 'detalle') {
     if(!$orden || (int)$orden['bss_id'] !== (int)$bss_id) {
         echo json_encode(['ok'=>false, 'msg'=>'Orden no encontrada']); exit;
     }
+
+    // Transportista asignado (si es un delivery ya enviado)
+    $tpActual = transportista_servicio_actual($conexion, (int)$bss_id, $id);
+    $orden['transportista_id'] = $tpActual['transportista_id'] ?? null;
+    $orden['transportista_nombre'] = $tpActual['nombre'] ?? null;
+    $orden['transportista_estado'] = $tpActual['estado'] ?? null;
 
     // Artículos de la orden
     $sqlArts = "SELECT a.*, p.nombre AS producto_nombre, s.nombre AS sucursal_nombre
@@ -93,8 +114,12 @@ if ($action === 'detalle') {
 if ($action === 'cambiar_estado') {
     $id = (int)($_POST['id'] ?? 0);
     $status = (int)($_POST['status'] ?? 0);
+    $transportistaId = (int)($_POST['transportista_id'] ?? 0);
 
     if (!$id || !$status) { echo json_encode(['ok'=>false, 'msg'=>'Datos inválidos']); exit; }
+
+    // Antes de la transacción: CREATE TABLE provoca commit implícito.
+    transportista_negocio_asegurar($conexion);
 
     $estatus_map     = [1 => 'pendiente', 2 => 'en_revision', 3 => 'enviada', 4 => 'entregada', 5 => 'rechazada'];
     $estatus_cliente = $estatus_map[$status] ?? 'pendiente';
@@ -105,7 +130,7 @@ if ($action === 'cambiar_estado') {
     $conexion->begin_transaction();
     try {
         // Bloquea la orden: dos clics/requests simultáneos no pueden repetir la transición.
-        $stmt = $conexion->prepare("SELECT status, descontado, customer_id FROM tienda_ordenes WHERE id = ? AND bss_id = ? FOR UPDATE");
+        $stmt = $conexion->prepare("SELECT status, descontado, customer_id, cliente, tipo_entrega, direccion_id FROM tienda_ordenes WHERE id = ? AND bss_id = ? FOR UPDATE");
         $stmt->bind_param("ii", $id, $bss_id);
         $stmt->execute();
         $orden = $stmt->get_result()->fetch_assoc();
@@ -123,6 +148,32 @@ if ($action === 'cambiar_estado') {
             $conexion->rollback();
             echo json_encode(['ok' => false, 'msg' => 'Transición no válida: solo se puede avanzar al siguiente estado']);
             exit;
+        }
+
+        // Al pasar a "Enviado" un delivery hay que asignarle un transportista.
+        $transportistaAsignado = null;
+        if ($status === 3 && (string)$orden['tipo_entrega'] === 'delivery') {
+            if ($transportistaId <= 0) {
+                $conexion->rollback();
+                echo json_encode(['ok' => false, 'msg' => 'Selecciona un transportista para enviar el delivery']);
+                exit;
+            }
+            $stmtT = $conexion->prepare(
+                "SELECT t.id, t.nombre
+                   FROM transportista_por_negocio r
+                   INNER JOIN transportistas t ON t.id = r.transportista_id
+                  WHERE r.bss_id = ? AND t.id = ? AND t.activo = 1 AND t.deliverys = 1
+                  LIMIT 1"
+            );
+            $stmtT->bind_param("ii", $bss_id, $transportistaId);
+            $stmtT->execute();
+            $transportistaAsignado = $stmtT->get_result()->fetch_assoc();
+            $stmtT->close();
+            if (!$transportistaAsignado) {
+                $conexion->rollback();
+                echo json_encode(['ok' => false, 'msg' => 'Transportista no válido o inactivo']);
+                exit;
+            }
         }
 
         // 1. Actualizar estatus de la orden
@@ -193,6 +244,11 @@ if ($action === 'cambiar_estado') {
             $stmt->close();
         }
 
+        // 4. Asignación al transportista (solo delivery al pasar a Enviado)
+        if ($transportistaAsignado) {
+            transportista_asignar_delivery($conexion, (int)$bss_id, $id, $transportistaId);
+        }
+
         $conexion->commit();
     } catch (Throwable $e) {
         $conexion->rollback();
@@ -218,7 +274,68 @@ if ($action === 'cambiar_estado') {
         }
     }
 
+    // 5. Push al transportista con el delivery recién asignado
+    if ($transportistaAsignado) {
+        transportista_notificar_asignacion($conexion, (int)$bss_id, $id, $transportistaId);
+    }
+
     echo json_encode(['ok' => true]);
+    exit;
+}
+
+/* ─── 3b. Cambiar transportista de un delivery ya enviado ─────────────── */
+if ($action === 'cambiar_transportista') {
+    $id = (int)($_POST['id'] ?? 0);
+    $transportistaId = (int)($_POST['transportista_id'] ?? 0);
+    if (!$id || !$transportistaId) {
+        echo json_encode(['ok' => false, 'msg' => 'Datos inválidos']);
+        exit;
+    }
+
+    $stmt = $conexion->prepare("SELECT status, tipo_entrega FROM tienda_ordenes WHERE id = ? AND bss_id = ? LIMIT 1");
+    $stmt->bind_param("ii", $id, $bss_id);
+    $stmt->execute();
+    $orden = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$orden) {
+        echo json_encode(['ok' => false, 'msg' => 'Orden no encontrada']);
+        exit;
+    }
+    if ((string)$orden['tipo_entrega'] !== 'delivery') {
+        echo json_encode(['ok' => false, 'msg' => 'Solo los pedidos delivery tienen transportista']);
+        exit;
+    }
+    if ((int)$orden['status'] !== 3) {
+        echo json_encode(['ok' => false, 'msg' => 'Solo se puede cambiar el transportista de un pedido enviado']);
+        exit;
+    }
+
+    transportista_negocio_asegurar($conexion);
+    $stmt = $conexion->prepare(
+        "SELECT t.id, t.nombre
+           FROM transportista_por_negocio r
+           INNER JOIN transportistas t ON t.id = r.transportista_id
+          WHERE r.bss_id = ? AND t.id = ? AND t.activo = 1 AND t.deliverys = 1
+          LIMIT 1"
+    );
+    $stmt->bind_param("ii", $bss_id, $transportistaId);
+    $stmt->execute();
+    $transportista = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$transportista) {
+        echo json_encode(['ok' => false, 'msg' => 'Transportista no válido o inactivo']);
+        exit;
+    }
+
+    if (!transportista_asignar_delivery($conexion, (int)$bss_id, $id, $transportistaId, 'Transportista cambiado desde el panel')) {
+        echo json_encode(['ok' => false, 'msg' => 'No se pudo cambiar el transportista']);
+        exit;
+    }
+
+    transportista_notificar_asignacion($conexion, (int)$bss_id, $id, $transportistaId, 'Delivery reasignado');
+
+    echo json_encode(['ok' => true, 'transportista' => $transportista['nombre']]);
     exit;
 }
 

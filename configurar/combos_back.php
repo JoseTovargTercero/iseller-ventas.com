@@ -71,13 +71,26 @@ function tasasCombo($conexion, int $bssId): array
     return $tasas;
 }
 
+function datosMonedasCombo($conexion, int $bssId): array
+{
+    $stmt = $conexion->prepare("SELECT tasas FROM cambios_mostrados WHERE bss_id = ? ORDER BY id DESC LIMIT 1");
+    if (!$stmt) return [];
+    $stmt->bind_param('i', $bssId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $data = $row ? json_decode((string)$row['tasas'], true) : null;
+    return is_array($data) ? $data : [];
+}
+
 /**
- * Convierte un precio nominal en USD a USD normalizado por BCV.
- * Colombiano: USD -> COP -> Bs (/peso_bolivar) -> USD (/BCV).
- * Manual: USD -> Bs (*DolarBolivar) -> USD (/BCV).
- * Si faltan tasas, devuelve el valor nominal para no romper la pantalla.
+ * Devuelve el costo/venta en USD que el POS muestra para un producto.
+ * Usa la misma CalculadoraPrecios, el porcentaje real y los mismos flags de
+ * moneda que ventas.php, para que el combo sume exactamente igual que los
+ * productos por separado. No se deriva el porcentaje del precio redondeado:
+ * eso hacía que Galleta Noel diera $0.67 en el combo y $0.63 en el POS.
  */
-function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $ventaUnit, string $origen, array $tasas): array
+function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $ventaUnit, string $origen, array $tasas, float $porcentaje): array
 {
     $nominal = ['costo' => round($costoUnit, 4), 'venta' => round($ventaUnit, 4)];
     if ($tasas['bcv'] <= 0) {
@@ -86,26 +99,27 @@ function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $vent
 
     $base = ['cantidad_unidades' => 1, 'origen' => $origen, 'mayor' => 0];
     $costo = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => 0]);
-    $venta = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => (($ventaUnit / max($costoUnit, 1e-9)) - 1) * 100]);
+    $venta = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => $porcentaje]);
 
-    $costoBcv = round(((float)$costo['precio_venta_bs']) / $tasas['bcv'], 4);
-    $ventaBcv = round(((float)$venta['precio_venta_bs']) / $tasas['bcv'], 4);
+    $costoD = round((float)$costo['precio_venta_dolar'], 4);
+    $ventaD = round((float)$venta['precio_venta_dolar'], 4);
 
-    if ($costoBcv <= 0 || $ventaBcv <= 0) {
+    if ($costoD <= 0 || $ventaD <= 0) {
         return $nominal;
     }
 
-    return ['costo' => $costoBcv, 'venta' => $ventaBcv];
+    return ['costo' => $costoD, 'venta' => $ventaD];
 }
 
 $tasasCombo = tasasCombo($conexion, $bss_id);
+$datosMonedasCombo = datosMonedasCombo($conexion, $bss_id);
 $calcCombo = new CalculadoraPrecios(
     $tasasCombo['pesoDolar'],
     $tasasCombo['peso_bolivar'],
     $tasasCombo['DolarBolivar'],
     $tasasCombo['bolivar_peso'],
     $tasasCombo['bcv'],
-    []
+    $datosMonedasCombo
 );
 
 if ($accion === 'listar_productos') {
@@ -138,7 +152,7 @@ if ($accion === 'listar_productos') {
         $pct = (float)$row['porcentaje'];
         $ventaUnit = round($costoUnit * (1 + ($pct / 100)), 2);
         $origenNorm = normalizarOrigen($row['origen']);
-        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $origenNorm, $tasasCombo);
+        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $origenNorm, $tasasCombo, $pct);
 
         $productos[] = [
             'id' => (int)$row['id'],
@@ -226,7 +240,7 @@ if ($accion === 'listar_combos') {
             $costoAct = round((float)$it['precio_compra'] / $unidades, 4);
             $pctAct   = (float)$it['porcentaje'];
             $ventaAct = round($costoAct * (1 + ($pctAct / 100)), 2);
-            $bcvAct = preciosBcvCombo($calcCombo, $costoAct, $ventaAct, normalizarOrigen($it['origen']), $tasasCombo);
+            $bcvAct = preciosBcvCombo($calcCombo, $costoAct, $ventaAct, normalizarOrigen($it['origen']), $tasasCombo, $pctAct);
             if ($origenNorm === 'm') {
                 $costoAct = $bcvAct['costo'];
                 $ventaAct = $bcvAct['venta'];
@@ -271,6 +285,12 @@ if ($accion === 'listar_combos') {
         $ventaActualHijos = round($ventaActualHijos, 2);
         $diffCostoTotal   = round($costoActualHijos - $costoReg, 2);
         $tieneVariacion   = ($itemsConCambio > 0 || abs($diffCostoTotal) >= 0.01);
+
+        // En un combo mixto el precio se recalcula sumando lo que el POS muestra
+        // por cada producto, para que coincida exactamente con venderlos sueltos.
+        if ($origenNorm === 'm') {
+            $ventaCombo = $ventaActualHijos;
+        }
 
         $combos[] = [
             'id'                 => $comboId,
@@ -377,7 +397,7 @@ if ($accion === 'guardar_combo') {
         $costoUnit = round((float)$rowP['precio_compra'] / $unidades, 4);
         $pctUnit   = (float)$rowP['porcentaje'];
         $ventaUnit = round($costoUnit * (1 + ($pctUnit / 100)), 2);
-        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $orig, $tasasCombo);
+        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $orig, $tasasCombo, $pctUnit);
 
         $itemsParaInsertar[] = [
             'producto_id' => $pid,

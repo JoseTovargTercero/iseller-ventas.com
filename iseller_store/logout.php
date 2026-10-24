@@ -8,5 +8,5 @@ require_once('core/session.php');
 // Cerrar sesión
 logoutUser();
 
-// Redirigir al index
-redirect('index.php');
+// Redirigir al inicio de la tienda
+redirect('../');

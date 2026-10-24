@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../core/venezuela_geo.php';
+
 // Ensure $loyaltyData['foto'] is available for the navbar
 if (isLoggedIn() && (!isset($loyaltyData) || !isset($loyaltyData['foto']))) {
     if (!isset($loyaltyData)) $loyaltyData = [];
@@ -8,6 +10,25 @@ if (isLoggedIn() && (!isset($loyaltyData) || !isset($loyaltyData['foto']))) {
     $stmt_nav->execute();
     $loyaltyData['foto'] = $stmt_nav->get_result()->fetch_assoc()['foto'] ?? null;
     $stmt_nav->close();
+}
+
+// Usuarios antiguos pueden tener la cuenta sin estado/municipio. El modal
+// de ubicación es obligatorio hasta que completen ambos datos.
+$navGeoEstado = '';
+$navGeoMunicipio = '';
+$navGeoPendiente = false;
+if (isLoggedIn()) {
+    $uidGeo = (int)getUserId();
+    $stmtGeo = $conexion_store->prepare("SELECT geo_estado, geo_municipio FROM tienda_usuarios WHERE id = ? LIMIT 1");
+    if ($stmtGeo) {
+        $stmtGeo->bind_param("i", $uidGeo);
+        $stmtGeo->execute();
+        $rowGeo = $stmtGeo->get_result()->fetch_assoc();
+        $stmtGeo->close();
+        $navGeoEstado = trim((string)($rowGeo['geo_estado'] ?? ''));
+        $navGeoMunicipio = trim((string)($rowGeo['geo_municipio'] ?? ''));
+        $navGeoPendiente = ($navGeoEstado === '' || $navGeoMunicipio === '');
+    }
 }
 ?>
 <nav class="navbar navbar-custom fixed-top" id="navbar">
@@ -284,3 +305,218 @@ if (isLoggedIn() && (!isset($loyaltyData) || !isset($loyaltyData['foto']))) {
     setInterval(loadBadge, 30000);
 })();
 </script>
+<?php if (isLoggedIn() && $navGeoPendiente): ?>
+    <?php
+    $navGeoMap = venezuela_estados_municipios();
+    $navGeoOpciones = $navGeoMap[$navGeoEstado] ?? [];
+    ?>
+    <style>
+        .geo-required-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(15, 23, 42, .62);
+            backdrop-filter: blur(3px);
+        }
+
+        .geo-required-card {
+            width: 100%;
+            max-width: 430px;
+            max-height: 92vh;
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 16px;
+            padding: 26px 24px 22px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+        }
+
+        .geo-required-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            color: #1a7f4b;
+            background: #f0f7f3;
+            font-size: 1.5rem;
+        }
+
+        .geo-required-card h2 {
+            margin: 0 0 8px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .geo-required-card p.geo-required-text {
+            margin: 0 0 20px;
+            text-align: center;
+            font-size: .88rem;
+            line-height: 1.5;
+            color: #6b7280;
+        }
+
+        .geo-required-card label {
+            display: block;
+            margin: 13px 0 6px;
+            font-size: .76rem;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .geo-required-card select {
+            width: 100%;
+            border: 1.5px solid #dfe5e2;
+            border-radius: 9px;
+            padding: 11px 12px;
+            font-size: 16px;
+            background: #fff;
+            color: #111827;
+            outline: none;
+        }
+
+        .geo-required-card select:focus {
+            border-color: #1a7f4b;
+            box-shadow: 0 0 0 3px rgba(26, 127, 75, .12);
+        }
+
+        .geo-required-error {
+            display: none;
+            margin: 12px 0 0;
+            color: #b91c1c;
+            font-size: .82rem;
+        }
+
+        .geo-required-submit {
+            width: 100%;
+            margin-top: 20px;
+            border: 0;
+            border-radius: 9px;
+            padding: 12px 16px;
+            background: #1a7f4b;
+            color: #fff;
+            font-size: .92rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .geo-required-submit:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+
+        @media (max-width: 480px) {
+            .geo-required-card {
+                padding: 22px 18px 18px;
+                border-radius: 14px;
+            }
+        }
+    </style>
+
+    <div class="geo-required-overlay" id="geoRequiredModal" role="dialog" aria-modal="true" aria-labelledby="geoRequiredTitle">
+        <div class="geo-required-card">
+            <div class="geo-required-icon"><i class="bi bi-geo-alt-fill"></i></div>
+            <h2 id="geoRequiredTitle">Completa tu ubicación</h2>
+            <p class="geo-required-text">Necesitamos tu estado y municipio para continuar usando la tienda. Estos datos son obligatorios.</p>
+            <form id="geoRequiredForm">
+                <label for="geoRequiredEstado">Estado</label>
+                <select id="geoRequiredEstado" required>
+                    <option value="">Seleccione un estado...</option>
+                    <?php foreach ($navGeoMap as $estado => $municipios): ?>
+                        <option value="<?= htmlspecialchars($estado) ?>" <?= $navGeoEstado === $estado ? 'selected' : '' ?>><?= htmlspecialchars($estado) ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <label for="geoRequiredMunicipio">Municipio</label>
+                <select id="geoRequiredMunicipio" required>
+                    <option value="">Seleccione un municipio...</option>
+                    <?php foreach ($navGeoOpciones as $municipio): ?>
+                        <option value="<?= htmlspecialchars($municipio) ?>" <?= $navGeoMunicipio === $municipio ? 'selected' : '' ?>><?= htmlspecialchars($municipio) ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <p class="geo-required-error" id="geoRequiredError"></p>
+                <button type="submit" class="geo-required-submit" id="geoRequiredSubmit">Guardar y continuar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var overlay = document.getElementById('geoRequiredModal');
+            var form = document.getElementById('geoRequiredForm');
+            var estadoSel = document.getElementById('geoRequiredEstado');
+            var municipioSel = document.getElementById('geoRequiredMunicipio');
+            var errorEl = document.getElementById('geoRequiredError');
+            var submitBtn = document.getElementById('geoRequiredSubmit');
+            var GEO = <?= json_encode($navGeoMap, JSON_UNESCAPED_UNICODE) ?>;
+            if (!overlay || !form) return;
+
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = (window.innerWidth - document.documentElement.clientWidth) + 'px';
+
+            function cargarMunicipios(seleccionado) {
+                municipioSel.innerHTML = '<option value="">Seleccione un municipio...</option>';
+                var lista = GEO[estadoSel.value] || [];
+                lista.forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === seleccionado) opt.selected = true;
+                    municipioSel.appendChild(opt);
+                });
+            }
+
+            estadoSel.addEventListener('change', function() {
+                cargarMunicipios('');
+            });
+
+            cargarMunicipios(<?= json_encode($navGeoMunicipio, JSON_UNESCAPED_UNICODE) ?>);
+            estadoSel.focus();
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                errorEl.style.display = 'none';
+                if (!estadoSel.value || !municipioSel.value) {
+                    errorEl.textContent = 'Selecciona tu estado y municipio.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Guardando...';
+
+                fetch('api/update_geo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        geo_estado: estadoSel.value,
+                        geo_municipio: municipioSel.value
+                    })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (!d.success) throw new Error(d.message || 'No se pudieron guardar los datos.');
+                    overlay.remove();
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                })
+                .catch(function(err) {
+                    errorEl.textContent = err.message || 'Error de conexión. Intenta de nuevo.';
+                    errorEl.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Guardar y continuar';
+                });
+            });
+        })();
+    </script>
+<?php endif; ?>

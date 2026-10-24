@@ -8,9 +8,9 @@
 require_once('core/db.php');
 require_once('core/session.php');
 
-// Si ya está logueado, redirigir a checkout
+// Si ya está logueado, volver a la tienda desde donde entró
 if (isLoggedIn()) {
-    redirect('index.php');
+    redirect(authReturnUrl('../'));
 }
 
 $error = '';
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             else if (password_verify($password, $user['password'])) {
                 // Login exitoso
                 loginUser($user);
-                redirect('../');
+                redirect(authReturnUrl('../'));
             } else {
                 $error = 'Email o contraseña incorrectos.';
             }
@@ -229,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main class="login-main">
         <div class="login-wrap">
             <div class="login-brand">
-                <a href="index.php" class="text-decoration-none">
+                <a href="../" class="text-decoration-none">
                     <img src="assets/img/logo-tienda.png" alt="" class="login-brand-icon">
                     <h1>iSeller <span>Store</span></h1>
                 </a>

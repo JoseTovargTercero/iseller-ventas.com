@@ -1,6 +1,7 @@
 <?php
 require_once('includes/requires.php');
 require_once('../../iseller_store/core/imagenes.php');
+require_once('../../iseller_store/core/venezuela_geo.php');
 
 if ($_SESSION['nivel'] != '1') {
     define('PAGINA_INICIO', '../../index.php');
@@ -98,13 +99,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat = isset($_POST['lat']) && $_POST['lat'] !== '' ? floatval($_POST['lat']) : null;
     $lng = isset($_POST['lng']) && $_POST['lng'] !== '' ? floatval($_POST['lng']) : null;
     $comunidad = strip_tags(trim($_POST['comunidad'] ?? ''));
+    // Solo se aceptan combinaciones estado/municipio de la lista.
+    $geo = venezuela_estados_municipios();
+    $geo_estado = trim($_POST['geo_estado'] ?? '');
+    $geo_municipio = trim($_POST['geo_municipio'] ?? '');
+    if (!isset($geo[$geo_estado]) || !in_array($geo_municipio, $geo[$geo_estado], true)) {
+        $geo_estado = $geo_municipio = null;
+    }
 
     if ($logo_url) {
-        $stmt = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = 1, slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, nombre_visible = ?, whatsapp = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $nombre_visible, $whatsapp, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = 1, slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, nombre_visible = ?, whatsapp = ? WHERE id = ?");
+        $stmt->bind_param("ssssssssssssi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $nombre_visible, $whatsapp, $bss_id);
     } else {
-        $stmt = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = 1, slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, nombre_visible = ?, whatsapp = ? WHERE id = ?");
-        $stmt->bind_param("sssssssssi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $nombre_visible, $whatsapp, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET tiene_tienda_virtual = 1, slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, nombre_visible = ?, whatsapp = ? WHERE id = ?");
+        $stmt->bind_param("sssssssssssi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $nombre_visible, $whatsapp, $bss_id);
     }
     $stmt->execute();
     $stmt->close();
@@ -626,13 +634,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <select name="categoria" class="dash-input" required>
                                                 <option value="">Seleccione una categoría...</option>
                                                 <option value="Restaurantes y Comida Rápida">Restaurantes y Comida Rápida</option>
-                                                <option value="Ropa y Accesorios">Ropa y Accesorios</option>
+                                                <option value="Panadería y Pastelería">Panadería y Pastelería</option>
+                                                <option value="Carnicerías y Víveres">Carnicerías y Víveres</option>
+                                                <option value="Frutas y Verduras">Frutas y Verduras</option>
                                                 <option value="Supermercado y Víveres">Supermercado y Víveres</option>
+                                                <option value="Bebidas y Licores">Bebidas y Licores</option>
+                                                <option value="Ropa y Accesorios">Ropa y Accesorios</option>
+                                                <option value="Calzado">Calzado</option>
+                                                <option value="Joyería y Relojería">Joyería y Relojería</option>
                                                 <option value="Salud y Belleza">Salud y Belleza</option>
+                                                <option value="Farmacia">Farmacia</option>
                                                 <option value="Tecnología y Electrónica">Tecnología y Electrónica</option>
+                                                <option value="Electrodomésticos">Electrodomésticos</option>
                                                 <option value="Hogar y Decoración">Hogar y Decoración</option>
+                                                <option value="Muebles">Muebles</option>
+                                                <option value="Ferretería y Construcción">Ferretería y Construcción</option>
+                                                <option value="Repuestos para Vehículos">Repuestos para Vehículos</option>
                                                 <option value="Juguetes y Niños">Juguetes y Niños</option>
+                                                <option value="Papelería y Librería">Papelería y Librería</option>
+                                                <option value="Deportes y Fitness">Deportes y Fitness</option>
                                                 <option value="Mascotas">Mascotas</option>
+                                                <option value="Flores y Regalos">Flores y Regalos</option>
+                                                <option value="Distribuidora y Mayorista">Distribuidora y Mayorista</option>
                                                 <option value="Servicios">Servicios</option>
                                                 <option value="Otro">Otro</option>
                                             </select>
@@ -664,6 +687,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <h6>Ubicación de la Tienda</h6>
                                     </div>
                                     <div class="ob-panel-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="field-label">Estado</label>
+                                                <select name="geo_estado" id="geo-estado" class="dash-input" required>
+                                                    <option value="">Seleccione un estado...</option>
+                                                    <?php foreach (venezuela_estados_municipios() as $estado => $municipios): ?>
+                                                        <option value="<?= htmlspecialchars($estado) ?>"><?= htmlspecialchars($estado) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="field-label">Municipio</label>
+                                                <select name="geo_municipio" id="geo-municipio" class="dash-input" required>
+                                                    <option value="">Seleccione un municipio...</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                         <div class="mb-3">
                                             <label class="field-label">Comunidad / Barrio</label>
                                             <div class="search-container">
@@ -977,6 +1017,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 this.setCustomValidity(out === '' || PM_TEL_RE.test(out) ? '' : 'Formato requerido: 0000-0000000');
             });
 
+            // --- Estado / Municipio ---
+            const GEO_VENEZUELA = <?= json_encode(venezuela_estados_municipios(), JSON_UNESCAPED_UNICODE) ?>;
+            const geoEstado = document.getElementById('geo-estado');
+            const geoMunicipio = document.getElementById('geo-municipio');
+            function cargarMunicipios() {
+                geoMunicipio.innerHTML = '<option value="">Seleccione un municipio...</option>';
+                (GEO_VENEZUELA[geoEstado.value] || []).forEach(function(m) {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    geoMunicipio.appendChild(opt);
+                });
+            }
+            geoEstado.addEventListener('change', cargarMunicipios);
+            cargarMunicipios();
+
             // --- Delivery cost reveal ---
             const deliveryTipo = document.getElementById('delivery-tipo');
             const costoWrap = document.getElementById('delivery-costo-wrap');
@@ -1066,7 +1122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
 
             // Cargar GeoJSON de comunidades
-            fetch('/iseller_store/assets/js/comunidades.geojson')
+            fetch('../../iseller_store/assets/js/comunidades.geojson')
                 .then(r => r.json())
                 .then(geoData => {
                     allCommunitiesNames = geoData.features.map(f => f.properties.NAME).sort();

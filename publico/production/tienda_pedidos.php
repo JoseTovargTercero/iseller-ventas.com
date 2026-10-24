@@ -1029,6 +1029,124 @@ $stmtRep->close();
                 padding: 10px 12px;
             }
         }
+
+        /* ---- Modal Asignar transportista (SweetAlert2) ---- */
+        .swal-transp-popup {
+            background: var(--dash-card, #181b22) !important;
+            border: 1px solid var(--dash-border, #2e353e) !important;
+            border-radius: 16px !important;
+            color: var(--dash-text, #e8edf2) !important;
+            padding: 24px !important;
+        }
+
+        .swal-transp-title {
+            color: var(--dash-text, #e8edf2) !important;
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+        }
+
+        .swal-transp-html {
+            margin: 14px 0 0 !important;
+            padding: 0 !important;
+        }
+
+        .transp-order-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border: 1px solid var(--dash-border, #2e353e);
+            background: rgba(45, 212, 160, 0.05);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .transp-order-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(45, 212, 160, 0.12);
+            color: var(--dash-mint, #2dd4a0);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .transp-order-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--dash-text, #e8edf2);
+        }
+
+        .transp-order-sub {
+            font-size: 0.75rem;
+            color: var(--dash-text-muted, #8892a0);
+            margin-top: 2px;
+        }
+
+        .transp-field-label {
+            display: block;
+            text-align: left;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--dash-text-muted, #8892a0);
+            margin-bottom: 6px;
+        }
+
+        .swal-transp-select {
+            width: 100% !important;
+            display: flex !important;
+            background: var(--dash-bg, #1a1e24) !important;
+            border: 1px solid var(--dash-border, #2e353e) !important;
+            color: var(--dash-text, #e8edf2) !important;
+            border-radius: 8px !important;
+            padding: 10px 12px !important;
+            font-size: 0.85rem !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .swal-transp-select:focus {
+            border-color: var(--dash-mint, #2dd4a0) !important;
+            box-shadow: 0 0 0 3px rgba(45, 212, 160, 0.12) !important;
+        }
+
+        .transp-hint-modal {
+            display: flex;
+            align-items: flex-start;
+            gap: 7px;
+            margin: 12px 0 0;
+            text-align: left;
+            font-size: 0.74rem;
+            line-height: 1.45;
+            color: var(--dash-text-muted, #8892a0);
+        }
+
+        .transp-hint-modal i {
+            color: var(--dash-mint, #2dd4a0);
+            margin-top: 1px;
+        }
+
+        .swal-transp-confirm {
+            background: var(--dash-mint, #2dd4a0) !important;
+            color: #000 !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            padding: 9px 20px !important;
+        }
+
+        .swal-transp-cancel {
+            background: transparent !important;
+            border: 1px solid var(--dash-border, #2e353e) !important;
+            color: var(--dash-text-muted, #8892a0) !important;
+            border-radius: 8px !important;
+            padding: 9px 20px !important;
+        }
     </style>
 </head>
 
@@ -1042,9 +1160,14 @@ $stmtRep->close();
                 <div class="pedidos-page">
                     <div class="pedidos-header">
                         <h2><i class="bi bi-box-seam"></i> Pedidos de Tienda Virtual</h2>
-                        <button class="btn btn-outline-secondary" onclick="cargarPedidos()">
-                            <i class="bi bi-arrow-clockwise"></i> Actualizar
-                        </button>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <a href="tienda_transportistas.php" class="btn btn-outline-secondary">
+                                <i class="bi bi-person-badge"></i> Mis transportistas
+                            </a>
+                            <button class="btn btn-outline-secondary" onclick="cargarPedidos()">
+                                <i class="bi bi-arrow-clockwise"></i> Actualizar
+                            </button>
+                        </div>
                     </div>
 
                     <div class="rep-card" style="--rep-color: <?= $repNivel['color'] ?>">
@@ -1199,6 +1322,22 @@ $stmtRep->close();
                             <div id="status-stepper"></div>
                             <div id="status-actions" class="mt-3"></div>
                         </div>
+
+                        <div id="transportista-box" class="detail-section text-center mt-3 pt-3 mb-3" style="display:none;">
+                            <h5>Transportista</h5>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--dash-border);border-radius:10px;background:rgba(45,212,160,.04);text-align:left;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <i class="bi bi-truck" style="color:var(--dash-mint);font-size:1.1rem;"></i>
+                                    <div>
+                                        <div id="det-transportista" style="font-weight:600;font-size:.86rem;"></div>
+                                        <div id="det-transportista-estado" style="font-size:.72rem;color:var(--dash-text-muted);"></div>
+                                    </div>
+                                </div>
+                                <button id="btn-cambiar-transportista" type="button" class="btn btn-outline-success btn-sm" onclick="cambiarTransportista()" style="display:none;">
+                                    <i class="bi bi-arrow-repeat"></i> Cambiar
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="modal-tab-content" id="tab-pago">
@@ -1269,7 +1408,9 @@ $stmtRep->close();
     <script>
         var tablaPendientes, tablaEntregadas;
         var ordenActual = null;
+        var ordenActualTipo = '';
         var ordenStatus = 0;
+        var ordenTransportistaId = 0;
         var orderMap = null;
         var orderMarker = null;
 
@@ -1440,6 +1581,7 @@ $stmtRep->close();
                         return;
                     }
                     var o = data.orden;
+                    ordenActualTipo = o.tipo_entrega || '';
 
                     // Header
                     $('#det-id').text(o.id);
@@ -1451,6 +1593,24 @@ $stmtRep->close();
                     $('#det-telefono').text(o.cliente_telefono || 'N/A');
                     $('#det-email').text(o.cliente_email || 'N/A');
                     renderStatusStepper(o);
+
+                    // Transportista (delivery enviado o entregado)
+                    var esDelivery = (o.tipo_entrega === 'delivery');
+                    var estadoNum = parseInt(o.status);
+                    var tpBox = document.getElementById('transportista-box');
+                    ordenTransportistaId = parseInt(o.transportista_id || 0);
+                    if (esDelivery && (estadoNum === 3 || estadoNum === 4)) {
+                        tpBox.style.display = '';
+                        document.getElementById('det-transportista').textContent = o.transportista_nombre || 'Sin transportista asignado';
+                        document.getElementById('det-transportista-estado').textContent = o.transportista_estado ? ('Servicio: ' + o.transportista_estado) : '';
+                        var btnTp = document.getElementById('btn-cambiar-transportista');
+                        btnTp.style.display = estadoNum === 3 ? 'inline-flex' : 'none';
+                        btnTp.innerHTML = ordenTransportistaId
+                            ? '<i class="bi bi-arrow-repeat"></i> Cambiar'
+                            : '<i class="bi bi-truck"></i> Asignar';
+                    } else {
+                        tpBox.style.display = 'none';
+                    }
 
                     // Pago tab
                     var tipoPagoId = parseInt(o.tipoPago);
@@ -1724,13 +1884,14 @@ $stmtRep->close();
             document.getElementById('status-actions').innerHTML = actions;
         }
 
-        function enviarEstado(status, confirmMsg) {
+        function enviarEstado(status, confirmMsg, transportistaId) {
             if (confirmMsg && !confirm(confirmMsg)) return;
             if (!ordenActual) return;
             var fd = new FormData();
             fd.append('action', 'cambiar_estado');
             fd.append('id', ordenActual);
             fd.append('status', status);
+            if (transportistaId) fd.append('transportista_id', transportistaId);
 
             fetch('db/tienda_pedidos_api.php', {
                     method: 'POST',
@@ -1750,7 +1911,142 @@ $stmtRep->close();
         }
 
         function avanzarEstado() {
-            enviarEstado(ordenStatus + 1);
+            var siguiente = ordenStatus + 1;
+            if (siguiente === 3 && ordenActualTipo === 'delivery') {
+                elegirTransportista(function(id) {
+                    enviarEstado(3, null, id);
+                });
+                return;
+            }
+            enviarEstado(siguiente);
+        }
+
+        function elegirTransportista(alConfirmar, opciones) {
+            opciones = opciones || {};
+            fetch('db/tienda_transportistas_api.php?action=listar')
+                .then(function(res) {
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data.ok) {
+                        Swal.fire('Error', data.msg || 'No se pudo cargar la lista', 'error');
+                        return;
+                    }
+                    if (!data.data || !data.data.length) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Sin transportistas',
+                            html: '<p style="margin:0;font-size:13px;color:#8892a0;">Agrega transportistas a tu tienda para poder asignar deliveries.</p>',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ir a Mis transportistas',
+                            cancelButtonText: 'Cerrar',
+                            background: '#181b22',
+                            color: '#e8edf2',
+                            confirmButtonColor: '#2dd4a0'
+                        }).then(function(res) {
+                            if (res.isConfirmed) {
+                                window.location.href = 'tienda_transportistas.php';
+                            }
+                        });
+                        return;
+                    }
+
+                    var actual = parseInt(opciones.actual || 0);
+                    var opcionesHtml = data.data.map(function(t) {
+                        var extra = [];
+                        if (t.cedula) extra.push('C.I. ' + escaparHtml(t.cedula));
+                        if (t.telefono) extra.push(escaparHtml(t.telefono));
+                        var selected = (parseInt(t.id) === actual) ? ' selected' : '';
+                        return '<option value="' + parseInt(t.id) + '"' + selected + '>' + escaparHtml(t.nombre) +
+                            (extra.length ? ' — ' + extra.join(' · ') : '') + '</option>';
+                    }).join('');
+
+                    Swal.fire({
+                        title: opciones.titulo || 'Asignar transportista',
+                        html: '<div class="transp-order-card">' +
+                            '<div class="transp-order-icon"><i class="bi bi-truck"></i></div>' +
+                            '<div><div class="transp-order-title">Pedido #' + parseInt(ordenActual) + '</div>' +
+                            '<div class="transp-order-sub">' + (opciones.subtitulo || 'Delivery · se notificará al transportista') + '</div></div>' +
+                            '</div>' +
+                            '<label class="transp-field-label" for="swal-transportista">Transportista</label>' +
+                            '<select id="swal-transportista" class="swal-transp-select">' + opcionesHtml + '</select>' +
+                            '<p class="transp-hint-modal"><i class="bi bi-info-circle"></i> ' +
+                            (opciones.hint || 'El transportista recibirá la dirección y el teléfono del cliente en su app.') + '</p>',
+                        showCancelButton: true,
+                        confirmButtonText: opciones.boton || '<i class="bi bi-send"></i> Asignar y enviar',
+                        cancelButtonText: 'Cancelar',
+                        focusConfirm: false,
+                        customClass: {
+                            popup: 'swal-transp-popup',
+                            title: 'swal-transp-title',
+                            htmlContainer: 'swal-transp-html',
+                            confirmButton: 'swal-transp-confirm',
+                            cancelButton: 'swal-transp-cancel'
+                        },
+                        preConfirm: function() {
+                            var id = document.getElementById('swal-transportista').value;
+                            if (!id) {
+                                Swal.showValidationMessage('Selecciona un transportista');
+                                return false;
+                            }
+                            return id;
+                        }
+                    }).then(function(res) {
+                        if (res.isConfirmed && res.value) {
+                            alConfirmar(res.value);
+                        }
+                    });
+                })
+                .catch(function() {
+                    Swal.fire('Error', 'Error de conexión', 'error');
+                });
+        }
+
+        function cambiarTransportista() {
+            var asignando = !ordenTransportistaId;
+            elegirTransportista(function(id) {
+                var fd = new FormData();
+                fd.append('action', 'cambiar_transportista');
+                fd.append('id', ordenActual);
+                fd.append('transportista_id', id);
+
+                fetch('db/tienda_pedidos_api.php', {
+                        method: 'POST',
+                        body: fd
+                    })
+                    .then(function(res) {
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        if (!data.ok) {
+                            alert('Error: ' + data.msg);
+                            return;
+                        }
+                        cargarPedidos();
+                        verDetalle(ordenActual);
+                    })
+                    .catch(function() {
+                        alert('Error de conexión');
+                    });
+            }, {
+                titulo: asignando ? 'Asignar transportista' : 'Cambiar transportista',
+                boton: asignando ? '<i class="bi bi-send"></i> Asignar' : '<i class="bi bi-check2"></i> Guardar cambio',
+                actual: ordenTransportistaId,
+                subtitulo: 'Delivery · el nuevo transportista recibirá el pedido',
+                hint: 'El nuevo transportista recibirá la dirección y el teléfono del cliente en su app.'
+            });
+        }
+
+        function escaparHtml(texto) {
+            return String(texto == null ? '' : texto).replace(/[&<>"']/g, function(c) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [c];
+            });
         }
 
         function rechazarEstado() {

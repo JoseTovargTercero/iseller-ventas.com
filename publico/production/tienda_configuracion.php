@@ -2,6 +2,7 @@
 require_once('includes/requires.php');
 require_once('../../iseller_store/core/chat_compra.php');
 require_once('../../iseller_store/core/eslogan.php');
+require_once('../../iseller_store/core/venezuela_geo.php');
 
 // El formulario guarda texto utf8mb4 (eslogan, nombre): con la conexión en utf8
 // (3 bytes) los emojis terminarían guardados como "????".
@@ -55,13 +56,28 @@ $bancos_venezuela = [
 
 $categorias_list = [
     "Restaurantes y Comida Rápida",
-    "Ropa y Accesorios",
+    "Panadería y Pastelería",
+    "Carnicerías y Víveres",
+    "Frutas y Verduras",
     "Supermercado y Víveres",
+    "Bebidas y Licores",
+    "Ropa y Accesorios",
+    "Calzado",
+    "Joyería y Relojería",
     "Salud y Belleza",
+    "Farmacia",
     "Tecnología y Electrónica",
+    "Electrodomésticos",
     "Hogar y Decoración",
+    "Muebles",
+    "Ferretería y Construcción",
+    "Repuestos para Vehículos",
     "Juguetes y Niños",
+    "Papelería y Librería",
+    "Deportes y Fitness",
     "Mascotas",
+    "Flores y Regalos",
+    "Distribuidora y Mayorista",
     "Servicios",
     "Otro"
 ];
@@ -163,6 +179,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat = isset($_POST['lat']) && $_POST['lat'] !== '' ? floatval($_POST['lat']) : null;
     $lng = isset($_POST['lng']) && $_POST['lng'] !== '' ? floatval($_POST['lng']) : null;
     $comunidad = strip_tags(trim($_POST['comunidad'] ?? ''));
+    // Solo se aceptan combinaciones estado/municipio de la lista.
+    $geo = venezuela_estados_municipios();
+    $geo_estado = trim($_POST['geo_estado'] ?? '');
+    $geo_municipio = trim($_POST['geo_municipio'] ?? '');
+    if (!isset($geo[$geo_estado]) || !in_array($geo_municipio, $geo[$geo_estado], true)) {
+        $geo_estado = $geo_municipio = null;
+    }
 
     $horarios = null;
     if (isset($_POST['horarios'])) {
@@ -200,11 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($logo_url) {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssssi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
+        $stmt->bind_param("ssssssssssssssi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
     } else {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
-        $stmt->bind_param("sssssssssssi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
+        $stmt->bind_param("sssssssssssssi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
     }
 
     $stmt->execute();
@@ -222,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, horarios, nombre_visible, eslogan, notificacion_email FROM negocio WHERE id = ?");
+$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email FROM negocio WHERE id = ?");
 $stmt->bind_param("i", $bss_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -1235,23 +1258,42 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                                     </div>
                                     <div class="panel-body">
                                         <p class="field-hint mb-3" style="margin-top:0;">Haz clic en el mapa para colocar tu tienda o busca tu comunidad para centrar el mapa.</p>
-                                        <div style="position:relative;" class="mb-3">
-                                            <input type="text" id="comunidad" class="dash-input" placeholder="Escribe tu comunidad..." autocomplete="off">
-                                            <div id="community-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--dash-bg);border:1px solid var(--dash-border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:50;"></div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="field-label">Estado</label>
+                                                <select name="geo_estado" id="geo-estado" class="dash-input">
+                                                    <option value="">Seleccione un estado...</option>
+                                                    <?php foreach (venezuela_estados_municipios() as $estado => $municipios): ?>
+                                                        <option value="<?= htmlspecialchars($estado) ?>" <?= ($tienda['geo_estado'] ?? '') === $estado ? 'selected' : '' ?>><?= htmlspecialchars($estado) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="field-label">Municipio</label>
+                                                <select name="geo_municipio" id="geo-municipio" class="dash-input">
+                                                    <option value="">Seleccione un municipio...</option>
+                                                    <?php foreach ((venezuela_estados_municipios()[$tienda['geo_estado'] ?? ''] ?? []) as $municipio): ?>
+                                                        <option value="<?= htmlspecialchars($municipio) ?>" <?= ($tienda['geo_municipio'] ?? '') === $municipio ? 'selected' : '' ?>><?= htmlspecialchars($municipio) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="field-label">Comunidad</label>
+                                            <div style="position:relative;">
+                                                <input type="text" name="comunidad" id="comunidad" class="dash-input" placeholder="Escribe tu comunidad..." autocomplete="off" value="<?= htmlspecialchars($tienda['comunidad'] ?? '') ?>">
+                                                <div id="community-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:1100;"></div>
+                                            </div>
                                         </div>
                                         <div id="map-picker" style="width:100%;height:280px;border-radius:8px;border:1px solid var(--dash-border);margin-bottom:14px;"></div>
                                         <div class="row mb-0">
-                                            <div class="col-md-4 mb-3">
+                                            <div class="col-md-6 mb-3">
                                                 <label class="field-label">Latitud</label>
                                                 <input type="text" name="lat" id="lat-input" class="dash-input" placeholder="0.0000000" value="<?= htmlspecialchars($tienda['lat'] ?? '') ?>" readonly>
                                             </div>
-                                            <div class="col-md-4 mb-3">
+                                            <div class="col-md-6 mb-3">
                                                 <label class="field-label">Longitud</label>
                                                 <input type="text" name="lng" id="lng-input" class="dash-input" placeholder="0.0000000" value="<?= htmlspecialchars($tienda['lng'] ?? '') ?>" readonly>
-                                            </div>
-                                            <div class="col-md-4 mb-3">
-                                                <label class="field-label">Comunidad</label>
-                                                <input type="text" name="comunidad" id="comunidad-hidden" class="dash-input" value="<?= htmlspecialchars($tienda['comunidad'] ?? '') ?>" readonly>
                                             </div>
                                         </div>
                                     </div>
@@ -1764,6 +1806,27 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
             });
             validarSlug();
 
+            // --- Estado / Municipio ---
+            const GEO_VENEZUELA = <?= json_encode(venezuela_estados_municipios(), JSON_UNESCAPED_UNICODE) ?>;
+            const geoEstado = document.getElementById('geo-estado');
+            const geoMunicipio = document.getElementById('geo-municipio');
+            let geoMunicipioGuardado = <?= json_encode($tienda['geo_municipio'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
+            function cargarMunicipios() {
+                geoMunicipio.innerHTML = '<option value="">Seleccione un municipio...</option>';
+                (GEO_VENEZUELA[geoEstado.value] || []).forEach(function(m) {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === geoMunicipioGuardado) opt.selected = true;
+                    geoMunicipio.appendChild(opt);
+                });
+            }
+            geoEstado.addEventListener('change', function() {
+                geoMunicipioGuardado = '';
+                cargarMunicipios();
+            });
+            cargarMunicipios();
+
             // El ejemplo del eslogan cambia con la categoría elegida
             const SLOGAN_DEFAULTS = <?= json_encode(eslogan_defaults(), JSON_UNESCAPED_UNICODE) ?>;
             const esloganInput = document.getElementById('eslogan-input');
@@ -1833,7 +1896,6 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
             const latInput = document.getElementById('lat-input');
             const lngInput = document.getElementById('lng-input');
             const comunidadInput = document.getElementById('comunidad');
-            const comunidadHidden = document.getElementById('comunidad-hidden');
             const resultsDiv = document.getElementById('community-results');
 
             const hasCoords = latInput.value && lngInput.value;
@@ -1873,7 +1935,7 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                 setMarker(e.latlng.lat, e.latlng.lng);
             });
 
-            fetch('/iseller_store/assets/js/comunidades.geojson')
+            fetch('../../iseller_store/assets/js/comunidades.geojson')
                 .then(r => r.json())
                 .then(geoData => {
                     allCommunitiesNames = geoData.features.map(f => f.properties.NAME).sort();
@@ -1907,7 +1969,6 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                 if (!item) return;
                 const name = item.textContent;
                 comunidadInput.value = name;
-                comunidadHidden.value = name;
                 resultsDiv.style.display = 'none';
                 if (geojsonLayer) {
                     geojsonLayer.eachLayer(layer => {

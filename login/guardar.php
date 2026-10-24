@@ -143,6 +143,9 @@ if ($result->num_rows === 1) {
 
         if ($estadoMembresia['esta_vencida']) {
             $redirect = 'publico/production/membresia_renovacion.php';
+        } elseif (!empty($estadoMembresia['dias_restantes']) && $estadoMembresia['dias_restantes'] <= 4) {
+            // Aviso de renovación en el primer panel que vea el usuario tras entrar
+            $_SESSION['alerta_membresia_pendiente'] = (int)$estadoMembresia['dias_restantes'];
         }
 
         // Puedes registrar el login exitoso en logs si deseas

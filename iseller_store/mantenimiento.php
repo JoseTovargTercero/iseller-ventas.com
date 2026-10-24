@@ -17,7 +17,7 @@ $check_query = "SELECT mantenimiento FROM configuracion WHERE configuracion = 'm
 $check_res = $conexion_store->query($check_query);
 if ($check_res && $check_res->num_rows > 0) {
     if ($check_res->fetch_assoc()['mantenimiento'] == 0) {
-        header("Location: index.php");
+        header("Location: ../");
         exit();
     }
 }

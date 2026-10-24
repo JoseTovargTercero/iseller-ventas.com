@@ -156,14 +156,21 @@ if (!optimizeImage($file['tmp_name'], $dest, $maxWidth, 85)) {
     exit;
 }
 
+// Versión ligera para la tarjeta de tienda del marketplace
+if ($tipo === 'portada') {
+    optimizeImage($file['tmp_name'], substr($dest, 0, -5) . '_min.webp', 480, 80);
+}
+
 // Borrar imagen anterior
 $col = $tipo . '_url';
 $old_res = $conexion->query("SELECT `{$col}` FROM negocio WHERE id = {$bss_id}");
 if ($old_res) {
     $old_row = $old_res->fetch_assoc();
     if (!empty($old_row[$col])) {
-        $old_path = realpath(__DIR__ . '/../../../iseller_store/') . DIRECTORY_SEPARATOR . $old_row[$col];
-        if (file_exists($old_path)) @unlink($old_path);
+        $old_base = realpath(__DIR__ . '/../../../iseller_store/') . DIRECTORY_SEPARATOR . $old_row[$col];
+        if (file_exists($old_base)) @unlink($old_base);
+        $old_min = substr($old_base, 0, -5) . '_min.webp';
+        if (file_exists($old_min)) @unlink($old_min);
     }
 }
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once('iseller_store/core/check_maintenance.php');
 require_once('iseller_store/core/db.php');
 require_once('iseller_store/core/session.php');
@@ -38,7 +38,7 @@ if (empty($tienda_slug) && $path !== '' && !in_array(strtolower($path), $reserva
 
 if ($tienda_slug) {
     // Buscar el negocio en la base de datos unificada
-    $stmtNegocio = $conexion->prepare("SELECT id, nombre, logo_url, portada_url, config_delivery, lat, lng, nombre_visible, eslogan, categoria, reputacion_total, reputacion_recomiendan, reputacion_pct FROM negocio WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'");
+    $stmtNegocio = $conexion->prepare("SELECT id, nombre, logo_url, portada_url, config_delivery, lat, lng, nombre_visible, eslogan, categoria, reputacion_total, reputacion_recomiendan, reputacion_pct, geo_estado, geo_municipio FROM negocio WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'");
     if ($stmtNegocio) {
         $stmtNegocio->bind_param("s", $tienda_slug);
         $stmtNegocio->execute();
@@ -187,6 +187,9 @@ if (!$es_tienda_individual) {
     $bss_id = 3; // Fallback for backwards compatibility with calculations if needed
 }
 
+// Última página pública visitada: registro.php vuelve aquí al terminar
+$_SESSION['return_after_auth'] = $request_uri;
+
 // OJO: no guardar $bss_id en la sesión desde la portada pública. El panel de la
 // tienda (configurar/session.php) usa $_SESSION['bss_id'] y un visitante anónimo
 // quedaría autenticado como dueño de la tienda.
@@ -235,6 +238,13 @@ if ($es_tienda_individual) {
     $tienda_slogan = eslogan_mostrar($negocio_data['eslogan'] ?? '', $negocio_data['categoria'] ?? '');
 }
 
+// Favorito del cliente para esta tienda
+$es_favorito = false;
+if ($es_tienda_individual && isLoggedIn()) {
+    require_once('iseller_store/core/favoritos.php');
+    $es_favorito = es_favorito($conexion_store, (int)getUserId(), (int)$negocio_data['id']);
+}
+
 // Registro de métricas
 require_once('iseller_store/core/metrics.php');
 // registrarVisita($conexion_store);
@@ -243,7 +253,7 @@ require_once('iseller_store/core/metrics.php');
 $tiendas_destacadas = [];
 if (!$es_tienda_individual) {
     $resTiendas = $conexion->query("
-        SELECT n.id, n.nombre, n.nombre_visible, n.logo_url, n.categoria, n.slug,
+        SELECT n.id, n.nombre, n.nombre_visible, n.logo_url, n.portada_url, n.categoria, n.slug,
                (SELECT COUNT(*) FROM negocio_productos np
                 WHERE np.negocio_id = n.id AND np.estado_publicacion = 1) AS total_productos
         FROM negocio n
@@ -281,6 +291,83 @@ if ($es_tienda_individual && $negocio_data) {
     $stmtRep->close();
 }
 
+// Tiendas cercanas: primero las del municipio del usuario (o el de su tienda),
+// luego el resto de su estado. Sin ubicación de referencia no hay listado.
+$tiendas_cercanas = ['municipio' => [], 'estado' => []];
+$geo_cerca_estado = '';
+$geo_cerca_municipio = '';
+
+// Cliente logueado en la tienda: su ubicación manda.
+if (isLoggedIn()) {
+    $stmtGeoCerca = $conexion_store->prepare("SELECT geo_estado, geo_municipio FROM tienda_usuarios WHERE id = ? LIMIT 1");
+    $uidCerca = (int)getUserId();
+    $stmtGeoCerca->bind_param("i", $uidCerca);
+    $stmtGeoCerca->execute();
+    $geoUsuario = $stmtGeoCerca->get_result()->fetch_assoc();
+    $stmtGeoCerca->close();
+    if ($geoUsuario && !empty($geoUsuario['geo_estado']) && !empty($geoUsuario['geo_municipio'])) {
+        $geo_cerca_estado = (string)$geoUsuario['geo_estado'];
+        $geo_cerca_municipio = (string)$geoUsuario['geo_municipio'];
+    }
+}
+
+// Dueño logueado en el panel (misma sesión PHP): usar la ubicación de su tienda.
+if (($geo_cerca_estado === '' || $geo_cerca_municipio === '') && !empty($_SESSION['bss_id'])) {
+    $stmtGeoTienda = $conexion->prepare("SELECT geo_estado, geo_municipio FROM negocio WHERE id = ? LIMIT 1");
+    $bssCerca = (int)$_SESSION['bss_id'];
+    $stmtGeoTienda->bind_param("i", $bssCerca);
+    $stmtGeoTienda->execute();
+    $geoTienda = $stmtGeoTienda->get_result()->fetch_assoc();
+    $stmtGeoTienda->close();
+    if ($geoTienda && !empty($geoTienda['geo_estado']) && !empty($geoTienda['geo_municipio'])) {
+        $geo_cerca_estado = (string)$geoTienda['geo_estado'];
+        $geo_cerca_municipio = (string)$geoTienda['geo_municipio'];
+    }
+}
+
+if ($es_tienda_individual) {
+    // Si nadie tiene ubicación, usar la de la tienda que se está viendo.
+    if ($geo_cerca_estado === '' || $geo_cerca_municipio === '') {
+        $geo_cerca_estado = (string)($negocio_data['geo_estado'] ?? '');
+        $geo_cerca_municipio = (string)($negocio_data['geo_municipio'] ?? '');
+    }
+}
+
+if ($geo_cerca_estado !== '' && $geo_cerca_municipio !== '') {
+    $stmtCerca = $conexion->prepare("
+        SELECT n.id, n.nombre, n.nombre_visible, n.logo_url, n.categoria, n.slug, n.geo_municipio
+        FROM negocio n
+        WHERE n.tiene_tienda_virtual = 1
+          AND n.estado = 'activo'
+          AND n.slug IS NOT NULL AND n.slug <> ''
+          AND n.geo_estado = ?
+          AND EXISTS (
+              SELECT 1 FROM negocio_productos np
+              WHERE np.negocio_id = n.id AND np.estado_publicacion = 1
+          )
+        ORDER BY (n.geo_municipio = ?) DESC, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre)
+    ");
+    $stmtCerca->bind_param("ss", $geo_cerca_estado, $geo_cerca_municipio);
+    $stmtCerca->execute();
+    $resCerca = $stmtCerca->get_result();
+    while ($filaCerca = $resCerca->fetch_assoc()) {
+        if ($filaCerca['geo_municipio'] === $geo_cerca_municipio) {
+            $tiendas_cercanas['municipio'][] = $filaCerca;
+        } else {
+            $tiendas_cercanas['estado'][] = $filaCerca;
+        }
+    }
+    $stmtCerca->close();
+}
+
+$grupos_cercanos = [];
+if ($tiendas_cercanas['municipio']) {
+    $grupos_cercanos['Mismo municipio · ' . $geo_cerca_municipio] = $tiendas_cercanas['municipio'];
+}
+if ($tiendas_cercanas['estado']) {
+    $grupos_cercanos['Mismo estado · ' . $geo_cerca_estado] = $tiendas_cercanas['estado'];
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -296,6 +383,10 @@ if ($es_tienda_individual && $negocio_data) {
     $base_url = $protocol . '://' . $host . $script_dir . '/iseller_store/';
     ?>
     <base href="<?= $base_url ?>">
+    <script>
+        // La ruta de fotos y logos vive en la BD: si el archivo no existe, usamos el placeholder
+        function imgFallback(img) { img.onerror = null; img.src = 'assets/img/no-images.png'; }
+    </script>
 
     <title>iSeller Store | Ecommerce para comprar en línea fácil y seguro</title>
 
@@ -1170,17 +1261,18 @@ if ($es_tienda_individual && $negocio_data) {
         .tienda-chip {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            text-align: center;
+            align-items: stretch;
+            text-align: left;
             background: #fff;
             border: 1.5px solid #e9ecef;
             border-radius: 14px;
-            padding: 18px 14px 14px;
+            padding: 0;
+            overflow: hidden;
             text-decoration: none;
             flex-shrink: 0;
             scroll-snap-align: start;
             transition: border-color 0.2s, box-shadow 0.2s, transform 0.18s;
-            width: 152px;
+            width: 250px;
             cursor: pointer;
             position: relative;
         }
@@ -1197,17 +1289,47 @@ if ($es_tienda_individual && $negocio_data) {
             box-shadow: 0 0 0 2px rgba(26, 127, 75, 0.15);
         }
 
-        .tienda-chip-logo {
-            width: 68px;
-            height: 68px;
-            border-radius: 50%;
-            overflow: hidden;
-            background: #f5f5f5;
+        .tienda-chip-cover {
+            height: 96px;
+            flex-shrink: 0;
+            background: linear-gradient(145deg, #f8faf9 0%, #eef6f1 50%, #e8f5ec 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
-            border: 2px solid #e9ecef;
+        }
+
+        .tienda-chip-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .tienda-chip-cover i {
+            font-size: 28px;
+            color: #b3c9bc;
+        }
+
+        .tienda-chip-body {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 0 14px 14px;
+            margin-top: -24px;
+            position: relative;
+        }
+
+        .tienda-chip-logo {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
             flex-shrink: 0;
         }
 
@@ -1218,8 +1340,14 @@ if ($es_tienda_individual && $negocio_data) {
         }
 
         .tienda-chip-logo i {
-            font-size: 26px;
+            font-size: 22px;
             color: #adb5bd;
+        }
+
+        .tienda-chip-info {
+            flex: 1;
+            min-width: 0;
+            padding-top: 26px;
         }
 
         .tienda-chip-name {
@@ -1227,10 +1355,10 @@ if ($es_tienda_individual && $negocio_data) {
             font-weight: 700;
             color: #1a1a1a;
             line-height: 1.3;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 4px;
         }
 
@@ -1241,6 +1369,7 @@ if ($es_tienda_individual && $negocio_data) {
         }
 
         .tienda-chip-cat {
+            display: block;
             font-size: 11px;
             color: #888;
             margin-bottom: 4px;
@@ -1256,32 +1385,107 @@ if ($es_tienda_individual && $negocio_data) {
             font-weight: 500;
         }
 
+        .tienda-chip-arrow {
+            font-size: 15px;
+            color: #333;
+            margin-top: 32px;
+            flex-shrink: 0;
+        }
+
         .tienda-chip-more {
-            background: #f8faf9;
-            border: 1.5px dashed #c8ddd4;
-            color: #1a7f4b;
+            background: #f6fbf8;
+            border-color: #d9ebe2;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px 18px;
+            gap: 4px;
         }
 
         .tienda-chip-more:hover {
-            background: #f0faf4;
+            background: #eef8f2;
             border-color: #1a7f4b;
         }
 
-        .tienda-chip-more .tienda-chip-logo {
-            background: #e8f5ee;
-            border-color: #c8ddd4;
+        .tienda-chip-more-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 1.5px solid #bcdccb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #1a7f4b;
+            margin-bottom: 4px;
         }
 
-        .tienda-chip-more .tienda-chip-logo i {
+        .tienda-chip-more-title {
+            font-size: 15px;
+            font-weight: 800;
             color: #1a7f4b;
         }
 
-        .tienda-chip-more .tienda-chip-name {
-            color: #1a7f4b;
+        .tienda-chip-more-sub {
+            font-size: 11px;
+            color: #6b8f7d;
         }
 
-        .tienda-chip-more .tienda-chip-cat {
-            color: #5a9e7c;
+        .tienda-chip-more-arrow {
+            font-size: 16px;
+            color: #1a7f4b;
+            margin-top: 4px;
+        }
+
+        /* Tiendas favoritas del cliente */
+        .favoritas-section {
+            padding-top: 28px;
+            padding-bottom: 4px;
+        }
+
+        .favoritas-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .favoritas-head h2 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin: 0 0 2px;
+        }
+
+        .favoritas-head h2 i {
+            color: #ef5a6f;
+            font-size: 1rem;
+        }
+
+        .favoritas-head p {
+            font-size: 0.82rem;
+            color: #666;
+            margin: 0;
+        }
+
+        .favoritas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 14px;
+        }
+
+        .favoritas-grid .tienda-chip {
+            width: auto;
+        }
+
+        @media (max-width: 576px) {
+            .favoritas-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* No-image product placeholder */
@@ -1361,8 +1565,7 @@ if ($es_tienda_individual && $negocio_data) {
             .store-profile-header {
                 position: relative;
                 width: 100%;
-                padding-top: 60px;
-                /* height of navbar */
+                padding-top: 0;
             }
 
             .store-cover {
@@ -1498,6 +1701,7 @@ if ($es_tienda_individual && $negocio_data) {
                 border-radius: 50px;
                 font-size: 0.82rem;
                 font-weight: 500;
+                font-family: inherit;
                 color: #ffffff;
                 display: inline-flex;
                 align-items: center;
@@ -1509,6 +1713,304 @@ if ($es_tienda_individual && $negocio_data) {
             .store-badge.clickable:hover {
                 background: rgba(255, 255, 255, 0.28);
                 cursor: pointer;
+            }
+
+            /* Segundo topbar del perfil de la tienda */
+            :root {
+                --navbar-h: 60px;
+            }
+
+            @media (max-width: 991px) {
+                :root {
+                    --navbar-h: 104px;
+                }
+            }
+
+            .store-subnav {
+                position: sticky;
+                top: var(--navbar-h, 60px);
+                z-index: 1020;
+                margin-top: var(--navbar-h, 60px);
+                background: rgba(255, 255, 255, 0.94);
+                -webkit-backdrop-filter: blur(14px);
+                backdrop-filter: blur(14px);
+                border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+                box-shadow: 0 6px 20px rgba(17, 24, 39, 0.06);
+            }
+
+            .store-subnav-inner {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 10px 32px;
+                display: flex;
+                align-items: center;
+                gap: 18px;
+            }
+
+            .store-subnav-brand {
+                display: flex;
+                align-items: center;
+                gap: 0;
+                min-width: 0;
+                min-height: 38px;
+                flex: 1;
+            }
+
+            .store-subnav-logo-wrap {
+                display: flex;
+                align-items: center;
+                width: 0;
+                opacity: 0;
+                overflow: hidden;
+                flex-shrink: 0;
+                transition: width 0.25s ease, opacity 0.2s ease, margin-right 0.25s ease;
+            }
+
+            .store-subnav.show-logo .store-subnav-logo-wrap {
+                width: 38px;
+                opacity: 1;
+                margin-right: 10px;
+            }
+
+            .store-subnav-logo,
+            .store-subnav-logo-placeholder {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                flex-shrink: 0;
+                border: 2px solid #fff;
+                box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.08), 0 2px 6px rgba(17, 24, 39, 0.08);
+            }
+
+            .store-subnav-logo {
+                object-fit: cover;
+                background: #f3f4f6;
+            }
+
+            .store-subnav-logo-placeholder {
+                background: #ecfdf5;
+                color: #1a7f4b;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1rem;
+            }
+
+            .store-subnav-text {
+                min-width: 0;
+            }
+
+            .store-subnav-name {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 0.92rem;
+                font-weight: 700;
+                color: #111827;
+                line-height: 1.2;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .store-subnav-name i {
+                color: #1a7f4b;
+                font-size: 0.78rem;
+                flex-shrink: 0;
+            }
+
+            .store-subnav-meta {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                margin-top: 2px;
+                font-size: 0.72rem;
+                color: #6b7280;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .store-subnav-meta .dot {
+                width: 3px;
+                height: 3px;
+                border-radius: 50%;
+                background: #d1d5db;
+                flex-shrink: 0;
+            }
+
+            .store-subnav-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+
+            .store-subnav-fav {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                height: 40px;
+                padding: 0 18px;
+                border: 1px solid transparent;
+                border-radius: 10px;
+                background: #1a7f4b;
+                color: #fff;
+                font-size: 0.82rem;
+                font-weight: 700;
+                font-family: inherit;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(26, 127, 75, 0.22);
+                transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+            }
+
+            .store-subnav-fav:hover {
+                background: #166a3f;
+                transform: translateY(-1px);
+                box-shadow: 0 6px 16px rgba(26, 127, 75, 0.28);
+            }
+
+            .store-subnav-fav:active {
+                transform: translateY(0);
+            }
+
+            .store-subnav-fav.is-fav {
+                background: #fff;
+                color: #e11d48;
+                border-color: #fecdd3;
+                box-shadow: 0 2px 8px rgba(225, 29, 72, 0.08);
+            }
+
+            .store-subnav-fav.is-fav:hover {
+                background: #fff1f2;
+            }
+
+            .store-subnav-fav.is-fav i {
+                color: #e11d48;
+            }
+
+            .store-subnav-fav:disabled {
+                opacity: 0.7;
+                cursor: wait;
+            }
+
+            .store-subnav-fav i {
+                font-size: 1rem;
+            }
+
+            .store-subnav-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 7px;
+                height: 40px;
+                padding: 0 14px;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                background: #fff;
+                color: #374151;
+                font-size: 0.8rem;
+                font-weight: 600;
+                font-family: inherit;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .store-subnav-btn:hover {
+                border-color: #1a7f4b;
+                color: #1a7f4b;
+                background: #f0fdf4;
+            }
+
+            .store-subnav-divider {
+                width: 1px;
+                height: 24px;
+                background: #e5e7eb;
+                margin: 0 4px;
+                flex-shrink: 0;
+            }
+
+            .store-subnav-delivery {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .store-subnav-meta-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 0.76rem;
+                font-weight: 500;
+                color: #4b5563;
+                white-space: nowrap;
+            }
+
+            .store-subnav-meta-item i {
+                color: #1a7f4b;
+                font-size: 0.9rem;
+            }
+
+            @media (max-width: 991px) {
+                .store-subnav-inner {
+                    padding: 10px 16px;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+
+                .store-subnav-brand {
+                    flex: 1 1 100%;
+                }
+
+                .store-subnav-actions {
+                    width: 100%;
+                    flex-wrap: wrap;
+                }
+
+                .store-subnav-fav {
+                    flex: 1;
+                }
+
+                .store-subnav-meta-item {
+                    font-size: 0.72rem;
+                }
+
+                .store-subnav-delivery {
+                    flex: 1 1 100%;
+                    gap: 12px;
+                }
+            }
+
+            @media (max-width: 640px) {
+                .store-subnav-meta {
+                    display: none;
+                }
+
+                .store-subnav-delivery {
+                    display: none;
+                }
+
+                .store-subnav-actions {
+                    gap: 6px;
+                }
+
+                .store-subnav-fav {
+                    font-size: 0.78rem;
+                    padding: 0 12px;
+                    white-space: nowrap;
+                }
+
+                .store-subnav-btn {
+                    padding: 0 12px;
+                }
+
+                .store-subnav-btn span {
+                    display: none;
+                }
+
+                .store-subnav-divider {
+                    display: none;
+                }
             }
 
             .store-rep-badge {
@@ -1879,12 +2381,58 @@ if ($es_tienda_individual && $negocio_data) {
             $deliveryInfo = "Zonas: $zona";
         }
         ?>
+        <div class="store-subnav">
+            <div class="store-subnav-inner">
+                <div class="store-subnav-brand">
+                    <span class="store-subnav-logo-wrap">
+                        <?php if (!empty($negocio_data['logo_url'])): ?>
+                            <img class="store-subnav-logo" src="<?= htmlspecialchars($negocio_data['logo_url']) ?>" onerror="imgFallback(this)" alt="">
+                        <?php else: ?>
+                            <span class="store-subnav-logo-placeholder"><i class="bi bi-shop"></i></span>
+                        <?php endif; ?>
+                    </span>
+                    <div class="store-subnav-text">
+                        <span class="store-subnav-name">
+                            <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre']) ?>
+                            <i class="bi bi-patch-check-fill" title="Tienda verificada"></i>
+                        </span>
+                        <?php if (!empty($negocio_data['categoria']) || ($repNivel && $repNivel['visible'])): ?>
+                            <span class="store-subnav-meta">
+                                <?php if (!empty($negocio_data['categoria'])): ?>
+                                    <span><?= htmlspecialchars($negocio_data['categoria']) ?></span>
+                                <?php endif; ?>
+                                <?php if ($repNivel && $repNivel['visible']): ?>
+                                    <?php if (!empty($negocio_data['categoria'])): ?><span class="dot"></span><?php endif; ?>
+                                    <span><?= round((float)$negocio_data['reputacion_pct']) ?>% recomendado</span>
+                                <?php endif; ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="store-subnav-actions">
+                    <button type="button" class="store-subnav-fav <?= $es_favorito ? 'is-fav' : '' ?>" id="btn-favorito" data-negocio="<?= (int)$negocio_data['id'] ?>" aria-pressed="<?= $es_favorito ? 'true' : 'false' ?>" title="<?= $es_favorito ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                        <i class="bi <?= $es_favorito ? 'bi-heart-fill' : 'bi-heart' ?>"></i>
+                        <span><?= $es_favorito ? 'En favoritos' : 'Agregar a favoritos' ?></span>
+                    </button>
+                    <button type="button" class="store-subnav-btn" data-bs-toggle="modal" data-bs-target="#modalUbicacion" title="Consultar ubicación" aria-label="Consultar ubicación">
+                        <i class="bi bi-geo-alt"></i> <span>Ubicación</span>
+                    </button>
+                    <?php if (!empty($negocio_data['config_delivery'])): ?>
+                        <span class="store-subnav-delivery">
+                            <span class="store-subnav-divider"></span>
+                            <span class="store-subnav-meta-item"><i class="bi bi-truck"></i> <?= $tipo_delivery ?></span>
+                            <span class="store-subnav-meta-item"><i class="bi bi-map"></i> <?= htmlspecialchars($deliveryInfo, ENT_QUOTES, 'UTF-8') ?></span>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
         <section class="store-profile-header">
             <div class="store-cover" style="background-image: url('<?= $portada ?>');">
                 <!-- Content overlay on the left -->
                 <div class="store-cover-content">
                     <?php if (!empty($negocio_data['logo_url'])): ?>
-                        <img class="store-logo-img" src="<?= htmlspecialchars($negocio_data['logo_url']) ?>" alt="Logo <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre']) ?>">
+                        <img class="store-logo-img" src="<?= htmlspecialchars($negocio_data['logo_url']) ?>" onerror="imgFallback(this)" alt="Logo <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre']) ?>">
                     <?php else: ?>
                         <div class="store-logo-placeholder"><i class="bi bi-shop"></i></div>
                     <?php endif; ?>
@@ -1898,8 +2446,8 @@ if ($es_tienda_individual && $negocio_data) {
                             </span>
                         </h1>
                             <p class="store-tagline"><?= nl2br(htmlspecialchars($tienda_slogan)) ?></p>
-                        <div class="store-badges">
-                            <?php if ($repNivel && $repNivel['visible']): ?>
+                        <?php if ($repNivel && $repNivel['visible']): ?>
+                            <div class="store-badges">
                                 <div class="store-rep-badge" style="--rep-color: <?= $repNivel['color'] ?>" title="Reputación basada en <?= (int)$negocio_data['reputacion_total'] ?> calificaciones de compradores">
                                     <span class="rep-dot"></span>
                                     <span class="rep-pct"><?= round((float)$negocio_data['reputacion_pct']) ?>%</span> recomendado
@@ -1910,19 +2458,8 @@ if ($es_tienda_individual && $negocio_data) {
                                         <?php endfor; ?>
                                     </span>
                                 </div>
-                            <?php endif; ?>
-                            <div class="store-badge clickable" data-bs-toggle="modal" data-bs-target="#modalUbicacion">
-                                <i class="bi bi-geo-alt-fill"></i> Consultar ubicación
                             </div>
-                            <?php if (!empty($negocio_data['config_delivery'])): ?>
-                                <div class="store-badge">
-                                    <i class="bi bi-truck"></i> <?= $tipo_delivery ?>
-                                </div>
-                                <div class="store-badge">
-                                    <i class="bi bi-map"></i> <?= htmlspecialchars($deliveryInfo, ENT_QUOTES, 'UTF-8') ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <!-- Decorative slogan right -->
@@ -1941,6 +2478,8 @@ if ($es_tienda_individual && $negocio_data) {
                 </div>
             </div>
         </section>
+
+        <?php include 'iseller_store/includes/tiendas_favoritas.php'; ?>
 
         <?php if ($es_tienda_individual && count($repReviews) > 0): ?>
             <section class="container-fluid px-3 px-md-5 rep-reviews-wrap" id="opiniones-tienda">
@@ -2214,12 +2753,19 @@ if ($es_tienda_individual && $negocio_data) {
                         <i class="bi bi-search me-2" style="color:#aaa; font-size:0.95rem;"></i>
                         <input type="text" id="hero-search-input" placeholder="Buscar productos o tiendas..." oninput="heroSearch(this.value)">
                     </div>
+                    <button type="button" class="btn rounded-pill px-4 py-2 fw-semibold mt-3" data-bs-toggle="modal" data-bs-target="#modalTiendasCercanas" style="background:#1a7f4b;color:#fff;border:none;box-shadow:0 2px 12px rgba(26,127,75,0.25);">
+                        <i class="bi bi-shop-window me-2"></i> Encontrar tiendas cercanas
+                    </button>
                 </div>
                 <div class="mkt-hero-img-col">
                     <img src="assets/img/bat-1.webp" alt="iSeller Store - Mercado local" loading="eager">
                 </div>
             </div>
         </div>
+    <?php endif; ?>
+
+    <?php if (!$es_tienda_individual): ?>
+        <?php include 'iseller_store/includes/tiendas_favoritas.php'; ?>
     <?php endif; ?>
 
     <!-- Registration CTA -->
@@ -2254,29 +2800,46 @@ if ($es_tienda_individual && $negocio_data) {
                         <i class="bi bi-chevron-left"></i>
                     </button>
                     <div class="tiendas-ribbon-scroll" id="tiendas-scroll">
-                        <?php foreach ($tiendas_destacadas as $t): ?>
+                        <?php foreach ($tiendas_destacadas as $t):
+                            // La portada se muestra con su versión ligera (480px) si existe
+                            $portada_t = $t['portada_url'] ?? '';
+                            if ($portada_t && is_file(__DIR__ . '/iseller_store/' . substr($portada_t, 0, -5) . '_min.webp')) {
+                                $portada_t = substr($portada_t, 0, -5) . '_min.webp';
+                            }
+                        ?>
                             <a href="/<?= htmlspecialchars($t['slug']) ?>" class="tienda-chip">
-                                <div class="tienda-chip-logo">
-                                    <?php if (!empty($t['logo_url'])): ?>
-                                        <img src="<?= htmlspecialchars($t['logo_url']) ?>" alt="<?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?>" loading="lazy">
+                                <div class="tienda-chip-cover">
+                                    <?php if ($portada_t !== ''): ?>
+                                        <img src="<?= htmlspecialchars($portada_t) ?>" onerror="imgFallback(this)" alt="" loading="lazy" decoding="async">
                                     <?php else: ?>
-                                        <i class="bi bi-shop"></i>
+                                        <i class="bi bi-image"></i>
                                     <?php endif; ?>
                                 </div>
-                                <span class="tienda-chip-name">
-                                    <?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?>
-                                    <i class="bi bi-patch-check-fill verified-dot"></i>
-                                </span>
-                                <span class="tienda-chip-cat"><?= htmlspecialchars($t['categoria']) ?></span>
-                                <span class="tienda-chip-count"><?= (int)$t['total_productos'] ?> productos</span>
+                                <div class="tienda-chip-body">
+                                    <div class="tienda-chip-logo">
+                                        <?php if (!empty($t['logo_url'])): ?>
+                                            <img src="<?= htmlspecialchars($t['logo_url']) ?>" onerror="imgFallback(this)" alt="<?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?>" loading="lazy">
+                                        <?php else: ?>
+                                            <i class="bi bi-shop"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="tienda-chip-info">
+                                        <span class="tienda-chip-name">
+                                            <?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?>
+                                            <i class="bi bi-patch-check-fill verified-dot"></i>
+                                        </span>
+                                        <span class="tienda-chip-cat"><?= htmlspecialchars($t['categoria']) ?></span>
+                                        <span class="tienda-chip-count"><?= number_format((int)$t['total_productos'], 0, ',', '.') ?> productos</span>
+                                    </div>
+                                    <i class="bi bi-chevron-right tienda-chip-arrow"></i>
+                                </div>
                             </a>
                         <?php endforeach; ?>
                         <a href="#" class="tienda-chip tienda-chip-more" onclick="openTiendasModal(); return false;">
-                            <div class="tienda-chip-logo">
-                                <i class="bi bi-shop-window"></i>
-                            </div>
-                            <span class="tienda-chip-name">Ver más tiendas</span>
-                            <span class="tienda-chip-cat">Explora todas nuestras tiendas aliadas</span>
+                            <span class="tienda-chip-more-icon"><i class="bi bi-shop"></i></span>
+                            <span class="tienda-chip-more-title">Ver más tiendas</span>
+                            <span class="tienda-chip-more-sub">Explora todas nuestras tiendas aliadas</span>
+                            <i class="bi bi-arrow-right tienda-chip-more-arrow"></i>
                         </a>
                     </div>
                     <button class="tiendas-ribbon-nav right" id="tiendas-nav-right" onclick="scrollTiendas(1)" aria-label="Siguiente">
@@ -2333,7 +2896,7 @@ if ($es_tienda_individual && $negocio_data) {
                         let skeletons = '';
                         for (let i = 0; i < 24; i++) {
                             skeletons += `
-                                 <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+                                 <div class="col-12 col-sm-4 col-md-3 col-xl-2">
                                      <div class="skeleton-card">
                                          <div class="skeleton-img shimmer"></div>
                                          <div class="skeleton-body">
@@ -2422,6 +2985,46 @@ if ($es_tienda_individual && $negocio_data) {
             </div>
         </div>
     </div>
+    <!-- Modal Tiendas cercanas -->
+        <div class="modal fade" id="modalTiendasCercanas" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title text-white fw-bold"><i class="bi bi-shop-window me-2"></i> Tiendas cercanas</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <?php if (!$grupos_cercanos): ?>
+                            <?php if ($geo_cerca_estado === '' && !isLoggedIn() && empty($_SESSION['bss_id'])): ?>
+                                <p class="text-muted small mb-2">Inicia sesión para ver las tiendas cercanas a tu ubicación.</p>
+                                <a href="login.php" class="btn btn-sm btn-success rounded-pill px-3">Iniciar sesión</a>
+                            <?php else: ?>
+                                <p class="text-muted small mb-0">No hay tiendas cercanas registradas todavía.</p>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        <?php foreach ($grupos_cercanos as $tituloGrupo => $listaCercanos): ?>
+                            <h6 class="fw-bold text-muted text-uppercase small mb-2 mt-3"><?= htmlspecialchars($tituloGrupo) ?></h6>
+                            <div class="list-group list-group-flush mb-2">
+                                <?php foreach ($listaCercanos as $t): ?>
+                                    <a href="<?= htmlspecialchars($script_dir . '/' . $t['slug']) ?>" class="list-group-item list-group-item-action d-flex align-items-center gap-3 px-0">
+                                        <?php if (!empty($t['logo_url'])): ?>
+                                            <img src="<?= htmlspecialchars($t['logo_url']) ?>" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+                                        <?php else: ?>
+                                            <span style="width:44px;height:44px;border-radius:50%;background:#e9ecef;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-shop text-muted"></i></span>
+                                        <?php endif; ?>
+                                        <span class="flex-grow-1">
+                                            <span class="d-block fw-semibold"><?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?></span>
+                                            <span class="d-block small text-muted"><?= htmlspecialchars($t['categoria'] ?: 'Tienda') ?><?= !empty($t['geo_municipio']) ? ' · ' . htmlspecialchars($t['geo_municipio']) : '' ?></span>
+                                        </span>
+                                        <i class="bi bi-chevron-right text-muted"></i>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
     <!-- Modal Cuenta -->
     <div class="modal fade" id="modalCuenta" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -3269,7 +3872,7 @@ if ($es_tienda_individual && $negocio_data) {
             let skeletons = '';
             for (let i = 0; i < 24; i++) {
                 skeletons += `
-                    <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+                    <div class="col-12 col-sm-4 col-md-3 col-xl-2">
                         <div class="skeleton-card">
                             <div class="skeleton-img shimmer"></div>
                             <div class="skeleton-body">
@@ -3402,11 +4005,11 @@ if ($es_tienda_individual && $negocio_data) {
                 else if (pId % 3 === 0) badgeHtml = '<div class="product-badge-top badge-mas-vendido">Más vendido</div>';
 
                 let card = `
-                    <div class="col-6 col-sm-4 col-md-3 col-xl-2 product-item">
+                    <div class="col-12 col-sm-4 col-md-3 col-xl-2 product-item">
                         <div class="product-card ${opacityClass}">
                             <div class="product-img-wrapper ${hasImg ? '' : 'no-img'}" style="cursor: pointer;" onclick="openProductModal('${producto.id}')">
                                 ${hasImg
-                                    ? `<img src="${imgSrc}" loading="lazy" class="product-img" alt="${producto.nombre}">`
+                                    ? `<img src="${imgSrc}" loading="lazy" class="product-img" alt="${producto.nombre}" onerror="imgFallback(this)">`
                                     : `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`
                                 }
                             </div>
@@ -3479,6 +4082,11 @@ if ($es_tienda_individual && $negocio_data) {
             // Image
             const modalImg = document.getElementById('modal-product-img');
             const modalNoImg = document.getElementById('modal-no-img');
+            modalImg.onerror = function () {
+                modalImg.onerror = null;
+                modalImg.style.display = 'none';
+                if (modalNoImg) modalNoImg.style.display = 'flex';
+            };
             if (producto.img) {
                 modalImg.src = producto.img;
                 modalImg.style.display = 'block';
@@ -3732,6 +4340,9 @@ if ($es_tienda_individual && $negocio_data) {
         /* Actualizar ubicacion */
         let mapUbicacion, markerUbicacion, geojsonLayer;
         const freeDeliveryComs = ["JOSE ANTONIO PAEZ", "LA FLORIDA", "CHAPARRALITO", "EL POLIGONO", "URB EL CAICET", "URB AV DEL EJERCITO", "SIMON BOLIVAR", "CARINAGUITA", "JOSE MARIA VARGAS", "LA PAILA", "LOS CAJONES DE SAN ENRIQUE", "SAN ENRIQUE CENTRO", "EL BOSQUE SAN ENRIQUE", "EL BAJO DE SAN ENRIQUE"];
+        // El GeoJSON muestra "Comunidad - Puerto Ayacucho Edo Amazonas"; para
+        // comparar las zonas de delivery gratis se usa solo el nombre base.
+        const comunidadBase = (nombre) => String(nombre || '').replace(/\s*-\s*Puerto Ayacucho Edo Amazonas$/i, '').toUpperCase();
 
         // --- CONFIGURACIÓN DE GEOCERCA ---
         const GEOFENCE_CENTER = [5.653802, -67.605304];
@@ -3792,7 +4403,7 @@ if ($es_tienda_individual && $negocio_data) {
 
                             geojsonLayer = L.geoJSON(geoData, {
                                 style: function(feature) {
-                                    const isFree = freeDeliveryComs.includes(feature.properties.NAME.toUpperCase());
+                                    const isFree = freeDeliveryComs.includes(comunidadBase(feature.properties.NAME));
                                     return {
                                         color: isFree ? "#198754" : "#bfd8ffff", // Verde si es gratis, Azul si es pago
                                         weight: 2,
@@ -3844,7 +4455,7 @@ if ($es_tienda_individual && $negocio_data) {
                         const results = leafletPip.pointInLayer(e.latlng, geojsonLayer);
                         if (results.length > 0) {
                             const comName = results[0].feature.properties.NAME;
-                            const isFree = freeDeliveryComs.includes(comName.toUpperCase());
+                            const isFree = freeDeliveryComs.includes(comunidadBase(comName));
 
                             document.getElementById('loc-comunidad').value = comName;
                             document.getElementById('loc-comunidad-input').value = comName;
@@ -3900,7 +4511,7 @@ if ($es_tienda_individual && $negocio_data) {
                     window.seleccionarComunidadGestion = function(name) {
                         inputCom.value = name;
                         document.getElementById('loc-comunidad').value = name;
-                        const isFree = freeDeliveryComs.includes(name.toUpperCase());
+                        const isFree = freeDeliveryComs.includes(comunidadBase(name));
                         document.getElementById('loc-delivery-gratis').value = isFree ? 1 : 0;
                         resultsDiv.style.display = 'none';
 
@@ -3978,7 +4589,7 @@ if ($es_tienda_individual && $negocio_data) {
                 const results = leafletPip.pointInLayer([addr.lng, addr.lat], geojsonLayer); // Nota: LeafletPip usa [lng, lat]
                 if (results.length > 0) {
                     const comName = results[0].feature.properties.NAME;
-                    const isFree = freeDeliveryComs.includes(comName.toUpperCase());
+                    const isFree = freeDeliveryComs.includes(comunidadBase(comName));
                     document.getElementById('loc-comunidad').value = comName;
                     document.getElementById('loc-comunidad-input').value = comName;
                     document.getElementById('loc-delivery-gratis').value = isFree ? 1 : 0;
@@ -5118,9 +5729,9 @@ if ($es_tienda_individual && $negocio_data) {
                 list.innerHTML = tiendas.map(t => {
                     const name = t.nombre_visible || t.nombre;
                     const logo = t.logo_url ?
-                        `<img src="${t.logo_url}" alt="${name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` :
+                        `<img src="${t.logo_url}" alt="${name}" onerror="imgFallback(this)" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` :
                         `<i class="bi bi-shop" style="font-size:1.2rem;color:#adb5bd;"></i>`;
-                    return `<a href="/${t.slug}" class="tienda-chip" style="width:auto;flex-direction:row;text-align:left;padding:12px 14px;gap:10px;">
+                    return `<a href="/${t.slug}" class="tienda-chip" style="width:auto;flex-direction:row;align-items:center;text-align:left;padding:12px 14px;gap:10px;">
                     <div class="tienda-chip-logo" style="width:44px;height:44px;border-radius:50%;margin-bottom:0;border:2px solid #e9ecef;">${logo}</div>
                     <div style="min-width:0;flex:1;">
                         <span class="tienda-chip-name" style="justify-content:flex-start;margin-bottom:2px;">
@@ -5187,7 +5798,7 @@ if ($es_tienda_individual && $negocio_data) {
                     prods.forEach(r => {
                         const it = r.item;
                         _heroLastProds[it.id] = it;
-                        const img = it.img ? '<img class="item-img" src="' + it.img + '" alt="">' : '<div class="item-img" style="display:flex;align-items:center;justify-content:center;"><i class="bi bi-box-seam" style="color:#94a3b8;"></i></div>';
+                        const img = it.img ? '<img class="item-img" src="' + it.img + '" alt="" onerror="imgFallback(this)">' : '<div class="item-img" style="display:flex;align-items:center;justify-content:center;"><i class="bi bi-box-seam" style="color:#94a3b8;"></i></div>';
                         const tiendaLabel = it.tienda_nombre ? '<div class="item-meta" style="color:#6b7a8d;font-size:0.72rem;"><i class="bi bi-shop" style="font-size:0.65rem;"></i> ' + it.tienda_nombre + '</div>' : '';
                         html += '<div class="mkt-hero-results-item" role="button" onclick="heroSearchPick(' + it.id + ')">' + img + '<div class="item-info"><div class="item-name">' + it.nombre + '</div><div class="item-meta">' + (it.categorias || '') + '</div>' + tiendaLabel + '</div><div class="item-price">$' + parseFloat(it.precio_dolar_visible || 0).toFixed(2) + '</div></div>';
                     });
@@ -5206,7 +5817,7 @@ if ($es_tienda_individual && $negocio_data) {
                     html += '<div class="mkt-hero-results-section">Tiendas</div>';
                     tias.forEach(t => {
                         const name = t.nombre_visible || t.nombre;
-                        const logo = t.logo_url ? '<img class="item-img" src="' + t.logo_url + '" alt="" style="border-radius:50%;">' : '<div class="item-img" style="display:flex;align-items:center;justify-content:center;border-radius:50%;"><i class="bi bi-shop" style="color:#94a3b8;"></i></div>';
+                        const logo = t.logo_url ? '<img class="item-img" src="' + t.logo_url + '" alt="" onerror="imgFallback(this)" style="border-radius:50%;">' : '<div class="item-img" style="display:flex;align-items:center;justify-content:center;border-radius:50%;"><i class="bi bi-shop" style="color:#94a3b8;"></i></div>';
                         html += '<a href="/' + t.slug + '" class="mkt-hero-results-item">' + logo + '<div class="item-info"><div class="item-name">' + name + ' <i class="bi bi-patch-check-fill" style="color:#1a7f4b;font-size:0.7rem;"></i></div><div class="item-meta">' + (t.categoria || '') + ' &middot; ' + (t.total_productos || 0) + ' productos</div></div></a>';
                     });
                 }
@@ -5305,6 +5916,103 @@ if ($es_tienda_individual && $negocio_data) {
                 }
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-send-fill me-2"></i> Enviar mensaje';
+            });
+        })();
+    </script>
+    <script>
+        (function() {
+            var nav = document.getElementById('navbar');
+            if (!nav) return;
+
+            function syncNavbarHeight() {
+                document.documentElement.style.setProperty('--navbar-h', nav.offsetHeight + 'px');
+            }
+
+            syncNavbarHeight();
+            window.addEventListener('resize', syncNavbarHeight);
+            window.addEventListener('load', syncNavbarHeight);
+        })();
+    </script>
+    <script>
+        (function() {
+            var heroLogo = document.querySelector('.store-logo-img, .store-logo-placeholder');
+            var subnav = document.querySelector('.store-subnav');
+            if (!heroLogo || !subnav) return;
+
+            var ticking = false;
+
+            function update() {
+                var logoRect = heroLogo.getBoundingClientRect();
+                var barRect = subnav.getBoundingClientRect();
+                subnav.classList.toggle('show-logo', logoRect.bottom <= barRect.bottom);
+            }
+
+            function onScroll() {
+                if (ticking) return;
+                ticking = true;
+                window.requestAnimationFrame(function() {
+                    update();
+                    ticking = false;
+                });
+            }
+
+            window.addEventListener('scroll', onScroll, {
+                passive: true
+            });
+            window.addEventListener('resize', update);
+            update();
+        })();
+    </script>
+    <script>
+        (function() {
+            var btn = document.getElementById('btn-favorito');
+            if (!btn) return;
+
+            btn.addEventListener('click', function() {
+                if (document.body.dataset.userLoggedIn !== 'true') {
+                    window.location.href = 'login.php';
+                    return;
+                }
+
+                var negocioId = btn.dataset.negocio;
+                btn.disabled = true;
+
+                var fd = new FormData();
+                fd.append('negocio_id', negocioId);
+
+                fetch('api/favorito.php', {
+                        method: 'POST',
+                        body: fd,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(res) {
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        btn.disabled = false;
+                        if (!data.ok) {
+                            if (data.login) {
+                                window.location.href = 'login.php';
+                            }
+                            return;
+                        }
+
+                        var fav = !!data.favorito;
+                        btn.classList.toggle('is-fav', fav);
+                        btn.setAttribute('aria-pressed', fav ? 'true' : 'false');
+                        btn.title = fav ? 'Quitar de favoritos' : 'Agregar a favoritos';
+
+                        var icon = btn.querySelector('i');
+                        if (icon) icon.className = 'bi ' + (fav ? 'bi-heart-fill' : 'bi-heart');
+
+                        var text = btn.querySelector('span');
+                        if (text) text.textContent = fav ? 'En favoritos' : 'Agregar a favoritos';
+                    })
+                    .catch(function() {
+                        btn.disabled = false;
+                    });
             });
         })();
     </script>

@@ -1,6 +1,7 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
+require_once(__DIR__ . '/../iseller_store/core/imagenes.php');
 header('Content-Type: application/json');
 
 // Sanitizar y preparar los datos
@@ -101,28 +102,20 @@ try {
   }
   $stmt_o->close();
 
-  // Subir foto del producto si se proporcionó
+  // Subir foto del producto si se proporcionó: se valida, comprime y guarda en WebP.
   if (isset($_FILES['foto_producto']) && $_FILES['foto_producto']['error'] === UPLOAD_ERR_OK) {
-    $file = $_FILES['foto_producto'];
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allow = ['jpg', 'jpeg', 'png', 'webp'];
-
-    if (in_array($ext, $allow) && $file['size'] <= 5 * 1024 * 1024) {
-      $dir = __DIR__ . '/../iseller_store/assets/img/tiendas/' . $bss_id . '/';
-      if (!is_dir($dir)) mkdir($dir, 0775, true);
-
-      $filename = $id_registro . '_' . time() . '.' . $ext;
-      if (move_uploaded_file($file['tmp_name'], $dir . $filename)) {
-        $foto_url = "assets/img/tiendas/{$bss_id}/{$filename}";
-        $stmt_foto = $conexion->prepare(
-          "INSERT INTO negocio_productos (negocio_id, producto_id, foto_url, estado_publicacion)
-           VALUES (?, ?, ?, 0)
-           ON DUPLICATE KEY UPDATE foto_url = VALUES(foto_url)"
-        );
-        $stmt_foto->bind_param("iis", $bss_id, $id_registro, $foto_url);
-        $stmt_foto->execute();
-        $stmt_foto->close();
-      }
+    $dir = __DIR__ . '/../iseller_store/assets/img/tiendas/' . $bss_id . '/';
+    $archivoFoto = imagen_guardar_webp($_FILES['foto_producto'], $dir, (string)$id_registro, 800, 5 * 1024 * 1024);
+    if ($archivoFoto) {
+      $foto_url = "assets/img/tiendas/{$bss_id}/{$archivoFoto}";
+      $stmt_foto = $conexion->prepare(
+        "INSERT INTO negocio_productos (negocio_id, producto_id, foto_url, estado_publicacion)
+         VALUES (?, ?, ?, 0)
+         ON DUPLICATE KEY UPDATE foto_url = VALUES(foto_url)"
+      );
+      $stmt_foto->bind_param("iis", $bss_id, $id_registro, $foto_url);
+      $stmt_foto->execute();
+      $stmt_foto->close();
     }
   }
 

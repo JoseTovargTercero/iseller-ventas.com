@@ -94,13 +94,36 @@ function redirect($url) {
 }
 
 /**
+ * Ruta local a la que volver tras iniciar sesión o registrarse.
+ * index.php guarda la última página pública en return_after_auth.
+ * @param string $porDefecto Ruta a usar si no hay una guardada
+ * @return string
+ */
+function authReturnUrl($porDefecto = '../') {
+    $url = $_SESSION['return_after_auth'] ?? '';
+    // Solo rutas locales: evita redirigir a otro dominio
+    if (!is_string($url) || !preg_match('#^/(?!/)[^\\\\\r\n]*$#', $url)) {
+        return $porDefecto;
+    }
+    return $url;
+}
+
+/**
  * Requiere que el usuario esté autenticado
  * Si no lo está, redirige al login
  * @param string $loginUrl URL del login (por defecto: login.php)
  * @return void
  */
-function requireLogin($loginUrl = 'login.php') {
+function requireLogin($loginUrl = null) {
     if (!isLoggedIn()) {
+        if ($loginUrl === null) {
+            // Login de la tienda, sin depender de la carpeta del script actual
+            // (funciona también desde api/chat/*).
+            $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
+            $pos = strpos($script, '/iseller_store/');
+            $base = $pos !== false ? substr($script, 0, $pos) . '/iseller_store' : dirname($script);
+            $loginUrl = rtrim($base, '/') . '/login.php';
+        }
         redirect($loginUrl);
     }
 }

@@ -17,7 +17,9 @@ if ($check_result && $check_result->num_rows > 0) {
         
         // If not already on maintenance page, redirect
         if ($current_script !== 'mantenimiento.php') {
-            header("Location: mantenimiento.php");
+            // index.php está en la raíz; checkout/soporte están dentro de iseller_store/.
+            $prefijo = strpos(str_replace('\\', '/', $_SERVER['SCRIPT_NAME']), '/iseller_store/') !== false ? '' : 'iseller_store/';
+            header("Location: {$prefijo}mantenimiento.php");
             exit();
         }
         
@@ -27,7 +29,7 @@ if ($check_result && $check_result->num_rows > 0) {
         // If maintenance is NOT active, but we are ON the maintenance page, redirect to home
          $current_script = basename($_SERVER['PHP_SELF']);
          if ($current_script === 'mantenimiento.php') {
-            header("Location: index.php");
+            header("Location: ../");
             exit();
         }
     }

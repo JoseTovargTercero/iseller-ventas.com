@@ -23,7 +23,7 @@ if ($negocio_id > 0) {
     $dolarPeso = (float)($cambioRow['pesoDolar'] ?? 0);
 
     // Obtener configuración del negocio
-    $stmt = $conexion->prepare("SELECT config_delivery, datos_bancarios FROM negocio WHERE id = ?");
+    $stmt = $conexion->prepare("SELECT * FROM negocio WHERE id = ?");
     $stmt->bind_param("i", $negocio_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -36,7 +36,9 @@ if ($negocio_id > 0) {
             'tasa_dolar' => $dolarBolivar,
             'tasa_peso' => $dolarPeso,
             'config_delivery' => $config_delivery,
-            'datos_bancarios' => $datos_bancarios
+            'datos_bancarios' => $datos_bancarios,
+            'geo_estado' => $row['geo_estado'] ?? null,
+            'geo_municipio' => $row['geo_municipio'] ?? null
         ]);
         exit;
     }

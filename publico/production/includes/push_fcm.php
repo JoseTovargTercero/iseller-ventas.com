@@ -231,4 +231,64 @@ if (!function_exists('push_habilitado')) {
             error_log('FCM: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Push de datos para el transportista.
+     * Sin bloque "notification": el mensaje pasa siempre por PosFcmService.onMessageReceived,
+     * que lo pinta y abre el panel del transportista al tocarlo.
+     */
+    function enviar_push_transportista(mysqli $conexion, int $transportistaId, string $titulo, string $cuerpo, array $data = []): void
+    {
+        if (!push_habilitado() || $transportistaId <= 0) return;
+
+        try {
+            $project = push_project_id();
+            if (!$project) return;
+
+            $access = push_access_token();
+            if (!$access) return;
+
+            $stmt = $conexion->prepare("SELECT id, token FROM push_dispositivos WHERE tipo = 'transp' AND usuario_id = ?");
+            $stmt->bind_param('i', $transportistaId);
+            $stmt->execute();
+            $dispositivos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+            if (!$dispositivos) return;
+
+            $data['titulo'] = $titulo;
+            $data['mensaje'] = $cuerpo;
+
+            $url = "https://fcm.googleapis.com/v1/projects/$project/messages:send";
+            $headers = [
+                'Authorization: Bearer ' . $access,
+                'Content-Type: application/json',
+            ];
+
+            foreach ($dispositivos as $d) {
+                $mensaje = [
+                    'token'   => $d['token'],
+                    'data'    => array_map('strval', $data),
+                    'android' => ['priority' => 'high'],
+                ];
+
+                $r = fcm_http_post($url, $headers, json_encode(['message' => $mensaje]));
+
+                $cuerpoError = (string)$r['body'];
+                $tokenMuerto = $r['status'] === 404
+                    || stripos($cuerpoError, 'UNREGISTERED') !== false
+                    || stripos($cuerpoError, 'not a valid FCM registration token') !== false;
+
+                if ($tokenMuerto) {
+                    $del = $conexion->prepare("DELETE FROM push_dispositivos WHERE id = ?");
+                    $del->bind_param('i', $d['id']);
+                    $del->execute();
+                    $del->close();
+                } elseif ($r['status'] < 200 || $r['status'] >= 300) {
+                    error_log('FCM transportista: error ' . $r['status'] . ' ' . substr($cuerpoError, 0, 300));
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('FCM transportista: ' . $e->getMessage());
+        }
+    }
 }

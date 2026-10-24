@@ -215,13 +215,24 @@ if ($en_verificacion && empty($msg_success)) {
             border-radius: 10px;
             padding: 18px 20px;
             cursor: pointer;
-            transition: border-color 0.15s ease, background-color 0.15s ease;
+            transition: border-color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
             position: relative;
         }
 
         .plan-card-option:hover {
             border-color: rgba(45, 212, 160, 0.4);
             background: var(--dash-card-hover);
+        }
+
+        /* El plan no seleccionado se atenúa para que la elección sea evidente */
+        .plan-card-option:not(.active) {
+            opacity: 0.45;
+            filter: grayscale(0.4);
+        }
+
+        .plan-card-option:not(.active):hover {
+            opacity: 0.75;
+            filter: grayscale(0);
         }
 
         .plan-card-option.active {

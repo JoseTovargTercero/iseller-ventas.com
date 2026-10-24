@@ -111,6 +111,11 @@ $stmtCombos = $conexion->prepare("
         ci.producto_id,
         ci.cantidad,
         p.nombre,
+        p.origen,
+        p.precio_compra,
+        p.cantidad_unidades,
+        p.mayor,
+        COALESCE(s.porcentaje, p.porcentaje, 0) AS porcentaje,
         COALESCE(s.stock, 0) AS stock_hijo
     FROM combo_items ci
     INNER JOIN productos p ON p.id = ci.producto_id
@@ -139,7 +144,14 @@ if ($stmtCombos) {
         }
         $combos_mapa[$cid]['items'][] = [
             'nombre' => $rowC['nombre'],
-            'cantidad' => $qtyC
+            'cantidad' => $qtyC,
+            'producto' => [
+                'cantidad_unidades' => $rowC['cantidad_unidades'],
+                'origen' => $rowC['origen'],
+                'precio_compra' => $rowC['precio_compra'],
+                'porcentaje' => $rowC['porcentaje'],
+                'mayor' => $rowC['mayor']
+            ]
         ];
     }
     $stmtCombos->close();
@@ -230,6 +242,27 @@ if ($result->num_rows > 0) {
         $comboItemsProd = ($esCombo === 1 && isset($combos_mapa[$row['id']]))
             ? $combos_mapa[$row['id']]['items']
             : [];
+
+        // Un combo mixto se vende por la suma exacta de lo que el POS muestra
+        // por cada producto hijo, para que no difiera de venderlos por separado.
+        if ($esCombo === 1 && isset($combos_mapa[$row['id']]) && strtolower(trim((string)($row['origen'] ?? ''))) === 'm') {
+            $sumDolar = 0.0;
+            $sumBs = 0.0;
+            $sumPeso = 0.0;
+            foreach ($combos_mapa[$row['id']]['items'] as $ci) {
+                if (!isset($ci['producto'])) continue;
+                $preciosHijo = $calculadora->calcularPrecios($ci['producto']);
+                $qtyHijo = (float)$ci['cantidad'];
+                $sumDolar += (float)$preciosHijo['precio_venta_dolar'] * $qtyHijo;
+                $sumBs += (float)$preciosHijo['precio_venta_bs'] * $qtyHijo;
+                $sumPeso += (float)$preciosHijo['precio_venta_peso'] * $qtyHijo;
+            }
+            if ($sumDolar > 0) {
+                $precios['precio_venta_dolar'] = round($sumDolar, 2);
+                $precios['precio_venta_bs'] = round($sumBs, 2);
+                $precios['precio_venta_peso'] = round($sumPeso, 2);
+            }
+        }
 
         $productos_por_id[$row['id']] = [
             'id' => $row['id'],
@@ -2895,6 +2928,10 @@ $stmt->close();
             }
 
             function confirmar_e_imprimir(nuevoPedido, moneda = 'default') {
+                // La configuración del negocio manda: si la impresión de tickets está
+                // desactivada no se pregunta nada, venga la llamada de donde venga.
+                if (Number(configuraciones.tickets) !== 1) return;
+
                 // 1. Limpiar si existía algún modal nativo previo abierto por error
                 $('#modal-impresion-nativo').remove();
 
@@ -4693,7 +4730,7 @@ $stmt->close();
                     $("#tabla-carrito tfoot").html('');
 
                     // Solicitar impresion solo si tickets está habilitado
-                    if (configuraciones.tickets == 1) {
+                    if (Number(configuraciones.tickets) === 1) {
                         confirmar_e_imprimir(nuevoPedido, 'BS')
                     }
 

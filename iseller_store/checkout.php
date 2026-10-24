@@ -9,6 +9,7 @@ require_once('core/check_maintenance.php');
 require_once('core/db.php');
 require_once('core/_tasas_cambio.php');
 require_once('core/session.php');
+require_once('core/venezuela_geo.php');
 // carga la calculadora de precios
 require_once('core/_calculadrora_precios.php');
 require_once('../publico/production/includes/notificaciones.php');
@@ -144,7 +145,7 @@ function enviarNotificacionCompra($orden_id, $user_id, $total_dolares, $num_oper
     $telefono_cliente = htmlspecialchars($usuario['telefono'] ?? 'N/A');
     $total_fmt        = '$' . number_format($total_dolares, 2);
     $entrega_label    = ($tipo_entrega === 'delivery') ? '🚚 Delivery' : '🏪 Retiro en Tienda';
-    $panel_url        = 'https://iseller-tiendas.com/publico/production/tienda_ordenes.php';
+    $panel_url        = 'https://iseller-tiendas.com/publico/production/tienda_pedidos.php';
 
     $from    = 'nuevas-compras@iseller-tiendas.com';
     $subject = "🛒 Nueva Compra - Orden #$orden_id | iSeller Tiendas";
@@ -283,10 +284,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombre    = trim($input['nombre_receptor'] ?? '');
         $telefono  = trim($input['telefono'] ?? '');
         $direccion = trim($input['direccion'] ?? '');
-        $referencia = trim($input['referencia'] ?? '');
         $lat  = $input['lat'] ?? null;
         $lng  = $input['lng'] ?? null;
         $comunidad = $input['comunidad'] ?? null;
+
+        // Solo se aceptan combinaciones estado/municipio de la lista.
+        $geo = venezuela_estados_municipios();
+        $geo_estado = trim($input['geo_estado'] ?? '');
+        $geo_municipio = trim($input['geo_municipio'] ?? '');
+        if (!isset($geo[$geo_estado]) || !in_array($geo_municipio, $geo[$geo_estado], true)) {
+            echo json_encode(['success' => false, 'message' => 'Selecciona estado y municipio']);
+            exit;
+        }
 
         if (empty($nombre) || empty($telefono) || empty($direccion)) {
             echo json_encode(['success' => false, 'message' => 'Complete los campos obligatorios']);
@@ -299,9 +308,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $delivery_gratis_confirmado = 0;
 
-        $sql = "INSERT INTO tienda_usuarios_direcciones (usuario_id, nombre_receptor, telefono, direccion, referencia, lat, lng, comunidad, delivery_gratis_confirmado, es_principal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+        $sql = "INSERT INTO tienda_usuarios_direcciones (usuario_id, nombre_receptor, telefono, direccion, geo_estado, geo_municipio, lat, lng, comunidad, delivery_gratis_confirmado, es_principal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
         $stmt = $conexion_store->prepare($sql);
-        $stmt->bind_param("issssddsi", $user_id, $nombre, $telefono, $direccion, $referencia, $lat, $lng, $comunidad, $delivery_gratis_confirmado);
+        $stmt->bind_param("isssssddsi", $user_id, $nombre, $telefono, $direccion, $geo_estado, $geo_municipio, $lat, $lng, $comunidad, $delivery_gratis_confirmado);
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'id' => $stmt->insert_id, 'message' => 'Dirección guardada']);
         } else {
@@ -1453,6 +1462,39 @@ if ($dolarBolivar == 0) {
             margin: 14px 0;
         }
 
+        /* ══ AVISO DE UBICACIÓN ═══════════════════ */
+        .geo-warning {
+            display: none;
+            position: sticky;
+            top: 63px;
+            z-index: 150;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            border: 1px solid #fde68a;
+            border-radius: 12px;
+            background: #fffbeb;
+            color: #92400e;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            box-shadow: 0 6px 18px -12px rgba(0, 0, 0, 0.35);
+        }
+
+        .geo-warning.show {
+            display: flex;
+        }
+
+        .geo-warning i {
+            flex-shrink: 0;
+            margin-top: 1px;
+            font-size: 1rem;
+        }
+
+        .geo-warning strong {
+            display: block;
+        }
+
         /* ══ RESPONSIVE ═══════════════════════════ */
         .checkout-wrap {
             max-width: 620px;
@@ -1640,6 +1682,16 @@ if ($dolarBolivar == 0) {
 
     <div class="checkout-wrap">
 
+        <!-- Aviso fijo: la dirección seleccionada está fuera de la ubicación de la tienda -->
+        <div class="geo-warning" id="geo-warning" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+                <strong>Esta tienda no está en esa ubicación.</strong>
+                <span id="geo-warning-text"></span>
+                Puedes continuar con tu compra, pero la tienda podría no entregar en esa zona.
+            </div>
+        </div>
+
         <!-- ── STEP 0: Seleccionar Carrito ── -->
         <div class="wizard-step active" id="step-0">
             <div class="checkout-card">
@@ -1758,6 +1810,25 @@ if ($dolarBolivar == 0) {
                             </div>
                         </div>
                         <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-text">Estado *</label>
+                                <select class="form-input" id="addr-estado">
+                                    <option value="">Seleccione un estado...</option>
+                                    <?php foreach (venezuela_estados_municipios() as $estado => $municipios): ?>
+                                        <option value="<?= htmlspecialchars($estado) ?>"><?= htmlspecialchars($estado) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-text">Municipio *</label>
+                                <select class="form-input" id="addr-municipio">
+                                    <option value="">Seleccione un municipio...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12">
                             <div class="form-group position-relative">
                                 <label class="form-label-text">Sector o Urbanización</label>
                                 <div class="position-relative">
@@ -1767,12 +1838,6 @@ if ($dolarBolivar == 0) {
                                     </span>
                                 </div>
                                 <div id="addr-comunidad-results" class="community-results-dropdown" style="display:none;"></div>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="form-group">
-                                <label class="form-label-text">Punto de referencia (opcional)</label>
-                                <input type="text" class="form-input" id="addr-ref" placeholder="Ej. Frente a la panadería">
                             </div>
                         </div>
                     </div>
@@ -2033,6 +2098,8 @@ if ($dolarBolivar == 0) {
         let mapInstance = null;
         let markerInstance = null;
         let selectedPaymentMethod = null;
+        let addressesById = {};
+        const GEO_VENEZUELA = <?= json_encode(venezuela_estados_municipios(), JSON_UNESCAPED_UNICODE) ?>;
 
         // ── Utilidades ────────────────────────────────────────────────
         function formatNumber(n) {
@@ -2087,9 +2154,13 @@ if ($dolarBolivar == 0) {
                 behavior: 'smooth'
             });
 
+            if (n === 0 || n === 'success') {
+                document.getElementById('geo-warning')?.classList.remove('show');
+            }
             if (n === 1) {
                 cargarDirecciones();
                 actualizarResumen();
+                actualizarAdvertenciaUbicacion();
             }
             if (n === 2) {
                 renderPaymentInfo();
@@ -2225,6 +2296,7 @@ if ($dolarBolivar == 0) {
         // ── Direcciones ───────────────────────────────────────────────
         async function cargarDirecciones() {
             const container = document.getElementById('addresses-container');
+            addressesById = {};
             container.innerHTML = `<div class="checkout-spinner">
         <div class="spinner-dot"></div><div class="spinner-dot"></div><div class="spinner-dot"></div>
         <span class="ms-2">Cargando direcciones...</span>
@@ -2251,11 +2323,13 @@ if ($dolarBolivar == 0) {
             <button class="btn-outline-add" onclick="mostrarFormDireccion()"><i class="bi bi-plus-lg me-1"></i> Agregar dirección</button>
         </div>`;
                 document.getElementById('btn-next-1').disabled = (deliveryType === 'delivery');
+                document.getElementById('geo-warning')?.classList.remove('show');
                 return;
             }
 
             let html = '';
             for (let addr of data.addresses) {
+                addressesById[String(addr.id)] = addr;
                 const initial = (addr.nombre_receptor || 'D').charAt(0).toUpperCase();
                 html += `
             <div class="address-card ${addr.es_principal ? 'selected' : ''}"
@@ -2264,7 +2338,7 @@ if ($dolarBolivar == 0) {
                 <div class="flex-grow-1">
                     <div class="address-name">${escapeHtml(addr.nombre_receptor)}</div>
                     <div class="address-detail">${escapeHtml(addr.direccion)}</div>
-                    ${addr.referencia ? `<div class="address-detail text-muted small"><i class="bi bi-pin-map me-1"></i>${escapeHtml(addr.referencia)}</div>` : ''}
+                    ${addr.geo_estado || addr.geo_municipio ? `<div class="address-detail text-muted small"><i class="bi bi-geo-alt me-1"></i>${escapeHtml([addr.geo_estado, addr.geo_municipio].filter(Boolean).join(', '))}</div>` : ''}
                     <div class="address-detail mt-1"><i class="bi bi-telephone me-1"></i>${escapeHtml(addr.telefono)}</div>
                 </div>
                 <div class="address-check">
@@ -2277,6 +2351,7 @@ if ($dolarBolivar == 0) {
                 }
             }
             container.innerHTML = html;
+            actualizarAdvertenciaUbicacion();
         }
 
         function seleccionarDireccion(id, el) {
@@ -2288,15 +2363,93 @@ if ($dolarBolivar == 0) {
             el.classList.add('selected');
             el.querySelector('.address-check i')?.classList.remove('d-none');
             document.getElementById('btn-next-1').disabled = false;
+
+            const addr = addressesById[String(id)];
+            if (addr && mostrarAdvertenciaUbicacion(addr.geo_estado || '', addr.geo_municipio || '')) {
+                Notiflix.Notify.warning('La tienda no está en ese estado/municipio');
+            }
         }
 
         function mostrarFormDireccion() {
             document.getElementById('new-address-form').classList.remove('d-none');
             iniciarMapa();
+            inicializarSelectsUbicacion();
+            actualizarAdvertenciaUbicacion();
         }
 
         function cancelarFormDireccion() {
             document.getElementById('new-address-form').classList.add('d-none');
+            actualizarAdvertenciaUbicacion();
+        }
+
+        // ── Ubicación: estado / municipio y aviso de zona ─────────────
+        function llenarMunicipios(estado, municipioSeleccionado) {
+            const sel = document.getElementById('addr-municipio');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Seleccione un municipio...</option>';
+            (GEO_VENEZUELA[estado] || []).forEach(function(m) {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                if (m === municipioSeleccionado) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function inicializarSelectsUbicacion() {
+            const estadoSel = document.getElementById('addr-estado');
+            if (!estadoSel) return;
+            // La dirección nace en la ubicación de la tienda; el usuario puede cambiarla.
+            const estado = estadoSel.value || tiendaConfig?.geo_estado || '';
+            estadoSel.value = estado;
+            const municipio = estado === (tiendaConfig?.geo_estado || '') ? (tiendaConfig?.geo_municipio || '') : '';
+            llenarMunicipios(estado, municipio);
+        }
+
+        function hayDesajusteUbicacion(estado, municipio) {
+            const te = (tiendaConfig?.geo_estado || '').trim();
+            const tm = (tiendaConfig?.geo_municipio || '').trim();
+            if (!te || !tm || !estado || !municipio) return false;
+            return estado !== te || municipio !== tm;
+        }
+
+        // Muestra u oculta el aviso fijo. Devuelve true si hay desajuste.
+        function mostrarAdvertenciaUbicacion(estado, municipio) {
+            const box = document.getElementById('geo-warning');
+            const txt = document.getElementById('geo-warning-text');
+            if (!box || !txt) return false;
+
+            if (deliveryType !== 'delivery' || !hayDesajusteUbicacion(estado, municipio)) {
+                box.classList.remove('show');
+                return false;
+            }
+
+            txt.textContent = ' La tienda está en ' + tiendaConfig.geo_estado + ', ' + tiendaConfig.geo_municipio +
+                ' y la ubicación seleccionada es ' + estado + ', ' + municipio + '.';
+            box.classList.add('show');
+            return true;
+        }
+
+        function actualizarAdvertenciaUbicacion() {
+            const box = document.getElementById('geo-warning');
+            if (!box) return;
+
+            if (deliveryType !== 'delivery') {
+                box.classList.remove('show');
+                return;
+            }
+
+            const form = document.getElementById('new-address-form');
+            if (form && !form.classList.contains('d-none')) {
+                mostrarAdvertenciaUbicacion(
+                    document.getElementById('addr-estado').value,
+                    document.getElementById('addr-municipio').value
+                );
+                return;
+            }
+
+            const addr = addressesById[String(selectedAddressId)];
+            mostrarAdvertenciaUbicacion(addr?.geo_estado || '', addr?.geo_municipio || '');
         }
 
         let allCommunitiesNames = [];
@@ -2476,13 +2629,18 @@ if ($dolarBolivar == 0) {
             const nombre = document.getElementById('addr-name').value.trim();
             const telefono = document.getElementById('addr-phone').value.trim();
             const direccion = document.getElementById('addr-address').value.trim();
-            const referencia = document.getElementById('addr-ref').value.trim();
             const comunidad = document.getElementById('addr-comunidad').value.trim();
+            const geoEstado = document.getElementById('addr-estado').value;
+            const geoMunicipio = document.getElementById('addr-municipio').value;
             const lat = document.getElementById('addr-lat').value || null;
             const lng = document.getElementById('addr-lng').value || null;
 
             if (!nombre || !telefono || !direccion) {
                 Notiflix.Notify.warning('Completa nombre, teléfono y dirección');
+                return;
+            }
+            if (!geoEstado || !geoMunicipio) {
+                Notiflix.Notify.warning('Selecciona estado y municipio');
                 return;
             }
 
@@ -2500,8 +2658,9 @@ if ($dolarBolivar == 0) {
                     nombre_receptor: nombre,
                     telefono,
                     direccion,
-                    referencia,
                     comunidad,
+                    geo_estado: geoEstado,
+                    geo_municipio: geoMunicipio,
                     lat,
                     lng,
                     csrf_token: csrf
@@ -2512,6 +2671,9 @@ if ($dolarBolivar == 0) {
 
             if (data.success) {
                 Notiflix.Notify.success('Dirección guardada');
+                if (hayDesajusteUbicacion(geoEstado, geoMunicipio)) {
+                    Notiflix.Notify.warning('La tienda no está en ese estado/municipio. Puedes continuar con tu compra.');
+                }
                 selectedAddressId = data.id;
                 document.getElementById('new-address-form').classList.add('d-none');
                 document.getElementById('btn-next-1').disabled = false;
@@ -2542,6 +2704,7 @@ if ($dolarBolivar == 0) {
                 document.getElementById('btn-next-1').disabled = false;
             }
             actualizarResumen();
+            actualizarAdvertenciaUbicacion();
         }
 
         // ── Resumen ───────────────────────────────────────────────────
@@ -2813,6 +2976,7 @@ if ($dolarBolivar == 0) {
 
                         document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
                         document.getElementById('step-success').classList.add('active');
+                        document.getElementById('geo-warning')?.classList.remove('show');
                         document.getElementById('step-indicator-container').style.display = 'none';
                         window.scrollTo({
                             top: 0,
@@ -2872,6 +3036,18 @@ if ($dolarBolivar == 0) {
 
         // ── Init ──────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', cargarCarrito);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const estadoSel = document.getElementById('addr-estado');
+            const municipioSel = document.getElementById('addr-municipio');
+            if (!estadoSel || !municipioSel) return;
+
+            estadoSel.addEventListener('change', function() {
+                llenarMunicipios(estadoSel.value, '');
+                actualizarAdvertenciaUbicacion();
+            });
+            municipioSel.addEventListener('change', actualizarAdvertenciaUbicacion);
+        });
     </script>
 
     <!-- Chat Component -->

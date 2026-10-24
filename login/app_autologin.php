@@ -129,6 +129,9 @@ if ((int)$usuario['nivel'] !== 1) {
 $membresia = MembresiaHelper::obtenerEstado($conexion, $usuario['bss_id']);
 if (!empty($membresia['esta_vencida'])) {
     $redirect = 'publico/production/membresia_renovacion.php';
+} elseif (!empty($membresia['dias_restantes']) && $membresia['dias_restantes'] <= 4) {
+    // Aviso de renovación en el primer panel que vea el usuario tras entrar
+    $_SESSION['alerta_membresia_pendiente'] = (int)$membresia['dias_restantes'];
 }
 
 header('Location: ../' . $redirect);

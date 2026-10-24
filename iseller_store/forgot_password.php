@@ -7,7 +7,7 @@ require_once('core/db.php');
 require_once('core/session.php');
 
 if (isLoggedIn()) {
-    redirect('index.php');
+    redirect('../');
 }
 
 $error = '';
@@ -211,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main class="login-main">
         <div class="login-wrap">
             <div class="login-brand">
-                <a href="index.php" class="text-decoration-none">
+                <a href="../" class="text-decoration-none">
                     <img src="assets/img/logo-tienda.png" alt="" class="login-brand-icon">
                     <h1>iSeller <span>Store</span></h1>
                 </a>

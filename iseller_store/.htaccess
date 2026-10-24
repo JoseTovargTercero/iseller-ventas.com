@@ -6,5 +6,6 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Si no, enviarlo a index.php con el parámetro tienda_slug
-RewriteRule ^([^/]+)/?$ index.php?tienda_slug=$1 [L,QSA]
+# Las tiendas ahora se sirven desde la raíz: /iseller_store/<slug> -> /<slug>
+RewriteCond %{REQUEST_URI} ^(.*)/iseller_store/([^/]+)/?$ [NC]
+RewriteRule ^ %1/%2 [R=301,L,QSA]
