@@ -46,6 +46,14 @@ if ($tienda_slug) {
         if ($negocio_data = $resNegocio->fetch_assoc()) {
             $es_tienda_individual = true;
             $bss_id = $negocio_data['id']; // Usamos el ID del negocio como bss_id
+
+            // Si la BD conserva una imagen que ya no existe en disco, no se
+            // imprime su URL: evitamos el 404 y usamos el placeholder.
+            foreach (['logo_url', 'portada_url'] as $imgKey) {
+                if (!empty($negocio_data[$imgKey]) && !is_file(__DIR__ . '/iseller_store/' . ltrim($negocio_data[$imgKey], '/'))) {
+                    $negocio_data[$imgKey] = '';
+                }
+            }
         }
         $stmtNegocio->close();
     }

@@ -1683,7 +1683,64 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
             function setupImageUpload(inputId, previewImgId, placeholderId) {
                 const input = document.getElementById(inputId);
                 if (!input) return;
-                input.addEventListener('change', function() {
+
+                // Comprime y convierte a WebP en el navegador antes de subir la imagen.
+                async function comprimirImagenWebP(file, maxWidth, quality) {
+                    if (!file.type.startsWith('image/')) return file;
+
+                    let source = null;
+                    let width = 0;
+                    let height = 0;
+                    let bitmap = null;
+
+                    if (typeof createImageBitmap === 'function') {
+                        try {
+                            bitmap = await createImageBitmap(file);
+                            source = bitmap;
+                            width = bitmap.width;
+                            height = bitmap.height;
+                        } catch (e) {
+                            bitmap = null;
+                        }
+                    }
+
+                    if (!source) {
+                        const url = URL.createObjectURL(file);
+                        try {
+                            const img = await new Promise((resolve, reject) => {
+                                const i = new Image();
+                                i.onload = () => resolve(i);
+                                i.onerror = reject;
+                                i.src = url;
+                            });
+                            source = img;
+                            width = img.naturalWidth;
+                            height = img.naturalHeight;
+                        } finally {
+                            URL.revokeObjectURL(url);
+                        }
+                    }
+
+                    const scale = Math.min(1, maxWidth / width);
+                    const w = Math.max(1, Math.round(width * scale));
+                    const h = Math.max(1, Math.round(height * scale));
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(source, 0, 0, w, h);
+                    if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+                    if (!blob || blob.type !== 'image/webp') return file;
+
+                    const nombre = file.name.replace(/\.[^.]+$/, '') + '.webp';
+                    return new File([blob], nombre, { type: 'image/webp' });
+                }
+
+                input.addEventListener('change', async function() {
                     if (!this.files || !this.files[0]) return;
                     const file = this.files[0];
                     const tipo = this.dataset.tipo;
@@ -1714,9 +1771,17 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                     };
                     reader.readAsDataURL(file);
 
+                    showToast('Optimizando imagen...', 'success');
+                    let imagen = file;
+                    try {
+                        imagen = await comprimirImagenWebP(file, tipo === 'portada' ? 1200 : 400, 0.9);
+                    } catch (e) {
+                        console.warn('No se pudo optimizar en el navegador, se sube el original.', e);
+                    }
+
                     const fd = new FormData();
                     fd.append('tipo', tipo);
-                    fd.append('imagen', file);
+                    fd.append('imagen', imagen);
                     showToast('Subiendo...', 'success');
 
                     fetch('api/tienda_upload_imagen.php', {

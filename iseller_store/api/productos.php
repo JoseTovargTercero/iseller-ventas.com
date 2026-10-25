@@ -13,6 +13,27 @@ $tienda_slug = $_GET['tienda_slug'] ?? null;
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
 define('URL_BASE', $protocol . '://' . $_SERVER['HTTP_HOST'] . '/iseller_store/');
 
+// Devuelve la imagen real del producto. Si la foto personalizada que guarda
+// la BD ya no existe, usa la genérica y evita un 404 en la cuadrícula.
+function urlImagenProducto(array $row): string
+{
+    $foto = (string)($row['foto_url'] ?? '');
+    if ($foto !== '' && is_file(__DIR__ . '/../' . ltrim($foto, '/'))) {
+        return URL_BASE . $foto;
+    }
+
+    $id = (int)($row['id'] ?? 0);
+    $imgPath = __DIR__ . "/../assets/img/stock/{$id}.png";
+    $optimizedPath = __DIR__ . "/../assets/img/stock/optimized/{$id}.webp";
+    if (!file_exists($optimizedPath) && file_exists($imgPath)) {
+        optimizeImage($imgPath, $optimizedPath, 400, 75);
+    }
+    if (file_exists($optimizedPath)) {
+        return URL_BASE . "assets/img/stock/optimized/{$id}.webp";
+    }
+    return file_exists($imgPath) ? URL_BASE . "assets/img/stock/{$id}.png" : '';
+}
+
 $mode = $_GET['mode'] ?? 'grid';
 $user_id = getUserId();
 $searchIndex = [];
@@ -120,7 +141,12 @@ function getCalculadora(int $bss_id, $recompensas = []) {
 // ─────────────────────────────────────────────────────────────────────────
 
 // Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global
-$where = "p.activo = 0 AND s.stock > 0 AND p.origen != 'c' AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'";
+$where = "p.activo = 0 AND s.stock > 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'";
+if (!$tienda_slug) {
+    // En el marketplace global se mantiene el filtro histórico de productos
+    // colombianos; en la tienda de un negocio sí deben verse sus publicados.
+    $where .= " AND p.origen != 'c'";
+}
 $params = [];
 $types = "";
 
@@ -151,25 +177,13 @@ if ($mode === 'search_index') {
 
     while ($row = $result->fetch_assoc()) {
         $precios = getCalculadora((int)$row['bss_id'], $recompensas)->calcularPrecios($row);
-        $nombre = ucfirst(mb_strtolower(trim($row['nombre']), 'UTF-8'));
-
-        if (!empty($row['foto_url'])) {
-            $img = URL_BASE . $row['foto_url'];
-        } else {
-            $imgPath = "../assets/img/stock/{$row['id']}.png";
-            $optimizedPath = "../assets/img/stock/optimized/{$row['id']}.webp";
-            if (!file_exists($optimizedPath) && file_exists($imgPath)) {
-                optimizeImage($imgPath, $optimizedPath, 400, 75);
-            }
-            $img = file_exists($optimizedPath)
-                ? URL_BASE . "assets/img/stock/optimized/{$row['id']}.webp"
-                : (file_exists($imgPath) ? URL_BASE . "assets/img/stock/{$row['id']}.png" : "");
-        }
+        $nombre = ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8'));
+        $img = urlImagenProducto($row);
 
         $searchIndex[] = [
             'id' => $row['id'],
             'n' => $nombre,
-            'c' => trim($row['codigo_barras']),
+            'c' => trim((string)$row['codigo_barras']),
             's' => (int)$row['stock'],
             'm' => $row['mayor'],
             'ca' => $row['categorias_nombres'] ?? '',
@@ -242,28 +256,15 @@ $result = $stmt->get_result();
 $products = [];
 while ($row = $result->fetch_assoc()) {
     $precios = getCalculadora((int)$row['bss_id'], $recompensas)->calcularPrecios($row);
-    $nombre = ucfirst(mb_strtolower(trim($row['nombre']), 'UTF-8'));
-    
-    // Si tiene foto personalizada, usamos esa, si no, la genérica.
-    if (!empty($row['foto_url'])) {
-        $img = URL_BASE . $row['foto_url'];
-    } else {
-        $imgPath = "../assets/img/stock/{$row['id']}.png";
-        $optimizedPath = "../assets/img/stock/optimized/{$row['id']}.webp";
-        if (!file_exists($optimizedPath) && file_exists($imgPath)) {
-            optimizeImage($imgPath, $optimizedPath, 400, 75);
-        }
-        $img = file_exists($optimizedPath)
-            ? URL_BASE . "assets/img/stock/optimized/{$row['id']}.webp"
-            : (file_exists($imgPath) ? URL_BASE . "assets/img/stock/{$row['id']}.png" : "");
-    }
+    $nombre = ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8'));
+    $img = urlImagenProducto($row);
 
     $products[] = [
         'id' => $row['id'],
         'nombre' => $nombre,
         'stock' => (int)$row['stock'],
         'mayor' => $row['mayor'],
-        'codigo' => trim($row['codigo_barras']),
+        'codigo' => trim((string)$row['codigo_barras']),
         'categorias' => $row['categorias_nombres'] ?? '',
         'precio_dolar_visible' => $precios['precio_venta_dolar'],
         'precio_peso_visible' => $precios['precio_venta_peso'],
