@@ -48,6 +48,34 @@ function api_categorias(?int $bssId): array
     return $items;
 }
 
+/** Tiendas virtuales activas para el cintillo del marketplace. */
+function api_tiendas_registradas(): array
+{
+    global $conexion;
+    $sql = "SELECT id, slug, nombre, nombre_visible, logo_url, categoria
+            FROM negocio
+            WHERE tiene_tienda_virtual = 1
+              AND estado = 'activo'
+              AND slug IS NOT NULL AND slug <> ''
+            ORDER BY COALESCE(NULLIF(nombre_visible, ''), nombre) ASC
+            LIMIT 50";
+    $res = $conexion->query($sql);
+    if (!$res) {
+        return [];
+    }
+    $items = [];
+    while ($fila = $res->fetch_assoc()) {
+        $items[] = [
+            'id'       => (int)$fila['id'],
+            'slug'     => (string)$fila['slug'],
+            'name'     => ($fila['nombre_visible'] ?? '') !== '' ? $fila['nombre_visible'] : $fila['nombre'],
+            'logo_url' => api_image($fila['logo_url'] ?? '', 160, 78),
+            'category' => (string)($fila['categoria'] ?? ''),
+        ];
+    }
+    return $items;
+}
+
 $themeBase = [
     'primary'      => '#36A97C',
     'primary_dark' => '#2A8562',
@@ -80,8 +108,8 @@ if ($slug === '') {
         'marketplace' => true,
         'store' => null,
         'hero' => [
-            'image_url'    => api_abs($imagenHero),
-            'logo_url'     => api_abs('assets/img/logo-tienda.png'),
+            'image_url'    => api_image($imagenHero, 1200, 70),
+            'logo_url'     => api_image('assets/img/logo-tienda.png', 256, 80),
             'title'        => 'Descubre productos de tiendas de tu localidad',
             'subtitle'     => 'Encuentra lo que necesitas desde la comodidad de tu hogar y con los mejores precios.',
             'badge'        => 'Tu mercado en un solo lugar',
@@ -93,6 +121,7 @@ if ($slug === '') {
         'delivery' => null,
         'payment' => null,
         'categories' => api_categorias(null),
+        'stores' => api_tiendas_registradas(),
         'rates' => ['bcv' => 0, 'usd_cop' => 0, 'usd_bs' => 0],
         'server_time' => date('c'),
     ]);
@@ -142,8 +171,8 @@ api_ok([
         'name'             => $tienda['nombre_visible'] !== '' ? $tienda['nombre_visible'] : $tienda['nombre'],
         'tagline'          => (string)($tienda['eslogan'] ?? ''),
         'category'         => (string)($tienda['categoria'] ?? ''),
-        'logo_url'         => api_abs($logo),
-        'cover_url'        => api_abs($portada),
+        'logo_url'         => api_image($logo, 256, 80),
+        'cover_url'        => api_image($portada, 1200, 72),
         'verified'         => true,
         'reputation_pct'   => (float)($tienda['reputacion_pct'] ?? 0),
         'reputation_total' => (int)($tienda['reputacion_total'] ?? 0),
@@ -157,8 +186,8 @@ api_ok([
         'hours'            => json_decode((string)($tienda['horarios'] ?? '{}'), true) ?: new stdClass(),
     ],
     'hero' => [
-        'image_url'    => api_abs($portada),
-        'logo_url'     => api_abs($logo),
+        'image_url'    => api_image($portada, 1200, 72),
+        'logo_url'     => api_image($logo, 256, 80),
         'title'        => $tienda['nombre_visible'] !== '' ? $tienda['nombre_visible'] : $tienda['nombre'],
         'subtitle'     => (string)($tienda['eslogan'] ?? ''),
         'badge'        => 'Tienda verificada',
@@ -170,6 +199,7 @@ api_ok([
     'delivery'       => $delivery,
     'payment'        => $pago,
     'categories'     => api_categorias($bssId),
+    'stores'         => api_tiendas_registradas(),
     'rates'          => [
         'bcv'       => $calc->getTasa('bcv'),
         'usd_cop'   => $calc->getTasa('pesoDolar'),

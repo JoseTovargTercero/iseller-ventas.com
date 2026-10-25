@@ -130,7 +130,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 </div>
                                                 <div class="col-lg-6">
                                                     <label for="porcentaje">Porcentaje</label>
-                                                    <input type="number" id="porcentaje" name="porcentaje" placeholder="Porcentaje de ganancia" required="required" class="form-control">
+                                                    <input type="text" inputmode="decimal" id="porcentaje" name="porcentaje" placeholder="Porcentaje de ganancia" required="required" class="form-control">
                                                 </div>
                                             </div>
 
@@ -199,6 +199,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             let precio_consultado
             let producto_consultado
+
+            // Porcentaje: solo dígitos y un punto decimal (la coma se normaliza a punto)
+            $(document).ready(function() {
+                const el = document.getElementById('porcentaje');
+                el.addEventListener('input', () => {
+                    const partes = el.value.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.');
+                    el.value = partes.length > 2 ? partes.shift() + '.' + partes.join('') : partes.join('.');
+                });
+            })
 
 
 

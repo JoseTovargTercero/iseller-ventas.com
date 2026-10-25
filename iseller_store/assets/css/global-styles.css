@@ -219,6 +219,19 @@ h1, h2, h3, h4, h5, h6 {
     background: transparent;
 }
 
+#products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 1rem;
+}
+
+/* En móvil la tarjeta es horizontal: ocupa la fila completa. */
+@media (max-width: 575.98px) {
+    #products-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .product-card {
     background: white;
     border: none;
@@ -268,7 +281,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .product-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 0.5rem;
@@ -297,20 +310,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .price-main {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1;
 }
 
 .price-sub {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
     margin-top: 0.25rem;
 }
 
 .stock-text {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-secondary);
     margin-top: 0.25rem;
     font-weight: 500;
@@ -703,6 +716,7 @@ h1, h2, h3, h4, h5, h6 {
 
     .price-main {
         font-size: 1.2rem !important;
+        margin-top: 0.5rem;
     }
 
     .price-sub {

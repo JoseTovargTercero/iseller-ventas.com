@@ -386,6 +386,36 @@ function api_local_path(?string $ruta): ?string
     return is_file($local) ? $local : null;
 }
 
+/**
+ * URL de imagen comprimida (WebP redimensionado y cacheado por el servidor).
+ * Solo las rutas bajo assets/img pasan por el endpoint; el resto conserva api_abs.
+ */
+function api_image(?string $ruta, int $ancho = 600, int $calidad = 72): string
+{
+    $ruta = trim((string)$ruta);
+    if ($ruta === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $ruta)) {
+        return $ruta;
+    }
+    if (!preg_match('#^assets/img/[A-Za-z0-9._/-]+$#', $ruta) || strpos($ruta, '..') !== false) {
+        return api_abs($ruta);
+    }
+    $ancho = max(64, min(1600, $ancho));
+    $calidad = max(40, min(85, $calidad));
+    $version = '';
+    $local = api_local_path($ruta);
+    if ($local !== null) {
+        $mtime = @filemtime($local);
+        if ($mtime) {
+            $version = '&v=' . $mtime;
+        }
+    }
+    return api_store_root() . '/api/v1/image.php?src=' . rawurlencode($ruta)
+        . '&w=' . $ancho . '&q=' . $calidad . $version;
+}
+
 /** Tienda virtual activa por slug o 404. */
 function api_store_by_slug(string $slug): array
 {
@@ -466,7 +496,7 @@ function api_user_public(array $u): array
         'name'          => $u['nombre'] ?? '',
         'email'         => $u['email'] ?? '',
         'phone'         => $u['telefono'] ?? '',
-        'photo_url'     => api_abs($u['foto'] ?? ''),
+        'photo_url'     => api_image($u['foto'] ?? '', 200, 75),
         'level'         => (int)($u['nivel'] ?? 1),
         'points'        => (float)($u['puntos'] ?? 0),
         'referral_code' => $u['referral_code'] ?? '',

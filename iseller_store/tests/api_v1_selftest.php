@@ -29,5 +29,11 @@ check(api_trunc2(10.567) === 10.56, 'precio truncado a 2 decimales');
 check(api_trunc2(0.999) === 0.99, 'precio pequeño truncado');
 check(str_ends_with(api_abs('assets/img/x.webp'), '/assets/img/x.webp'), 'URL absoluta de recursos');
 check(api_abs('https://cdn.test/x.png') === 'https://cdn.test/x.png', 'URL externa respetada');
+check(
+    str_contains(api_image('assets/img/x.webp', 160, 78), 'image.php?src=assets%2Fimg%2Fx.webp&w=160&q=78'),
+    'imagen local por el proxy comprimido'
+);
+check(api_image('https://cdn.test/x.png') === 'https://cdn.test/x.png', 'imagen externa intacta');
+check(!str_contains(api_image('assets/img/../config.php'), 'image.php'), 'traversal no proxificado');
 
 echo "API v1: autochequeo correcto\n";

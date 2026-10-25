@@ -64,9 +64,22 @@ Devuelve `id, name, email, phone, photo_url, level, points, referral_code, creat
   "delivery": null,
   "payment": null,
   "categories": [ { "id": 1, "name": "Abarrotes" } ],
+  "stores": [ { "id": 2, "slug": "loreannys", "name": "loreannys",
+                "logo_url": "...image.php?...w=160&q=78", "category": "..." } ],
   "rates": { "bcv": 0, "usd_cop": 0, "usd_bs": 0 }
 }
 ```
+
+`stores` son las tiendas virtuales activas (máximo 50, orden alfabético) para el
+cintillo del marketplace. Con `slug` también se devuelve la lista, para poder
+volver al marketplace desde una tienda.
+
+Todas las URLs de imagen (`hero`, `logo`, `cover`, productos, `photo_url`) son
+**comprimidas**: apuntan a `GET image.php?src=...&w=...&q=...`, que redimensiona y
+sirve WebP cacheado (30 días, ETag). `src` solo acepta rutas dentro de
+`iseller_store/assets/img`; cualquier otra ruta o intento de traversal da 404.
+El tipo real se detecta con `getimagesize`, así que también corrige archivos con
+extensión equivocada. Las URLs externas (`http(s)://`) no se proxyfican.
 
 Con `slug`, `marketplace` es `false`, `store` trae el branding, y `delivery`/`payment`
 son la configuración de esa tienda.
@@ -83,7 +96,12 @@ precios se recalculan con las tasas de la tienda de cada producto.
 
 ### GET geo.php
 
-`{ "states": { "Amazonas": ["Atures", ...], ... } }`
+`{ "states": { "Amazonas": ["Atures", ...], ... } }`### GET image.php?src=assets/img/tiendas/2/logo.webp&w=160&q=78
+
+Proxy público de imágenes: redimensiona a `w` (64–1600) y comprime en WebP con
+calidad `q` (40–85). Responde `image/webp`, `ETag` y `Cache-Control` de 30 días;
+el archivo generado se cachea en el temporal del servidor. Solo rutas bajo
+`assets/img`; el resto responde 404.
 
 ## Direcciones (Bearer)
 

@@ -87,14 +87,14 @@ while ($fila = $res->fetch_assoc()) {
 
     $imagen = '';
     if (!empty($fila['foto_url'])) {
-        $imagen = api_abs($fila['foto_url']);
+        $imagen = api_image($fila['foto_url'], 600, 72);
     } else {
         $optimizada = 'assets/img/stock/optimized/' . (int)$fila['id'] . '.webp';
         $original   = 'assets/img/stock/' . (int)$fila['id'] . '.png';
         if (api_local_path($optimizada) !== null) {
-            $imagen = api_abs($optimizada);
+            $imagen = api_image($optimizada, 400, 75);
         } elseif (api_local_path($original) !== null) {
-            $imagen = api_abs($original);
+            $imagen = api_image($original, 400, 75);
         }
     }
 

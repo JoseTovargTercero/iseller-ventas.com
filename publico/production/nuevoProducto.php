@@ -1,6 +1,14 @@
 <?php
 require_once('includes/requires.php');
 
+// Reglas para sugerir categoría al escribir el nombre (solo lectura, sin BD)
+$reglasCatJs = [];
+$archivoReglasCat = __DIR__ . '/../../configurar/_categorizar_reglas.php';
+if (is_file($archivoReglasCat)) {
+    require_once($archivoReglasCat);
+    if (defined('CAT_REGLAS')) $reglasCatJs = CAT_REGLAS;
+}
+
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
@@ -541,7 +549,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                                                 echo '<optgroup label="' . htmlspecialchars($grupo) . '">';
                                                                                 $grupoActual = $grupo;
                                                                             }
-                                                                            echo '<option value="' . (int)$cat['id'] . '">' . htmlspecialchars($cat['nombre']) . '</option>';
+                                                                            echo '<option value="' . (int)$cat['id'] . '" data-slug="' . htmlspecialchars($cat['slug']) . '">' . htmlspecialchars($cat['nombre']) . '</option>';
                                                                         }
                                                                         if ($grupoActual !== '') echo '</optgroup>';
                                                                     }
@@ -1165,6 +1173,64 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     document.getElementById('np-photo-input').files = e.dataTransfer.files;
                     document.getElementById('np-photo-input').dispatchEvent(new Event('change'));
                 }
+            });
+        </script>
+
+        <script>
+            // Sugerencia de categoría al cambiar el nombre del producto.
+            // Usa las mismas reglas que configurar/_categorizar_reglas.php (sin llamadas al servidor).
+            const CAT_REGLAS = <?= json_encode($reglasCatJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+            const catReglasCompiladas = CAT_REGLAS.map(function(regla) {
+                try {
+                    return [regla[0], new RegExp('\\b(?:' + regla[1] + ')\\b')];
+                } catch (e) {
+                    return null;
+                }
+            }).filter(Boolean);
+
+            function catNormalizar(texto) {
+                return texto.toUpperCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^A-Z0-9]+/g, ' ')
+                    .trim();
+            }
+
+            function catSugerir(nombre) {
+                const texto = ' ' + catNormalizar(nombre) + ' ';
+                for (let i = 0; i < catReglasCompiladas.length; i++) {
+                    if (catReglasCompiladas[i][1].test(texto)) return catReglasCompiladas[i][0];
+                }
+                return null;
+            }
+
+            $(function() {
+                const $cat = $('#categoria_select');
+
+                // Si la categoría la eligió el usuario, no la pisamos al cambiar el nombre.
+                $cat.on('select2:select select2:unselect', function() {
+                    $(this).data('auto', false);
+                });
+
+                $('#nombre').on('change', function() {
+                    const nombre = $(this).val().trim();
+                    if (nombre === '') return;
+
+                    // Solo reemplazamos una categoría puesta automáticamente.
+                    if ($cat.val() && !$cat.data('auto')) return;
+
+                    const slug = catSugerir(nombre);
+                    if (!slug) return;
+
+                    const $opcion = $cat.find('option').filter(function() {
+                        return this.dataset.slug === slug;
+                    }).first();
+
+                    if ($opcion.length) {
+                        $cat.data('auto', true);
+                        $cat.val($opcion.val()).trigger('change');
+                    }
+                });
             });
         </script>
     </body>

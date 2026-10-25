@@ -231,6 +231,26 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
 - Wizard probado también con validación de método/referencia/fecha y resumen con
   total USD/BS; los datos de prueba (#47/#48, stock, chat, notificaciones) se
   eliminaron al terminar.
+- Cintillo horizontal debajo del hero con las tiendas activas, sin tarjeta de
+  fondo: logo de 26 dp + nombre en una sola fila (~34 dp de alto). Tocar una
+  abre su catálogo y agrega **Todo** para volver al marketplace; se probó
+  entrando a YolaMarket y regresando.
+- Hero como capa de fondo (240 dp, a sangre y pegado al top) detrás de una hoja
+  blanca con esquinas superiores redondeadas; al hacer scroll la hoja sube hasta
+  cubrir el hero y al volver arriba lo descubre de nuevo. Funciona igual en
+  marketplace y en tienda, y con catálogos cortos la hoja llega hasta donde
+  permite el scroll.
+- Login/registro con cabecera degradada + logo de iSeller y hoja con tabs
+  segmentadas; checkout con cabecera degradada, stepper en la hoja, tarjetas a
+  ancho completo y barra inferior con inset de navegación; misma línea visual en
+  la pantalla de éxito.
+- Al regresar a Inicio se recarga `products.php` sin duplicar la carga inicial ni
+  vaciar la lista mientras responde.
+- El buscador vive en la barra superior (solo Inicio) y se quitó el icono del
+  carrito de la barra; el carrito sigue en la navegación inferior.
+- Todas las imágenes locales de la API (`hero`, logos, portadas, productos y
+  foto de perfil) pasan por `api/v1/image.php`, que redimensiona y sirve WebP
+  cacheado con ETag; el hero pasó de 1.7 MB a 16 KB y el logo del cintillo a 5 KB.
 - Probado también en la entrega anterior: GPS y alta de dirección, detalle/historial,
   perfil, deep link y gate biométrico.
 
@@ -239,6 +259,9 @@ Verificado también con llamadas reales a la API local:
 - `store` y `products` en modo global y por tienda, `geo`, login, refresh
   rotativo, `me`, rechazo por `X-Device-Id` distinto, direcciones, historial y
   detalle de pedidos, registro de token push y errores 401 genéricos.
+- `image.php` devuelve WebP con `Content-Type` correcto, `ETag` y caché de 30
+  días; rechaza con 404 rutas fuera de `assets/img`, traversal y archivos
+  inexistentes; detecta el tipo real aunque la extensión esté equivocada.
 
 Pendiente de verificar:
 

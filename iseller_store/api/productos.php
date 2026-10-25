@@ -11,7 +11,10 @@ header('Content-Type: application/json');
 $tienda_slug = $_GET['tienda_slug'] ?? null;
 
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-define('URL_BASE', $protocol . '://' . $_SERVER['HTTP_HOST'] . '/iseller_store/');
+// La tienda puede vivir en un subdirectorio (/iseller-tiendas.com/iseller_store/):
+// se deduce de la ruta del script en vez de asumir que cuelga de la raíz del dominio.
+$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/iseller_store/api'));
+define('URL_BASE', $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($scriptDir) . '/');
 
 // Devuelve la imagen real del producto. Si la foto personalizada que guarda
 // la BD ya no existe, usa la genérica y evita un 404 en la cuadrícula.
@@ -140,13 +143,9 @@ function getCalculadora(int $bss_id, $recompensas = []) {
 }
 // ─────────────────────────────────────────────────────────────────────────
 
-// Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global
-$where = "p.activo = 0 AND s.stock > 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'";
-if (!$tienda_slug) {
-    // En el marketplace global se mantiene el filtro histórico de productos
-    // colombianos; en la tienda de un negocio sí deben verse sus publicados.
-    $where .= " AND p.origen != 'c'";
-}
+// Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global.
+// Solo se muestran productos con stock disponible.
+$where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo' AND s.stock > 0";
 $params = [];
 $types = "";
 

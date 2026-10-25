@@ -2,6 +2,7 @@
 require_once('configuracion.php');
 require_once('session.php');
 require_once('_tasas_cambio.php');
+require_once('_gastos_reglas.php');
 
 header('Content-Type: application/json');
 
@@ -54,6 +55,19 @@ switch ($moneda) {
 $semana = $dt->format('Y-W');
 $mes    = $dt->format('Y-m');
 
+// Si no eligieron categoría, se deduce del concepto (mismas reglas por palabras clave)
+$categoria_auto = null;
+if ($categoria_id === null) {
+    $sugerida = gasto_sugerir($concepto);
+    if ($sugerida !== null) {
+        $resuelta = gasto_resolver_categoria($conexion, $bss_id, $sugerida);
+        if ($resuelta !== null) {
+            $categoria_id  = $resuelta['id'];
+            $categoria_auto = $resuelta['nombre'];
+        }
+    }
+}
+
 $stmt = $conexion->prepare("SELECT codigo FROM gastos WHERE bss_id=? ORDER BY id DESC LIMIT 1");
 $stmt->bind_param('i', $bss_id);
 $stmt->execute();
@@ -89,7 +103,12 @@ if ($categoria_id) {
 }
 
 if ($stmt->execute()) {
-    echo json_encode(['status' => 'ok', 'codigo' => $codigo]);
+    $salida = ['status' => 'ok', 'codigo' => $codigo];
+    if ($categoria_auto !== null) {
+        $salida['categoria'] = $categoria_auto;
+        $salida['categoria_auto'] = true;
+    }
+    echo json_encode($salida);
 } else {
     echo json_encode(['status' => 'error', 'msg' => 'Error al registrar gasto']);
 }

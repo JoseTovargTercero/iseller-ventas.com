@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once('iseller_store/core/check_maintenance.php');
 require_once('iseller_store/core/db.php');
 require_once('iseller_store/core/session.php');
@@ -278,7 +278,9 @@ if (!$es_tienda_individual) {
     }
 }
 
-// Reputación de la tienda individual (se publica desde 5 calificaciones)
+// Logos comprimidos para el listado de tiendas destacadas
+require_once(__DIR__ . '/iseller_store/core/tienda_logo.php');
+
 $repNivel = null;
 $repReviews = [];
 if ($es_tienda_individual && $negocio_data) {
@@ -394,6 +396,15 @@ if ($tiendas_cercanas['estado']) {
     <script>
         // La ruta de fotos y logos vive en la BD: si el archivo no existe, usamos el placeholder
         function imgFallback(img) { img.onerror = null; img.src = 'assets/img/no-images.png'; }
+
+        // En el grid, una foto rota se pinta igual que un producto sin imagen.
+        function productImgError(img) {
+            img.onerror = null;
+            const wrapper = img.parentElement;
+            if (!wrapper) return;
+            wrapper.classList.add('no-img');
+            wrapper.innerHTML = '<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>';
+        }
     </script>
 
     <title>iSeller Store | Ecommerce para comprar en línea fácil y seguro</title>
@@ -2750,7 +2761,8 @@ if ($tiendas_cercanas['estado']) {
                     padding-bottom: 0;
                 }
             }
-        </style>
+
+            </style>
         <div class="mkt-hero">
             <div class="mkt-hero-inner">
                 <div class="mkt-hero-text">
@@ -2814,6 +2826,7 @@ if ($tiendas_cercanas['estado']) {
                             if ($portada_t && is_file(__DIR__ . '/iseller_store/' . substr($portada_t, 0, -5) . '_min.webp')) {
                                 $portada_t = substr($portada_t, 0, -5) . '_min.webp';
                             }
+                            $logo_chip = tienda_logo_thumb((string)($t['logo_url'] ?? ''), 96);
                         ?>
                             <a href="/<?= htmlspecialchars($t['slug']) ?>" class="tienda-chip">
                                 <div class="tienda-chip-cover">
@@ -2825,8 +2838,8 @@ if ($tiendas_cercanas['estado']) {
                                 </div>
                                 <div class="tienda-chip-body">
                                     <div class="tienda-chip-logo">
-                                        <?php if (!empty($t['logo_url'])): ?>
-                                            <img src="<?= htmlspecialchars($t['logo_url']) ?>" onerror="imgFallback(this)" alt="<?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?>" loading="lazy">
+                                        <?php if ($logo_chip !== ''): ?>
+                                            <img src="<?= htmlspecialchars($logo_chip) ?>" onerror="imgFallback(this)" alt="<?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?>" loading="lazy" decoding="async">
                                         <?php else: ?>
                                             <i class="bi bi-shop"></i>
                                         <?php endif; ?>
@@ -2894,7 +2907,7 @@ if ($tiendas_cercanas['estado']) {
         </div>
 
 
-        <div class="row g-4" id="products-grid">
+        <div id="products-grid">
             <!-- Products will be loaded here by JavaScript -->
             <!-- Skeleton placeholders will be shown here initially -->
             <script>
@@ -2904,7 +2917,7 @@ if ($tiendas_cercanas['estado']) {
                         let skeletons = '';
                         for (let i = 0; i < 24; i++) {
                             skeletons += `
-                                 <div class="col-12 col-sm-4 col-md-3 col-xl-2">
+                                 <div>
                                      <div class="skeleton-card">
                                          <div class="skeleton-img shimmer"></div>
                                          <div class="skeleton-body">
@@ -3405,6 +3418,7 @@ if ($tiendas_cercanas['estado']) {
 
         /* buscador de productos */
         let productos_indexados = [];
+        let searchItems = [];
         let fuse;
 
         const tiendaSlugParam = urlParams.has('tienda_slug') ? '&tienda_slug=' + urlParams.get('tienda_slug') : '<?= !empty($tienda_slug) ? '&tienda_slug=' . urlencode($tienda_slug) : '' ?>';
@@ -3413,7 +3427,7 @@ if ($tiendas_cercanas['estado']) {
             .then(data => {
                 productos_indexados = data.searchIndex;
                 // Mapear claves para Fuse (revertir minificación)
-                const searchItems = data.searchIndex.map(item => ({
+                searchItems = data.searchIndex.map(item => ({
                     id: item.id,
                     nombre: item.n,
                     codigo: item.c,
@@ -3436,6 +3450,7 @@ if ($tiendas_cercanas['estado']) {
                     keys: ['nombre', 'categorias'],
                     threshold: 0.35,
                     ignoreLocation: true,
+                    ignoreDiacritics: true,
                     includeScore: false,
                     useExtendedSearch: false
                 });
@@ -3557,8 +3572,82 @@ if ($tiendas_cercanas['estado']) {
         };
 */
 
-        // Función de búsqueda rápida y limpia
-        const buscarConFuse = termino => fuse.search(`=${termino}`).map(r => r.item);
+        // Búsqueda tolerante: tildes, errores de tipeo, orden de palabras, sinónimos y código de barras
+        const SINONIMOS_BUSQUEDA = {
+            gaseosa: 'refresco',
+            celular: 'telefono',
+            telefono: 'celular',
+            computadora: 'laptop',
+            laptop: 'computadora',
+            nevera: 'refrigerador',
+            refrigerador: 'nevera',
+            zapatilla: 'zapato',
+            zapato: 'zapatilla',
+            lapicero: 'boligrafo',
+            boligrafo: 'lapicero',
+            cuaderno: 'libreta',
+            libreta: 'cuaderno'
+        };
+
+        const normalizarBusqueda = texto => (texto || '').toString()
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const buscarTolerante = termino => {
+            if (typeof fuse === 'undefined' || !fuse) return [];
+
+            const consulta = normalizarBusqueda(termino);
+            if (!consulta) return [];
+
+            const vistos = new Set();
+            const salida = [];
+            const agregar = item => {
+                if (item && !vistos.has(item.id)) {
+                    vistos.add(item.id);
+                    salida.push(item);
+                }
+            };
+
+            // Código de barras: coincidencia directa (evita que Fuse asocie números al azar)
+            if (/^\d{4,}$/.test(consulta)) {
+                const porCodigo = searchItems.filter(it => String(it.codigo || '').includes(consulta));
+                if (porCodigo.length) return porCodigo;
+            }
+
+            // Coincidencia normal (tolera errores de tipeo y tildes)
+            fuse.search('=' + consulta).forEach(r => agregar(r.item));
+            if (salida.length) return salida;
+
+            const palabras = consulta.split(' ').filter(p => p.length > 2);
+
+            // Sinónimos, solo si el nombre contiene la palabra equivalente
+            palabras.forEach(palabra => {
+                const equivalente = SINONIMOS_BUSQUEDA[palabra];
+                if (!equivalente) return;
+                fuse.search(equivalente).forEach(r => {
+                    if (normalizarBusqueda(r.item.nombre).includes(equivalente)) agregar(r.item);
+                });
+            });
+            if (salida.length) return salida;
+
+            // Todas las palabras, en cualquier orden
+            if (palabras.length > 1) {
+                const coincidencias = palabras.map(p => new Map(fuse.search(p).map(r => [r.item.id, r.item])));
+                const comunes = [...coincidencias[0].keys()].filter(id => coincidencias.every(m => m.has(id)));
+                if (comunes.length) {
+                    comunes.forEach(id => agregar(coincidencias[0].get(id)));
+                    return salida;
+                }
+                // Al menos una palabra
+                coincidencias.forEach(m => [...m.values()].slice(0, 5).forEach(agregar));
+            }
+
+            return salida;
+        };
+
+        const buscarConFuse = termino => buscarTolerante(termino);
         /* buscador de productos */
 
         // Search functionality for both desktop and mobile
@@ -3880,7 +3969,7 @@ if ($tiendas_cercanas['estado']) {
             let skeletons = '';
             for (let i = 0; i < 24; i++) {
                 skeletons += `
-                    <div class="col-12 col-sm-4 col-md-3 col-xl-2">
+                    <div>
                         <div class="skeleton-card">
                             <div class="skeleton-img shimmer"></div>
                             <div class="skeleton-body">
@@ -4013,11 +4102,11 @@ if ($tiendas_cercanas['estado']) {
                 else if (pId % 3 === 0) badgeHtml = '<div class="product-badge-top badge-mas-vendido">Más vendido</div>';
 
                 let card = `
-                    <div class="col-12 col-sm-4 col-md-3 col-xl-2 product-item">
+                    <div class="product-item">
                         <div class="product-card ${opacityClass}">
                             <div class="product-img-wrapper ${hasImg ? '' : 'no-img'}" style="cursor: pointer;" onclick="openProductModal('${producto.id}')">
                                 ${hasImg
-                                    ? `<img src="${imgSrc}" loading="lazy" class="product-img" alt="${producto.nombre}" onerror="imgFallback(this)">`
+                                    ? `<img src="${imgSrc}" loading="lazy" class="product-img" alt="${producto.nombre}" onerror="productImgError(this)">`
                                     : `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`
                                 }
                             </div>
@@ -5484,10 +5573,9 @@ if ($tiendas_cercanas['estado']) {
             --mc-green: #1a7f4b;
             --mc-green-dark: #13663a;
             --mc-line: #e9ecef;
-            max-width: 1120px;
+            width: 100%;
             margin: 64px auto 48px;
             padding: 0 24px;
-            font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
 
         .mc-card {
@@ -5507,7 +5595,6 @@ if ($tiendas_cercanas['estado']) {
         }
 
         .mc-title {
-            font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
             font-weight: 600;
             font-size: clamp(1.5rem, 2.4vw, 2.1rem);
             line-height: 1.15;
@@ -5799,7 +5886,7 @@ if ($tiendas_cercanas['estado']) {
 
             // Productos via Fuse
             if (typeof fuse !== 'undefined') {
-                const prods = fuse.search(q).slice(0, 5);
+                const prods = buscarConFuse(q).slice(0, 5);
                 _heroLastProds = {};
                 if (prods.length) {
                     html += '<div class="mkt-hero-results-section">Productos</div>';
