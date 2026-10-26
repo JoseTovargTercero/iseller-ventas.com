@@ -1208,6 +1208,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 /* Barra de herramientas de la tabla */
                 .productos-toolbar {
+                    display: flex;
+                    align-items: center;
                     justify-content: space-between;
                     flex-wrap: wrap;
                     gap: 12px;
@@ -1217,8 +1219,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     display: flex;
                     align-items: center;
                     gap: 12px;
-                    flex-wrap: wrap;
+                    flex-wrap: nowrap;
                     margin-left: auto;
+                }
+
+                /* El tema deja el h2 flotado y con ancho fijo: en flex eso lo empuja a otra línea */
+                .productos-toolbar h2 {
+                    float: none;
+                    width: auto;
+                    margin: 0;
                 }
 
                 .productos-search {
@@ -1267,26 +1276,37 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 .dataTables_wrapper .dt-bottom {
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
+                    justify-content: flex-end;
                     gap: 12px;
                     flex-wrap: wrap;
                     padding-top: 12px;
                 }
 
+                /* El largo de página queda a la izquierda; info y paginación a la derecha */
+                .dataTables_wrapper .dt-bottom .dataTables_length {
+                    margin-right: auto;
+                }
+
                 .dataTables_wrapper .dt-bottom .dataTables_info {
+                    width: auto;
                     padding-top: 0;
                 }
 
                 .dataTables_wrapper .dt-bottom .dataTables_paginate {
+                    width: auto;
+                    float: none;
                     margin: 0;
                 }
 
-                @media (max-width: 768px) {
+                @media (max-width: 900px) {
                     .productos-toolbar-actions {
                         width: 100%;
                         margin-left: 0;
+                        flex-wrap: wrap;
                     }
+                }
 
+                @media (max-width: 768px) {
                     .productos-search {
                         flex: 1 1 100%;
                     }
