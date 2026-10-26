@@ -2841,6 +2841,12 @@ if ($tiendas_cercanas['estado']) {
 
             .destacado-card .product-title {
                 font-size: 0.85rem;
+                line-height: 1.35;
+                white-space: normal;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                min-height: 2.7em;
             }
 
             .destacado-card .price-container {
@@ -2853,8 +2859,41 @@ if ($tiendas_cercanas['estado']) {
             }
 
             @media (max-width: 575.98px) {
+                /* El card móvil global es horizontal; en el cintillo se mantiene
+                   vertical y con ancho fijo para que el nombre quepa en 2 líneas. */
                 .destacado-card {
-                    flex: 0 0 150px;
+                    flex: 0 0 170px;
+                }
+
+                .destacado-card .product-card {
+                    flex-direction: column !important;
+                    flex-wrap: nowrap !important;
+                    padding: 0 !important;
+                }
+
+                .destacado-card .product-img-wrapper {
+                    width: 100% !important;
+                    height: auto !important;
+                    padding-top: 100% !important;
+                    border-radius: 0 !important;
+                }
+
+                .destacado-card .product-body {
+                    width: 100% !important;
+                    padding: 0.85rem !important;
+                }
+
+                .destacado-card .product-title {
+                    font-size: 0.9rem !important;
+                }
+
+                .destacado-card .price-container {
+                    margin: 0 0.85rem 1rem !important;
+                }
+
+                .destacado-card .price-main {
+                    margin-top: 0 !important;
+                    font-size: 1.1rem !important;
                 }
             }
         </style>
