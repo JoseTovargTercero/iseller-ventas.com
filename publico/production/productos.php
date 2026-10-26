@@ -319,14 +319,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     <div class="col-lg-12" id="section_lista">
                         <div class="x_panel   fadeInUp animated">
-                            <div class="w-100 x_title d-flex justify-content-between">
+                            <div class="w-100 x_title productos-toolbar">
                                 <h2>Productos</h2>
-                                <div class="d-flex align-items-center gap-2">
-                                    <label class="switch mb-0" title="Mostrar solo productos con stock positivo">
-                                        <input type="checkbox" id="switch-stock">
-                                        <span class="slider"></span>
+                                <div class="productos-toolbar-actions">
+                                    <div class="productos-search">
+                                        <ion-icon name="search-outline"></ion-icon>
+                                        <input type="search" id="productos-buscar" placeholder="Buscar producto…" autocomplete="off">
+                                    </div>
+                                    <label class="productos-stock" title="Mostrar solo productos con stock positivo">
+                                        <span class="switch">
+                                            <input type="checkbox" id="switch-stock">
+                                            <span class="slider"></span>
+                                        </span>
+                                        <span>Solo con stock</span>
                                     </label>
-                                    <span style="font-size:12px;white-space:nowrap;">Solo con stock</span>
                                     <select class="form-control" style="max-width: 200px;" id="sucursal-selector" name="sucursal-selector">
                                         <?php if (count($sucursales) > 1): ?>
                                             <option value="">Todas las sucursales</option>
@@ -546,7 +552,33 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
             <script>
-                const tabla = $('#datatable-responsive').DataTable();
+                const tabla = $('#datatable-responsive').DataTable({
+                    // El buscador y el largo de página salen del encabezado de DataTables:
+                    // arriba solo queda la tabla; largo, información y paginación al pie.
+                    dom: 't<"dt-bottom"lip>',
+                    language: {
+                        lengthMenu: 'Mostrar _MENU_ registros',
+                        info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+                        infoEmpty: 'Mostrando 0 a 0 de 0 registros',
+                        infoFiltered: '(filtrado de _MAX_ registros en total)',
+                        zeroRecords: 'No se encontraron resultados',
+                        emptyTable: 'Ningún dato disponible en esta tabla',
+                        loadingRecords: 'Cargando...',
+                        processing: 'Procesando...',
+                        search: 'Buscar:',
+                        paginate: {
+                            first: 'Primero',
+                            last: 'Último',
+                            next: 'Siguiente',
+                            previous: 'Anterior'
+                        }
+                    }
+                });
+
+                // Buscador del encabezado (sustituye al que pinta DataTables)
+                $('#productos-buscar').on('input', function() {
+                    tabla.search(this.value).draw();
+                });
 
                 // Filtro "solo con stock positivo": se aplica al dibujar, sin recargar
                 // datos ni perder la página actual de la tabla.
@@ -1172,6 +1204,95 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 .switch input:checked + .slider:before {
                     transform: translateX(22px);
+                }
+
+                /* Barra de herramientas de la tabla */
+                .productos-toolbar {
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
+
+                .productos-toolbar-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                    margin-left: auto;
+                }
+
+                .productos-search {
+                    position: relative;
+                }
+
+                .productos-search ion-icon {
+                    position: absolute;
+                    left: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    font-size: 15px;
+                    color: var(--dash-text-muted);
+                    pointer-events: none;
+                }
+
+                .productos-search input {
+                    width: 240px;
+                    max-width: 100%;
+                    padding: 8px 12px 8px 32px;
+                    background: var(--dash-bg);
+                    border: 1px solid var(--dash-border);
+                    border-radius: 8px;
+                    color: var(--dash-text);
+                    font-size: 13px;
+                }
+
+                .productos-search input:focus {
+                    outline: none;
+                    border-color: var(--dash-mint);
+                    box-shadow: 0 0 0 3px rgba(45, 212, 160, 0.1);
+                }
+
+                .productos-stock {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin: 0;
+                    font-size: 12px;
+                    font-weight: 400;
+                    white-space: nowrap;
+                    cursor: pointer;
+                }
+
+                /* Controles propios de DataTables: solo al pie, alineados */
+                .dataTables_wrapper .dt-bottom {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                    padding-top: 12px;
+                }
+
+                .dataTables_wrapper .dt-bottom .dataTables_info {
+                    padding-top: 0;
+                }
+
+                .dataTables_wrapper .dt-bottom .dataTables_paginate {
+                    margin: 0;
+                }
+
+                @media (max-width: 768px) {
+                    .productos-toolbar-actions {
+                        width: 100%;
+                        margin-left: 0;
+                    }
+
+                    .productos-search {
+                        flex: 1 1 100%;
+                    }
+
+                    .productos-search input {
+                        width: 100%;
+                    }
                 }
 
                 /* ── Precios de venta: tarjetas de resumen ── */

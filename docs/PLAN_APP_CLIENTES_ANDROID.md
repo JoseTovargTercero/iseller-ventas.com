@@ -250,9 +250,17 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   carrito de la barra; el carrito sigue en la navegación inferior.
 - Chat por pedido en la app: hilo con la tienda, envío, polling cada 7 s y
   marcado de leídos; API `chat.php` (listar, abrir por pedido, mensajes,
-  responder). El chat general/consulta nueva del sitio web no está en la app.
+  responder). Probado en el emulador contra la API local. El chat general/
+  consulta nueva del sitio web no está en la app.
+- Perfil de tienda: el cintillo solo aparece en el marketplace; dentro de una
+  tienda se oculta y el hero tiene un botón de regreso al inicio arriba a la
+  derecha (se oculta cuando la hoja cubre el hero).
 - Fallback de logo (iSeller) y portada (`bg-hero-2a.webp`) para tiendas sin
   imágenes; el perfil de la tienda ya no queda en blanco.
+- El build debug apunta a producción por defecto; para local se pasa
+  `-PapiBase=http://10.0.2.2/iseller-tiendas.com/iseller_store/api/v1/`.
+- Producción: falta `API_JWT_SECRET` en el `.env` (login 503 “Servicio no
+  configurado”); sin eso no se pueden probar compras ni chat en producción.
 - Todas las imágenes locales de la API (`hero`, logos, portadas, productos y
   foto de perfil) pasan por `api/v1/image.php`, que redimensiona y sirve WebP
   cacheado con ETag; el hero pasó de 1.7 MB a 16 KB y el logo del cintillo a 5 KB.
