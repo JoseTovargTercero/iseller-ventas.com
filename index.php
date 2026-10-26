@@ -2893,6 +2893,71 @@ if ($tiendas_cercanas['estado']) {
             </script>
         <?php endif; ?>
 
+        <?php if ($es_tienda_individual): ?>
+        <style>
+            .destacados-ribbon-wrap {
+                margin: 0 0 26px;
+            }
+
+            .destacados-ribbon {
+                display: flex;
+                gap: 14px;
+                overflow-x: auto;
+                padding: 4px 2px 14px;
+                scroll-snap-type: x proximity;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .destacados-ribbon::-webkit-scrollbar {
+                height: 8px;
+            }
+
+            .destacados-ribbon::-webkit-scrollbar-thumb {
+                background: #d6dde6;
+                border-radius: 8px;
+            }
+
+            .destacado-card {
+                flex: 0 0 170px;
+                scroll-snap-align: start;
+                cursor: pointer;
+            }
+
+            .destacado-card .product-body {
+                padding: 0.85rem;
+            }
+
+            .destacado-card .product-title {
+                font-size: 0.85rem;
+            }
+
+            .destacado-card .price-container {
+                margin-left: 0.85rem;
+                margin-right: 0.85rem;
+            }
+
+            .destacado-card .price-main {
+                font-size: 1.1rem;
+            }
+
+            @media (max-width: 575.98px) {
+                .destacado-card {
+                    flex: 0 0 150px;
+                }
+            }
+        </style>
+
+        <section class="destacados-ribbon-wrap" id="destacados-section" style="display:none;">
+            <div class="tiendas-section-header">
+                <div>
+                    <h2>Recomendados</h2>
+                    <p>Una selección de <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre']) ?>.</p>
+                </div>
+            </div>
+            <div class="destacados-ribbon" id="destacados-ribbon"></div>
+        </section>
+        <?php endif; ?>
+
         <!-- Grid Header: Sorting -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
             <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
@@ -3456,6 +3521,41 @@ if ($tiendas_cercanas['estado']) {
                 });
             })
             .catch(err => console.error("Error cargando índice de búsqueda", err));
+
+        // Cintillo de productos recomendados (solo en el perfil de una tienda)
+        const destacadosRibbon = document.getElementById('destacados-ribbon');
+        if (destacadosRibbon) {
+            fetch('api/productos.php?mode=destacados' + tiendaSlugParam)
+                .then(res => res.json())
+                .then(data => {
+                    const lista = Array.isArray(data.data) ? data.data : [];
+                    if (!lista.length) return;
+
+                    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+                    destacadosRibbon.innerHTML = lista.map(p => {
+                        productos_por_id[p.id] = p;
+                        const nombre = esc(p.nombre);
+                        const img = p.img
+                            ? `<img src="${esc(p.img)}" loading="lazy" class="product-img" alt="${nombre}" onerror="productImgError(this)">`
+                            : `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`;
+
+                        return `<div class="destacado-card" onclick="openProductModal('${esc(p.id)}')">
+                            <div class="product-card">
+                                <div class="product-img-wrapper ${p.img ? '' : 'no-img'}">${img}</div>
+                                <div class="product-body"><h3 class="product-title" title="${nombre}">${nombre}</h3></div>
+                                <div class="price-container">
+                                    <div class="price-main"><span class="price-dolar">$${formatNumber(recortarADosDecimales(p.precio_dolar_visible))}</span></div>
+                                    <div class="price-sub"><span class="price-bs">Bs ${formatNumber(recortarADosDecimales(p.precio_bs_visible))}</span></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    document.getElementById('destacados-section').style.display = '';
+                })
+                .catch(() => {});
+        }
 
 
 

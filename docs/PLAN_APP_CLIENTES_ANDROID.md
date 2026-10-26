@@ -248,6 +248,11 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   vaciar la lista mientras responde.
 - El buscador vive en la barra superior (solo Inicio) y se quitó el icono del
   carrito de la barra; el carrito sigue en la navegación inferior.
+- Chat por pedido en la app: hilo con la tienda, envío, polling cada 7 s y
+  marcado de leídos; API `chat.php` (listar, abrir por pedido, mensajes,
+  responder). El chat general/consulta nueva del sitio web no está en la app.
+- Fallback de logo (iSeller) y portada (`bg-hero-2a.webp`) para tiendas sin
+  imágenes; el perfil de la tienda ya no queda en blanco.
 - Todas las imágenes locales de la API (`hero`, logos, portadas, productos y
   foto de perfil) pasan por `api/v1/image.php`, que redimensiona y sirve WebP
   cacheado con ETag; el hero pasó de 1.7 MB a 16 KB y el logo del cintillo a 5 KB.

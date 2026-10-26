@@ -321,17 +321,24 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <div class="x_panel   fadeInUp animated">
                             <div class="w-100 x_title d-flex justify-content-between">
                                 <h2>Productos</h2>
-                                <select class="form-control" style="max-width: 200px;" id="sucursal-selector" name="sucursal-selector">
-                                    <?php if (count($sucursales) > 1): ?>
-                                        <option value="">Todas las sucursales</option>
-                                    <?php endif; ?>
+                                <div class="d-flex align-items-center gap-2">
+                                    <label class="switch mb-0" title="Mostrar solo productos con stock positivo">
+                                        <input type="checkbox" id="switch-stock">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span style="font-size:12px;white-space:nowrap;">Solo con stock</span>
+                                    <select class="form-control" style="max-width: 200px;" id="sucursal-selector" name="sucursal-selector">
+                                        <?php if (count($sucursales) > 1): ?>
+                                            <option value="">Todas las sucursales</option>
+                                        <?php endif; ?>
 
-                                    <?php foreach ($sucursales as $row): ?>
-                                        <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($row['nombre']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
+                                        <?php foreach ($sucursales as $row): ?>
+                                            <option value="<?= $row['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($row['nombre']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
 
                             </div>
                             <div class="clearfix"></div>
@@ -541,6 +548,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             <script>
                 const tabla = $('#datatable-responsive').DataTable();
 
+                // Filtro "solo con stock positivo": se aplica al dibujar, sin recargar
+                // datos ni perder la página actual de la tabla.
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    if (settings.nTable.id !== 'datatable-responsive') return true;
+                    const switchStock = document.getElementById('switch-stock');
+                    if (!switchStock || !switchStock.checked) return true;
+                    const fila = settings.aoData[dataIndex] ? settings.aoData[dataIndex].nTr : null;
+                    return fila ? parseFloat(fila.dataset.stock || '0') > 0 : true;
+                });
+
+                const switchSoloStock = document.getElementById('switch-stock');
+                if (switchSoloStock) {
+                    switchSoloStock.addEventListener('change', function() {
+                        tabla.draw(false);
+                    });
+                }
+
                 let productos_editar
                 let metodo_editar
 
@@ -677,8 +701,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         const hasFoto = !!row.imagen;
 
-                                        tabla.row.add([
-                                            `<div class="foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}"><ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon></div>`,
+                                        const filaNueva = tabla.row.add([
+                                            `<div class="foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" data-producto-id="${row.id}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}"><ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon></div>`,
                                             row.nombre + `<br><small class="${row.categoria_nombre ? 'text-muted' : 'text-danger'}">${row.categoria_nombre || 'Sin categoría'}</small>`,
                                             row.precio_compra,
                                             row.cantidad_unidades,
@@ -691,6 +715,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             `<a href="ficha.php?id=${row.id}"><i style="color: #41c1af" class="icon-gray line icon-chart"></i></a>`,
                                             `<a class="c-pointer btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
                                         ]);
+                                        $(filaNueva.node()).attr('data-stock', row.stock);
                                     });
 
                                     tabla.draw(); // Redibuja la tabla
@@ -1103,6 +1128,50 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     background: var(--dash-bg);
                     color: var(--dash-border);
                     border: 1px dashed var(--dash-border);
+                }
+
+                /* Interruptor "solo con stock" */
+                .switch {
+                    position: relative;
+                    display: inline-block;
+                    width: 46px;
+                    height: 24px;
+                    flex-shrink: 0;
+                }
+
+                .switch input {
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+
+                .switch .slider {
+                    position: absolute;
+                    cursor: pointer;
+                    inset: 0;
+                    background: var(--dash-border);
+                    border-radius: 24px;
+                    transition: .3s;
+                }
+
+                .switch .slider:before {
+                    content: "";
+                    position: absolute;
+                    height: 16px;
+                    width: 16px;
+                    left: 4px;
+                    bottom: 4px;
+                    background: #fff;
+                    border-radius: 50%;
+                    transition: .3s;
+                }
+
+                .switch input:checked + .slider {
+                    background: var(--dash-mint);
+                }
+
+                .switch input:checked + .slider:before {
+                    transform: translateX(22px);
                 }
 
                 /* ── Precios de venta: tarjetas de resumen ── */
@@ -1797,6 +1866,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     $('#modalFoto').modal('show');
                 }
 
+                // Refresca solo el icono de foto de la fila; no recarga la tabla ni pierde la página
+                function actualizarIconoFoto(productoId) {
+                    const icono = document.querySelector('#datatable-responsive .foto-check[data-producto-id="' + productoId + '"]');
+                    if (!icono) return;
+                    icono.classList.remove('no-foto');
+                    icono.classList.add('has-foto');
+                    icono.title = 'Tiene foto';
+                    icono.innerHTML = '<ion-icon name="image-outline"></ion-icon>';
+                    if (productos[productoId]) productos[productoId].imagen = '1';
+                }
+
                 function fmSwitchTab(tab, btn) {
                     document.querySelectorAll('.fm-tab').forEach(t => t.classList.remove('active'));
                     document.querySelectorAll('.fm-panel').forEach(p => p.classList.remove('active'));
@@ -1880,7 +1960,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             }
                             Alerta.toast('success', 'Foto aplicada con éxito');
                             $('#modalFoto').modal('hide');
-                            cargarProductos(document.getElementById('sucursal-selector').value);
+                            actualizarIconoFoto(fmProductoActual);
                         })
                         .catch(() => Alerta.toast('error', 'Error al aplicar imagen'));
                 }
@@ -1930,7 +2010,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             }
                             Alerta.toast('success', 'Foto guardada con éxito');
                             $('#modalFoto').modal('hide');
-                            cargarProductos(document.getElementById('sucursal-selector').value);
+                            actualizarIconoFoto(fmProductoActual);
                         });
                 }
 

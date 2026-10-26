@@ -208,9 +208,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $horarios = json_encode($horarios, JSON_UNESCAPED_UNICODE);
     }
 
+    // Productos principales (hasta 10, solo publicados del negocio)
+    $destacados_ids = [];
+    foreach ((array) ($_POST['destacados'] ?? []) as $pid) {
+        $pid = (int) $pid;
+        if ($pid > 0 && !in_array($pid, $destacados_ids, true)) $destacados_ids[] = $pid;
+    }
+    $destacados_ids = array_slice($destacados_ids, 0, 10);
+    if ($destacados_ids) {
+        $listaDest = implode(',', $destacados_ids);
+        $resDest = $conexion->query("SELECT DISTINCT producto_id FROM negocio_productos
+                                     WHERE negocio_id = $bss_id AND estado_publicacion = 1
+                                       AND producto_id IN ($listaDest)");
+        $permitidos = [];
+        while ($resDest && $filaDest = $resDest->fetch_row()) $permitidos[(int) $filaDest[0]] = true;
+        $destacados_ids = array_values(array_filter($destacados_ids, fn($pid) => isset($permitidos[$pid])));
+    }
+    $destacados_activo = (isset($_POST['destacados_activo']) && $destacados_ids) ? 1 : 0;
+    $destacados_json = json_encode(array_values($destacados_ids));
+
     $logo_url = null;
-    if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['logo'];
+    if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {        $file = $_FILES['logo'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp']) && $file['size'] <= 2 * 1024 * 1024) {
             $dir = __DIR__ . '/../../iseller_store/assets/img/tiendas/' . $bss_id . '/';
@@ -223,11 +241,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($logo_url) {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssssssi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
+        $stmt->bind_param("ssssssssssssssisi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
     } else {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ? WHERE id = ?");
-        $stmt->bind_param("sssssssssssssi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
+        $stmt->bind_param("sssssssssssssisi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
     }
 
     $stmt->execute();
@@ -245,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email FROM negocio WHERE id = ?");
+$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email, destacados_activo, destacados_ids FROM negocio WHERE id = ?");
 $stmt->bind_param("i", $bss_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -306,6 +324,37 @@ $total_pub = $stmtPub->get_result()->fetch_assoc()['total'];
 $stmtPub->close();
 
 $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios['delivery']);
+
+// Productos principales (recomendados): hasta 10, en orden
+$destacados_activo = (int) ($tienda['destacados_activo'] ?? 0) === 1;
+$destacados_ids = [];
+$tmpDest = json_decode((string) ($tienda['destacados_ids'] ?? ''), true);
+if (is_array($tmpDest)) {
+    foreach (array_slice($tmpDest, 0, 10) as $pidDest) {
+        $pidDest = (int) $pidDest;
+        if ($pidDest > 0 && !in_array($pidDest, $destacados_ids, true)) $destacados_ids[] = $pidDest;
+    }
+}
+
+$productos_publicados = [];
+$stmtPP = $conexion->prepare("SELECT p.id, p.nombre
+                              FROM productos p
+                              INNER JOIN negocio_productos np ON np.producto_id = p.id
+                                   AND np.negocio_id = ? AND np.estado_publicacion = 1
+                              GROUP BY p.id, p.nombre
+                              ORDER BY p.nombre");
+$stmtPP->bind_param('i', $bss_id);
+$stmtPP->execute();
+$resPP = $stmtPP->get_result();
+while ($pp = $resPP->fetch_assoc()) $productos_publicados[] = $pp;
+$stmtPP->close();
+
+$destacados_nombres = [];
+if ($destacados_ids) {
+    $listaDest = implode(',', $destacados_ids);
+    $resDN = $conexion->query("SELECT id, nombre FROM productos WHERE id IN ($listaDest)");
+    while ($resDN && $dn = $resDN->fetch_assoc()) $destacados_nombres[(int) $dn['id']] = $dn['nombre'];
+}
 ?>
 <!DOCTYPE html>
 <html lang='es'>
@@ -863,6 +912,36 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
             font-size: 18px;
         }
 
+        /* ---- Productos recomendados ---- */
+        .destacados-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .destacado-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: var(--dash-text);
+            background: var(--dash-bg);
+            border: 1px solid var(--dash-border);
+            border-radius: 8px;
+        }
+
+        .destacado-item .destacado-quitar {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--dash-danger);
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
         /* ---- Grid helpers ---- */
         .row {
             display: flex;
@@ -1025,6 +1104,10 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                         <div class="sidebar-tab" data-tab="tab-imagenes" onclick="switchTab(this)">
                             <ion-icon name="image-outline"></ion-icon>
                             Imágenes
+                        </div>
+                        <div class="sidebar-tab" data-tab="tab-destacados" onclick="switchTab(this)">
+                            <ion-icon name="ribbon-outline"></ion-icon>
+                            Recomendados
                         </div>
                         <div class="sidebar-tab" data-tab="tab-envios" onclick="switchTab(this)">
                             <ion-icon name="car-outline"></ion-icon>
@@ -1206,6 +1289,50 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                                 <button type="submit" class="btn btn-success btn-block">
                                     <ion-icon name="save-outline"></ion-icon>
                                     Guardar Imágenes
+                                </button>
+                            </div>
+
+                            <!-- TAB: Recomendados -->
+                            <div class="config-tab-panel" id="tab-destacados">
+                                <div class="dash-panel">
+                                    <div class="panel-header">
+                                        <h6><ion-icon name="ribbon-outline"></ion-icon>Productos principales</h6>
+                                        <label class="switch" title="Mostrar el cintillo en la tienda">
+                                            <input type="checkbox" name="destacados_activo" value="1" id="switch-destacados" <?= $destacados_activo ? 'checked' : '' ?>>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="panel-body">
+                                        <p class="field-hint" style="margin-top:0;">
+                                            Elige hasta 10 productos. Cuando la sección esté activa se mostrarán como un cintillo con scroll horizontal en el perfil de tu tienda.
+                                        </p>
+                                        <div class="row">
+                                            <div class="col-md-8 mb-3">
+                                                <label class="field-label">Producto</label>
+                                                <select id="destacado-picker" class="dash-input">
+                                                    <option value="">Seleccione un producto...</option>
+                                                    <?php foreach ($productos_publicados as $pp): ?>
+                                                        <option value="<?= (int) $pp['id'] ?>"><?= htmlspecialchars($pp['nombre']) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3" style="display:flex;align-items:flex-end;">
+                                                <button type="button" class="btn btn-success w-100" id="btn-agregar-destacado">
+                                                    <ion-icon name="add-outline"></ion-icon>
+                                                    Agregar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="field-hint" id="destacados-contador">0 de 10 seleccionados</p>
+                                        <div id="destacados-lista" class="destacados-lista"></div>
+                                        <?php if (!$productos_publicados): ?>
+                                            <p class="field-hint">No tienes productos publicados todavía. Publica productos en la pestaña Productos para poder elegirlos aquí.</p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-block">
+                                    <ion-icon name="save-outline"></ion-icon>
+                                    Guardar Recomendados
                                 </button>
                             </div>
 
@@ -1956,6 +2083,76 @@ $horarios_configured = !empty($conf_horarios['tienda']) || !empty($conf_horarios
                     document.getElementById(target + '-range-2-label').textContent = isDoble ? 'Turno tarde' : 'Horario de atención';
                 });
             });
+
+            // ---- Productos principales (recomendados) ----
+            (function() {
+                const MAX_DESTACADOS = 10;
+                const listaEl = document.getElementById('destacados-lista');
+                const contadorEl = document.getElementById('destacados-contador');
+                const pickerEl = document.getElementById('destacado-picker');
+                const btnAgregar = document.getElementById('btn-agregar-destacado');
+                if (!listaEl || !contadorEl || !pickerEl || !btnAgregar) return;
+
+                const iniciales = <?= json_encode(array_map(fn($pid) => ['id' => $pid, 'nombre' => $destacados_nombres[$pid] ?? ('#' . $pid)], $destacados_ids), JSON_UNESCAPED_UNICODE) ?>;
+                const seleccionados = new Map(iniciales.map(p => [String(p.id), p.nombre]));
+
+                function renderDestacados() {
+                    listaEl.innerHTML = '';
+                    let i = 0;
+                    seleccionados.forEach(function(nombre, id) {
+                        i++;
+                        const item = document.createElement('div');
+                        item.className = 'destacado-item';
+
+                        const num = document.createElement('span');
+                        num.textContent = i + '.';
+                        num.style.cssText = 'min-width:18px;font-weight:600;color:var(--dash-text-muted);';
+
+                        const txt = document.createElement('span');
+                        txt.textContent = nombre;
+                        txt.style.flex = '1';
+
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'destacados[]';
+                        hidden.value = id;
+
+                        const quitar = document.createElement('button');
+                        quitar.type = 'button';
+                        quitar.className = 'destacado-quitar';
+                        quitar.innerHTML = '&times;';
+                        quitar.title = 'Quitar';
+                        quitar.addEventListener('click', function() {
+                            seleccionados.delete(id);
+                            renderDestacados();
+                        });
+
+                        item.append(num, txt, hidden, quitar);
+                        listaEl.appendChild(item);
+                    });
+
+                    contadorEl.textContent = seleccionados.size + ' de ' + MAX_DESTACADOS + ' seleccionados';
+                    btnAgregar.disabled = seleccionados.size >= MAX_DESTACADOS;
+                }
+
+                btnAgregar.addEventListener('click', function() {
+                    const id = pickerEl.value;
+                    if (!id) return;
+                    if (seleccionados.size >= MAX_DESTACADOS) {
+                        showToast('Máximo 10 productos.', 'error');
+                        return;
+                    }
+                    if (seleccionados.has(id)) {
+                        showToast('Ese producto ya está en la lista.', 'error');
+                        return;
+                    }
+                    seleccionados.set(id, pickerEl.options[pickerEl.selectedIndex].text);
+                    pickerEl.value = '';
+                    renderDestacados();
+                });
+
+                renderDestacados();
+            })();
 
             // ---- Leaflet Map ----
             const latInput = document.getElementById('lat-input');

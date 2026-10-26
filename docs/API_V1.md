@@ -160,6 +160,38 @@ El servidor:
 
 200: `{ order_id, total_usd, total_bs, total_cop, delivery_usd, status }`.
 
+## Chat (Bearer)
+
+### GET chat.php
+
+Conversaciones del cliente:
+
+```json
+{ "items": [ { "id": 26, "order_id": 42, "subject": "Pedido #42",
+  "status": "abierta", "store_name": "loreannys", "store_logo": "...",
+  "unread": 0, "last_message": "...", "last_message_at": "...",
+  "created_at": "..." } ] }
+```
+
+### GET chat.php?id=26
+
+`{ conversation, messages[] }` con `messages[] = { id, mine, message, created_at }`.
+Al abrirla se marcan como leídos los mensajes de la tienda.
+
+### GET chat.php?order_id=42
+
+Abre (o crea, si el pedido aún no tiene) la conversación del pedido. Mismo
+formato que `?id=`. Solo el dueño del pedido puede abrirla.
+
+### POST chat.php
+
+```json
+{ "conversation_id": 26, "message": "Hola, ¿ya salió mi pedido?" }
+```
+
+Inserta el mensaje como cliente, actualiza `ultimo_mensaje_en` y avisa al
+comercio (in-app/push). No permite escribir en conversaciones cerradas.
+
 ## Push (Bearer)
 
 ### POST push/token.php

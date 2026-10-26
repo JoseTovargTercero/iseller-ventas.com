@@ -65,11 +65,15 @@ function api_tiendas_registradas(): array
     }
     $items = [];
     while ($fila = $res->fetch_assoc()) {
+        $logo = trim((string)($fila['logo_url'] ?? ''));
+        if ($logo === '') {
+            $logo = 'assets/img/logo-tienda.png';
+        }
         $items[] = [
             'id'       => (int)$fila['id'],
             'slug'     => (string)$fila['slug'],
             'name'     => ($fila['nombre_visible'] ?? '') !== '' ? $fila['nombre_visible'] : $fila['nombre'],
-            'logo_url' => api_image($fila['logo_url'] ?? '', 160, 78),
+            'logo_url' => api_image($logo, 160, 78),
             'category' => (string)($fila['categoria'] ?? ''),
         ];
     }
@@ -134,6 +138,12 @@ $bssId = (int)$tienda['id'];
 
 $portada = trim((string)($tienda['portada_url'] ?? ''));
 $logo = trim((string)($tienda['logo_url'] ?? ''));
+if ($portada === '') {
+    $portada = 'assets/img/bg-hero-2a.webp';
+}
+if ($logo === '') {
+    $logo = 'assets/img/logo-tienda.png';
+}
 
 // La app recorta el hero: se acota la proporción real para que en móvil no quede
 // una franja de 4:1 ni una imagen gigante en tablets.

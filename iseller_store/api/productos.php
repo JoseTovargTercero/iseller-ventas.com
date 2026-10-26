@@ -143,6 +143,32 @@ function getCalculadora(int $bss_id, $recompensas = []) {
 }
 // ─────────────────────────────────────────────────────────────────────────
 
+// Formato común de producto: cuadrícula y cintillo de recomendados
+function formatearProducto(array $row, array $recompensas = []): array
+{
+    $precios = getCalculadora((int)$row['bss_id'], $recompensas)->calcularPrecios($row);
+
+    return [
+        'id' => $row['id'],
+        'nombre' => ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8')),
+        'stock' => (int)$row['stock'],
+        'mayor' => $row['mayor'],
+        'codigo' => trim((string)$row['codigo_barras']),
+        'categorias' => $row['categorias_nombres'] ?? '',
+        'precio_dolar_visible' => $precios['precio_venta_dolar'],
+        'precio_peso_visible' => $precios['precio_venta_peso'],
+        'precio_bs_visible' => $precios['precio_venta_bs'],
+        'precio_costo' => $precios['precio_dolar_compra'],
+        'precio_costo_bs' => $precios['precio_bs_compra'],
+        'sucursal' => $row['slug'],
+        'tienda_nombre' => $row['nombre_tienda'],
+        'cantidadPaca' => $row['cantidad_unidades'],
+        'img' => urlImagenProducto($row),
+        'bss_id' => $row['bss_id'],
+        'id_sucursal' => $row['id_sucursal']
+    ];
+}
+
 // Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global.
 // Solo se muestran productos con stock disponible.
 $where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo' AND s.stock > 0";
@@ -204,6 +230,61 @@ if ($mode === 'search_index') {
     exit;
 }
 
+// Mode Destacados: productos principales elegidos por la tienda (cintillo)
+if ($mode === 'destacados') {
+    if (!$tienda_slug) {
+        echo json_encode(['data' => []]);
+        exit;
+    }
+
+    $stmtNeg = $conexion->prepare("SELECT id, destacados_activo, destacados_ids FROM negocio WHERE slug = ? LIMIT 1");
+    $stmtNeg->bind_param('s', $tienda_slug);
+    $stmtNeg->execute();
+    $neg = $stmtNeg->get_result()->fetch_assoc();
+    $stmtNeg->close();
+
+    $idsDest = [];
+    if ($neg && (int)$neg['destacados_activo'] === 1) {
+        $tmpDest = json_decode((string)$neg['destacados_ids'], true);
+        if (is_array($tmpDest)) {
+            foreach (array_slice($tmpDest, 0, 10) as $pidDest) {
+                $pidDest = (int)$pidDest;
+                if ($pidDest > 0 && !in_array($pidDest, $idsDest, true)) $idsDest[] = $pidDest;
+            }
+        }
+    }
+    if (!$idsDest) {
+        echo json_encode(['data' => []]);
+        exit;
+    }
+
+    $listaDest = implode(',', $idsDest);
+    $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
+                   NULL AS categorias_nombres
+            FROM productos p
+            INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
+            INNER JOIN negocio n ON np.negocio_id = n.id
+            INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+            WHERE {$where} AND p.id IN ($listaDest)
+            GROUP BY p.id, n.id
+            ORDER BY FIELD(p.id, $listaDest)
+            LIMIT 10";
+
+    $stmt = $conexion->prepare($sql);
+    if (!$stmt) { echo json_encode(['error' => $conexion->error]); exit; }
+    if (!empty($params)) $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $destacados = [];
+    while ($row = $result->fetch_assoc()) {
+        $destacados[] = formatearProducto($row, $recompensas);
+    }
+
+    echo json_encode(['data' => $destacados]);
+    exit;
+}
+
 // Mode Grid Pagination
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 24;
@@ -254,29 +335,7 @@ $result = $stmt->get_result();
 
 $products = [];
 while ($row = $result->fetch_assoc()) {
-    $precios = getCalculadora((int)$row['bss_id'], $recompensas)->calcularPrecios($row);
-    $nombre = ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8'));
-    $img = urlImagenProducto($row);
-
-    $products[] = [
-        'id' => $row['id'],
-        'nombre' => $nombre,
-        'stock' => (int)$row['stock'],
-        'mayor' => $row['mayor'],
-        'codigo' => trim((string)$row['codigo_barras']),
-        'categorias' => $row['categorias_nombres'] ?? '',
-        'precio_dolar_visible' => $precios['precio_venta_dolar'],
-        'precio_peso_visible' => $precios['precio_venta_peso'],
-        'precio_bs_visible' => $precios['precio_venta_bs'],
-        'precio_costo' => $precios['precio_dolar_compra'],
-        'precio_costo_bs' => $precios['precio_bs_compra'],
-        'sucursal' => $row['slug'],
-        'tienda_nombre' => $row['nombre_tienda'],
-        'cantidadPaca' => $row['cantidad_unidades'],
-        'img' => $img,
-        'bss_id' => $row['bss_id'],
-        'id_sucursal' => $row['id_sucursal']
-    ];
+    $products[] = formatearProducto($row, $recompensas);
 }
 
 
