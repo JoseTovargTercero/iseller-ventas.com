@@ -17,6 +17,46 @@ if ((string)($_SESSION['nivel'] ?? '') !== '1') {
 $topnav = topnav();
 $bss_id = $_SESSION["bss_id"];
 
+// Ids válidos de recomendados: enteros, sin duplicados, máximo 10 y publicados
+// en la tienda. Lo usan el guardado automático y el guardado general.
+function destacados_validos(mysqli $conexion, int $bss_id, array $ids): array
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($id) => $id > 0)));
+    $ids = array_slice($ids, 0, 10);
+    if (!$ids) return [];
+
+    $marcas = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $conexion->prepare("SELECT DISTINCT producto_id FROM negocio_productos
+                                WHERE negocio_id = ? AND estado_publicacion = 1
+                                  AND producto_id IN ($marcas)");
+    $stmt->bind_param('i' . str_repeat('i', count($ids)), $bss_id, ...$ids);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $permitidos = [];
+    while ($fila = $res->fetch_row()) $permitidos[(int) $fila[0]] = true;
+    $stmt->close();
+
+    return array_values(array_filter($ids, fn($id) => isset($permitidos[$id])));
+}
+
+// Guardado automático de Recomendados (AJAX). Solo toca estas dos columnas
+// para no pisar cambios sin guardar de las otras pestañas.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'guardar_destacados') {
+    header('Content-Type: application/json');
+
+    $ids = destacados_validos($conexion, (int) $bss_id, (array) ($_POST['destacados'] ?? []));
+    $activo = (isset($_POST['destacados_activo']) && $_POST['destacados_activo'] === '1' && $ids) ? 1 : 0;
+    $json = json_encode(array_values($ids));
+
+    $stmt = $conexion->prepare("UPDATE negocio SET destacados_activo = ?, destacados_ids = ? WHERE id = ?");
+    $stmt->bind_param("isi", $activo, $json, $bss_id);
+    $stmt->execute();
+    $stmt->close();
+
+    echo json_encode(['ok' => true, 'ids' => $ids, 'activo' => $activo]);
+    exit;
+}
+
 // Activar / desactivar la tienda. Todo el front de la tienda comprueba
 // tiene_tienda_virtual = 1, así que basta con apagar el flag: los clientes
 // dejan de verla. No borra nada (productos, pedidos y configuración siguen
@@ -209,21 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Productos principales (hasta 10, solo publicados del negocio)
-    $destacados_ids = [];
-    foreach ((array) ($_POST['destacados'] ?? []) as $pid) {
-        $pid = (int) $pid;
-        if ($pid > 0 && !in_array($pid, $destacados_ids, true)) $destacados_ids[] = $pid;
-    }
-    $destacados_ids = array_slice($destacados_ids, 0, 10);
-    if ($destacados_ids) {
-        $listaDest = implode(',', $destacados_ids);
-        $resDest = $conexion->query("SELECT DISTINCT producto_id FROM negocio_productos
-                                     WHERE negocio_id = $bss_id AND estado_publicacion = 1
-                                       AND producto_id IN ($listaDest)");
-        $permitidos = [];
-        while ($resDest && $filaDest = $resDest->fetch_row()) $permitidos[(int) $filaDest[0]] = true;
-        $destacados_ids = array_values(array_filter($destacados_ids, fn($pid) => isset($permitidos[$pid])));
-    }
+    $destacados_ids = destacados_validos($conexion, (int) $bss_id, (array) ($_POST['destacados'] ?? []));
     $destacados_activo = (isset($_POST['destacados_activo']) && $destacados_ids) ? 1 : 0;
     $destacados_json = json_encode(array_values($destacados_ids));
 
@@ -914,6 +940,46 @@ if ($destacados_ids) {
         }
 
         /* ---- Productos recomendados ---- */
+        .panel-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-switch span {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--dash-text-muted);
+            white-space: nowrap;
+        }
+
+        .destacados-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 4px 0 10px;
+            font-size: 12px;
+            color: var(--dash-text-muted);
+        }
+
+        .destacados-estado {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 16px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .destacados-estado.ok {
+            color: var(--dash-mint);
+        }
+
+        .destacados-estado.error {
+            color: var(--dash-danger);
+        }
+
         .destacados-lista {
             display: flex;
             flex-direction: column;
@@ -923,24 +989,82 @@ if ($destacados_ids) {
         .destacado-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
+            gap: 12px;
+            padding: 9px 10px;
             font-size: 13px;
             color: var(--dash-text);
             background: var(--dash-bg);
             border: 1px solid var(--dash-border);
-            border-radius: 8px;
+            border-radius: 10px;
+            transition: border-color 0.15s ease;
         }
 
-        .destacado-item .destacado-quitar {
-            margin-left: auto;
-            background: none;
-            border: none;
-            color: var(--dash-danger);
-            font-size: 18px;
+        .destacado-item:hover {
+            border-color: rgba(45, 212, 160, 0.35);
+        }
+
+        .destacado-pos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--dash-mint);
+            background: rgba(45, 212, 160, 0.12);
+            border-radius: 7px;
+        }
+
+        .destacado-nombre {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .destacado-quitar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+            padding: 0;
+            font-size: 16px;
             line-height: 1;
+            color: var(--dash-text-muted);
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 7px;
             cursor: pointer;
-            padding: 0 4px;
+            transition: all 0.15s ease;
+        }
+
+        .destacado-quitar:hover {
+            color: var(--dash-danger);
+            background: rgba(239, 90, 111, 0.1);
+            border-color: rgba(239, 90, 111, 0.25);
+        }
+
+        .destacados-vacio {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 26px 16px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--dash-text-muted);
+            border: 1px dashed var(--dash-border);
+            border-radius: 12px;
+        }
+
+        .destacados-vacio ion-icon {
+            font-size: 26px;
+            opacity: 0.6;
         }
 
         /* ---- Grid helpers ---- */
@@ -1243,6 +1367,35 @@ if ($destacados_ids) {
                                     <ion-icon name="save-outline"></ion-icon>
                                     Guardar Identidad
                                 </button>
+
+                                <!-- Zona de peligro: activar / desactivar la tienda -->
+                                <div class="dash-panel" style="border-color: <?= $tienda_activa ? 'rgba(239,90,111,0.25)' : 'rgba(45,212,160,0.25)' ?>; margin-top: 20px;">
+                                    <div class="panel-header">
+                                        <h6 style="color:<?= $tienda_activa ? 'var(--dash-danger)' : 'var(--dash-mint)' ?>;">
+                                            <ion-icon name="power-outline" style="color:inherit;"></ion-icon>
+                                            <?= $tienda_activa ? 'Desactivar tienda' : 'Reactivar tienda' ?>
+                                        </h6>
+                                    </div>
+                                    <div class="panel-body">
+                                        <p class="field-hint" style="margin-top:0;">
+                                            <?php if ($tienda_activa): ?>
+                                                Tu tienda dejará de ser visible para los clientes: el enlace
+                                                <b>iseller-tiendas.com/<?= htmlspecialchars($tienda['slug']) ?></b> mostrará
+                                                "Tienda no encontrada". No se borra nada (productos, pedidos y configuración
+                                                se conservan) y puedes reactivarla aquí mismo.
+                                            <?php else: ?>
+                                                Tu tienda está <b>desactivada</b>: los clientes no pueden verla ni hacer pedidos.
+                                                Al reactivarla vuelve a estar disponible en
+                                                <b>iseller-tiendas.com/<?= htmlspecialchars($tienda['slug']) ?></b> con la misma
+                                                configuración y productos.
+                                            <?php endif; ?>
+                                        </p>
+                                        <button type="button" id="btnFlagTienda" data-accion="<?= $tienda_activa ? 'desactivar_tienda' : 'reactivar_tienda' ?>" class="btn <?= $tienda_activa ? 'btn-danger' : 'btn-success' ?>">
+                                            <ion-icon name="power-outline"></ion-icon>
+                                            <?= $tienda_activa ? 'Desactivar mi tienda' : 'Reactivar mi tienda' ?>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- TAB: Imágenes -->
@@ -1298,43 +1451,43 @@ if ($destacados_ids) {
                                 <div class="dash-panel">
                                     <div class="panel-header">
                                         <h6><ion-icon name="ribbon-outline"></ion-icon>Productos principales</h6>
-                                        <label class="switch" title="Mostrar el cintillo en la tienda">
-                                            <input type="checkbox" name="destacados_activo" value="1" id="switch-destacados" <?= $destacados_activo ? 'checked' : '' ?>>
-                                            <span class="slider"></span>
-                                        </label>
+                                        <div class="panel-switch">
+                                            <span id="destacados-switch-label">Visible en la tienda</span>
+                                            <label class="switch" title="Mostrar el cintillo en la tienda">
+                                                <input type="checkbox" name="destacados_activo" value="1" id="switch-destacados" aria-labelledby="destacados-switch-label" <?= $destacados_activo ? 'checked' : '' ?>>
+                                                <span class="slider"></span>
+                                            </label>
+                                        </div>
                                     </div>
                                     <div class="panel-body">
                                         <p class="field-hint" style="margin-top:0;">
-                                            Elige hasta 10 productos. Cuando la sección esté activa se mostrarán como un cintillo con scroll horizontal en el perfil de tu tienda.
+                                            Elige hasta 10 productos para mostrarlos como cintillo en el perfil de tu tienda. Los cambios se guardan solos.
                                         </p>
-                                        <div class="row">
-                                            <div class="col-md-8 mb-3">
-                                                <label class="field-label">Producto</label>
+                                        <?php if ($productos_publicados): ?>
+                                            <div class="mb-3">
+                                                <label class="field-label" for="destacado-picker">Agregar producto</label>
                                                 <select id="destacado-picker" class="dash-input">
-                                                    <option value="">Seleccione un producto...</option>
+                                                    <option value="">Buscar y agregar producto...</option>
                                                     <?php foreach ($productos_publicados as $pp): ?>
                                                         <option value="<?= (int) $pp['id'] ?>"><?= htmlspecialchars($pp['nombre']) ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
                                             </div>
-                                            <div class="col-md-4 mb-3" style="display:flex;align-items:flex-end;">
-                                                <button type="button" class="btn btn-success w-100" id="btn-agregar-destacado">
-                                                    <ion-icon name="add-outline"></ion-icon>
-                                                    Agregar
-                                                </button>
-                                            </div>
+                                        <?php endif; ?>
+                                        <div class="destacados-meta">
+                                            <span id="destacados-contador">0 de 10</span>
+                                            <span id="destacados-estado" class="destacados-estado" role="status" aria-live="polite"></span>
                                         </div>
-                                        <p class="field-hint" id="destacados-contador">0 de 10 seleccionados</p>
                                         <div id="destacados-lista" class="destacados-lista"></div>
+                                        <div id="destacados-vacio" class="destacados-vacio">
+                                            <ion-icon name="ribbon-outline"></ion-icon>
+                                            <span>Aún no hay productos en la lista.</span>
+                                        </div>
                                         <?php if (!$productos_publicados): ?>
-                                            <p class="field-hint">No tienes productos publicados todavía. Publica productos en la pestaña Productos para poder elegirlos aquí.</p>
+                                            <p class="field-hint">No tienes productos publicados todavía. <a href="tienda_productos.php" style="color:var(--dash-mint);">Publica un producto</a> para poder elegirlo aquí.</p>
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-success btn-block">
-                                    <ion-icon name="save-outline"></ion-icon>
-                                    Guardar Recomendados
-                                </button>
                             </div>
 
                             <!-- TAB: Envíos -->
@@ -1740,37 +1893,6 @@ if ($destacados_ids) {
 
                         </form>
 
-                        <!-- Zona de peligro: activar / desactivar la tienda -->
-                        <div class="dash-panel" style="border-color: <?= $tienda_activa ? 'rgba(239,90,111,0.25)' : 'rgba(45,212,160,0.25)' ?>;">
-                            <div class="panel-header">
-                                <h6 style="color:<?= $tienda_activa ? 'var(--dash-danger)' : 'var(--dash-mint)' ?>;">
-                                    <ion-icon name="power-outline" style="color:inherit;"></ion-icon>
-                                    <?= $tienda_activa ? 'Desactivar tienda' : 'Reactivar tienda' ?>
-                                </h6>
-                            </div>
-                            <div class="panel-body">
-                                <p class="field-hint" style="margin-top:0;">
-                                    <?php if ($tienda_activa): ?>
-                                        Tu tienda dejará de ser visible para los clientes: el enlace
-                                        <b>iseller-tiendas.com/<?= htmlspecialchars($tienda['slug']) ?></b> mostrará
-                                        "Tienda no encontrada". No se borra nada (productos, pedidos y configuración
-                                        se conservan) y puedes reactivarla aquí mismo.
-                                    <?php else: ?>
-                                        Tu tienda está <b>desactivada</b>: los clientes no pueden verla ni hacer pedidos.
-                                        Al reactivarla vuelve a estar disponible en
-                                        <b>iseller-tiendas.com/<?= htmlspecialchars($tienda['slug']) ?></b> con la misma
-                                        configuración y productos.
-                                    <?php endif; ?>
-                                </p>
-                                <form method="POST" id="formFlagTienda">
-                                    <input type="hidden" name="accion" value="<?= $tienda_activa ? 'desactivar_tienda' : 'reactivar_tienda' ?>">
-                                    <button type="submit" class="btn <?= $tienda_activa ? 'btn-danger' : 'btn-success' ?>">
-                                        <ion-icon name="power-outline"></ion-icon>
-                                        <?= $tienda_activa ? 'Desactivar mi tienda' : 'Reactivar mi tienda' ?>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
                     </main>
 
                 </div>
@@ -2040,16 +2162,21 @@ if ($destacados_ids) {
                 }
             });
 
-            // Confirmación antes de activar/desactivar la tienda
-            const formFlagTienda = document.getElementById('formFlagTienda');
-            if (formFlagTienda) {
-                formFlagTienda.addEventListener('submit', function(e) {
-                    if (this.dataset.confirmado === '1') return;
-                    e.preventDefault();
-                    const form = this;
-                    const desactivar = form.querySelector('input[name="accion"]').value === 'desactivar_tienda';
+            // Confirmación antes de activar/desactivar la tienda (el botón vive
+            // dentro del formulario, así que se envía con un form temporal).
+            const btnFlagTienda = document.getElementById('btnFlagTienda');
+            if (btnFlagTienda) {
+                btnFlagTienda.addEventListener('click', function() {
+                    const desactivar = this.dataset.accion === 'desactivar_tienda';
                     const enviar = () => {
-                        form.dataset.confirmado = '1';
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        const accion = document.createElement('input');
+                        accion.type = 'hidden';
+                        accion.name = 'accion';
+                        accion.value = this.dataset.accion;
+                        form.appendChild(accion);
+                        document.body.appendChild(form);
                         form.submit();
                     };
                     if (typeof Swal !== 'undefined') {
@@ -2087,26 +2214,51 @@ if ($destacados_ids) {
             });
 
             // ---- Productos principales (recomendados) ----
+            // Se guardan solos: agregar, quitar o activar la sección llama al
+            // guardado AJAX, sin botón de guardar.
             (function() {
                 const MAX_DESTACADOS = 10;
                 const listaEl = document.getElementById('destacados-lista');
                 const contadorEl = document.getElementById('destacados-contador');
+                const estadoEl = document.getElementById('destacados-estado');
+                const vacioEl = document.getElementById('destacados-vacio');
                 const pickerEl = document.getElementById('destacado-picker');
-                const btnAgregar = document.getElementById('btn-agregar-destacado');
-                if (!listaEl || !contadorEl || !pickerEl || !btnAgregar) return;
+                const switchEl = document.getElementById('switch-destacados');
+                if (!listaEl || !contadorEl || !switchEl) return;
 
-                // Buscador dentro del select, igual que el de categorías en nuevoProducto.php
-                $(pickerEl).select2({
-                    placeholder: 'Seleccione un producto...',
-                    width: '100%',
-                    language: {
-                        noResults: function() { return 'Sin resultados'; },
-                        searching: function() { return 'Buscando...'; }
-                    }
+                const PRODUCTOS = <?= json_encode(array_map(fn($p) => ['id' => (int) $p['id'], 'nombre' => $p['nombre']], $productos_publicados), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+                const iniciales = <?= json_encode(array_map(fn($pid) => ['id' => $pid, 'nombre' => $destacados_nombres[$pid] ?? ('#' . $pid)], $destacados_ids), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+                const nombres = new Map(PRODUCTOS.map(function(p) { return [String(p.id), p.nombre]; }));
+                iniciales.forEach(function(p) {
+                    if (!nombres.has(String(p.id))) nombres.set(String(p.id), p.nombre);
                 });
+                const seleccionados = new Map(iniciales.map(function(p) { return [String(p.id), p.nombre]; }));
 
-                const iniciales = <?= json_encode(array_map(fn($pid) => ['id' => $pid, 'nombre' => $destacados_nombres[$pid] ?? ('#' . $pid)], $destacados_ids), JSON_UNESCAPED_UNICODE) ?>;
-                const seleccionados = new Map(iniciales.map(p => [String(p.id), p.nombre]));
+                // El picker solo ofrece productos que no están ya en la lista.
+                function renderPicker() {
+                    if (!pickerEl) return;
+                    pickerEl.innerHTML = '<option value=""></option>';
+                    PRODUCTOS.forEach(function(p) {
+                        if (seleccionados.has(String(p.id))) return;
+                        const opcion = document.createElement('option');
+                        opcion.value = p.id;
+                        opcion.textContent = p.nombre;
+                        pickerEl.appendChild(opcion);
+                    });
+                    if (!window.jQuery) return;
+                    const $picker = jQuery(pickerEl);
+                    if ($picker.data('select2')) $picker.select2('destroy');
+                    $picker.select2({
+                        placeholder: 'Buscar y agregar producto...',
+                        width: '100%',
+                        language: {
+                            noResults: function() { return 'Sin resultados'; },
+                            searching: function() { return 'Buscando...'; }
+                        }
+                    });
+                    $picker.prop('disabled', seleccionados.size >= MAX_DESTACADOS);
+                }
 
                 function renderDestacados() {
                     listaEl.innerHTML = '';
@@ -2116,13 +2268,14 @@ if ($destacados_ids) {
                         const item = document.createElement('div');
                         item.className = 'destacado-item';
 
-                        const num = document.createElement('span');
-                        num.textContent = i + '.';
-                        num.style.cssText = 'min-width:18px;font-weight:600;color:var(--dash-text-muted);';
+                        const pos = document.createElement('span');
+                        pos.className = 'destacado-pos';
+                        pos.textContent = i;
 
                         const txt = document.createElement('span');
+                        txt.className = 'destacado-nombre';
                         txt.textContent = nombre;
-                        txt.style.flex = '1';
+                        txt.title = nombre;
 
                         const hidden = document.createElement('input');
                         hidden.type = 'hidden';
@@ -2133,34 +2286,100 @@ if ($destacados_ids) {
                         quitar.type = 'button';
                         quitar.className = 'destacado-quitar';
                         quitar.innerHTML = '&times;';
-                        quitar.title = 'Quitar';
+                        quitar.title = 'Quitar de la lista';
+                        quitar.setAttribute('aria-label', 'Quitar ' + nombre);
                         quitar.addEventListener('click', function() {
                             seleccionados.delete(id);
                             renderDestacados();
+                            programarGuardado();
                         });
 
-                        item.append(num, txt, hidden, quitar);
+                        item.append(pos, txt, hidden, quitar);
                         listaEl.appendChild(item);
                     });
 
-                    contadorEl.textContent = seleccionados.size + ' de ' + MAX_DESTACADOS + ' seleccionados';
-                    btnAgregar.disabled = seleccionados.size >= MAX_DESTACADOS;
+                    contadorEl.textContent = seleccionados.size + ' de ' + MAX_DESTACADOS;
+                    if (vacioEl) vacioEl.style.display = seleccionados.size ? 'none' : 'flex';
+                    renderPicker();
                 }
 
-                btnAgregar.addEventListener('click', function() {
-                    const id = pickerEl.value;
-                    if (!id) return;
-                    if (seleccionados.size >= MAX_DESTACADOS) {
-                        showToast('Máximo 10 productos.', 'error');
+                let guardarTimer = null;
+                let estadoTimer = null;
+
+                function setEstado(texto, tipo) {
+                    if (!estadoEl) return;
+                    estadoEl.textContent = texto || '';
+                    estadoEl.className = 'destacados-estado' + (tipo ? ' ' + tipo : '');
+                    clearTimeout(estadoTimer);
+                    if (texto) estadoTimer = setTimeout(function() { setEstado(''); }, 2500);
+                }
+
+                function programarGuardado() {
+                    clearTimeout(guardarTimer);
+                    guardarTimer = setTimeout(guardarDestacados, 300);
+                }
+
+                function guardarDestacados() {
+                    const activo = switchEl.checked ? 1 : 0;
+                    setEstado('Guardando...');
+                    const fd = new FormData();
+                    fd.append('accion', 'guardar_destacados');
+                    if (activo) fd.append('destacados_activo', '1');
+                    seleccionados.forEach(function(nombre, id) { fd.append('destacados[]', id); });
+
+                    fetch('tienda_configuracion.php', { method: 'POST', body: fd })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (!data.ok) throw new Error(data.error || 'No se pudo guardar.');
+                            const validos = new Set((data.ids || []).map(String));
+                            let cambio = false;
+                            [...seleccionados.keys()].forEach(function(id) {
+                                if (!validos.has(id)) { seleccionados.delete(id); cambio = true; }
+                            });
+                            if ((data.activo === 1) !== switchEl.checked) {
+                                switchEl.checked = data.activo === 1;
+                                cambio = true;
+                            }
+                            if (cambio) renderDestacados();
+                            setEstado('Guardado', 'ok');
+                        })
+                        .catch(function() {
+                            setEstado('No se pudo guardar', 'error');
+                            showToast('No se pudieron guardar los recomendados. Revisa tu conexión.', 'error');
+                        });
+                }
+
+                if (pickerEl && window.jQuery) {
+                    jQuery(pickerEl).on('select2:select', function(e) {
+                        const id = String(e.params.data.id || '');
+                        if (!id) return;
+                        if (seleccionados.size >= MAX_DESTACADOS) {
+                            showToast('Máximo 10 productos.', 'error');
+                            return;
+                        }
+                        if (seleccionados.has(id)) {
+                            showToast('Ese producto ya está en la lista.', 'error');
+                            return;
+                        }
+                        seleccionados.set(id, e.params.data.text);
+                        // Agregar un producto implica querer mostrarlo: el cintillo
+                        // se activa solo y el switch queda como opción para ocultarlo.
+                        switchEl.checked = true;
+                        // Se espera a que Select2 cierre antes de reconstruirlo.
+                        setTimeout(function() {
+                            renderDestacados();
+                            programarGuardado();
+                        }, 0);
+                    });
+                }
+
+                switchEl.addEventListener('change', function() {
+                    if (this.checked && !seleccionados.size) {
+                        this.checked = false;
+                        showToast('Agrega al menos un producto para activar la sección.', 'error');
                         return;
                     }
-                    if (seleccionados.has(id)) {
-                        showToast('Ese producto ya está en la lista.', 'error');
-                        return;
-                    }
-                    seleccionados.set(id, pickerEl.options[pickerEl.selectedIndex].text);
-                    $(pickerEl).val(null).trigger('change');
-                    renderDestacados();
+                    programarGuardado();
                 });
 
                 renderDestacados();

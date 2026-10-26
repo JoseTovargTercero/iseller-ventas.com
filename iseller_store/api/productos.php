@@ -260,11 +260,12 @@ if ($mode === 'destacados') {
 
     $listaDest = implode(',', $idsDest);
     $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
-                   NULL AS categorias_nombres
+                   GROUP_CONCAT(DISTINCT cat.nombre SEPARATOR ', ') AS categorias_nombres
             FROM productos p
             INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
             INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+            LEFT JOIN categorias_producto cat ON p.categoria = cat.id
             WHERE {$where} AND p.id IN ($listaDest)
             GROUP BY p.id, n.id
             ORDER BY FIELD(p.id, $listaDest)
@@ -312,11 +313,12 @@ if ($categoryId) {
 $offset = ($page - 1) * $limit;
 
 $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
-               NULL AS categorias_nombres
+               GROUP_CONCAT(DISTINCT cat.nombre SEPARATOR ', ') AS categorias_nombres
         FROM productos p
         INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
         INNER JOIN negocio n ON np.negocio_id = n.id
         INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+        LEFT JOIN categorias_producto cat ON p.categoria = cat.id
         WHERE {$where}
         GROUP BY p.id, n.id
         ORDER BY {$order}

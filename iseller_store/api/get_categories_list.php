@@ -13,7 +13,8 @@ if ($tienda_slug !== '') {
         JOIN productos p ON p.categoria = c.id
         JOIN negocio_productos np ON np.producto_id = p.id
         JOIN negocio n ON n.id = np.negocio_id
-        WHERE n.slug = ? AND np.estado_publicacion = 1
+        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+        WHERE n.slug = ? AND np.estado_publicacion = 1 AND p.activo = 0 AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
         ORDER BY c.nombre ASC
     ";
     $stmt = $conexion->prepare($sql);
@@ -32,7 +33,9 @@ if ($tienda_slug !== '') {
         FROM categorias_producto c
         JOIN productos p ON p.categoria = c.id
         JOIN negocio_productos np ON np.producto_id = p.id
-        WHERE np.estado_publicacion = 1
+        JOIN negocio n ON n.id = np.negocio_id
+        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+        WHERE np.estado_publicacion = 1 AND p.activo = 0 AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
         ORDER BY c.nombre ASC
     ";
     $result = $conexion->query($sql);

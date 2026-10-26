@@ -449,6 +449,11 @@ if ($tiendas_cercanas['estado']) {
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="../publico/vendors/leaflet/leaflet.css" crossorigin="">
+
+    <?php if ($es_tienda_individual): ?>
+    <!-- Select2 (buscador de categorías) -->
+    <link rel="stylesheet" href="../publico/vendors/select2/dist/css/select2.min.css">
+    <?php endif; ?>
     <script type="text/javascript">
         (function(c, l, a, r, i, t, y) {
             c[a] = c[a] || function() {
@@ -2198,135 +2203,41 @@ if ($tiendas_cercanas['estado']) {
                 margin: 0 auto;
             }
 
-            .category-pills-zone {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                flex-wrap: nowrap;
-                overflow: hidden;
-                flex: 0 0 70%;
-                max-width: 70%;
+            .category-select-zone {
+                flex: 1 1 auto;
                 min-width: 0;
             }
 
-            .category-pills-list {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                flex-wrap: nowrap;
-                overflow: hidden;
-                min-width: 0;
-                flex: 1;
+            .category-select-zone .select2-container {
+                width: 100% !important;
+            }
+
+            .category-select-zone .select2-container--default .select2-selection--single {
+                height: 34px;
+                border: 1.5px solid #e9ecef;
+                border-radius: 99px;
+                background: #fff;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            }
+
+            .category-select-zone .select2-container--default .select2-selection--single .select2-selection__rendered {
+                line-height: 31px;
+                padding-left: 0.9rem;
+                color: #495057;
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
+
+            .category-select-zone .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 32px;
             }
 
             .category-sort-zone {
-                flex: 0 0 30%;
-                max-width: 30%;
+                flex: 0 0 auto;
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
                 justify-content: flex-end;
-            }
-
-            .category-pill {
-                white-space: nowrap;
-                background: #ffffff;
-                color: #495057;
-                border: 1.5px solid #e9ecef;
-                padding: 0.45rem 1.1rem;
-                border-radius: 99px;
-                font-size: 0.9rem;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                gap: 0.4rem;
-            }
-
-            .category-pill:hover {
-                border-color: #1a7f4b;
-                color: #1a7f4b;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(26, 127, 75, 0.12);
-            }
-
-            .category-pill.active {
-                background: #1a7f4b;
-                color: #ffffff;
-                border-color: #1a7f4b;
-                box-shadow: 0 6px 16px rgba(26, 127, 75, 0.25);
-            }
-
-            #sort-products-store {
-                border: 1.5px solid #e9ecef !important;
-                font-weight: 600 !important;
-                color: #495057;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-                transition: border-color 0.3s;
-            }
-
-            #sort-products-store:hover {
-                border-color: #1a7f4b !important;
-            }
-
-
-            .category-more-btn {
-                white-space: nowrap;
-                background: #ffffff;
-                color: #495057;
-                border: 1px solid #dee2e6;
-                padding: 0.4rem 0.85rem;
-                border-radius: 50px;
-                font-size: 0.88rem;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s;
-                flex-shrink: 0;
-                display: none;
-            }
-
-            .category-more-btn:hover {
-                background: #f8f9fa;
-                border-color: #ced4da;
-            }
-
-            .category-more-dropdown {
-                position: absolute;
-                top: calc(100% + 6px);
-                right: 0;
-                background: #fff;
-                border: 1px solid #dee2e6;
-                border-radius: 10px;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-                z-index: 200;
-                min-width: 200px;
-                padding: 0.4rem 0;
-                display: none;
-            }
-
-            .category-more-dropdown .cat-drop-item {
-                padding: 0.5rem 1rem;
-                font-size: 0.9rem;
-                color: #495057;
-                cursor: pointer;
-                transition: background 0.15s;
-            }
-
-            .category-more-dropdown .cat-drop-item:hover {
-                background: #f8f9fa;
-            }
-
-            .category-more-dropdown .cat-drop-item.active {
-                color: #1a7f4b;
-                font-weight: 600;
-            }
-
-            .category-more-wrapper {
-                position: relative;
-                flex-shrink: 0;
             }
 
             @media (max-width: 576px) {
@@ -2359,14 +2270,17 @@ if ($tiendas_cercanas['estado']) {
                     margin-bottom: 0.6rem;
                 }
 
-                .category-pills-zone {
-                    flex: 0 0 60%;
-                    max-width: 60%;
+                .category-nav-inner {
+                    flex-wrap: wrap;
+                }
+
+                .category-select-zone {
+                    flex: 1 1 100%;
                 }
 
                 .category-sort-zone {
-                    flex: 0 0 40%;
-                    max-width: 40%;
+                    flex: 1 1 100%;
+                    justify-content: space-between;
                 }
             }
 
@@ -2528,13 +2442,11 @@ if ($tiendas_cercanas['estado']) {
         <!-- Contenedor del Menú de Categorías + Ordenar -->
         <div class="category-nav-wrapper d-none" id="store-category-wrapper">
             <div class="category-nav-inner">
-                <!-- 70%: Pills + More dropdown -->
-                <div class="category-pills-zone">
-                    <div class="category-pills-list" id="category-pill-container"></div>
-                    <div class="category-more-wrapper" id="category-more-wrapper">
-                        <button class="category-more-btn" id="category-more-btn"><i class="bi bi-chevron-down me-1"></i>Más</button>
-                        <div class="category-more-dropdown" id="category-more-dropdown"></div>
-                    </div>
+                <!-- Selector de categoría con buscador -->
+                <div class="category-select-zone">
+                    <select id="category-filter" class="form-select form-select-sm" aria-label="Filtrar por categoría">
+                        <option value="">Todas las categorías</option>
+                    </select>
                 </div>
                 <!-- 30%: Ordenar por -->
                 <div class="category-sort-zone">
@@ -3356,6 +3268,10 @@ if ($tiendas_cercanas['estado']) {
     <script src="assets/js/jquery.min.js"></script>
     <!-- Bootstrap Bundle -->
     <script src="../publico/vendors/bootstrap5/js/bootstrap.bundle.min.js"></script>
+    <?php if ($es_tienda_individual): ?>
+    <!-- Select2 (buscador de categorías) -->
+    <script src="../publico/vendors/select2/dist/js/select2.full.min.js"></script>
+    <?php endif; ?>
     <!-- Custom Scripts -->
     <script src="assets/js/fastclick.js"></script>
     <script src="assets/js/nprogress.js"></script>
@@ -3543,7 +3459,7 @@ if ($tiendas_cercanas['estado']) {
                         return `<div class="destacado-card" onclick="openProductModal('${esc(p.id)}')">
                             <div class="product-card">
                                 <div class="product-img-wrapper ${p.img ? '' : 'no-img'}">${img}</div>
-                                <div class="product-body"><h3 class="product-title" title="${nombre}">${nombre}</h3></div>
+                                <div class="product-body"><h3 class="product-title" title="${nombre}">${nombre}</h3>${p.categorias ? `<div class="product-cat"><i class="bi bi-tag"></i> ${esc(p.categorias)}</div>` : ''}</div>
                                 <div class="price-container">
                                     <div class="price-main"><span class="price-dolar">$${formatNumber(recortarADosDecimales(p.precio_dolar_visible))}</span></div>
                                     <div class="price-sub"><span class="price-bs">Bs ${formatNumber(recortarADosDecimales(p.precio_bs_visible))}</span></div>
@@ -3894,86 +3810,34 @@ if ($tiendas_cercanas['estado']) {
         let currentCategory = ''; // Category parameter
         const productsGrid = document.getElementById("products-grid");
 
-        // Load Categories into filter & pill menu
+        // Load Categories into the searchable filter
         (async function loadCategoriesFilter() {
+            const sel = document.getElementById('category-filter');
+            if (!sel) return;
             try {
                 const res = await fetch('api/get_categories_list.php' + (typeof tiendaSlugParam !== 'undefined' && tiendaSlugParam ? tiendaSlugParam.replace('&', '?') : ''));
                 const data = await res.json();
-                if (data.success) {
-                    const pillContainer = document.getElementById('category-pill-container');
-                    if (pillContainer) {
-                        // Build all pills (Todas + categories)
-                        const allCats = [{
-                            id: '',
-                            nombre: 'Todas'
-                        }, ...data.categories];
-                        pillContainer.innerHTML = '';
+                if (!data.success) return;
 
-                        const getIcon = (name) => {
-                            const n = name.toLowerCase();
-                            if (n === 'todas') return '<i class="bi bi-grid-fill"></i>';
-                            if (n.includes('harina') || n.includes('alimento') || n.includes('arroz')) return '<i class="bi bi-egg-fried"></i>';
-                            if (n.includes('bebida') || n.includes('jugo') || n.includes('agua')) return '<i class="bi bi-cup-straw"></i>';
-                            if (n.includes('higiene') || n.includes('limpieza')) return '<i class="bi bi-droplet-half"></i>';
-                            if (n.includes('hogar')) return '<i class="bi bi-house-door"></i>';
-                            return '<i class="bi bi-tag-fill"></i>';
-                        };
+                data.categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.nombre;
+                    sel.appendChild(opt);
+                });
+                document.getElementById('store-category-wrapper').classList.remove('d-none');
 
-                        allCats.forEach(cat => {
-                            const pill = document.createElement('div');
-                            pill.className = 'category-pill' + (cat.id === '' ? ' active' : '');
-                            pill.dataset.categoryId = cat.id;
-                            pill.innerHTML = getIcon(cat.nombre) + ' <span>' + cat.nombre + '</span>';
-                            pillContainer.appendChild(pill);
-                        });
-
-                        document.getElementById('store-category-wrapper').classList.remove('d-none');
-
-                        // After render, check overflow and move excess pills to dropdown
-                        requestAnimationFrame(() => {
-                            buildMoreDropdown(pillContainer);
-                        });
-
-                        // Click handler for pills (delegated)
-                        pillContainer.addEventListener('click', function(e) {
-                            const pill = e.target.closest('.category-pill');
-                            if (!pill) return;
-                            setActiveCategory(pill.dataset.categoryId);
-                        });
-
-                        // Sort select inside store nav
-                        const sortStore = document.getElementById('sort-products-store');
-                        if (sortStore) {
-                            sortStore.addEventListener('change', function() {
-                                currentSort = this.value;
-                                currentPage = 1;
-                                hasMore = true;
-                                showSkeletons();
-                                cargarMasProductos();
-                            });
-                        }
+                $(sel).select2({
+                    placeholder: 'Todas las categorías',
+                    allowClear: true,
+                    width: '100%',
+                    language: {
+                        noResults: () => 'Sin resultados',
+                        searching: () => 'Buscando…'
                     }
-
-                    // Dropdown toggle
-                    const moreBtn = document.getElementById('category-more-btn');
-                    const moreDropdown = document.getElementById('category-more-dropdown');
-                    if (moreBtn && moreDropdown) {
-                        moreBtn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            const open = moreDropdown.style.display === 'block';
-                            moreDropdown.style.display = open ? 'none' : 'block';
-                        });
-                        document.addEventListener('click', () => {
-                            moreDropdown.style.display = 'none';
-                        });
-                        moreDropdown.addEventListener('click', function(e) {
-                            const item = e.target.closest('.cat-drop-item');
-                            if (!item) return;
-                            setActiveCategory(item.dataset.categoryId);
-                            moreDropdown.style.display = 'none';
-                        });
-                    }
-                }
+                }).on('change', function() {
+                    setActiveCategory(this.value);
+                });
             } catch (e) {
                 console.error("Error cargando categorías para filtro", e);
             }
@@ -3983,70 +3847,11 @@ if ($tiendas_cercanas['estado']) {
         // -- Category helper functions --
         function setActiveCategory(catId) {
             currentCategory = catId;
-            const pillContainer = document.getElementById('category-pill-container');
-            if (pillContainer) {
-                pillContainer.querySelectorAll('.category-pill').forEach(p => {
-                    p.classList.toggle('active', p.dataset.categoryId == catId);
-                });
-            }
-            const moreDropdown = document.getElementById('category-more-dropdown');
-            if (moreDropdown) {
-                moreDropdown.querySelectorAll('.cat-drop-item').forEach(p => {
-                    p.classList.toggle('active', p.dataset.categoryId == catId);
-                });
-                const isInDropdown = Array.from(moreDropdown.querySelectorAll('.cat-drop-item'))
-                    .some(p => p.dataset.categoryId == catId && catId !== '');
-                const moreBtn = document.getElementById('category-more-btn');
-                if (moreBtn) moreBtn.classList.toggle('active', isInDropdown);
-            }
             currentPage = 1;
             hasMore = true;
+            productsGrid.innerHTML = '';
             showSkeletons();
-            cargarMasProductos();
-        }
-
-        function buildMoreDropdown(pillContainer) {
-            const moreWrapper = document.getElementById('category-more-wrapper');
-            const moreBtn = document.getElementById('category-more-btn');
-            const moreDropdown = document.getElementById('category-more-dropdown');
-            if (!moreWrapper || !moreBtn || !moreDropdown) return;
-
-            const pills = Array.from(pillContainer.querySelectorAll('.category-pill'));
-            const availableWidth = pillContainer.offsetWidth - 90;
-            let usedWidth = 0;
-            let overflowStart = -1;
-
-            // Reset
-            pills.forEach(p => {
-                p.style.display = '';
-            });
-
-            pills.forEach((pill, i) => {
-                usedWidth += pill.offsetWidth + 8;
-                if (overflowStart === -1 && usedWidth > availableWidth) {
-                    overflowStart = i;
-                }
-            });
-
-            if (overflowStart !== -1 && overflowStart < pills.length) {
-                const dropItems = [];
-                pills.forEach((pill, i) => {
-                    if (i >= overflowStart) {
-                        pill.style.display = 'none';
-                        const item = document.createElement('div');
-                        item.className = 'cat-drop-item' + (pill.classList.contains('active') ? ' active' : '');
-                        item.dataset.categoryId = pill.dataset.categoryId;
-                        item.textContent = pill.textContent;
-                        dropItems.push(item);
-                    }
-                });
-                moreDropdown.innerHTML = '';
-                dropItems.forEach(item => moreDropdown.appendChild(item));
-                moreBtn.style.display = '';
-            } else {
-                moreBtn.style.display = 'none';
-                moreDropdown.innerHTML = '';
-            }
+            cargarMasProductos(true);
         }
 
         // Event listener for sorting dropdown
@@ -4056,10 +3861,10 @@ if ($tiendas_cercanas['estado']) {
             currentPage = 1;
             hasMore = true;
 
-            // Show skeletons to preserve vertical space and prevent scroll jump
+            productsGrid.innerHTML = '';
             showSkeletons();
 
-            cargarMasProductos();
+            cargarMasProductos(true);
         });
 
         function showSkeletons() {
@@ -4087,8 +3892,11 @@ if ($tiendas_cercanas['estado']) {
         sentinel.id = "sentinel";
         document.getElementById("products-container").appendChild(sentinel);
 
-        async function cargarMasProductos() {
-            if (isLoading || !hasMore) return;
+        let loadToken = 0;
+        async function cargarMasProductos(force = false) {
+            if (!hasMore || (isLoading && !force)) return;
+            const token = ++loadToken;
+            const pageToLoad = currentPage;
             isLoading = true;
 
             let loaderShown = false;
@@ -4101,8 +3909,9 @@ if ($tiendas_cercanas['estado']) {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tiendaSlugParam = urlParams.has('tienda_slug') ? '&tienda_slug=' + urlParams.get('tienda_slug') : '<?= !empty($tienda_slug) ? '&tienda_slug=' . urlencode($tienda_slug) : '' ?>';
-                const res = await fetch(`api/productos.php?mode=grid&page=${currentPage}&limit=18&order=${currentSort}&category=${currentCategory}${tiendaSlugParam}`);
+                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}${tiendaSlugParam}`);
                 const data = await res.json();
+                if (token !== loadToken) return; // respuesta vieja: ya hay otro filtro cargando
 
                 const recompensas = data.recompensas[0];
 
@@ -4117,6 +3926,9 @@ if ($tiendas_cercanas['estado']) {
                     hasMore = data.hasMore;
                 } else {
                     hasMore = false;
+                    if (pageToLoad === 1) {
+                        productsGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #6b7280;">No hay productos en esta categoría.</div>';
+                    }
                 }
 
             } catch (err) {
@@ -4127,11 +3939,11 @@ if ($tiendas_cercanas['estado']) {
                 clearTimeout(loaderTimer);
 
                 // Quitar loader solo si llegó a mostrarse
-                if (loaderShown) {
+                if (loaderShown && token === loadToken) {
                     Notiflix.Loading.remove();
                 }
 
-                isLoading = false;
+                if (token === loadToken) isLoading = false;
             }
         }
 
@@ -4212,6 +4024,7 @@ if ($tiendas_cercanas['estado']) {
                             </div>
                             <div class="product-body" style="cursor: pointer;" onclick="openProductModal('${producto.id}')">
                                 <h3 class="product-title" title="${producto.nombre}">${producto.nombre}</h3>
+                                ${producto.categorias ? `<div class="product-cat" title="${producto.categorias}"><i class="bi bi-tag"></i> ${producto.categorias}</div>` : ''}
                                 ${badgeTienda}
                             </div>
                             <div class="price-container">

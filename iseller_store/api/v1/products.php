@@ -29,7 +29,6 @@ $sort = ($_GET['sort'] ?? '') === 'name_desc' ? 'DESC' : 'ASC';
 
 $where = "np.estado_publicacion = 1
           AND p.activo = 0
-          AND p.origen != 'c'
           AND s.stock > 0
           AND n.tiene_tienda_virtual = 1
           AND n.estado = 'activo'";
