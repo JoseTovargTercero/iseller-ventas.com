@@ -322,10 +322,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="w-100 x_title productos-toolbar">
                                 <h2>Productos</h2>
                                 <div class="productos-toolbar-actions">
-                                    <div class="productos-search">
-                                        <ion-icon name="search-outline"></ion-icon>
-                                        <input type="search" id="productos-buscar" placeholder="Buscar producto…" autocomplete="off">
-                                    </div>
                                     <label class="productos-stock" title="Mostrar solo productos con stock positivo">
                                         <span class="switch">
                                             <input type="checkbox" id="switch-stock">
@@ -344,6 +340,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <div class="productos-search">
+                                        <ion-icon name="search-outline"></ion-icon>
+                                        <input type="search" id="productos-buscar" placeholder="Buscar producto…" autocomplete="off">
+                                    </div>
                                 </div>
 
                             </div>
@@ -1208,6 +1208,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 /* Barra de herramientas de la tabla */
                 .productos-toolbar {
+                    justify-content: space-between;
                     flex-wrap: wrap;
                     gap: 12px;
                 }
