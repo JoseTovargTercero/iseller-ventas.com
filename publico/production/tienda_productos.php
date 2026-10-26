@@ -318,6 +318,26 @@ $stmtC->close();
             font-weight: bold;
         }
 
+        .tp-pagination .btn-pg:disabled {
+            opacity: .35;
+            cursor: default;
+        }
+
+        .tp-pagination .btn-pg:disabled:hover {
+            border-color: var(--dash-border);
+        }
+
+        .tp-pg-dots {
+            color: var(--dash-text-muted);
+            padding: .4rem .3rem;
+            font-size: .85rem;
+            user-select: none;
+        }
+
+        .tp-pg-nav {
+            white-space: nowrap;
+        }
+
         .toast-tp {
             position: fixed;
             bottom: 1.5rem;
@@ -1339,11 +1359,21 @@ $stmtC->close();
                     <button class="btn-pg" onclick="cargar(${Math.min(totalPaginas, paginaActual + 1)})" ${paginaActual === totalPaginas ? 'disabled' : ''} aria-label="Siguiente">›</button>`;
                 return;
             }
-            let html = '';
-            for (let i = 1; i <= totalPaginas; i++) {
-                html += `<button class="btn-pg ${i === paginaActual ? 'active' : ''}"
-                         onclick="cargar(${i})">${i}</button>`;
-            }
+            // Ventana de páginas agrupada como DataTables: primera, última y actual ±2
+            const paginas = new Set([1, totalPaginas]);
+            const inicio = Math.max(1, Math.min(paginaActual - 2, totalPaginas - 4));
+            const fin = Math.min(totalPaginas, Math.max(paginaActual + 2, 5));
+            for (let i = inicio; i <= fin; i++) paginas.add(i);
+            const ordenadas = [...paginas].sort((a, b) => a - b);
+
+            let html = `<button class="btn-pg tp-pg-nav" onclick="cargar(${Math.max(1, paginaActual - 1)})" ${paginaActual === 1 ? 'disabled' : ''}>Anterior</button>`;
+            let previa = 0;
+            ordenadas.forEach(p => {
+                if (previa && p - previa > 1) html += '<span class="tp-pg-dots">…</span>';
+                html += `<button class="btn-pg ${p === paginaActual ? 'active' : ''}" onclick="cargar(${p})">${p}</button>`;
+                previa = p;
+            });
+            html += `<button class="btn-pg tp-pg-nav" onclick="cargar(${Math.min(totalPaginas, paginaActual + 1)})" ${paginaActual === totalPaginas ? 'disabled' : ''}>Siguiente</button>`;
             el.innerHTML = html;
         }
 

@@ -362,6 +362,7 @@ if ($destacados_ids) {
 <head>
     <title>Configuración Tienda Virtual</title>
     <?php require_once('includes/headers.php'); ?>
+    <link href='../vendors/select2/dist/css/select2.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="../vendors/leaflet/leaflet.css" crossorigin="">
     <style>
@@ -1780,6 +1781,7 @@ if ($destacados_ids) {
     </div>
 
     <script src="js/nombre_pagina.js?v=<?php echo @filemtime(__DIR__ . '/js/nombre_pagina.js'); ?>"></script>
+    <script src="../vendors/select2/dist/js/select2.full.min.js"></script>
     <script>
         function switchTab(el) {
             document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
@@ -2093,6 +2095,16 @@ if ($destacados_ids) {
                 const btnAgregar = document.getElementById('btn-agregar-destacado');
                 if (!listaEl || !contadorEl || !pickerEl || !btnAgregar) return;
 
+                // Buscador dentro del select, igual que el de categorías en nuevoProducto.php
+                $(pickerEl).select2({
+                    placeholder: 'Seleccione un producto...',
+                    width: '100%',
+                    language: {
+                        noResults: function() { return 'Sin resultados'; },
+                        searching: function() { return 'Buscando...'; }
+                    }
+                });
+
                 const iniciales = <?= json_encode(array_map(fn($pid) => ['id' => $pid, 'nombre' => $destacados_nombres[$pid] ?? ('#' . $pid)], $destacados_ids), JSON_UNESCAPED_UNICODE) ?>;
                 const seleccionados = new Map(iniciales.map(p => [String(p.id), p.nombre]));
 
@@ -2147,7 +2159,7 @@ if ($destacados_ids) {
                         return;
                     }
                     seleccionados.set(id, pickerEl.options[pickerEl.selectedIndex].text);
-                    pickerEl.value = '';
+                    $(pickerEl).val(null).trigger('change');
                     renderDestacados();
                 });
 
