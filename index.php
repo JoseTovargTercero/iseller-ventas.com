@@ -278,6 +278,77 @@ if (!$es_tienda_individual) {
     }
 }
 
+// Grupos del marketplace: solo los que tienen productos publicados.
+$grupos_home = [];
+$grupo_activo = null;
+if (!$es_tienda_individual) {
+    $resGruposHome = $conexion->query("
+        SELECT c.grupo,
+               COUNT(DISTINCT p.id) AS total_productos,
+               SUBSTRING_INDEX(GROUP_CONCAT(np.foto_url ORDER BY (np.foto_url IS NOT NULL AND np.foto_url <> '') DESC, s.stock DESC, p.id DESC SEPARATOR '|'), '|', 1) AS foto_url,
+               SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY (np.foto_url IS NOT NULL AND np.foto_url <> '') DESC, s.stock DESC, p.id DESC SEPARATOR ','), ',', 1) AS producto_id
+        FROM categorias_producto c
+        JOIN productos p ON p.categoria = c.id
+        JOIN negocio_productos np ON np.producto_id = p.id
+        JOIN negocio n ON n.id = np.negocio_id
+        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+        WHERE np.estado_publicacion = 1
+          AND p.activo = 0
+          AND n.estado = 'activo'
+          AND n.tiene_tienda_virtual = 1
+          AND s.stock > 0
+          AND c.grupo IS NOT NULL AND c.grupo <> ''
+        GROUP BY c.grupo
+        ORDER BY total_productos DESC, c.grupo ASC
+    ");
+    if ($resGruposHome) {
+        $grupos_home = $resGruposHome->fetch_all(MYSQLI_ASSOC);
+    }
+
+    $grupoGet = trim((string)($_GET['grupo'] ?? ''));
+    if ($grupoGet !== '') {
+        foreach ($grupos_home as $grupoHome) {
+            if ($grupoHome['grupo'] === $grupoGet) {
+                $grupo_activo = $grupoHome;
+                break;
+            }
+        }
+    }
+}
+
+// Icono por grupo de categoría para las tarjetas del marketplace.
+function home_categoria_icono(?string $grupo): string
+{
+    $iconos = [
+        'Víveres y alimentos' => 'bi-basket',
+        'Cárnicos y proteínas' => 'bi-egg-fried',
+        'Charcutería y quesos' => 'bi-circle-square',
+        'Lácteos y refrigerados' => 'bi-cup-straw',
+        'Frutas, verduras y frescos' => 'bi-apple',
+        'Bebidas' => 'bi-cup-straw',
+        'Licores y bebidas alcohólicas' => 'bi-cup',
+        'Congelados' => 'bi-snow',
+        'Limpieza del hogar' => 'bi-droplet',
+        'Higiene y cuidado personal' => 'bi-heart',
+        'Bebés' => 'bi-emoji-smile',
+        'Mascotas' => 'bi-heart',
+        'Ferretería' => 'bi-tools',
+        'Construcción y materiales' => 'bi-bricks',
+        'Plomería' => 'bi-water',
+        'Electricidad e iluminación' => 'bi-lightning-charge',
+        'Hogar y cocina' => 'bi-house-door',
+        'Electrónica y tecnología' => 'bi-phone',
+        'Papelería y oficina' => 'bi-pencil',
+        'Ropa y accesorios' => 'bi-bag',
+        'Deportes y recreación' => 'bi-bicycle',
+        'Automotriz y motocicletas' => 'bi-car-front',
+        'Jardinería y agricultura' => 'bi-flower2',
+        'Farmacia y bienestar' => 'bi-capsule',
+        'Otras categorías' => 'bi-grid',
+    ];
+    return $iconos[$grupo ?? ''] ?? 'bi-tag';
+}
+
 // Logos comprimidos para el listado de tiendas destacadas
 require_once(__DIR__ . '/iseller_store/core/tienda_logo.php');
 
@@ -1223,6 +1294,200 @@ if ($tiendas_cercanas['estado']) {
             font-size: 0.82rem;
             color: #666;
             margin: 0;
+        }
+
+        /* Categorías del marketplace (home) */
+        #categorias,
+        #productos {
+            scroll-margin-top: 84px;
+        }
+
+        .home-cats {
+            margin: 0 0 28px;
+        }
+
+        .home-cats-panel {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 18px;
+            padding: 22px 24px 24px;
+            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .home-cats-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .home-cats-head h2 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #111827;
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+
+        .home-cats-head p {
+            font-size: 0.82rem;
+            color: #6b7280;
+            margin: 2px 0 0;
+        }
+
+        .home-cats-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #dcefe3;
+            background: #f4fbf6;
+            color: #1a7f4b;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .home-cats-toggle:hover {
+            background: #e8f7ee;
+            border-color: #b7e0c6;
+        }
+
+        .home-cats-toggle i {
+            font-size: 0.75rem;
+        }
+
+        .home-cats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+        }
+
+        .home-cat-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-height: 112px;
+            padding: 10px 12px 10px 10px;
+            background: #fff;
+            border: 1px solid #e8ebef;
+            border-radius: 14px;
+            color: #111827;
+            text-decoration: none;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+        }
+
+        .home-cat-card:hover {
+            border-color: #b7e0c6;
+            box-shadow: 0 10px 26px rgba(26, 127, 75, 0.12);
+            transform: translateY(-3px);
+            color: #111827;
+        }
+
+        .home-cat-card.active {
+            border-color: #1a7f4b;
+            background: #f7fdf9;
+            box-shadow: 0 0 0 3px rgba(26, 127, 75, 0.12);
+        }
+
+        .home-cat-icon {
+            flex: 0 0 92px;
+            height: 92px;
+            border-radius: 11px;
+            background: #f6f7f8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            box-shadow: inset 0 0 0 1px #eef0f2;
+        }
+
+        .home-cat-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 6px;
+        }
+
+        .home-cat-icon i {
+            font-size: 2rem;
+            color: #1a7f4b;
+        }
+
+        .home-cat-info {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .home-cat-name {
+            font-size: 0.97rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: #111827;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .home-cat-count {
+            font-size: 0.76rem;
+            font-weight: 500;
+            color: #8a94a6;
+        }
+
+        .home-cat-arrow {
+            flex: 0 0 auto;
+            color: #c3cad4;
+            font-size: 0.95rem;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .home-cat-card:hover .home-cat-arrow,
+        .home-cat-card.active .home-cat-arrow {
+            color: #1a7f4b;
+            transform: translateX(2px);
+        }
+
+        .home-cat-extra {
+            display: none;
+        }
+
+        .home-cats-grid.expanded .home-cat-extra {
+            display: flex;
+        }
+
+        @media (max-width: 575.98px) {
+            .home-cats-panel {
+                padding: 16px;
+                border-radius: 14px;
+            }
+
+            .home-cats-head {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .home-cat-card {
+                min-height: 96px;
+                gap: 12px;
+            }
+
+            .home-cat-icon {
+                flex-basis: 76px;
+                height: 76px;
+                padding: 8px;
+            }
         }
 
 
@@ -2805,6 +3070,74 @@ if ($tiendas_cercanas['estado']) {
             </script>
         <?php endif; ?>
 
+        <?php if (!$es_tienda_individual && $grupos_home): ?>
+        <section class="home-cats" id="categorias">
+            <div class="home-cats-panel">
+                <div class="home-cats-head">
+                    <div>
+                        <h2>Categorías</h2>
+                        <p>Explora por secciones y encuentra lo que buscas.</p>
+                    </div>
+                    <?php if (count($grupos_home) > 12): ?>
+                        <button type="button" class="home-cats-toggle" id="home-cats-toggle" aria-expanded="<?= $grupo_activo ? 'true' : 'false' ?>">
+                            <span id="home-cats-toggle-label"><?= $grupo_activo ? 'Mostrar menos' : 'Mostrar todas las categorías' ?></span>
+                            <i class="bi <?= $grupo_activo ? 'bi-chevron-up' : 'bi-chevron-down' ?>" id="home-cats-toggle-icon"></i>
+                        </button>
+                    <?php endif; ?>
+                </div>
+                <div class="home-cats-grid<?= $grupo_activo ? ' expanded' : '' ?>" id="home-cats-grid">
+                    <?php foreach ($grupos_home as $i => $grupoHome):
+                        $grupoActivo = $grupo_activo && $grupo_activo['grupo'] === $grupoHome['grupo'];
+                        $totalGrupo = (int)$grupoHome['total_productos'];
+                        $fotoGrupo = trim((string)($grupoHome['foto_url'] ?? ''));
+                        $prodGrupo = (int)($grupoHome['producto_id'] ?? 0);
+                        $imgGrupo = '';
+                        if ($fotoGrupo !== '' && is_file(__DIR__ . '/iseller_store/' . ltrim($fotoGrupo, '/'))) {
+                            $imgGrupo = $base_url . ltrim($fotoGrupo, '/');
+                        } elseif ($prodGrupo > 0) {
+                            if (is_file(__DIR__ . "/iseller_store/assets/img/stock/optimized/{$prodGrupo}.webp")) {
+                                $imgGrupo = $base_url . "assets/img/stock/optimized/{$prodGrupo}.webp";
+                            } elseif (is_file(__DIR__ . "/iseller_store/assets/img/stock/{$prodGrupo}.png")) {
+                                $imgGrupo = $base_url . "assets/img/stock/{$prodGrupo}.png";
+                            }
+                        }
+                    ?>
+                        <a href="<?= htmlspecialchars($script_dir . '/') ?>?grupo=<?= urlencode($grupoHome['grupo']) ?>#productos"
+                           class="home-cat-card<?= $i >= 12 ? ' home-cat-extra' : '' ?><?= $grupoActivo ? ' active' : '' ?>"
+                           <?= $grupoActivo ? 'aria-current="page"' : '' ?>>
+                            <span class="home-cat-icon">
+                                <?php if ($imgGrupo !== ''): ?>
+                                    <img src="<?= htmlspecialchars($imgGrupo) ?>" alt="" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <?php endif; ?>
+                                <i class="bi <?= home_categoria_icono($grupoHome['grupo']) ?>"<?= $imgGrupo !== '' ? ' style="display:none;"' : '' ?>></i>
+                            </span>
+                            <span class="home-cat-info">
+                                <span class="home-cat-name"><?= htmlspecialchars($grupoHome['grupo']) ?></span>
+                                <span class="home-cat-count"><?= number_format($totalGrupo, 0, ',', '.') ?> producto<?= $totalGrupo === 1 ? '' : 's' ?></span>
+                            </span>
+                            <i class="bi bi-chevron-right home-cat-arrow"></i>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+        <script>
+            (function() {
+                const btn = document.getElementById('home-cats-toggle');
+                const grid = document.getElementById('home-cats-grid');
+                if (!btn || !grid) return;
+                btn.addEventListener('click', function() {
+                    const expanded = grid.classList.toggle('expanded');
+                    document.getElementById('home-cats-toggle-label').textContent = expanded ? 'Mostrar menos' : 'Mostrar todas las categorías';
+                    const icon = document.getElementById('home-cats-toggle-icon');
+                    icon.classList.toggle('bi-chevron-down', !expanded);
+                    icon.classList.toggle('bi-chevron-up', expanded);
+                    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                });
+            })();
+        </script>
+        <?php endif; ?>
+
         <?php if ($es_tienda_individual): ?>
         <style>
             .destacados-ribbon-wrap {
@@ -2915,10 +3248,17 @@ if ($tiendas_cercanas['estado']) {
             </div>
         </div>
 
-        <div class="tiendas-section-header">
+        <div class="tiendas-section-header" id="productos">
             <div>
-                <h2>Productos destacados</h2>
-                <p>Conoce algunos de los productos disponibles en <span class="text-primary">iseller store</span>.</p>
+                <?php if ($grupo_activo): ?>
+                    <h2><?= htmlspecialchars($grupo_activo['grupo']) ?></h2>
+                    <p><?= (int)$grupo_activo['total_productos'] ?> producto<?= (int)$grupo_activo['total_productos'] === 1 ? '' : 's' ?> publicado<?= (int)$grupo_activo['total_productos'] === 1 ? '' : 's' ?> en esta categoría.
+                        <a href="<?= htmlspecialchars($script_dir . '/') ?>#categorias" class="fw-semibold text-decoration-none">Ver todas las categorías</a>
+                    </p>
+                <?php else: ?>
+                    <h2>Productos destacados</h2>
+                    <p>Conoce algunos de los productos disponibles en <span class="text-primary">iseller store</span>.</p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -3846,7 +4186,8 @@ if ($tiendas_cercanas['estado']) {
         let isLoading = false;
         let hasMore = true;
         let currentSort = ''; // Sorting parameter
-        let currentCategory = ''; // Category parameter
+        let currentCategory = ''; // Category parameter (filtro de la tienda)
+        let currentGroup = <?= $grupo_activo ? json_encode($grupo_activo['grupo'], JSON_UNESCAPED_UNICODE) : "''" ?>; // Grupo (home del marketplace)
         const productsGrid = document.getElementById("products-grid");
 
         // Load Categories into the searchable filter
@@ -3884,8 +4225,25 @@ if ($tiendas_cercanas['estado']) {
 
 
         // -- Category helper functions --
+        function scrollAlHash() {
+            if (!location.hash) return;
+            const target = document.getElementById(location.hash.slice(1));
+            if (!target) return;
+            // Compensa la barra superior fija al llegar desde una categoría.
+            const top = target.getBoundingClientRect().top + window.scrollY - 96;
+            const html = document.documentElement;
+            const prevSmooth = html.style.scrollBehavior;
+            html.style.scrollBehavior = 'auto';
+            window.scrollTo(0, Math.max(0, top));
+            html.style.scrollBehavior = prevSmooth;
+        }
+        window.addEventListener('load', function() {
+            setTimeout(scrollAlHash, 100);
+        });
+
         function setActiveCategory(catId) {
             currentCategory = catId;
+            currentGroup = '';
             currentPage = 1;
             hasMore = true;
             productsGrid.innerHTML = '';
@@ -3948,7 +4306,7 @@ if ($tiendas_cercanas['estado']) {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tiendaSlugParam = urlParams.has('tienda_slug') ? '&tienda_slug=' + urlParams.get('tienda_slug') : '<?= !empty($tienda_slug) ? '&tienda_slug=' . urlencode($tienda_slug) : '' ?>';
-                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}${tiendaSlugParam}`);
+                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}&grupo=${encodeURIComponent(currentGroup)}${tiendaSlugParam}`);
                 const data = await res.json();
                 if (token !== loadToken) return; // respuesta vieja: ya hay otro filtro cargando
 
@@ -3969,6 +4327,8 @@ if ($tiendas_cercanas['estado']) {
                         productsGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #6b7280;">No hay productos en esta categoría.</div>';
                     }
                 }
+
+                if (pageToLoad === 1) scrollAlHash();
 
             } catch (err) {
                 console.error("Error cargando productos", err);

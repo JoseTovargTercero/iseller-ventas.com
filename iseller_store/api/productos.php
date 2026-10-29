@@ -308,6 +308,16 @@ if ($categoryId) {
     $where .= " AND p.categoria = ?";
     $params[] = $categoryId;
     $types .= "i";
+    // Listado por categoría del marketplace: orden estable para que la paginación no repita productos.
+    if (!$tienda_slug) $order = 'p.nombre ASC';
+}
+
+$grupoFiltro = trim((string)($_GET['grupo'] ?? ''));
+if ($grupoFiltro !== '') {
+    $where .= " AND p.categoria IN (SELECT id FROM categorias_producto WHERE grupo = ?)";
+    $params[] = $grupoFiltro;
+    $types .= "s";
+    if (!$tienda_slug) $order = 'p.nombre ASC';
 }
 
 $offset = ($page - 1) * $limit;

@@ -3,3 +3,7 @@
 
 # Credenciales locales (se cargan desde fuera del proyecto)
 .env
+
+# Proyectos de vídeo generados con HyperFrames (frames, renders, música)
+temp/pos-promo/
+temp/pos-promo-vertical/
