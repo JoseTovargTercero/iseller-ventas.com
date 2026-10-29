@@ -735,7 +735,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         const filaNueva = tabla.row.add([
                                             `<div class="foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" data-producto-id="${row.id}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}"><ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon></div>`,
-                                            row.nombre + `<br><small class="${row.categoria_nombre ? 'text-muted' : 'text-danger'}">${row.categoria_nombre || 'Sin categoría'}</small>`,
+                                            row.nombre + `<button type="button" class="btn-foto-google" data-id="${row.id}" title="Buscar foto en Google Imágenes"><ion-icon name="logo-google"></ion-icon></button><br><small class="${row.categoria_nombre ? 'text-muted' : 'text-danger'}">${row.categoria_nombre || 'Sin categoría'}</small>`,
                                             row.precio_compra,
                                             row.cantidad_unidades,
                                             row.porcentaje,
@@ -871,6 +871,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                 document.addEventListener('click', async (event) => {
+                    // Icono junto al nombre: modal en la zona de subida + Google Imágenes
+                    const btnGoogle = event.target.closest('.btn-foto-google');
+                    if (btnGoogle) {
+                        abrirFoto(parseInt(btnGoogle.getAttribute('data-id'), 10), true);
+                        return;
+                    }
+
                     if (event.target.closest('.btn-edit')) {
                         const id = event.target.closest('.btn-edit').getAttribute('data-id');
 
@@ -1160,6 +1167,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     background: var(--dash-bg);
                     color: var(--dash-border);
                     border: 1px dashed var(--dash-border);
+                }
+
+                /* Icono junto al nombre: abre el modal de foto en la zona de subida */
+                .btn-foto-google {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 26px;
+                    height: 26px;
+                    margin-left: 6px;
+                    padding: 0;
+                    vertical-align: middle;
+                    font-size: 14px;
+                    line-height: 1;
+                    color: var(--dash-text-muted);
+                    background: transparent;
+                    border: 1px solid var(--dash-border);
+                    border-radius: 7px;
+                    cursor: pointer;
+                    transition: color .2s, border-color .2s, background .2s;
+                }
+
+                .btn-foto-google:hover {
+                    color: var(--dash-mint);
+                    border-color: var(--dash-mint);
+                    background: rgba(45, 212, 160, .08);
                 }
 
                 /* Interruptor "solo con stock" */
@@ -1909,6 +1942,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         width: 34px;
                         height: 34px;
                     }
+
+                    .btn-foto-google {
+                        width: 34px;
+                        height: 34px;
+                        margin-left: 4px;
+                    }
                 }
             </style>
 
@@ -2012,7 +2051,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     })
                     .catch(() => {});
 
-                function abrirFoto(productoId) {
+                function abrirFoto(productoId, irAGoogle) {
                     fmProductoActual = productoId;
                     fmSelectedImage = null;
                     fmClearPreview();
@@ -2029,8 +2068,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     document.getElementById('fm-google-link').href =
                         'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(nombre);
 
-                    fmSwitchTab('buscar', document.querySelector('.fm-tab[data-tab="buscar"]'));
                     $('#modalFoto').modal('show');
+
+                    if (irAGoogle) {
+                        // Botón de la tabla: abre directo la zona de subida y lanza Google Imágenes
+                        fmSwitchTab('subir', document.querySelector('.fm-tab[data-tab="subir"]'));
+                        document.getElementById('fm-google-link').click();
+                        return;
+                    }
+
+                    fmSwitchTab('buscar', document.querySelector('.fm-tab[data-tab="buscar"]'));
                 }
 
                 // Refresca solo el icono de foto de la fila; no recarga la tabla ni pierde la página
