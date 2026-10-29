@@ -2240,9 +2240,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         e.preventDefault();
                         fmDropzone.classList.remove('dragover');
 
-                        // Archivo real (Explorador de Windows)
+                        // Archivo real (Explorador de Windows): se envía al soltarlo
                         if (e.dataTransfer.files.length) {
                             fmMostrarPreview(e.dataTransfer.files[0]);
+                            fmUploadPhoto();
                             return;
                         }
                         // Imagen web (Google/Bing): solo llega la URL, no los bytes
