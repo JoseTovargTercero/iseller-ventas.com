@@ -91,6 +91,88 @@ if ($action === 'upload_foto') {
     exit;
 }
 
+/* ─── 2b. FOTO descargada desde una URL (arrastrar desde Google Imágenes) ── */
+if ($action === 'descargar_foto') {
+    $producto_id = (int)($_POST['producto_id'] ?? 0);
+    $url = trim((string)($_POST['url'] ?? ''));
+
+    if (!$producto_id || $url === '') {
+        echo json_encode(['ok' => false, 'msg' => 'Datos incompletos']); exit;
+    }
+    if (!function_exists('curl_init')) {
+        echo json_encode(['ok' => false, 'msg' => 'El servidor no tiene cURL']); exit;
+    }
+
+    $partes = parse_url($url);
+    $host = strtolower($partes['host'] ?? '');
+    // Solo HTTPS y dominios de miniaturas de buscadores: evita SSRF hacia la red interna.
+    $dominios = ['gstatic.com', 'googleusercontent.com', 'ggpht.com', 'bing.com', 'bing.net'];
+    $hostValido = false;
+    foreach ($dominios as $d) {
+        if ($host === $d || substr($host, -strlen($d) - 1) === '.' . $d) {
+            $hostValido = true;
+            break;
+        }
+    }
+    if (!$hostValido || ($partes['scheme'] ?? '') !== 'https') {
+        echo json_encode(['ok' => false, 'msg' => 'Solo se pueden descargar imágenes desde Google o Bing']); exit;
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => false,          // sin redirecciones: la whitelist no se puede saltar
+        CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT        => 15,
+        CURLOPT_MAXFILESIZE    => 5 * 1024 * 1024,
+        CURLOPT_USERAGENT      => 'Mozilla/5.0',
+    ]);
+    $bytes = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+    if (!is_string($bytes) || $status !== 200 || strlen($bytes) < 100 || strlen($bytes) > 5 * 1024 * 1024) {
+        echo json_encode(['ok' => false, 'msg' => 'No se pudo descargar la imagen']); exit;
+    }
+
+    $tmp = tempnam(sys_get_temp_dir(), 'foto');
+    if (!$tmp || file_put_contents($tmp, $bytes) === false) {
+        echo json_encode(['ok' => false, 'msg' => 'No se pudo guardar la imagen']); exit;
+    }
+
+    // Valida contenido real y recodifica a WebP, igual que una subida normal.
+    $dir = __DIR__ . '/../../../iseller_store/assets/img/tiendas/' . $bss_id . '/';
+    $archivoFoto = imagen_guardar_webp(
+        ['tmp_name' => $tmp, 'size' => strlen($bytes), 'error' => UPLOAD_ERR_OK],
+        $dir,
+        (string)$producto_id,
+        800,
+        5 * 1024 * 1024,
+        25000000,
+        85,
+        false
+    );
+    @unlink($tmp);
+
+    if (!$archivoFoto) {
+        echo json_encode(['ok' => false, 'msg' => 'La imagen descargada no es válida. Usa JPG, PNG o WEBP de hasta 5 MB.']);
+        exit;
+    }
+
+    $foto_url = "assets/img/tiendas/{$bss_id}/{$archivoFoto}";
+    $stmt = $conexion->prepare(
+        "INSERT INTO negocio_productos (negocio_id, producto_id, foto_url, estado_publicacion)
+         VALUES (?, ?, ?, 0)
+         ON DUPLICATE KEY UPDATE foto_url = VALUES(foto_url)"
+    );
+    $stmt->bind_param("iis", $bss_id, $producto_id, $foto_url);
+    $stmt->execute();
+    $stmt->close();
+
+    echo json_encode(['ok' => true, 'foto_url' => $foto_url]);
+    exit;
+}
+
 /* ─── 3. DELETE foto ─────────────────────────────────────────────────── */
 if ($action === 'delete_foto') {
     $producto_id = (int)($_POST['producto_id'] ?? 0);

@@ -1769,6 +1769,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     text-align: center;
                 }
 
+                .fm-google-link {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin-top: 1rem;
+                    font-size: .8rem;
+                    font-weight: 600;
+                    color: var(--dash-mint);
+                    text-decoration: none;
+                }
+
+                .fm-google-link:hover {
+                    color: var(--dash-text);
+                    text-decoration: underline;
+                }
+
                 .fm-upload-preview img {
                     max-width: 100%;
                     max-height: 260px;
@@ -1946,7 +1962,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <ion-icon name="cloud-upload-outline"></ion-icon>
                                     </div>
                                     <p class="fm-upload-title">Arrastra una imagen aquí</p>
-                                    <p class="fm-upload-hint">o haz clic para seleccionar</p>
+                                    <p class="fm-upload-hint">o haz clic para seleccionar &middot; tambi&eacute;n puedes pegar con Ctrl+V o arrastrar la imagen desde Google</p>
                                     <button class="fm-upload-btn" onclick="document.getElementById('fm-file-input').click()">
                                         Seleccionar archivo
                                     </button>
@@ -1958,6 +1974,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <button class="fm-btn-secondary" onclick="fmClearPreview()">Cambiar</button>
                                         <button class="fm-btn-primary" onclick="fmUploadPhoto()">Usar esta foto</button>
                                     </div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <a id="fm-google-link" class="fm-google-link" href="https://www.google.com/search?tbm=isch" target="_blank" rel="noopener">
+                                        <ion-icon name="logo-google"></ion-icon> Buscar esta foto en Google Imágenes
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -2003,6 +2024,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const searchInput = document.getElementById('fm-search');
                     searchInput.value = nombre;
                     fmDoSearch(nombre);
+
+                    // Enlace directo a la búsqueda de imágenes en Google con el nombre del producto
+                    document.getElementById('fm-google-link').href =
+                        'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(nombre);
 
                     fmSwitchTab('buscar', document.querySelector('.fm-tab[data-tab="buscar"]'));
                     $('#modalFoto').modal('show');
@@ -2157,19 +2182,74 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
 
                 const fmDropzone = document.getElementById('fm-dropzone');
-                if (fmDropzone) {
-                    fmDropzone.addEventListener('dragover', e => {
+                const fmPanelSubir = document.getElementById('fm-panel-subir');
+
+                // Deja un archivo (subido o pegado) en el input para que salga la vista previa
+                function fmMostrarPreview(file) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    const input = document.getElementById('fm-file-input');
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+
+                // Arrastrar desde Google no entrega el archivo, solo su URL: la descarga el servidor
+                function fmDescargarDeUrl(url) {
+                    if (!fmProductoActual || !url) return;
+                    Alerta.toast('info', 'Descargando imagen…');
+
+                    const fd = new FormData();
+                    fd.append('action', 'descargar_foto');
+                    fd.append('producto_id', fmProductoActual);
+                    fd.append('url', url);
+
+                    fetch(FOTO_API, {
+                            method: 'POST',
+                            body: fd
+                        })
+                        .then(r => r.json())
+                        .then(r => {
+                            if (!r.ok) {
+                                Alerta.toast('error', 'Error: ' + r.msg);
+                                return;
+                            }
+                            Alerta.toast('success', 'Foto guardada con éxito');
+                            $('#modalFoto').modal('hide');
+                            actualizarIconoFoto(fmProductoActual);
+                        })
+                        .catch(() => Alerta.toast('error', 'Error al descargar la imagen'));
+                }
+
+                // Ctrl+V dentro del modal: la imagen copiada en Google queda lista para "Usar esta foto"
+                document.addEventListener('paste', e => {
+                    if (!document.getElementById('modalFoto').classList.contains('show')) return;
+                    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+                    if (!item) return;
+                    e.preventDefault();
+                    fmSwitchTab('subir', document.querySelector('.fm-tab[data-tab="subir"]'));
+                    fmMostrarPreview(item.getAsFile());
+                });
+
+                if (fmPanelSubir) {
+                    fmPanelSubir.addEventListener('dragover', e => {
                         e.preventDefault();
                         fmDropzone.classList.add('dragover');
                     });
-                    fmDropzone.addEventListener('dragleave', () => fmDropzone.classList.remove('dragover'));
-                    fmDropzone.addEventListener('drop', e => {
+                    fmPanelSubir.addEventListener('dragleave', () => fmDropzone.classList.remove('dragover'));
+                    fmPanelSubir.addEventListener('drop', e => {
                         e.preventDefault();
                         fmDropzone.classList.remove('dragover');
+
+                        // Archivo real (Explorador de Windows)
                         if (e.dataTransfer.files.length) {
-                            document.getElementById('fm-file-input').files = e.dataTransfer.files;
-                            document.getElementById('fm-file-input').dispatchEvent(new Event('change'));
+                            fmMostrarPreview(e.dataTransfer.files[0]);
+                            return;
                         }
+                        // Imagen web (Google/Bing): solo llega la URL, no los bytes
+                        const html = e.dataTransfer.getData('text/html') || '';
+                        const url = (html.match(/<img[^>]+src=["']([^"']+)["']/i) || [])[1]
+                            || (e.dataTransfer.getData('text/uri-list') || '').trim();
+                        fmDescargarDeUrl(url);
                     });
                 }
             </script>

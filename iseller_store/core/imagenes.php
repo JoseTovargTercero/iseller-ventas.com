@@ -15,14 +15,16 @@ function imagen_guardar_webp(
     int $anchoMaximo = 400,
     int $bytesMaximos = 2097152,
     int $pixelesMaximos = 25000000,
-    int $calidad = 85
+    int $calidad = 85,
+    bool $esSubida = true
 ): ?string {
     if (($archivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         return null;
     }
+    // $esSubida = false solo para archivos que descarga el propio servidor (no vienen de $_FILES).
     $tmp = (string)($archivo['tmp_name'] ?? '');
     $tamano = (int)($archivo['size'] ?? 0);
-    if ($tmp === '' || $tamano <= 0 || $tamano > $bytesMaximos || !is_uploaded_file($tmp)) {
+    if ($tmp === '' || $tamano <= 0 || $tamano > $bytesMaximos || ($esSubida && !is_uploaded_file($tmp))) {
         return null;
     }
 
