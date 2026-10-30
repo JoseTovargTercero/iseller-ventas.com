@@ -181,6 +181,15 @@ if ($tienda_slug) {
     $types .= "s";
 }
 
+// Marketplace: solo productos de tiendas del estado del visitante. El estado
+// se calcula en el servidor al renderizar index.php y se envía en la consulta.
+$estadoFiltro = trim((string)($_GET['estado'] ?? ''));
+if (!$tienda_slug && $estadoFiltro !== '') {
+    $where .= " AND n.geo_estado = ?";
+    $params[] = $estadoFiltro;
+    $types .= "s";
+}
+
 if ($mode === 'search_index') {
     $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor, 
                    GROUP_CONCAT(DISTINCT cat.nombre SEPARATOR ', ') AS categorias_nombres,

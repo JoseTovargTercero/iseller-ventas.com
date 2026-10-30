@@ -5,6 +5,7 @@ require_once('iseller_store/core/session.php');
 require_once('iseller_store/core/_tasas_cambio.php');
 require_once('iseller_store/core/reputacion.php');
 require_once('iseller_store/core/eslogan.php');
+require_once('iseller_store/core/venezuela_geo.php');
 
 // El texto de la tienda (eslogan, nombre, comunidad) es utf8mb4: con la conexión
 // en utf8 (3 bytes) los emojis se mostrarían como "????".
@@ -448,6 +449,14 @@ if ($tiendas_cercanas['municipio']) {
 if ($tiendas_cercanas['estado']) {
     $grupos_cercanos['Mismo estado · ' . $geo_cerca_estado] = $tiendas_cercanas['estado'];
 }
+
+// Aviso de región en el perfil de una tienda: otro estado bloquea la compra;
+// otro municipio dentro del mismo estado solo se informa.
+$geo_tienda_estado = trim((string)($negocio_data['geo_estado'] ?? ''));
+$geo_tienda_municipio = trim((string)($negocio_data['geo_municipio'] ?? ''));
+$zona_tienda = $es_tienda_individual
+    ? zona_tienda_respecto_usuario($negocio_data, $geo_cerca_estado, $geo_cerca_municipio)
+    : 'ok';
 
 ?>
 
@@ -1844,7 +1853,7 @@ if ($tiendas_cercanas['estado']) {
     <div class="toast-text">Agregado al carrito</div>
 </div>
 
-<body class="bg-light" data-user-logged-in="<?php echo isLoggedIn() ? 'true' : 'false'; ?>">
+<body class="bg-light <?= $zona_tienda === 'otro_estado' ? 'zona-bloqueada' : '' ?>" data-user-logged-in="<?php echo isLoggedIn() ? 'true' : 'false'; ?>">
     <!-- Navbar -->
     <?php include 'iseller_store/includes/navbar.php'; ?>
 
@@ -2680,6 +2689,39 @@ if ($tiendas_cercanas['estado']) {
                 </div>
             </div>
         </section>
+
+        <?php if ($zona_tienda === 'otro_estado'): ?>
+            <div class="container-fluid px-3 px-md-5 mt-3">
+                <div class="alert alert-danger d-flex align-items-start gap-2 mb-0" role="alert">
+                    <i class="bi bi-x-octagon-fill fs-5"></i>
+                    <div>
+                        <strong>Esta tienda no está en tu región.</strong>
+                        Está en <?= htmlspecialchars($geo_tienda_estado . ', ' . $geo_tienda_municipio) ?>
+                        y tu ubicación es <?= htmlspecialchars($geo_cerca_estado . ', ' . $geo_cerca_municipio) ?>.
+                        No puedes comprarle desde aquí.
+                    </div>
+                </div>
+            </div>
+            <style>
+                /* Tienda de otro estado: sin compra posible, se ocultan las acciones del carrito. */
+                .zona-bloqueada .card-actions,
+                .zona-bloqueada .modal-actions-container {
+                    display: none !important;
+                }
+            </style>
+        <?php elseif ($zona_tienda === 'otro_municipio'): ?>
+            <div class="container-fluid px-3 px-md-5 mt-3">
+                <div class="alert alert-warning d-flex align-items-start gap-2 mb-0" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <div>
+                        <strong>Esta tienda está en otro municipio.</strong>
+                        Está en <?= htmlspecialchars($geo_tienda_municipio . ', ' . $geo_tienda_estado) ?>
+                        y tu ubicación es <?= htmlspecialchars($geo_cerca_municipio . ', ' . $geo_cerca_estado) ?>.
+                        Puedes comprar con normalidad; el envío puede tardar más o tener un costo adicional.
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php include 'iseller_store/includes/tiendas_favoritas.php'; ?>
 
@@ -3786,7 +3828,9 @@ if ($tiendas_cercanas['estado']) {
         let fuse;
 
         const tiendaSlugParam = urlParams.has('tienda_slug') ? '&tienda_slug=' + urlParams.get('tienda_slug') : '<?= !empty($tienda_slug) ? '&tienda_slug=' . urlencode($tienda_slug) : '' ?>';
-        fetch('api/productos.php?mode=search_index' + tiendaSlugParam)
+        // En el marketplace solo se listan productos de tiendas del estado del usuario.
+        const estadoParam = <?= json_encode($geo_cerca_estado !== '' ? '&estado=' . urlencode($geo_cerca_estado) : '') ?>;
+        fetch('api/productos.php?mode=search_index' + tiendaSlugParam + estadoParam)
             .then(res => res.json())
             .then(data => {
                 productos_indexados = data.searchIndex;
@@ -3824,7 +3868,7 @@ if ($tiendas_cercanas['estado']) {
         // Cintillo de productos recomendados (solo en el perfil de una tienda)
         const destacadosRibbon = document.getElementById('destacados-ribbon');
         if (destacadosRibbon) {
-            fetch('api/productos.php?mode=destacados' + tiendaSlugParam)
+            fetch('api/productos.php?mode=destacados' + tiendaSlugParam + estadoParam)
                 .then(res => res.json())
                 .then(data => {
                     const lista = Array.isArray(data.data) ? data.data : [];
@@ -4316,7 +4360,7 @@ if ($tiendas_cercanas['estado']) {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tiendaSlugParam = urlParams.has('tienda_slug') ? '&tienda_slug=' + urlParams.get('tienda_slug') : '<?= !empty($tienda_slug) ? '&tienda_slug=' . urlencode($tienda_slug) : '' ?>';
-                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}&grupo=${encodeURIComponent(currentGroup)}${tiendaSlugParam}`);
+                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}&grupo=${encodeURIComponent(currentGroup)}${tiendaSlugParam}${estadoParam}`);
                 const data = await res.json();
                 if (token !== loadToken) return; // respuesta vieja: ya hay otro filtro cargando
 

@@ -118,3 +118,20 @@ function venezuela_estados_municipios(): array
         ],
     ];
 }
+
+/**
+ * Zona de una tienda respecto a la ubicación del comprador.
+ * 'otro_estado' bloquea la compra; 'otro_municipio' solo se informa.
+ */
+function zona_tienda_respecto_usuario(array $tienda, string $estadoUsuario, string $municipioUsuario): string
+{
+    $estadoTienda = trim((string)($tienda['geo_estado'] ?? ''));
+    $municipioTienda = trim((string)($tienda['geo_municipio'] ?? ''));
+    $estadoUsuario = trim($estadoUsuario);
+    $municipioUsuario = trim($municipioUsuario);
+
+    if ($estadoTienda === '' || $estadoUsuario === '') return 'ok';
+    if ($estadoTienda !== $estadoUsuario) return 'otro_estado';
+    if ($municipioTienda !== '' && $municipioUsuario !== '' && $municipioTienda !== $municipioUsuario) return 'otro_municipio';
+    return 'ok';
+}
