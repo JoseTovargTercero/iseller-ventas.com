@@ -249,6 +249,37 @@ HTML;
     @mail($to, $subject, $body, $headers);
 }
 
+/**
+ * Asegura las columnas de ubicación de las direcciones (migración 009).
+ * El proyecto no tiene runner de migraciones: cada entorno las obtiene en el
+ * primer uso. Aditivo y nullable, no toca datos existentes.
+ */
+function asegurarColumnasDirecciones($conexion): void
+{
+    static $listo = false;
+    if ($listo) return;
+
+    $res = $conexion->query("SHOW COLUMNS FROM tienda_usuarios_direcciones");
+    if (!$res) return; // La tabla no existe: el INSERT fallará y se informa abajo.
+
+    $existentes = [];
+    while ($col = $res->fetch_assoc()) {
+        $existentes[strtolower($col['Field'])] = true;
+    }
+    $faltantes = [
+        'comunidad' => 'VARCHAR(100) NULL',
+        'geo_estado' => 'VARCHAR(100) NULL',
+        'geo_municipio' => 'VARCHAR(150) NULL',
+        'delivery_gratis_confirmado' => 'TINYINT(1) NOT NULL DEFAULT 0',
+    ];
+    foreach ($faltantes as $nombre => $definicion) {
+        if (!isset($existentes[$nombre])) {
+            $conexion->query("ALTER TABLE tienda_usuarios_direcciones ADD COLUMN `$nombre` $definicion");
+        }
+    }
+    $listo = true;
+}
+
 // Procesar solicitudes POST (API)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
@@ -268,19 +299,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = $input['action'] ?? '';
 
+    // Cualquier fallo de BD/PDO debe responder JSON, nunca un 500 con body vacío.
+    try {
+
     // 1. Obtener direcciones
     if ($action === 'get_addresses') {
+        asegurarColumnasDirecciones($conexion_store);
         $stmt = $conexion_store->prepare("SELECT * FROM tienda_usuarios_direcciones WHERE usuario_id = ? ORDER BY es_principal DESC, creado_en DESC");
+        if (!$stmt) {
+            error_log('checkout get_addresses: ' . $conexion_store->error);
+            echo json_encode(['success' => false, 'message' => 'No se pudieron cargar las direcciones']);
+            exit;
+        }
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $direcciones = $result->fetch_all(MYSQLI_ASSOC);
-        echo json_encode(['success' => true, 'addresses' => $direcciones]);
+        echo json_encode(['success' => true, 'addresses' => $direcciones], JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     }
 
     // 2. Guardar nueva dirección
     if ($action === 'save_address') {
+        asegurarColumnasDirecciones($conexion_store);
         $nombre    = trim($input['nombre_receptor'] ?? '');
         $telefono  = trim($input['telefono'] ?? '');
         $direccion = trim($input['direccion'] ?? '');
@@ -310,6 +351,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $sql = "INSERT INTO tienda_usuarios_direcciones (usuario_id, nombre_receptor, telefono, direccion, geo_estado, geo_municipio, lat, lng, comunidad, delivery_gratis_confirmado, es_principal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
         $stmt = $conexion_store->prepare($sql);
+        if (!$stmt) {
+            // Normalmente falta la migración 009 (columnas geo_*): sin el chequeo,
+            // bind_param() sobre false terminaba en un 500 sin cuerpo.
+            error_log('checkout save_address: ' . $conexion_store->error);
+            echo json_encode(['success' => false, 'message' => 'No se pudo guardar la dirección. Revisa la migración 009_direcciones_ubicacion.sql']);
+            exit;
+        }
         $stmt->bind_param("isssssddsi", $user_id, $nombre, $telefono, $direccion, $geo_estado, $geo_municipio, $lat, $lng, $comunidad, $delivery_gratis_confirmado);
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'id' => $stmt->insert_id, 'message' => 'Dirección guardada']);
@@ -645,6 +693,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } // Fin if isset carrito
 
     echo json_encode(['success' => false, 'message' => 'Acción no reconocida']);
+    } catch (Throwable $e) {
+        error_log('checkout POST: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'No se pudo procesar la solicitud. Intenta de nuevo.']);
+    }
     exit;
 } // Fin if POST
 
@@ -2294,6 +2346,19 @@ if ($dolarBolivar == 0) {
         }
 
         // ── Direcciones ───────────────────────────────────────────────
+        async function leerRespuestaJson(res) {
+            const texto = await res.text();
+            try {
+                return JSON.parse(texto);
+            } catch (e) {
+                console.error('[Checkout] Respuesta no JSON:', res.status, texto);
+                return {
+                    success: false,
+                    message: 'El servidor no respondió correctamente (' + res.status + ')'
+                };
+            }
+        }
+
         async function cargarDirecciones() {
             const container = document.getElementById('addresses-container');
             addressesById = {};
@@ -2313,9 +2378,18 @@ if ($dolarBolivar == 0) {
                     csrf_token: csrf
                 })
             });
-            const data = await res.json();
+            const data = await leerRespuestaJson(res);
 
-            if (!data.success || data.addresses.length === 0) {
+            if (!data.success) {
+                container.innerHTML = `<div class="text-center py-4 text-danger">
+            <i class="bi bi-exclamation-triangle fs-2 mb-2 d-block"></i>
+            <div class="fw-semibold small">${escapeHtml(data.message || 'No se pudieron cargar las direcciones')}</div>
+        </div>`;
+                document.getElementById('btn-next-1').disabled = (deliveryType === 'delivery');
+                return;
+            }
+
+            if (!Array.isArray(data.addresses) || data.addresses.length === 0) {
                 container.innerHTML = `<div class="text-center py-4 text-muted">
             <i class="bi bi-geo-alt fs-2 mb-2 d-block text-secondary opacity-50"></i>
             <div class="fw-semibold small">No tienes direcciones guardadas</div>
@@ -2648,25 +2722,33 @@ if ($dolarBolivar == 0) {
             btn.textContent = 'Guardando...';
 
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
-            const res = await fetch('checkout.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'save_address',
-                    nombre_receptor: nombre,
-                    telefono,
-                    direccion,
-                    comunidad,
-                    geo_estado: geoEstado,
-                    geo_municipio: geoMunicipio,
-                    lat,
-                    lng,
-                    csrf_token: csrf
-                })
-            });
-            const data = await res.json();
+            let data;
+            try {
+                const res = await fetch('checkout.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'save_address',
+                        nombre_receptor: nombre,
+                        telefono,
+                        direccion,
+                        comunidad,
+                        geo_estado: geoEstado,
+                        geo_municipio: geoMunicipio,
+                        lat,
+                        lng,
+                        csrf_token: csrf
+                    })
+                });
+                data = await leerRespuestaJson(res);
+            } catch (e) {
+                data = {
+                    success: false,
+                    message: 'No se pudo conectar con el servidor'
+                };
+            }
             btn.textContent = 'Guardar dirección';
 
             if (data.success) {
@@ -2679,7 +2761,7 @@ if ($dolarBolivar == 0) {
                 document.getElementById('btn-next-1').disabled = false;
                 cargarDirecciones();
             } else {
-                Notiflix.Notify.failure(data.message);
+                Notiflix.Notify.failure(data.message || 'No se pudo guardar la dirección');
             }
         }
 
