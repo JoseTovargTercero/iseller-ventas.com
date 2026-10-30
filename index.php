@@ -466,7 +466,10 @@ if ($tiendas_cercanas['estado']) {
     <base href="<?= $base_url ?>">
     <script>
         // La ruta de fotos y logos vive en la BD: si el archivo no existe, usamos el placeholder
-        function imgFallback(img) { img.onerror = null; img.src = 'assets/img/no-images.png'; }
+        function imgFallback(img) {
+            img.onerror = null;
+            img.src = 'assets/img/no-images.png';
+        }
 
         // En el grid, una foto rota se pinta igual que un producto sin imagen.
         function productImgError(img) {
@@ -522,8 +525,8 @@ if ($tiendas_cercanas['estado']) {
     <link rel="stylesheet" href="../publico/vendors/leaflet/leaflet.css" crossorigin="">
 
     <?php if ($es_tienda_individual): ?>
-    <!-- Select2 (buscador de categorías) -->
-    <link rel="stylesheet" href="../publico/vendors/select2/dist/css/select2.min.css">
+        <!-- Select2 (buscador de categorías) -->
+        <link rel="stylesheet" href="../publico/vendors/select2/dist/css/select2.min.css">
     <?php endif; ?>
     <script type="text/javascript">
         (function(c, l, a, r, i, t, y) {
@@ -1897,6 +1900,7 @@ if ($tiendas_cercanas['estado']) {
                 object-fit: cover;
                 border-radius: 50%;
                 border: 3px solid rgba(255, 255, 255, 0.85);
+                background-color: white;
                 flex-shrink: 0;
                 box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
             }
@@ -2643,7 +2647,7 @@ if ($tiendas_cercanas['estado']) {
                                 </svg>
                             </span>
                         </h1>
-                            <p class="store-tagline"><?= nl2br(htmlspecialchars($tienda_slogan)) ?></p>
+                        <p class="store-tagline"><?= nl2br(htmlspecialchars($tienda_slogan)) ?></p>
                         <?php if ($repNivel && $repNivel['visible']): ?>
                             <div class="store-badges">
                                 <div class="store-rep-badge" style="--rep-color: <?= $repNivel['color'] ?>" title="Reputación basada en <?= (int)$negocio_data['reputacion_total'] ?> calificaciones de compradores">
@@ -2938,8 +2942,7 @@ if ($tiendas_cercanas['estado']) {
                     padding-bottom: 0;
                 }
             }
-
-            </style>
+        </style>
         <div class="mkt-hero">
             <div class="mkt-hero-inner">
                 <div class="mkt-hero-text">
@@ -3071,175 +3074,176 @@ if ($tiendas_cercanas['estado']) {
         <?php endif; ?>
 
         <?php if (!$es_tienda_individual && $grupos_home): ?>
-        <section class="home-cats" id="categorias">
-            <div class="home-cats-panel">
-                <div class="home-cats-head">
-                    <div>
-                        <h2>Categorías</h2>
-                        <p>Explora por secciones y encuentra lo que buscas.</p>
+            <section class="home-cats" id="categorias">
+                <div class="home-cats-panel">
+                    <div class="home-cats-head">
+                        <div>
+                            <h2>Categorías</h2>
+                            <p>Explora por secciones y encuentra lo que buscas.</p>
+                        </div>
+                        <?php if (count($grupos_home) > 12): ?>
+                            <button type="button" class="home-cats-toggle" id="home-cats-toggle" aria-expanded="<?= $grupo_activo ? 'true' : 'false' ?>">
+                                <span id="home-cats-toggle-label"><?= $grupo_activo ? 'Mostrar menos' : 'Mostrar todas las categorías' ?></span>
+                                <i class="bi <?= $grupo_activo ? 'bi-chevron-up' : 'bi-chevron-down' ?>" id="home-cats-toggle-icon"></i>
+                            </button>
+                        <?php endif; ?>
                     </div>
-                    <?php if (count($grupos_home) > 12): ?>
-                        <button type="button" class="home-cats-toggle" id="home-cats-toggle" aria-expanded="<?= $grupo_activo ? 'true' : 'false' ?>">
-                            <span id="home-cats-toggle-label"><?= $grupo_activo ? 'Mostrar menos' : 'Mostrar todas las categorías' ?></span>
-                            <i class="bi <?= $grupo_activo ? 'bi-chevron-up' : 'bi-chevron-down' ?>" id="home-cats-toggle-icon"></i>
-                        </button>
-                    <?php endif; ?>
-                </div>
-                <div class="home-cats-grid<?= $grupo_activo ? ' expanded' : '' ?>" id="home-cats-grid">
-                    <?php foreach ($grupos_home as $i => $grupoHome):
-                        $grupoActivo = $grupo_activo && $grupo_activo['grupo'] === $grupoHome['grupo'];
-                        $totalGrupo = (int)$grupoHome['total_productos'];
-                        $fotoGrupo = trim((string)($grupoHome['foto_url'] ?? ''));
-                        $prodGrupo = (int)($grupoHome['producto_id'] ?? 0);
-                        $imgGrupo = '';
-                        if ($fotoGrupo !== '' && is_file(__DIR__ . '/iseller_store/' . ltrim($fotoGrupo, '/'))) {
-                            $imgGrupo = $base_url . ltrim($fotoGrupo, '/');
-                        } elseif ($prodGrupo > 0) {
-                            if (is_file(__DIR__ . "/iseller_store/assets/img/stock/optimized/{$prodGrupo}.webp")) {
-                                $imgGrupo = $base_url . "assets/img/stock/optimized/{$prodGrupo}.webp";
-                            } elseif (is_file(__DIR__ . "/iseller_store/assets/img/stock/{$prodGrupo}.png")) {
-                                $imgGrupo = $base_url . "assets/img/stock/{$prodGrupo}.png";
+                    <div class="home-cats-grid<?= $grupo_activo ? ' expanded' : '' ?>" id="home-cats-grid">
+                        <?php foreach ($grupos_home as $i => $grupoHome):
+                            $grupoActivo = $grupo_activo && $grupo_activo['grupo'] === $grupoHome['grupo'];
+                            $totalGrupo = (int)$grupoHome['total_productos'];
+                            $fotoGrupo = trim((string)($grupoHome['foto_url'] ?? ''));
+                            $prodGrupo = (int)($grupoHome['producto_id'] ?? 0);
+                            $imgGrupo = '';
+                            if ($fotoGrupo !== '' && is_file(__DIR__ . '/iseller_store/' . ltrim($fotoGrupo, '/'))) {
+                                $imgGrupo = $base_url . ltrim($fotoGrupo, '/');
+                            } elseif ($prodGrupo > 0) {
+                                if (is_file(__DIR__ . "/iseller_store/assets/img/stock/optimized/{$prodGrupo}.webp")) {
+                                    $imgGrupo = $base_url . "assets/img/stock/optimized/{$prodGrupo}.webp";
+                                } elseif (is_file(__DIR__ . "/iseller_store/assets/img/stock/{$prodGrupo}.png")) {
+                                    $imgGrupo = $base_url . "assets/img/stock/{$prodGrupo}.png";
+                                }
                             }
-                        }
-                    ?>
-                        <a href="<?= htmlspecialchars($script_dir . '/') ?>?grupo=<?= urlencode($grupoHome['grupo']) ?>#productos"
-                           class="home-cat-card<?= $i >= 12 ? ' home-cat-extra' : '' ?><?= $grupoActivo ? ' active' : '' ?>"
-                           <?= $grupoActivo ? 'aria-current="page"' : '' ?>>
-                            <span class="home-cat-icon">
-                                <?php if ($imgGrupo !== ''): ?>
-                                    <img src="<?= htmlspecialchars($imgGrupo) ?>" alt="" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <?php endif; ?>
-                                <i class="bi <?= home_categoria_icono($grupoHome['grupo']) ?>"<?= $imgGrupo !== '' ? ' style="display:none;"' : '' ?>></i>
-                            </span>
-                            <span class="home-cat-info">
-                                <span class="home-cat-name"><?= htmlspecialchars($grupoHome['grupo']) ?></span>
-                                <span class="home-cat-count"><?= number_format($totalGrupo, 0, ',', '.') ?> producto<?= $totalGrupo === 1 ? '' : 's' ?></span>
-                            </span>
-                            <i class="bi bi-chevron-right home-cat-arrow"></i>
-                        </a>
-                    <?php endforeach; ?>
+                        ?>
+                            <a href="<?= htmlspecialchars($script_dir . '/') ?>?grupo=<?= urlencode($grupoHome['grupo']) ?>#productos"
+                                class="home-cat-card<?= $i >= 12 ? ' home-cat-extra' : '' ?><?= $grupoActivo ? ' active' : '' ?>"
+                                <?= $grupoActivo ? 'aria-current="page"' : '' ?>>
+                                <span class="home-cat-icon">
+                                    <?php if ($imgGrupo !== ''): ?>
+                                        <img src="<?= htmlspecialchars($imgGrupo) ?>" alt="" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <?php endif; ?>
+                                    <i class="bi <?= home_categoria_icono($grupoHome['grupo']) ?>" <?= $imgGrupo !== '' ? ' style="display:none;"' : '' ?>></i>
+                                </span>
+                                <span class="home-cat-info">
+                                    <span class="home-cat-name"><?= htmlspecialchars($grupoHome['grupo']) ?></span>
+                                    <span class="home-cat-count"><?= number_format($totalGrupo, 0, ',', '.') ?> producto<?= $totalGrupo === 1 ? '' : 's' ?></span>
+                                </span>
+                                <i class="bi bi-chevron-right home-cat-arrow"></i>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </div>
-        </section>
-        <script>
-            (function() {
-                const btn = document.getElementById('home-cats-toggle');
-                const grid = document.getElementById('home-cats-grid');
-                if (!btn || !grid) return;
-                btn.addEventListener('click', function() {
-                    const expanded = grid.classList.toggle('expanded');
-                    document.getElementById('home-cats-toggle-label').textContent = expanded ? 'Mostrar menos' : 'Mostrar todas las categorías';
-                    const icon = document.getElementById('home-cats-toggle-icon');
-                    icon.classList.toggle('bi-chevron-down', !expanded);
-                    icon.classList.toggle('bi-chevron-up', expanded);
-                    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-                });
-            })();
-        </script>
+            </section>
+            <script>
+                (function() {
+                    const btn = document.getElementById('home-cats-toggle');
+                    const grid = document.getElementById('home-cats-grid');
+                    if (!btn || !grid) return;
+                    btn.addEventListener('click', function() {
+                        const expanded = grid.classList.toggle('expanded');
+                        document.getElementById('home-cats-toggle-label').textContent = expanded ? 'Mostrar menos' : 'Mostrar todas las categorías';
+                        const icon = document.getElementById('home-cats-toggle-icon');
+                        icon.classList.toggle('bi-chevron-down', !expanded);
+                        icon.classList.toggle('bi-chevron-up', expanded);
+                        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    });
+                })();
+            </script>
         <?php endif; ?>
 
         <?php if ($es_tienda_individual): ?>
-        <style>
-            .destacados-ribbon-wrap {
-                margin: 0 0 26px;
-            }
+            <style>
+                .destacados-ribbon-wrap {
+                    margin: 0 0 26px;
+                }
 
-            .destacados-ribbon {
-                display: flex;
-                gap: 14px;
-                overflow-x: auto;
-                padding: 4px 2px 14px;
-                scroll-snap-type: x proximity;
-                -webkit-overflow-scrolling: touch;
-            }
+                .destacados-ribbon {
+                    display: flex;
+                    gap: 14px;
+                    overflow-x: auto;
+                    padding: 4px 2px 14px;
+                    scroll-snap-type: x proximity;
+                    -webkit-overflow-scrolling: touch;
+                }
 
-            .destacados-ribbon::-webkit-scrollbar {
-                height: 8px;
-            }
+                .destacados-ribbon::-webkit-scrollbar {
+                    height: 8px;
+                }
 
-            .destacados-ribbon::-webkit-scrollbar-thumb {
-                background: #d6dde6;
-                border-radius: 8px;
-            }
+                .destacados-ribbon::-webkit-scrollbar-thumb {
+                    background: #d6dde6;
+                    border-radius: 8px;
+                }
 
-            .destacado-card {
-                flex: 0 0 170px;
-                scroll-snap-align: start;
-                cursor: pointer;
-            }
-
-            .destacado-card .product-body {
-                padding: 0.85rem;
-            }
-
-            .destacado-card .product-title {
-                font-size: 0.85rem;
-                line-height: 1.35;
-                white-space: normal;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                min-height: 2.7em;
-            }
-
-            .destacado-card .price-container {
-                margin-left: 0.85rem;
-                margin-right: 0.85rem;
-            }
-
-            .destacado-card .price-main {
-                font-size: 1.1rem;
-            }
-
-            @media (max-width: 575.98px) {
-                /* El card móvil global es horizontal; en el cintillo se mantiene
-                   vertical y con ancho fijo para que el nombre quepa en 2 líneas. */
                 .destacado-card {
                     flex: 0 0 170px;
-                }
-
-                .destacado-card .product-card {
-                    flex-direction: column !important;
-                    flex-wrap: nowrap !important;
-                    padding: 0 !important;
-                }
-
-                .destacado-card .product-img-wrapper {
-                    width: 100% !important;
-                    height: auto !important;
-                    padding-top: 100% !important;
-                    border-radius: 0 !important;
+                    scroll-snap-align: start;
+                    cursor: pointer;
                 }
 
                 .destacado-card .product-body {
-                    width: 100% !important;
-                    padding: 0.85rem !important;
+                    padding: 0.85rem;
                 }
 
                 .destacado-card .product-title {
-                    font-size: 0.9rem !important;
+                    font-size: 0.85rem;
+                    line-height: 1.35;
+                    white-space: normal;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    min-height: 2.7em;
                 }
 
                 .destacado-card .price-container {
-                    margin: 0 0.85rem 1rem !important;
+                    margin-left: 0.85rem;
+                    margin-right: 0.85rem;
                 }
 
                 .destacado-card .price-main {
-                    margin-top: 0 !important;
-                    font-size: 1.1rem !important;
+                    font-size: 1.1rem;
                 }
-            }
-        </style>
 
-        <section class="destacados-ribbon-wrap" id="destacados-section" style="display:none;">
-            <div class="tiendas-section-header">
-                <div>
-                    <h2>Recomendados</h2>
-                    <p>Una selección de <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre']) ?>.</p>
+                @media (max-width: 575.98px) {
+
+                    /* El card móvil global es horizontal; en el cintillo se mantiene
+                   vertical y con ancho fijo para que el nombre quepa en 2 líneas. */
+                    .destacado-card {
+                        flex: 0 0 170px;
+                    }
+
+                    .destacado-card .product-card {
+                        flex-direction: column !important;
+                        flex-wrap: nowrap !important;
+                        padding: 0 !important;
+                    }
+
+                    .destacado-card .product-img-wrapper {
+                        width: 100% !important;
+                        height: auto !important;
+                        padding-top: 100% !important;
+                        border-radius: 0 !important;
+                    }
+
+                    .destacado-card .product-body {
+                        width: 100% !important;
+                        padding: 0.85rem !important;
+                    }
+
+                    .destacado-card .product-title {
+                        font-size: 0.9rem !important;
+                    }
+
+                    .destacado-card .price-container {
+                        margin: 0 0.85rem 1rem !important;
+                    }
+
+                    .destacado-card .price-main {
+                        margin-top: 0 !important;
+                        font-size: 1.1rem !important;
+                    }
+                }
+            </style>
+
+            <section class="destacados-ribbon-wrap" id="destacados-section" style="display:none;">
+                <div class="tiendas-section-header">
+                    <div>
+                        <h2>Recomendados</h2>
+                        <p>Una selección de <?= htmlspecialchars($negocio_data['nombre_visible'] ?: $negocio_data['nombre']) ?>.</p>
+                    </div>
                 </div>
-            </div>
-            <div class="destacados-ribbon" id="destacados-ribbon"></div>
-        </section>
+                <div class="destacados-ribbon" id="destacados-ribbon"></div>
+            </section>
         <?php endif; ?>
 
         <!-- Grid Header: Sorting -->
@@ -3363,45 +3367,45 @@ if ($tiendas_cercanas['estado']) {
         </div>
     </div>
     <!-- Modal Tiendas cercanas -->
-        <div class="modal fade" id="modalTiendasCercanas" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title text-white fw-bold"><i class="bi bi-shop-window me-2"></i> Tiendas cercanas</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <?php if (!$grupos_cercanos): ?>
-                            <?php if ($geo_cerca_estado === '' && !isLoggedIn() && empty($_SESSION['bss_id'])): ?>
-                                <p class="text-muted small mb-2">Inicia sesión para ver las tiendas cercanas a tu ubicación.</p>
-                                <a href="login.php" class="btn btn-sm btn-success rounded-pill px-3">Iniciar sesión</a>
-                            <?php else: ?>
-                                <p class="text-muted small mb-0">No hay tiendas cercanas registradas todavía.</p>
-                            <?php endif; ?>
+    <div class="modal fade" id="modalTiendasCercanas" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title text-white fw-bold"><i class="bi bi-shop-window me-2"></i> Tiendas cercanas</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <?php if (!$grupos_cercanos): ?>
+                        <?php if ($geo_cerca_estado === '' && !isLoggedIn() && empty($_SESSION['bss_id'])): ?>
+                            <p class="text-muted small mb-2">Inicia sesión para ver las tiendas cercanas a tu ubicación.</p>
+                            <a href="login.php" class="btn btn-sm btn-success rounded-pill px-3">Iniciar sesión</a>
+                        <?php else: ?>
+                            <p class="text-muted small mb-0">No hay tiendas cercanas registradas todavía.</p>
                         <?php endif; ?>
-                        <?php foreach ($grupos_cercanos as $tituloGrupo => $listaCercanos): ?>
-                            <h6 class="fw-bold text-muted text-uppercase small mb-2 mt-3"><?= htmlspecialchars($tituloGrupo) ?></h6>
-                            <div class="list-group list-group-flush mb-2">
-                                <?php foreach ($listaCercanos as $t): ?>
-                                    <a href="<?= htmlspecialchars($script_dir . '/' . $t['slug']) ?>" class="list-group-item list-group-item-action d-flex align-items-center gap-3 px-0">
-                                        <?php if (!empty($t['logo_url'])): ?>
-                                            <img src="<?= htmlspecialchars($t['logo_url']) ?>" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;">
-                                        <?php else: ?>
-                                            <span style="width:44px;height:44px;border-radius:50%;background:#e9ecef;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-shop text-muted"></i></span>
-                                        <?php endif; ?>
-                                        <span class="flex-grow-1">
-                                            <span class="d-block fw-semibold"><?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?></span>
-                                            <span class="d-block small text-muted"><?= htmlspecialchars($t['categoria'] ?: 'Tienda') ?><?= !empty($t['geo_municipio']) ? ' · ' . htmlspecialchars($t['geo_municipio']) : '' ?></span>
-                                        </span>
-                                        <i class="bi bi-chevron-right text-muted"></i>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <?php endif; ?>
+                    <?php foreach ($grupos_cercanos as $tituloGrupo => $listaCercanos): ?>
+                        <h6 class="fw-bold text-muted text-uppercase small mb-2 mt-3"><?= htmlspecialchars($tituloGrupo) ?></h6>
+                        <div class="list-group list-group-flush mb-2">
+                            <?php foreach ($listaCercanos as $t): ?>
+                                <a href="<?= htmlspecialchars($script_dir . '/' . $t['slug']) ?>" class="list-group-item list-group-item-action d-flex align-items-center gap-3 px-0">
+                                    <?php if (!empty($t['logo_url'])): ?>
+                                        <img src="<?= htmlspecialchars($t['logo_url']) ?>" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+                                    <?php else: ?>
+                                        <span style="width:44px;height:44px;border-radius:50%;background:#e9ecef;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-shop text-muted"></i></span>
+                                    <?php endif; ?>
+                                    <span class="flex-grow-1">
+                                        <span class="d-block fw-semibold"><?= htmlspecialchars($t['nombre_visible'] ?: $t['nombre']) ?></span>
+                                        <span class="d-block small text-muted"><?= htmlspecialchars($t['categoria'] ?: 'Tienda') ?><?= !empty($t['geo_municipio']) ? ' · ' . htmlspecialchars($t['geo_municipio']) : '' ?></span>
+                                    </span>
+                                    <i class="bi bi-chevron-right text-muted"></i>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
+    </div>
     <!-- Modal Cuenta -->
     <div class="modal fade" id="modalCuenta" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -3648,8 +3652,8 @@ if ($tiendas_cercanas['estado']) {
     <!-- Bootstrap Bundle -->
     <script src="../publico/vendors/bootstrap5/js/bootstrap.bundle.min.js"></script>
     <?php if ($es_tienda_individual): ?>
-    <!-- Select2 (buscador de categorías) -->
-    <script src="../publico/vendors/select2/dist/js/select2.full.min.js"></script>
+        <!-- Select2 (buscador de categorías) -->
+        <script src="../publico/vendors/select2/dist/js/select2.full.min.js"></script>
     <?php endif; ?>
     <!-- Custom Scripts -->
     <script src="assets/js/fastclick.js"></script>
@@ -3826,14 +3830,20 @@ if ($tiendas_cercanas['estado']) {
                     const lista = Array.isArray(data.data) ? data.data : [];
                     if (!lista.length) return;
 
-                    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    } [c]));
 
                     destacadosRibbon.innerHTML = lista.map(p => {
                         productos_por_id[p.id] = p;
                         const nombre = esc(p.nombre);
-                        const img = p.img
-                            ? `<img src="${esc(p.img)}" loading="lazy" class="product-img" alt="${nombre}" onerror="productImgError(this)">`
-                            : `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`;
+                        const img = p.img ?
+                            `<img src="${esc(p.img)}" loading="lazy" class="product-img" alt="${nombre}" onerror="productImgError(this)">` :
+                            `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`;
 
                         return `<div class="destacado-card" onclick="openProductModal('${esc(p.id)}')">
                             <div class="product-card">
@@ -4491,7 +4501,7 @@ if ($tiendas_cercanas['estado']) {
             // Image
             const modalImg = document.getElementById('modal-product-img');
             const modalNoImg = document.getElementById('modal-no-img');
-            modalImg.onerror = function () {
+            modalImg.onerror = function() {
                 modalImg.onerror = null;
                 modalImg.style.display = 'none';
                 if (modalNoImg) modalNoImg.style.display = 'flex';
