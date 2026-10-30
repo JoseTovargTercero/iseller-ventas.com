@@ -2530,13 +2530,54 @@ if ($dolarBolivar == 0) {
         let geojsonLayer = null;
         const MAP_DEFAULT_CENTER = [5.653802, -67.605304]; // Puerto Ayacucho
 
+        // Coordenadas de referencia del usuario: la dirección seleccionada y, si no,
+        // la primera guardada. Devuelve null si ninguna tiene ubicación en el mapa.
+        function ubicacionReferenciaUsuario() {
+            const candidatas = [];
+            if (selectedAddressId) candidatas.push(addressesById[String(selectedAddressId)]);
+            candidatas.push(...Object.values(addressesById));
+            for (const a of candidatas) {
+                const lat = parseFloat(a?.lat);
+                const lng = parseFloat(a?.lng);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
+            }
+            return null;
+        }
+
+        // Centra el mapa en la ubicación conocida del usuario; si no hay direcciones
+        // guardadas, pide la ubicación del navegador.
+        function centrarSegunUsuario() {
+            if (!mapInstance) return;
+            const ref = ubicacionReferenciaUsuario();
+            if (ref) {
+                mapInstance.setView(ref, 16);
+                return;
+            }
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        const latInput = document.getElementById('addr-lat');
+                        if (!mapInstance || (latInput && latInput.value)) return;
+                        mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
+                );
+            }
+        }
+
         function iniciarMapa() {
             if (mapInstance) {
-                setTimeout(() => mapInstance.invalidateSize(), 200);
+                setTimeout(() => {
+                    mapInstance.invalidateSize();
+                    centrarSegunUsuario();
+                }, 200);
                 return;
             }
 
-            mapInstance = L.map('map').setView(MAP_DEFAULT_CENTER, 13);
+            const refUsuario = ubicacionReferenciaUsuario();
+            mapInstance = L.map('map').setView(refUsuario || MAP_DEFAULT_CENTER, refUsuario ? 16 : 13);
+            if (!refUsuario) centrarSegunUsuario();
 
             // Google Hybrid Map tiles
             L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {

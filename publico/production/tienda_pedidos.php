@@ -1333,9 +1333,14 @@ $stmtRep->close();
                                         <div id="det-transportista-estado" style="font-size:.72rem;color:var(--dash-text-muted);"></div>
                                     </div>
                                 </div>
-                                <button id="btn-cambiar-transportista" type="button" class="btn btn-outline-success btn-sm" onclick="cambiarTransportista()" style="display:none;">
-                                    <i class="bi bi-arrow-repeat"></i> Cambiar
-                                </button>
+                                <div style="display:flex;gap:6px;align-items:center;">
+                                    <button id="btn-notificar-transportista" type="button" class="btn btn-outline-success btn-sm" onclick="reenviarNotificacion()" style="display:none;" title="Reenviar notificación a la app">
+                                        <i class="bi bi-bell"></i> Notificar
+                                    </button>
+                                    <button id="btn-cambiar-transportista" type="button" class="btn btn-outline-success btn-sm" onclick="cambiarTransportista()" style="display:none;">
+                                        <i class="bi bi-arrow-repeat"></i> Cambiar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1608,6 +1613,8 @@ $stmtRep->close();
                         btnTp.innerHTML = ordenTransportistaId
                             ? '<i class="bi bi-arrow-repeat"></i> Cambiar'
                             : '<i class="bi bi-truck"></i> Asignar';
+                        document.getElementById('btn-notificar-transportista').style.display =
+                            (estadoNum === 3 && ordenTransportistaId) ? 'inline-flex' : 'none';
                     } else {
                         tpBox.style.display = 'none';
                     }
@@ -1884,6 +1891,17 @@ $stmtRep->close();
             document.getElementById('status-actions').innerHTML = actions;
         }
 
+        // Avisa si el pedido quedó guardado pero el push al transportista falló.
+        function avisarPush(data) {
+            if (!data || !data.push || data.push.ok !== false) return;
+            Swal.fire({
+                icon: 'warning',
+                title: 'Pedido guardado, notificación no enviada',
+                text: data.push.msg || 'Revisa la configuración de notificaciones.',
+                confirmButtonColor: '#2dd4a0'
+            });
+        }
+
         function enviarEstado(status, confirmMsg, transportistaId) {
             if (confirmMsg && !confirm(confirmMsg)) return;
             if (!ordenActual) return;
@@ -1904,6 +1922,7 @@ $stmtRep->close();
                     if (data.ok) {
                         cargarPedidos();
                         verDetalle(ordenActual);
+                        avisarPush(data);
                     } else {
                         alert('Error: ' + data.msg);
                     }
@@ -2024,6 +2043,7 @@ $stmtRep->close();
                         }
                         cargarPedidos();
                         verDetalle(ordenActual);
+                        avisarPush(data);
                     })
                     .catch(function() {
                         alert('Error de conexión');
@@ -2035,6 +2055,54 @@ $stmtRep->close();
                 subtitulo: 'Delivery · el nuevo transportista recibirá el pedido',
                 hint: 'El nuevo transportista recibirá la dirección y el teléfono del cliente en su app.'
             });
+        }
+
+        function reenviarNotificacion() {
+            if (!ordenActual) return;
+            var btn = document.getElementById('btn-notificar-transportista');
+            var textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            var fd = new FormData();
+            fd.append('action', 'notificar_transportista');
+            fd.append('id', ordenActual);
+
+            fetch('db/tienda_pedidos_api.php', {
+                    method: 'POST',
+                    body: fd
+                })
+                .then(function(res) {
+                    return res.json();
+                })
+                .then(function(data) {
+                    btn.disabled = false;
+                    btn.innerHTML = textoOriginal;
+                    if (!data.ok) {
+                        Swal.fire('Error', data.msg || 'No se pudo notificar', 'error');
+                        return;
+                    }
+                    if (data.push && data.push.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Notificación enviada',
+                            text: 'El transportista recibió el aviso en su app.',
+                            confirmButtonColor: '#2dd4a0'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Notificación no enviada',
+                            text: (data.push && data.push.msg) || 'Revisa la configuración de notificaciones.',
+                            confirmButtonColor: '#2dd4a0'
+                        });
+                    }
+                })
+                .catch(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = textoOriginal;
+                    Swal.fire('Error', 'Error de conexión', 'error');
+                });
         }
 
         function escaparHtml(texto) {

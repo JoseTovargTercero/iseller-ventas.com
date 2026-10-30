@@ -151,25 +151,30 @@ function transportista_asignar_delivery($conexion, int $bssId, int $ordenId, int
 }
 
 /** Push al transportista cuando se le asigna (o reasigna) un delivery. */
-function transportista_notificar_asignacion($conexion, int $bssId, int $ordenId, int $transportistaId, string $titulo = 'Nuevo delivery asignado'): void
+function transportista_notificar_asignacion($conexion, int $bssId, int $ordenId, int $transportistaId, string $titulo = 'Nuevo delivery asignado'): array
 {
     if (!function_exists('enviar_push_transportista')) {
-        return;
+        return ['ok' => false, 'sent' => 0, 'msg' => 'El módulo de notificaciones no está cargado.'];
     }
 
     $nombreTienda = '';
-    $stmt = $conexion->prepare(
-        "SELECT COALESCE(NULLIF(nombre_visible, ''), nombre) AS nombre FROM negocio WHERE id = ? LIMIT 1"
-    );
-    if ($stmt) {
-        $stmt->bind_param('i', $bssId);
-        $stmt->execute();
-        $fila = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        $nombreTienda = trim((string)($fila['nombre'] ?? ''));
+    try {
+        $stmt = $conexion->prepare(
+            "SELECT COALESCE(NULLIF(nombre_visible, ''), nombre) AS nombre FROM negocio WHERE id = ? LIMIT 1"
+        );
+        if ($stmt) {
+            $stmt->bind_param('i', $bssId);
+            $stmt->execute();
+            $fila = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            $nombreTienda = trim((string)($fila['nombre'] ?? ''));
+        }
+    } catch (Throwable $e) {
+        // El nombre de la tienda es solo decorativo: nunca debe impedir el push.
+        error_log('transportista_notificar_asignacion: ' . $e->getMessage());
     }
 
-    enviar_push_transportista(
+    return enviar_push_transportista(
         $conexion,
         $transportistaId,
         $titulo,

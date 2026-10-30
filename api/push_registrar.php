@@ -28,6 +28,7 @@ set_exception_handler(function () {
 });
 
 require_once __DIR__ . '/../configurar/configuracion.php';
+require_once __DIR__ . '/../publico/production/includes/push_fcm.php';
 
 function salir(int $code, array $body): void
 {
@@ -111,6 +112,8 @@ if ((int)$u['status'] === 1) {
 $usuarioId = (int)$u['id'];
 $bssId = (int)$u['bss_id'];
 
+push_asegurar_tabla($conexion);
+
 // ── Alta o baja del dispositivo ────────────────────────────────────────────────
 if ($action === 'baja') {
     $stmt = $conexion->prepare("DELETE FROM push_dispositivos WHERE token = ? AND tipo = 'panel' AND usuario_id = ?");
@@ -119,6 +122,8 @@ if ($action === 'baja') {
     $stmt->close();
     salir(200, ['ok' => true]);
 }
+
+push_limpiar_token_ajeno($conexion, 'panel', $usuarioId, $token);
 
 $stmt = $conexion->prepare(
     "INSERT INTO push_dispositivos (tipo, usuario_id, bss_id, token, plataforma)

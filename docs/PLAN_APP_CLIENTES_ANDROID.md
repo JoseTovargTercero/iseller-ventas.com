@@ -247,7 +247,8 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
 - Al regresar a Inicio se recarga `products.php` sin duplicar la carga inicial ni
   vaciar la lista mientras responde.
 - El buscador vive en la barra superior (solo Inicio) y se quitó el icono del
-  carrito de la barra; el carrito sigue en la navegación inferior.
+  carrito de la barra; el carrito sigue en la navegación inferior con un badge
+  de cantidad que desaparece al vaciarlo.
 - Chat por pedido en la app: hilo con la tienda, envío, polling cada 7 s y
   marcado de leídos; API `chat.php` (listar, abrir por pedido, mensajes,
   responder). Probado en el emulador contra la API local. El chat general/
@@ -255,6 +256,9 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
 - Perfil de tienda: el cintillo solo aparece en el marketplace; dentro de una
   tienda se oculta y el hero tiene un botón de regreso al inicio arriba a la
   derecha (se oculta cuando la hoja cubre el hero).
+- Nueva dirección: primero pregunta si usar la ubicación actual; con GPS toma el
+  punto, completa estado/municipio con geocodificación inversa y deja solo
+  dirección y referencia. Si se niega o el GPS falla, formulario manual.
 - Fallback de logo (iSeller) y portada (`bg-hero-2a.webp`) para tiendas sin
   imágenes; el perfil de la tienda ya no queda en blanco.
 - El build debug apunta a producción por defecto; para local se pasa

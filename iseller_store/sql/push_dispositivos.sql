@@ -3,7 +3,10 @@
 --  Un registro por token. `tipo` distingue a quién pertenece:
 --    'panel'   -> usuarios del panel del negocio (tabla usuarios)
 --    'cliente' -> usuarios de la tienda (tabla tienda_usuarios)
+--    'transp'  -> transportistas (tabla transportistas)
 --  Los ids de ambas tablas son independientes, por eso `tipo`.
+--  El índice es por (token, tipo, usuario_id): un mismo teléfono puede estar
+--  logueado a la vez en el panel y en la app del transportista.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `push_dispositivos` (
@@ -16,6 +19,6 @@ CREATE TABLE IF NOT EXISTS `push_dispositivos` (
   `creado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `actualizado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_push_token` (`token`),
+  UNIQUE KEY `uq_push_token_tipo_usuario` (`token`(191), `tipo`, `usuario_id`),
   KEY `idx_push_usuario` (`tipo`, `usuario_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

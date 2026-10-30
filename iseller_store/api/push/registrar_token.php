@@ -15,6 +15,7 @@
 
 require_once('../../core/db.php');
 require_once('../../core/session.php');
+require_once(__DIR__ . '/../../../publico/production/includes/push_fcm.php');
 
 header('Content-Type: application/json');
 
@@ -56,6 +57,9 @@ if ($action === 'baja') {
     echo json_encode(['success' => true]);
     exit;
 }
+
+push_asegurar_tabla($conexion);
+push_limpiar_token_ajeno($conexion, $tipo, $usuario_id, $token);
 
 $stmt = $conexion->prepare(
     "INSERT INTO push_dispositivos (tipo, usuario_id, bss_id, token, plataforma)

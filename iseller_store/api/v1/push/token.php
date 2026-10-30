@@ -6,6 +6,7 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../../../core/api_v1.php';
+require_once __DIR__ . '/../../../../publico/production/includes/push_fcm.php';
 
 api_method('POST');
 $user = api_auth();
@@ -24,6 +25,8 @@ if (!in_array($plataforma, ['android', 'ios'], true)) {
 }
 
 global $conexion;
+push_asegurar_tabla($conexion);
+push_limpiar_token_ajeno($conexion, 'cliente', (int)$user['id'], $token);
 if ($accion === 'unregister') {
     $stmt = $conexion->prepare(
         "DELETE FROM push_dispositivos WHERE token = ? AND tipo = 'cliente' AND usuario_id = ?"

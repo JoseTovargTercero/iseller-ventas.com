@@ -17,6 +17,9 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 // La tabla de planes es utf8mb4; con la conexión en utf8 (3 bytes) un nombre
 // con emoji falla en hosting con sql_mode estricto.
 $conexion->set_charset('utf8mb4');
+if (in_array($action, ['cambiar_estado', 'cambiar_transportista', 'notificar_transportista'], true)) {
+    push_asegurar_tabla($conexion);
+}
 
 header('Content-Type: application/json');
 
@@ -275,11 +278,12 @@ if ($action === 'cambiar_estado') {
     }
 
     // 5. Push al transportista con el delivery recién asignado
+    $pushTransportista = null;
     if ($transportistaAsignado) {
-        transportista_notificar_asignacion($conexion, (int)$bss_id, $id, $transportistaId);
+        $pushTransportista = transportista_notificar_asignacion($conexion, (int)$bss_id, $id, $transportistaId);
     }
 
-    echo json_encode(['ok' => true]);
+    echo json_encode(['ok' => true, 'push' => $pushTransportista]);
     exit;
 }
 
@@ -333,9 +337,35 @@ if ($action === 'cambiar_transportista') {
         exit;
     }
 
-    transportista_notificar_asignacion($conexion, (int)$bss_id, $id, $transportistaId, 'Delivery reasignado');
+    $pushTransportista = transportista_notificar_asignacion($conexion, (int)$bss_id, $id, $transportistaId, 'Delivery reasignado');
 
-    echo json_encode(['ok' => true, 'transportista' => $transportista['nombre']]);
+    echo json_encode(['ok' => true, 'transportista' => $transportista['nombre'], 'push' => $pushTransportista]);
+    exit;
+}
+
+/* ─── 3c. Reenviar la notificación al transportista asignado ───────────── */
+if ($action === 'notificar_transportista') {
+    $id = (int)($_POST['id'] ?? 0);
+    if (!$id) {
+        echo json_encode(['ok' => false, 'msg' => 'Pedido inválido']);
+        exit;
+    }
+
+    $tp = transportista_servicio_actual($conexion, (int)$bss_id, $id);
+    if (!$tp || (int)$tp['transportista_id'] <= 0) {
+        echo json_encode(['ok' => false, 'msg' => 'El pedido no tiene transportista asignado']);
+        exit;
+    }
+
+    $pushTransportista = transportista_notificar_asignacion(
+        $conexion,
+        (int)$bss_id,
+        $id,
+        (int)$tp['transportista_id'],
+        'Delivery asignado'
+    );
+
+    echo json_encode(['ok' => true, 'push' => $pushTransportista]);
     exit;
 }
 

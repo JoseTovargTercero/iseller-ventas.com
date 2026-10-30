@@ -7,11 +7,13 @@
  */
 
 require_once __DIR__ . '/transportista_comun.php';
+require_once __DIR__ . '/../publico/production/includes/push_fcm.php';
 
 exigirMetodo('POST');
 limitar('push', 30, 300);
 exigirApiKey();
 asegurarTablas($conexion);
+push_asegurar_tabla($conexion);
 
 $transportista = transportistaDesdeToken($conexion);
 if (!$transportista) {
@@ -45,6 +47,7 @@ if ($accion === 'baja') {
 }
 
 // tipo 'transp' (cabe en varchar(10)); el token es único por dispositivo.
+push_limpiar_token_ajeno($conexion, 'transp', $transportistaId, $token);
 $stmt = $conexion->prepare(
     "INSERT INTO push_dispositivos (tipo, usuario_id, bss_id, token, plataforma)
      VALUES ('transp', ?, 0, ?, ?)

@@ -20,6 +20,74 @@
 
 if (!function_exists('push_habilitado')) {
 
+    /**
+     * Asegura la tabla de tokens y que un mismo teléfono pueda estar registrado
+     * a la vez como panel y como transportista.
+     *
+     * El índice viejo `uq_push_token` era único solo por token: al iniciar sesión
+     * como transportista se actualizaba la fila del panel y se perdía su push (y
+     * viceversa). El índice compuesto conserva una fila por tipo/usuario.
+     */
+    function push_asegurar_tabla(mysqli $conexion): void
+    {
+        static $hecho = false;
+        if ($hecho) return;
+        $hecho = true;
+
+        $conexion->query(
+            "CREATE TABLE IF NOT EXISTS push_dispositivos (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                tipo varchar(10) NOT NULL,
+                usuario_id int(11) NOT NULL,
+                bss_id int(11) DEFAULT NULL,
+                token varchar(255) NOT NULL,
+                plataforma varchar(20) NOT NULL DEFAULT 'android',
+                creado_en datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_push_token_tipo_usuario (token(191), tipo, usuario_id),
+                KEY idx_push_usuario (tipo, usuario_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+
+        $idx = $conexion->query("SHOW INDEX FROM push_dispositivos");
+        $porIndice = [];
+        if ($idx) {
+            while ($fila = $idx->fetch_assoc()) {
+                if ((int)$fila['Non_unique'] !== 0) continue;
+                $porIndice[$fila['Key_name']][(int)$fila['Seq_in_index']] = $fila['Column_name'];
+            }
+        }
+        foreach ($porIndice as $nombreIndice => $columnas) {
+            ksort($columnas);
+            if ($nombreIndice !== 'PRIMARY' && array_values($columnas) === ['token']) {
+                $nombreSeguro = str_replace('`', '``', $nombreIndice);
+                $conexion->query("ALTER TABLE push_dispositivos DROP INDEX `$nombreSeguro`");
+            }
+        }
+
+        $idx = $conexion->query("SHOW INDEX FROM push_dispositivos WHERE Key_name = 'uq_push_token_tipo_usuario'");
+        if ($idx && $idx->num_rows === 0) {
+            $conexion->query(
+                "DELETE p1 FROM push_dispositivos p1
+                   INNER JOIN push_dispositivos p2
+                      ON p1.token = p2.token AND p1.tipo = p2.tipo AND p1.usuario_id = p2.usuario_id
+                    WHERE p1.id > p2.id"
+            );
+            $conexion->query("ALTER TABLE push_dispositivos ADD UNIQUE KEY uq_push_token_tipo_usuario (token(191), tipo, usuario_id)");
+        }
+    }
+
+    /** Un token no debe seguir recibiendo avisos de una cuenta anterior del mismo rol. */
+    function push_limpiar_token_ajeno(mysqli $conexion, string $tipo, int $usuarioId, string $token): void
+    {
+        $stmt = $conexion->prepare("DELETE FROM push_dispositivos WHERE token = ? AND tipo = ? AND usuario_id <> ?");
+        if (!$stmt) return;
+        $stmt->bind_param('ssi', $token, $tipo, $usuarioId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
     function push_habilitado(): bool
     {
         return !empty($_ENV['PUSH_HABILITADO']) && $_ENV['PUSH_HABILITADO'] !== '0';
@@ -236,24 +304,44 @@ if (!function_exists('push_habilitado')) {
      * Push de datos para el transportista.
      * Sin bloque "notification": el mensaje pasa siempre por PosFcmService.onMessageReceived,
      * que lo pinta y abre el panel del transportista al tocarlo.
+     *
+     * Devuelve el resultado para que el panel pueda avisar por qué no se envió
+     * (push deshabilitado, sin token de la app, error de Firebase...).
      */
-    function enviar_push_transportista(mysqli $conexion, int $transportistaId, string $titulo, string $cuerpo, array $data = []): void
+    function enviar_push_transportista(mysqli $conexion, int $transportistaId, string $titulo, string $cuerpo, array $data = []): array
     {
-        if (!push_habilitado() || $transportistaId <= 0) return;
+        if (!push_habilitado()) {
+            return ['ok' => false, 'sent' => 0, 'msg' => 'Las notificaciones push no están habilitadas en el servidor.'];
+        }
+        if ($transportistaId <= 0) {
+            return ['ok' => false, 'sent' => 0, 'msg' => 'Transportista inválido.'];
+        }
 
         try {
             $project = push_project_id();
-            if (!$project) return;
+            if (!$project) {
+                error_log('FCM transportista: falta FCM_SERVICE_ACCOUNT/FCM_PROJECT_ID');
+                return ['ok' => false, 'sent' => 0, 'msg' => 'Firebase no está configurado en el servidor.'];
+            }
 
             $access = push_access_token();
-            if (!$access) return;
+            if (!$access) {
+                return ['ok' => false, 'sent' => 0, 'msg' => 'No se pudo autenticar con Firebase.'];
+            }
 
             $stmt = $conexion->prepare("SELECT id, token FROM push_dispositivos WHERE tipo = 'transp' AND usuario_id = ?");
+            if (!$stmt) {
+                error_log('FCM transportista: ' . $conexion->error);
+                return ['ok' => false, 'sent' => 0, 'msg' => 'No se pudieron leer los dispositivos del transportista.'];
+            }
             $stmt->bind_param('i', $transportistaId);
             $stmt->execute();
             $dispositivos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
-            if (!$dispositivos) return;
+            if (!$dispositivos) {
+                error_log('FCM transportista: sin token para transportista ' . $transportistaId);
+                return ['ok' => false, 'sent' => 0, 'msg' => 'El transportista no tiene la app con notificaciones registradas.'];
+            }
 
             $data['titulo'] = $titulo;
             $data['mensaje'] = $cuerpo;
@@ -264,6 +352,8 @@ if (!function_exists('push_habilitado')) {
                 'Content-Type: application/json',
             ];
 
+            $enviados = 0;
+            $ultimoError = '';
             foreach ($dispositivos as $d) {
                 $mensaje = [
                     'token'   => $d['token'],
@@ -283,12 +373,22 @@ if (!function_exists('push_habilitado')) {
                     $del->bind_param('i', $d['id']);
                     $del->execute();
                     $del->close();
+                    $ultimoError = 'La app del transportista tiene un token vencido; debe abrir la app para registrarse de nuevo.';
                 } elseif ($r['status'] < 200 || $r['status'] >= 300) {
                     error_log('FCM transportista: error ' . $r['status'] . ' ' . substr($cuerpoError, 0, 300));
+                    $ultimoError = 'Firebase rechazó la notificación (' . $r['status'] . ').';
+                } else {
+                    $enviados++;
                 }
             }
+
+            if ($enviados > 0) {
+                return ['ok' => true, 'sent' => $enviados, 'msg' => ''];
+            }
+            return ['ok' => false, 'sent' => 0, 'msg' => $ultimoError ?: 'Firebase rechazó la notificación.'];
         } catch (Throwable $e) {
             error_log('FCM transportista: ' . $e->getMessage());
+            return ['ok' => false, 'sent' => 0, 'msg' => 'Error interno al enviar la notificación.'];
         }
     }
 }
