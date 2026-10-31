@@ -35,7 +35,8 @@ class Notificaciones
     public static function paraUsuario(mysqli $conexion, int $usuario_id, int $limite = 20): array
     {
         $stmt = $conexion->prepare(
-            "SELECT id, titulo, cuerpo, tipo, canal, leida, created_at
+            "SELECT id, titulo, cuerpo, tipo, canal, leida, created_at,
+                    TIMESTAMPDIFF(SECOND, created_at, NOW()) AS segundos
              FROM notificaciones
              WHERE usuario_id = ?
              ORDER BY created_at DESC

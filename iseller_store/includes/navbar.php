@@ -209,8 +209,9 @@ if (isLoggedIn()) {
         return '<i class="bi bi-info-circle"></i>';
     }
 
-    function timeAgo(str) {
-        const s = Math.floor((Date.now() - new Date(str.replace(' ', 'T') + 'Z').getTime()) / 1000);
+    function timeAgo(segundos) {
+        // La antigüedad la calcula MySQL: no depende de la zona horaria del navegador.
+        const s = Math.max(0, Math.floor(Number(segundos) || 0));
         if (s < 60) return 'ahora';
         if (s < 3600) return Math.floor(s / 60) + 'm';
         if (s < 86400) return Math.floor(s / 3600) + 'h';
@@ -233,7 +234,7 @@ if (isLoggedIn()) {
                     '<div class="notif-icon ' + n.tipo + '">' + iconFor(n.tipo) + '</div>' +
                     '<div class="notif-body"><div class="notif-title">' + n.titulo + '</div>' +
                     '<div class="notif-text">' + (n.cuerpo || '') + '</div></div>' +
-                    '<div class="notif-time">' + timeAgo(n.created_at) + '</div>' +
+                    '<div class="notif-time">' + timeAgo(n.segundos) + '</div>' +
                     (n.leida == 0 ? '<div class="notif-dot"></div>' : '');
                 div.addEventListener('click', async function() {
                     if (n.leida == 0) {

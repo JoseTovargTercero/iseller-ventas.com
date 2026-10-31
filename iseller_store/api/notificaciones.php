@@ -17,7 +17,8 @@ switch ($action) {
     case 'listar':
         $limite = min((int)($_GET['limite'] ?? 20), 50);
         $stmt = $conexion_store->prepare(
-            "SELECT id, titulo, cuerpo, tipo, enlace, leida, created_at
+            "SELECT id, titulo, cuerpo, tipo, enlace, leida, created_at,
+                    TIMESTAMPDIFF(SECOND, created_at, NOW()) AS segundos
              FROM tienda_cliente_notificaciones
              WHERE usuario_id = ?
              ORDER BY created_at DESC

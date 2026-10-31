@@ -155,10 +155,9 @@ function topnav()
                 closeAll();
             });
 
-            function timeAgo(str) {
-                const d = new Date(str.replace(' ', 'T') + 'Z');
-                const now = new Date();
-                const s = Math.floor((now - d) / 1000);
+            function timeAgo(segundos) {
+                // La antigüedad la calcula MySQL: no depende de la zona horaria del navegador.
+                const s = Math.max(0, Math.floor(Number(segundos) || 0));
                 if (s < 60) return 'ahora';
                 if (s < 3600) return Math.floor(s / 60) + 'm';
                 if (s < 86400) return Math.floor(s / 3600) + 'h';
@@ -197,7 +196,7 @@ function topnav()
                         '<div class="notif-title">' + escHtml(n.titulo) + '</div>' +
                         '<div class="notif-text">' + escHtml(n.cuerpo) + '</div>' +
                         '</div>' +
-                        '<div class="notif-time">' + timeAgo(n.created_at) + '</div>' +
+                        '<div class="notif-time">' + timeAgo(n.segundos) + '</div>' +
                         (n.leida == 0 ? '<div class="notif-dot"></div>' : '');
                     div.addEventListener('click', function() {
                         if (n.leida == 0) {

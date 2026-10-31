@@ -261,6 +261,10 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   dirección y referencia. Si se niega o el GPS falla, formulario manual.
 - Agregar producto: modal de cantidad con Aceptar/Cancelar; cancelar lo quita
   del carrito. La tarjeta muestra la cantidad en el carrito, sin stepper inline.
+- Mis mercados: pestaña con listas guardadas por tienda (crear con nombre,
+  agregar productos, editar, eliminar y cargar al carrito). El carrito permite
+  guardar cada grupo de tienda como mercado; al cargar se respeta el stock
+  actual. El editor pagina el catálogo completo de la tienda (40 por página).
 - Estado de pedido `transportista_asignado` (delivery, previo a `enviada`)
   reconocido en la píldora de estado.
 - Fallback de logo (iSeller) y portada (`bg-hero-2a.webp`) para tiendas sin
