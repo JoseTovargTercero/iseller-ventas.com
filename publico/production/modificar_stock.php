@@ -27,6 +27,35 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
     $stmt->close();
+
+    // Todos los productos con stock del negocio, con su sucursal. El filtro se
+    // hace en el navegador con Fuse: no hay que esperar a un AJAX por cada tecla.
+    $stockProductos = [];
+    $stmtStock = $conexion->prepare("
+        SELECT S.id_producto, S.id_sucursal, S.stock, P.nombre
+        FROM stock AS S
+        INNER JOIN productos AS P ON P.id = S.id_producto
+        WHERE S.bss_id = ? AND P.activo = 0 AND P.mayor IS NULL
+        ORDER BY P.nombre ASC
+    ");
+    if ($stmtStock) {
+        $stmtStock->bind_param('i', $bss_id);
+        $stmtStock->execute();
+        $resStock = $stmtStock->get_result();
+        if ($resStock) {
+            while ($rowStock = $resStock->fetch_assoc()) {
+                $claveStock = (int)$rowStock['id_sucursal'] . '-' . (int)$rowStock['id_producto'];
+                $stockProductos[$claveStock] = [
+                    'id' => (int)$rowStock['id_producto'],
+                    'nombre' => $rowStock['nombre'],
+                    'sucursal' => (int)$rowStock['id_sucursal'],
+                    'stock' => (float)$rowStock['stock'],
+                ];
+            }
+        }
+        $stmtStock->close();
+    }
+    $stockProductos = array_values($stockProductos);
 ?>
     <!DOCTYPE html>
     <html lang='es'>
@@ -92,7 +121,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <div class="col-lg-8">
                                                         <label for='producto'>Seleccione el producto</label>
                                                         <select id="producto" name="producto" class="form-control" required>
-                                                            <option>-- Indique un filtro --</option>
+                                                            <option value="">-- Indique un filtro --</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -122,144 +151,114 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <script src="../build/js/custom.js"></script>
         <script src="../build/js/modal.js"></script>
         <script src="js/nombre_pagina.js"></script>
+        <script src="../vendors/fuse/fuse.min.js"></script>
 
         <script>
-            let precio_consultado
-            let producto_consultado
+            const STOCK_PRODUCTOS = <?= json_encode($stockProductos, JSON_UNESCAPED_UNICODE) ?>;
+            const SUCURSAL_FIJA = <?= json_encode($tipo_u == 2 ? (int)$_SESSION['sucursal'] : null) ?>;
 
-            // Consultar productos
-            function obtener_registros(producto) {
-                var $sucursal = $('#sucursal');
-                var sucursal = $sucursal.length ? $sucursal.val() : '';
+            let productosSucursal = [];
+            let fuseProductos = null;
 
-                if ($('#sucursal').length && $('#sucursal').val() == '') {
-                    $('#codigo').val('')
-                    Alerta.toast('error', 'Debe seleccionar una sucursal antes de buscar el producto')
-                    return
+            function sucursalSeleccionada() {
+                const select = document.getElementById('sucursal');
+                const valor = select ? select.value : '';
+                return valor !== '' ? String(valor) : (SUCURSAL_FIJA !== null ? String(SUCURSAL_FIJA) : '');
+            }
+
+            // Índice Fuse con los productos que existen en la sucursal elegida.
+            function cargarIndiceProductos() {
+                const sucursal = sucursalSeleccionada();
+                const porId = {};
+
+                if (sucursal !== '') {
+                    STOCK_PRODUCTOS.forEach(function(p) {
+                        if (String(p.sucursal) !== sucursal) return;
+                        porId[p.id] = {
+                            id: p.id,
+                            nombre: p.nombre,
+                            stock: p.stock
+                        };
+                    });
                 }
-                $.ajax({
-                    url: "../../configurar/consulta_codigo_producto.php",
-                    type: "POST",
-                    dataType: "json", // <-- importante: estamos esperando JSON ahora
-                    data: {
-                        producto: producto,
-                        sucursal: sucursal
-                    },
-                }).done(function(resultado2) {
-                    const $select = $("#producto");
-                    $select.empty(); // Limpia opciones anteriores
 
-                    if (resultado2.length > 0) {
-                        // Agrega las opciones recibidas
-                        $select.append(`<option value="">-- Seleccione --</option>`);
-                        resultado2.forEach(function(item) {
-                            $select.append(`<option value="${item.id}">${item.nombre}</option>`);
-                        });
-                    } else {
-                        // Indique un filtro
-                        $select.append('<option value="">-- Indique un filtro --</option>');
-                    }
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error("Error en la petición AJAX:", textStatus, errorThrown);
-                    $("#producto").html('<option >-- Error al cargar --</option>');
+                productosSucursal = Object.values(porId);
+                fuseProductos = new Fuse(productosSucursal, {
+                    keys: ['nombre'],
+                    threshold: 0.35,
+                    ignoreLocation: true,
+                    ignoreDiacritics: true
                 });
             }
 
-            // Evento al escribir en #codigo
-            $(document).on("keyup", "#codigo", function() {
-                if ($(this).val().trim() !== "") {
-                    obtener_registros($(this).val());
-                } else {
-                    $("#producto").html('<option value="">-- Indique un filtro --</option>');
+            function ponerOpcionUnica(texto) {
+                const select = document.getElementById('producto');
+                select.innerHTML = '';
+                select.add(new Option(texto, ''));
+                document.getElementById('cantidad_stock').value = '';
+            }
+
+            function filtrarProductos(texto) {
+                const sucursal = sucursalSeleccionada();
+
+                if (sucursal === '') {
+                    ponerOpcionUnica('-- Seleccione una sucursal --');
+                    return;
                 }
-            });
+                if (!texto || !fuseProductos) {
+                    ponerOpcionUnica('-- Indique un filtro --');
+                    return;
+                }
 
+                const resultados = fuseProductos.search(texto).slice(0, 100);
+                if (resultados.length === 0) {
+                    ponerOpcionUnica('-- Sin coincidencias --');
+                    return;
+                }
 
-            // Resetear formulario
+                const select = document.getElementById('producto');
+                select.innerHTML = '';
+                select.add(new Option('-- Seleccione --', ''));
+                resultados.forEach(function(r) {
+                    select.add(new Option(r.item.nombre, r.item.id));
+                });
+                document.getElementById('cantidad_stock').value = '';
+            }
+
+            // Resetear formulario conservando la sucursal elegida.
             function form_reset() {
                 const form = document.getElementById('data-form');
-                const select = document.getElementById('sucursal'); // Asegúrate de que el select tenga este ID
+                const select = document.getElementById('sucursal');
 
-                const selectedValue = select.value; // Guarda la opción seleccionada
-                form.reset(); // Resetea el formulario
-                select.value = selectedValue; // Restablece la opción seleccionada
+                const selectedValue = select ? select.value : '';
+                form.reset();
+                if (select) select.value = selectedValue;
+                cargarIndiceProductos();
             }
 
-            $(document).on('change', '#sucursal', function() {
-                form_reset()
-            }); // resetear form al cambiar el select
-
-
-            $(document).on('change', '#producto', function() {
-                var producto = $(this).val();
-                if (producto != "") {
-                    buscarProducto(producto);
-                }
+            $(document).on('input', '#codigo', function() {
+                filtrarProductos($(this).val().trim());
             });
 
+            $(document).on('change', '#sucursal', function() {
+                form_reset();
+            });
 
-            //Consultar informacion del producto
-            function buscarProducto(codigo) {
-
-                var $sucursal = $('#sucursal');
-                var sucursal = $sucursal.length ? $sucursal.val() : '';
-
-                if ($('#sucursal').length && $('#sucursal').val() == '') {
-                    $('#codigo').val('')
-                    Alerta.toast('error', 'Debe seleccionar una sucursal antes de seleccionar el producto')
-                    return
+            $(document).on('change', '#producto', function() {
+                const id = $(this).val();
+                if (id === '') {
+                    document.getElementById('cantidad_stock').value = '';
+                    return;
                 }
+                const prod = productosSucursal.find(function(p) {
+                    return String(p.id) === String(id);
+                });
+                document.getElementById('cantidad_stock').value = prod ? prod.stock : '';
+            });
 
-                fetch('precio_producto.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: new URLSearchParams({
-                            producto: codigo,
-                            sucursal: sucursal
-                        })
-                    })
-                    .then(res => res.text())
-                    .then(text => {
-                        console.log('respuesta crudda ' + text)
-                        let res;
-                        try {
-                            res = JSON.parse(text);
-                        } catch (e) {
-                            console.error("Error al parsear JSON:", e);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Respuesta no válida',
-                                text: 'El servidor no devolvió un JSON válido.'
-                            });
-                            return;
-                        }
-
-                        if (res.success) {
-                            precio_consultado = res.data.precio_compra;
-                            producto_consultado = res.data.nombre
-
-                            document.getElementById('cantidad_stock').value = res.data.stock;
-                            //        document.querySelector('[name=nombrepor]').value = res.data.nombre;
-                        } else {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Producto no encontrado',
-                                text: 'Verifica el código ingresado'
-                            });
-                        }
-
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error de conexión',
-                            text: 'No se pudo obtener los datos del producto'
-                        });
-                    });
-            }
+            $(document).ready(function() {
+                cargarIndiceProductos();
+            });
 
 
             // ENVIAR LA NUEVA COMPRA AL BACK
@@ -297,7 +296,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                         if (json.success) {
                             Alerta.mostrar('success', json.message);
-                            form.reset(); // Opcional: limpia el formulario
+
+                            // Sin reset: la sucursal (y el filtro) se quedan como estaban.
+                            // Se actualiza el stock en memoria para la próxima búsqueda.
+                            const sucursal = sucursalSeleccionada();
+                            const productoId = form.producto.value;
+                            const nuevaCantidad = parseFloat(form.cantidad_stock.value);
+                            const item = STOCK_PRODUCTOS.find(function(p) {
+                                return String(p.sucursal) === sucursal && String(p.id) === String(productoId);
+                            });
+                            if (item && !isNaN(nuevaCantidad)) item.stock = nuevaCantidad;
+                            cargarIndiceProductos();
                         } else {
                             Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
                         }

@@ -65,13 +65,18 @@ if ($hasCatTable) {
     $cols = $conexion->query("SHOW COLUMNS FROM productos LIKE 'categoria'");
     $hasCatCol = $cols && $cols->num_rows > 0;
 }
+$hasGrupoCol = false;
+if ($hasCatTable) {
+    $colsGrupo = $conexion->query("SHOW COLUMNS FROM categorias_producto LIKE 'grupo'");
+    $hasGrupoCol = $colsGrupo && $colsGrupo->num_rows > 0;
+}
 
 $catJoin = $hasCatTable && $hasCatCol
     ? "LEFT JOIN categorias_producto AS C ON C.id = P.categoria"
     : "";
 $catSelect = $hasCatTable && $hasCatCol
-    ? ", P.categoria, C.nombre AS categoria_nombre"
-    : ", NULL AS categoria, NULL AS categoria_nombre";
+    ? ", P.categoria, C.nombre AS categoria_nombre" . ($hasGrupoCol ? ", C.grupo AS categoria_grupo" : ", NULL AS categoria_grupo")
+    : ", NULL AS categoria, NULL AS categoria_nombre, NULL AS categoria_grupo";
 
 $sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo, MAX(NP.foto_url) AS foto_url $catSelect
 FROM stock AS S
@@ -137,6 +142,7 @@ while ($row = $result->fetch_assoc()) {
             "mayor" =>  $row['mayor'],
             "categoria" =>  $row['categoria'],
             "categoria_nombre" =>  $row['categoria_nombre'],
+            "categoria_grupo" =>  $row['categoria_grupo'],
             "foto_url" =>  $row['foto_url'],
             "imagen" =>  $imgRef,
 

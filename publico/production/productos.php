@@ -735,7 +735,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                         const filaNueva = tabla.row.add([
                                             `<div class="foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" data-producto-id="${row.id}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}"><ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon></div>`,
-                                            row.nombre + `<button type="button" class="btn-foto-google" data-id="${row.id}" title="Buscar foto en Google Imágenes"><ion-icon name="logo-google"></ion-icon></button><br><small class="${row.categoria_nombre ? 'text-muted' : 'text-danger'}">${row.categoria_nombre || 'Sin categoría'}</small>`,
+                                            row.nombre + `<button type="button" class="btn-foto-google" data-id="${row.id}" title="Buscar foto en Google Imágenes"><ion-icon name="logo-google"></ion-icon></button><br><small class="${row.categoria_grupo ? 'text-muted' : 'text-danger'}">${row.categoria_grupo || 'Sin grupo'}</small>`,
                                             row.precio_compra,
                                             row.cantidad_unidades,
                                             row.porcentaje,

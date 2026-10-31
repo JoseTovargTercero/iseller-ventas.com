@@ -42,7 +42,7 @@ if ($result->num_rows === 0) {
 
 // Actualizar el stock
 $stmt = $conexion->prepare("UPDATE stock SET stock=? WHERE id_producto=? AND id_sucursal=? AND bss_id=?");
-$stmt->bind_param("iiii", $cantidad_stock, $id, $sucursal, $bss_id);
+$stmt->bind_param("diii", $cantidad_stock, $id, $sucursal, $bss_id);
 $stmt->execute();
 $stmt->close();
 
