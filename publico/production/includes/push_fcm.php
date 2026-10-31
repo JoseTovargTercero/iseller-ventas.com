@@ -120,10 +120,19 @@ if (!function_exists('push_habilitado')) {
     function push_project_id(): ?string
     {
         $env = trim($_ENV['FCM_PROJECT_ID'] ?? '');
-        if ($env !== '') return $env;
-
         $sa = push_service_account();
-        return !empty($sa['project_id']) ? (string)$sa['project_id'] : null;
+        $saProject = !empty($sa['project_id']) ? (string)$sa['project_id'] : null;
+
+        if ($env === '') return $saProject;
+
+        // FCM v1 firma con la service account: si el .env apunta a otro
+        // proyecto, Google responde 403 (SenderId mismatch). Manda el del JSON.
+        if ($saProject !== null && $env !== $saProject) {
+            error_log('FCM: FCM_PROJECT_ID (' . $env . ') no coincide con la service account (' . $saProject . '); se usa ' . $saProject);
+            return $saProject;
+        }
+
+        return $env;
     }
 
     /** JWT firmado (RS256) para pedir el access token. Separado para poder verificarlo en pruebas. */
@@ -370,19 +379,27 @@ if (!function_exists('push_habilitado')) {
                 $tokenMuerto = $r['status'] === 404
                     || stripos($cuerpoError, 'UNREGISTERED') !== false
                     || stripos($cuerpoError, 'not a valid FCM registration token') !== false;
+                $tokenAjeno = stripos($cuerpoError, 'SenderId mismatch') !== false;
 
-                if ($tokenMuerto) {
+                if ($tokenMuerto || $tokenAjeno) {
                     $del = $conexion->prepare("DELETE FROM push_dispositivos WHERE id = ?");
                     $del->bind_param('i', $d['id']);
                     $del->execute();
                     $del->close();
-                    $ultimoError = 'La app del transportista tiene un token vencido; debe abrir la app para registrarse de nuevo.';
+                    $ultimoError = $tokenAjeno
+                        ? 'El token de la app pertenece a otro proyecto Firebase. Abre la app del transportista para registrarlo de nuevo.'
+                        : 'La app del transportista tiene un token vencido; debe abrir la app para registrarse de nuevo.';
                 } elseif ($r['status'] < 200 || $r['status'] >= 300) {
+                    $errorGoogle = '';
+                    $jsonError = json_decode($cuerpoError, true);
+                    if (!empty($jsonError['error']['message'])) {
+                        $errorGoogle = ' ' . $jsonError['error']['message'];
+                    }
                     $pista = $r['status'] === 403
                         ? ' (revisa que FCM_SERVICE_ACCOUNT sea del MISMO proyecto Firebase que google-services.json y que FCM_PROJECT_ID no apunte a otro proyecto)'
                         : '';
-                    error_log('FCM transportista: error ' . $r['status'] . $pista . ' ' . substr($cuerpoError, 0, 300));
-                    $ultimoError = 'Firebase rechazó la notificación (' . $r['status'] . ').';
+                    error_log('FCM transportista: error ' . $r['status'] . ' proyecto=' . push_project_id() . $pista . ' ' . substr($cuerpoError, 0, 500));
+                    $ultimoError = 'Firebase rechazó la notificación (' . $r['status'] . ').' . mb_substr($errorGoogle, 0, 180);
                 } else {
                     $enviados++;
                 }
