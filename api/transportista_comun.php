@@ -152,6 +152,36 @@ function asegurarTablas($conexion): void
                 REFERENCES transportistas (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci"
     );
+
+    // CREATE TABLE IF NOT EXISTS no añade columnas a tablas ya creadas en producción.
+    $columnas = [
+        'transportistas' => [
+            'foto_url'    => 'VARCHAR(255) DEFAULT NULL',
+            'moto_marca'  => 'VARCHAR(60) DEFAULT NULL',
+            'moto_modelo' => 'VARCHAR(60) DEFAULT NULL',
+            'moto_color'  => 'VARCHAR(40) DEFAULT NULL',
+        ],
+        'transportista_servicios' => [
+            'lat'          => 'DECIMAL(10,7) DEFAULT NULL',
+            'lng'          => 'DECIMAL(10,7) DEFAULT NULL',
+            'entregado_en' => 'DATETIME DEFAULT NULL',
+        ],
+    ];
+    foreach ($columnas as $tabla => $definiciones) {
+        foreach ($definiciones as $columna => $definicion) {
+            $stmt = $conexion->prepare(
+                "SELECT 1 FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1"
+            );
+            $stmt->bind_param('ss', $tabla, $columna);
+            $stmt->execute();
+            $existe = (bool)$stmt->get_result()->fetch_row();
+            $stmt->close();
+            if (!$existe) {
+                $conexion->query("ALTER TABLE `$tabla` ADD COLUMN `$columna` $definicion");
+            }
+        }
+    }
 }
 
 function normalizarCedula(string $cedula): string

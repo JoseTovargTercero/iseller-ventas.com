@@ -196,6 +196,11 @@ if (!$tienda_slug && $estadoFiltro !== '') {
     $types .= "s";
 }
 
+// Categoría especial "Al mayor": solo productos al mayor (pacas/cajas/sacos).
+if ((string)($_GET['mayor'] ?? '') === '1') {
+    $where .= " AND p.mayor = '1'";
+}
+
 if ($mode === 'search_index') {
     $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor,
                    MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0

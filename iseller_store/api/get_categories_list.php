@@ -48,5 +48,37 @@ if ($result) {
     }
 }
 
+// Categoría especial para los productos al mayor con al menos una paca disponible.
+$sqlMayor = "
+    SELECT COUNT(DISTINCT p.id) AS total
+    FROM productos p
+    INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
+    INNER JOIN negocio n ON n.id = np.negocio_id
+    INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id
+         AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+    LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
+    WHERE p.activo = 0 AND p.mayor = '1' AND p.cantidad_unidades > 0
+      AND sb.stock >= p.cantidad_unidades
+      AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
+";
+if ($tienda_slug !== '') {
+    $sqlMayor .= " AND n.slug = ?";
+    $stmtMayor = $conexion->prepare($sqlMayor);
+    if ($stmtMayor) {
+        $stmtMayor->bind_param("s", $tienda_slug);
+        $stmtMayor->execute();
+        $resMayor = $stmtMayor->get_result()->fetch_assoc();
+        $stmtMayor->close();
+        if ((int)($resMayor['total'] ?? 0) > 0) {
+            $categories[] = ['id' => 'mayor', 'nombre' => 'Al mayor'];
+        }
+    }
+} else {
+    $resMayor = $conexion->query($sqlMayor);
+    if ($resMayor && (int)($resMayor->fetch_assoc()['total'] ?? 0) > 0) {
+        $categories[] = ['id' => 'mayor', 'nombre' => 'Al mayor'];
+    }
+}
+
 echo json_encode(['success' => true, 'categories' => $categories]);
 ?>

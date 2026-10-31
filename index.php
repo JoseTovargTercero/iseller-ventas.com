@@ -282,6 +282,7 @@ if (!$es_tienda_individual) {
 // Grupos del marketplace: solo los que tienen productos publicados.
 $grupos_home = [];
 $grupo_activo = null;
+$mayor_activo = false;
 if (!$es_tienda_individual) {
     $resGruposHome = $conexion->query("
         SELECT c.grupo,
@@ -306,10 +307,45 @@ if (!$es_tienda_individual) {
         $grupos_home = $resGruposHome->fetch_all(MYSQLI_ASSOC);
     }
 
+    // Categoría especial "Al mayor": productos con al menos una paca cubierta.
+    $resMayorHome = $conexion->query("
+        SELECT COUNT(DISTINCT p.id) AS total
+        FROM productos p
+        INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
+        INNER JOIN negocio n ON n.id = np.negocio_id
+        INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id
+             AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+        LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
+        WHERE p.activo = 0 AND p.mayor = '1' AND p.cantidad_unidades > 0
+          AND sb.stock >= p.cantidad_unidades
+          AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
+    ");
+    $total_mayor_home = $resMayorHome ? (int)($resMayorHome->fetch_assoc()['total'] ?? 0) : 0;
+    if ($total_mayor_home > 0) {
+        array_unshift($grupos_home, [
+            'grupo' => 'Al mayor',
+            'total_productos' => $total_mayor_home,
+            'foto_url' => '',
+            'producto_id' => 0,
+            'es_mayor' => true
+        ]);
+    }
+
     $grupoGet = trim((string)($_GET['grupo'] ?? ''));
     if ($grupoGet !== '') {
         foreach ($grupos_home as $grupoHome) {
             if ($grupoHome['grupo'] === $grupoGet) {
+                $grupo_activo = $grupoHome;
+                break;
+            }
+        }
+    }
+
+    // La categoría "Al mayor" se activa con ?mayor=1.
+    $mayor_activo = (($_GET['mayor'] ?? '') === '1');
+    if ($mayor_activo) {
+        foreach ($grupos_home as $grupoHome) {
+            if (!empty($grupoHome['es_mayor'])) {
                 $grupo_activo = $grupoHome;
                 break;
             }
@@ -346,6 +382,7 @@ function home_categoria_icono(?string $grupo): string
         'Jardinería y agricultura' => 'bi-flower2',
         'Farmacia y bienestar' => 'bi-capsule',
         'Otras categorías' => 'bi-grid',
+        'Al mayor' => 'bi-box-seam',
     ];
     return $iconos[$grupo ?? ''] ?? 'bi-tag';
 }
@@ -1794,6 +1831,24 @@ $zona_tienda = $es_tienda_individual
             background: linear-gradient(145deg, #f8faf9 0%, #eef6f1 50%, #e8f5ec 100%);
         }
 
+        /* Badge de unidades por paca/caja en productos al mayor */
+        .product-mayor-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 3;
+            background: #1a7f4b;
+            color: #fff;
+            border-radius: 999px;
+            padding: 2px 9px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            line-height: 1.5;
+            letter-spacing: 0.02em;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+            pointer-events: none;
+        }
+
         .product-img-wrapper.no-img::before {
             content: '';
             position: absolute;
@@ -3134,6 +3189,10 @@ $zona_tienda = $es_tienda_individual
                         <?php foreach ($grupos_home as $i => $grupoHome):
                             $grupoActivo = $grupo_activo && $grupo_activo['grupo'] === $grupoHome['grupo'];
                             $totalGrupo = (int)$grupoHome['total_productos'];
+                            $esMayorCard = !empty($grupoHome['es_mayor']);
+                            $hrefGrupo = $esMayorCard
+                                ? $script_dir . '/?mayor=1#productos'
+                                : $script_dir . '/?grupo=' . urlencode($grupoHome['grupo']) . '#productos';
                             $fotoGrupo = trim((string)($grupoHome['foto_url'] ?? ''));
                             $prodGrupo = (int)($grupoHome['producto_id'] ?? 0);
                             $imgGrupo = '';
@@ -3147,7 +3206,7 @@ $zona_tienda = $es_tienda_individual
                                 }
                             }
                         ?>
-                            <a href="<?= htmlspecialchars($script_dir . '/') ?>?grupo=<?= urlencode($grupoHome['grupo']) ?>#productos"
+                            <a href="<?= htmlspecialchars($hrefGrupo) ?>"
                                 class="home-cat-card<?= $i >= 12 ? ' home-cat-extra' : '' ?><?= $grupoActivo ? ' active' : '' ?>"
                                 <?= $grupoActivo ? 'aria-current="page"' : '' ?>>
                                 <span class="home-cat-icon">
@@ -3585,6 +3644,7 @@ $zona_tienda = $es_tienda_individual
                     <!-- Image Side (Protruding) -->
                     <div class="col-md-5">
                         <div class="product-modal-img-container">
+                            <span id="modal-product-mayor" class="product-mayor-badge" style="display:none;"></span>
                             <img src="" id="modal-product-img" class="product-modal-img" alt="Product">
                             <div id="modal-no-img" class="modal-no-img" style="display:none;">
                                 <i class="bi bi-box-seam"></i>
@@ -3892,7 +3952,7 @@ $zona_tienda = $es_tienda_individual
 
                         return `<div class="destacado-card" onclick="openProductModal('${esc(p.id)}')">
                             <div class="product-card">
-                                <div class="product-img-wrapper ${p.img ? '' : 'no-img'}">${img}</div>
+                                <div class="product-img-wrapper ${p.img ? '' : 'no-img'}">${String(p.mayor) === '1' ? `<span class="product-mayor-badge" title="${p.cantidadPaca} unidades por paca">x${p.cantidadPaca}</span>` : ''}${img}</div>
                                 <div class="product-body"><h3 class="product-title" title="${nombre}">${nombre}</h3>${p.categorias ? `<div class="product-cat"><i class="bi bi-tag"></i> ${esc(p.categorias)}</div>` : ''}</div>
                                 <div class="price-container">
                                     <div class="price-main"><span class="price-dolar">$${formatNumber(recortarADosDecimales(p.precio_dolar_visible))}</span></div>
@@ -4242,7 +4302,8 @@ $zona_tienda = $es_tienda_individual
         let hasMore = true;
         let currentSort = ''; // Sorting parameter
         let currentCategory = ''; // Category parameter (filtro de la tienda)
-        let currentGroup = <?= $grupo_activo ? json_encode($grupo_activo['grupo'], JSON_UNESCAPED_UNICODE) : "''" ?>; // Grupo (home del marketplace)
+        let currentGroup = <?= ($grupo_activo && empty($grupo_activo['es_mayor'])) ? json_encode($grupo_activo['grupo'], JSON_UNESCAPED_UNICODE) : "''" ?>; // Grupo (home del marketplace)
+        let currentMayor = <?= ($grupo_activo && !empty($grupo_activo['es_mayor'])) ? 'true' : 'false' ?>; // Categoría especial "Al mayor"
         const productsGrid = document.getElementById("products-grid");
 
         // Load Categories into the searchable filter
@@ -4297,7 +4358,8 @@ $zona_tienda = $es_tienda_individual
         });
 
         function setActiveCategory(catId) {
-            currentCategory = catId;
+            currentMayor = String(catId) === 'mayor';
+            currentCategory = currentMayor ? '' : catId;
             currentGroup = '';
             currentPage = 1;
             hasMore = true;
@@ -4361,7 +4423,7 @@ $zona_tienda = $es_tienda_individual
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tiendaSlugParam = urlParams.has('tienda_slug') ? '&tienda_slug=' + urlParams.get('tienda_slug') : '<?= !empty($tienda_slug) ? '&tienda_slug=' . urlencode($tienda_slug) : '' ?>';
-                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}&grupo=${encodeURIComponent(currentGroup)}${tiendaSlugParam}${estadoParam}`);
+                const res = await fetch(`api/productos.php?mode=grid&page=${pageToLoad}&limit=18&order=${currentSort}&category=${currentCategory}&grupo=${encodeURIComponent(currentGroup)}${currentMayor ? '&mayor=1' : ''}${tiendaSlugParam}${estadoParam}`);
                 const data = await res.json();
                 if (token !== loadToken) return; // respuesta vieja: ya hay otro filtro cargando
 
@@ -4473,6 +4535,7 @@ $zona_tienda = $es_tienda_individual
                     <div class="product-item">
                         <div class="product-card ${opacityClass}">
                             <div class="product-img-wrapper ${hasImg ? '' : 'no-img'}" style="cursor: pointer;" onclick="openProductModal('${producto.id}')">
+                                ${esMayor ? `<span class="product-mayor-badge" title="${producto.cantidadPaca} unidades por paca">x${producto.cantidadPaca}</span>` : ''}
                                 ${hasImg
                                     ? `<img src="${imgSrc}" loading="lazy" class="product-img" alt="${producto.nombre}" onerror="productImgError(this)">`
                                     : `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`
@@ -4525,6 +4588,17 @@ $zona_tienda = $es_tienda_individual
             // Populate Elements
             document.getElementById('modal-product-name').textContent = producto.nombre;
             document.getElementById('modal-product-code').textContent = producto.codigo || 'N/A';
+
+            const modalMayor = document.getElementById('modal-product-mayor');
+            if (modalMayor) {
+                if (String(producto.mayor) === '1' && producto.cantidadPaca) {
+                    modalMayor.textContent = 'x' + producto.cantidadPaca;
+                    modalMayor.title = producto.cantidadPaca + ' unidades por paca';
+                    modalMayor.style.display = '';
+                } else {
+                    modalMayor.style.display = 'none';
+                }
+            }
 
             // Mostrar tienda en el modal (solo en modo Marketplace)
             const esModoMarketplace = <?= $es_tienda_individual ? 'false' : 'true' ?>;
