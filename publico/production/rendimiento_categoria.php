@@ -805,7 +805,7 @@ if ($tipo_u === 1) {
                     </div>
                     <div class="panel-body p-0">
                         <div style="overflow-x: auto;">
-                            <table class="tabla-productos-cat">
+                            <table id="tablaProductosCat" class="tabla-productos-cat">
                                 <thead>
                                     <tr>
                                         <th>Producto</th>
@@ -1210,7 +1210,7 @@ if ($tipo_u === 1) {
                     });
             }
 
-            tablaProductosCat = $('#tablaProductosCategoria').DataTable({
+            tablaProductosCat = $('#tablaProductosCat').DataTable({
                 dom: 't<"rend-dt-footer"lip>',
                 pageLength: 10,
                 lengthMenu: [

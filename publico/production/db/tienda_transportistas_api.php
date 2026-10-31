@@ -19,6 +19,41 @@ if ($action === 'listar') {
     exit;
 }
 
+if ($action === 'rendimiento') {
+    $periodo = (string)($_GET['periodo'] ?? 'dia');
+    if (!in_array($periodo, ['dia', 'semana', 'mes'], true)) {
+        $periodo = 'dia';
+    }
+
+    $fecha = DateTime::createFromFormat('!Y-m-d', (string)($_GET['fecha'] ?? ''));
+    if (!$fecha) {
+        $fecha = new DateTime('today');
+    }
+
+    if ($periodo === 'semana') {
+        $desde = (clone $fecha)->modify('-' . ((int)$fecha->format('N') - 1) . ' days');
+        $hasta = (clone $desde)->modify('+6 days');
+    } elseif ($periodo === 'mes') {
+        $desde = (clone $fecha)->modify('first day of this month');
+        $hasta = (clone $fecha)->modify('last day of this month');
+    } else {
+        $desde = clone $fecha;
+        $hasta = clone $fecha;
+    }
+
+    $desdeStr = $desde->format('Y-m-d');
+    $hastaStr = $hasta->format('Y-m-d');
+
+    echo json_encode([
+        'ok' => true,
+        'periodo' => $periodo,
+        'desde' => $desdeStr,
+        'hasta' => $hastaStr,
+        'data' => transportista_negocio_rendimiento($conexion, $bss_id, $desdeStr, $hastaStr),
+    ]);
+    exit;
+}
+
 if ($action === 'agregar') {
     $cedula = preg_replace('/\D/', '', (string)($_POST['cedula'] ?? ''));
 

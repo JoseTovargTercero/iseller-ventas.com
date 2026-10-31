@@ -87,7 +87,62 @@ $stmtC->close();
         .search-bar {
             display: flex;
             gap: .5rem;
+            flex-wrap: wrap;
             margin-bottom: 1rem;
+        }
+
+        .tp-stock-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--dash-text-muted);
+            white-space: nowrap;
+            cursor: pointer;
+            padding: 0 .25rem;
+        }
+
+        .tp-stock-filter .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .tp-stock-filter .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .tp-stock-filter .switch .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--dash-border);
+            border-radius: 24px;
+            transition: .3s;
+        }
+
+        .tp-stock-filter .switch .slider:before {
+            content: "";
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        .tp-stock-filter .switch input:checked + .slider {
+            background: var(--dash-mint);
+        }
+
+        .tp-stock-filter .switch input:checked + .slider:before {
+            transform: translateX(22px);
         }
 
         .search-bar input,
@@ -117,7 +172,7 @@ $stmtC->close();
 
         .tp-table {
             width: 100%;
-            min-width: 900px;
+            min-width: 1050px;
             border-collapse: separate;
             border-spacing: 0 .5rem;
             table-layout: fixed;
@@ -168,6 +223,85 @@ $stmtC->close();
             width: 190px;
         }
 
+        .tp-table .tp-col-stock {
+            width: 90px;
+        }
+
+        .tp-table .tp-stock-value {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--dash-text);
+        }
+
+        .tp-table .tp-stock-value.agotado {
+            color: var(--dash-danger);
+        }
+
+        .tp-stock-label {
+            display: none;
+        }
+
+        /* Controles de paginación de DataTables */
+        .tp-dt-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 12px 0 0;
+        }
+
+        .tp-dt-footer .dataTables_length {
+            margin-right: auto;
+            color: var(--dash-text-muted);
+            font-size: 12px;
+        }
+
+        .tp-dt-footer .dataTables_length select {
+            background: var(--dash-bg);
+            color: var(--dash-text);
+            border: 1px solid var(--dash-border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin: 0 4px;
+        }
+
+        .tp-dt-footer .dataTables_info {
+            color: var(--dash-text-muted);
+            font-size: 12px;
+            padding: 0;
+        }
+
+        .tp-dt-footer .dataTables_paginate {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0;
+        }
+
+        .tp-dt-footer .paginate_button {
+            color: var(--dash-text-muted) !important;
+            border: 1px solid var(--dash-border) !important;
+            border-radius: 6px !important;
+            padding: 4px 10px !important;
+            margin: 0 !important;
+            background: transparent !important;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        .tp-dt-footer .paginate_button.current {
+            background: rgba(45, 212, 160, 0.12) !important;
+            border-color: rgba(45, 212, 160, 0.5) !important;
+            color: var(--dash-mint) !important;
+        }
+
+        .tp-dt-footer .paginate_button.disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
         .tp-table .btn {
             width: 100%;
             margin: 0;
@@ -190,6 +324,12 @@ $stmtC->close();
             text-align: center;
             color: var(--dash-text-muted);
             font-size: 14px;
+            padding: 2rem;
+        }
+
+        .tp-table td.dataTables_empty {
+            text-align: center;
+            color: var(--dash-text-muted);
             padding: 2rem;
         }
 
@@ -876,7 +1016,7 @@ $stmtC->close();
         /* ── Móvil (WebView de la app) ───────────────────────────────── */
         @media (max-width: 768px) {
 
-            /* La tabla de 900px pasa a ser una tarjeta por producto */
+            /* La tabla ancha pasa a ser una tarjeta por producto */
             .tp-table {
                 display: block;
                 min-width: 0;
@@ -931,20 +1071,35 @@ $stmtC->close();
                 grid-column: 1 / -1;
             }
 
-            /* Publicar / Detalles / Foto / Eliminar: uno por columna */
+            /* Stock, a lo ancho debajo de la sucursal */
             .tp-table td:nth-child(4) {
+                grid-column: 1 / -1;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: .8rem;
+            }
+
+            .tp-stock-label {
+                display: inline;
+                color: var(--dash-text-muted);
+                font-weight: 600;
+            }
+
+            /* Publicar / Detalles / Foto / Eliminar: uno por columna */
+            .tp-table td:nth-child(5) {
                 grid-column: 2;
             }
 
-            .tp-table td:nth-child(5) {
+            .tp-table td:nth-child(6) {
                 grid-column: 3;
             }
 
-            .tp-table td:nth-child(6) {
+            .tp-table td:nth-child(7) {
                 grid-column: 4;
             }
 
-            .tp-table td:nth-child(7) {
+            .tp-table td:nth-child(8) {
                 grid-column: 5;
             }
 
@@ -1030,40 +1185,49 @@ $stmtC->close();
                                     <div><strong>Pro Tip:</strong> Los productos con fotografía propia aparecen <strong>primero en el Marketplace</strong>. ¡Sube fotos para destacar tu tienda!</div>
                                 </div>
 
-                                <!-- Búsqueda -->
+                                <!-- Búsqueda y filtros -->
                                 <div class="search-bar">
                                     <input type="text" id="buscador" placeholder="Buscar producto por nombre...">
+                                    <select id="grupo-selector" style="max-width:220px;" title="Filtrar por grupo" aria-label="Filtrar por grupo">
+                                        <option value="">Todos los grupos</option>
+                                    </select>
+                                    <select id="categoria-selector" style="max-width:220px;" title="Filtrar por categoría" aria-label="Filtrar por categoría">
+                                        <option value="">Todas las categorías</option>
+                                    </select>
                                     <select id="filtro-pub" style="max-width:180px;">
                                         <option value="">Todos</option>
                                         <option value="1">Publicados</option>
                                         <option value="0">No publicados</option>
                                     </select>
+                                    <label class="tp-stock-filter" title="Mostrar solo productos con stock positivo">
+                                        <span class="switch">
+                                            <input type="checkbox" id="switch-stock">
+                                            <span class="slider"></span>
+                                        </span>
+                                        <span>Solo con stock</span>
+                                    </label>
                                 </div>
 
                                 <!-- Tabla -->
                                 <div class="tp-table-wrap">
-                                    <table class="tp-table">
+                                    <table id="tp-tabla" class="tp-table">
                                         <thead>
                                             <tr>
                                                 <th class="tp-col-foto"></th>
                                                 <th>Producto</th>
                                                 <th class="tp-col-suc">Sucursal</th>
+                                                <th class="tp-col-stock">Stock</th>
                                                 <th class="tp-col-act">Publicación</th>
                                                 <th class="tp-col-act">Detalles</th>
                                                 <th class="tp-col-act">Foto</th>
                                                 <th class="tp-col-act">Eliminar</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="tp-body">
-                                            <tr>
-                                                <td colspan="7" class="tp-empty">Cargando productos...</td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="tp-body"></tbody>
                                     </table>
                                 </div>
 
-                                <!-- Paginación -->
-                                <div class="tp-pagination" id="tp-paginacion"></div>
+                                <!-- La paginación la coloca DataTables al pie de la tabla -->
                             </div>
                         </div>
                     </div>
@@ -1242,12 +1406,15 @@ $stmtC->close();
     </div>
 
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
     <script src="../vendors/fuse/fuse.min.js"></script>
     <script src="../vendors/select2/dist/js/select2.full.min.js"></script>
     <script>
         const SUCURSALES = <?php echo json_encode($sucursales); ?>;
         const API = 'db/tienda_productos_api.php';
-        let paginaActual = 1;
+        let tabla = null;
+        let productosPorId = {};
+        let categoriasPorGrupo = new Map();
 
         /* ── Helpers ─────────────────────────────────────────────────────── */
         function toast(msg, type = 'success') {
@@ -1267,28 +1434,116 @@ $stmtC->close();
             }).then(r => r.json());
         }
 
+        function escapeHtml(texto) {
+            return String(texto == null ? '' : texto).replace(/[&<>"']/g, function(c) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [c];
+            });
+        }
+
+        function formatCantidad(n) {
+            return (Number(n) || 0).toLocaleString('en-US', {
+                maximumFractionDigits: 2
+            });
+        }
+
+        function stockDeProducto(p, sucursalId) {
+            if (!p || !p.stock_sucursales) return 0;
+            const valor = p.stock_sucursales[String(sucursalId)];
+            return valor == null ? 0 : Number(valor);
+        }
+
+        // Sucursal por defecto de la fila: la publicada o la primera del select.
+        function sucursalActiva(p) {
+            const ids = SUCURSALES.map(s => String(s.id));
+            const propuesta = String(p.sucursal_id || '');
+            return ids.indexOf(propuesta) !== -1 ? propuesta : String(SUCURSALES[0] ? SUCURSALES[0].id : 0);
+        }
+
+        function stockCelda(p, sucursalId) {
+            const stock = stockDeProducto(p, sucursalId);
+            return `<span class="tp-stock-label">Stock:</span> <span class="tp-stock-value ${stock <= 0 ? 'agotado' : ''}">${formatCantidad(stock)}</span>`;
+        }
+
+        /* ── Filtros de grupo/categoría ──────────────────────────────────── */
+        function llenarCategorias(grupo, seleccionada) {
+            const catSel = document.getElementById('categoria-selector');
+            if (!catSel) return;
+
+            const actual = seleccionada || '';
+            const categorias = [];
+            categoriasPorGrupo.forEach(function(g, nombre) {
+                if (!grupo || g === grupo) categorias.push(nombre);
+            });
+            categorias.sort(function(a, b) {
+                return a.localeCompare(b, 'es');
+            });
+
+            catSel.innerHTML = '';
+            catSel.add(new Option('Todas las categorías', ''));
+            categorias.forEach(function(nombre) {
+                catSel.add(new Option(nombre, nombre));
+            });
+            catSel.value = categorias.indexOf(actual) !== -1 ? actual : '';
+        }
+
+        function actualizarFiltros(items) {
+            const grupoSel = document.getElementById('grupo-selector');
+            const catSel = document.getElementById('categoria-selector');
+            if (!grupoSel || !catSel) return;
+
+            const grupos = new Set();
+            categoriasPorGrupo = new Map();
+            items.forEach(function(p) {
+                if (p.categoria_grupo) grupos.add(p.categoria_grupo);
+                if (p.categoria_nombre) {
+                    categoriasPorGrupo.set(p.categoria_nombre, p.categoria_grupo || '');
+                }
+            });
+
+            const grupoActual = grupoSel.value;
+            const categoriaActual = catSel.value;
+
+            grupoSel.innerHTML = '';
+            grupoSel.add(new Option('Todos los grupos', ''));
+            Array.from(grupos).sort(function(a, b) {
+                return a.localeCompare(b, 'es');
+            }).forEach(function(grupo) {
+                grupoSel.add(new Option(grupo, grupo));
+            });
+            grupoSel.value = grupos.has(grupoActual) ? grupoActual : '';
+
+            llenarCategorias(grupoSel.value, categoriaActual);
+        }
+
         /* ── Render ──────────────────────────────────────────────────────── */
         function renderGrid(items) {
-            const tbody = document.getElementById('tp-body');
-            if (!items.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="tp-empty">No se encontraron productos.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = items.map(p => {
+            productosPorId = {};
+            tabla.clear();
+
+            items.forEach(p => {
+                productosPorId[p.id] = p;
+
                 const pub = p.estado_publicacion == 1;
                 const hasFoto = !!p.foto_url;
-                const stock = p.stock_cantidad != null ? parseInt(p.stock_cantidad) : null;
+                const sucursalId = sucursalActiva(p);
+                const stock = stockDeProducto(p, sucursalId);
 
                 let controlHtml = '';
                 if (pub) {
-                    const sucName = SUCURSALES.find(s => s.id == p.sucursal_id)?.nombre || '—';
-                    controlHtml = `<span class="tp-sucursal-badge">${sucName}</span>`;
+                    const sucName = SUCURSALES.find(s => s.id == sucursalId)?.nombre || '—';
+                    controlHtml = `<span class="tp-sucursal-badge">${escapeHtml(sucName)}</span>`;
                 } else {
                     controlHtml = `<select id="suc-${p.id}" class="sucursal-select">`;
                     if (SUCURSALES.length > 0) {
                         SUCURSALES.forEach(s => {
-                            const sel = (p.sucursal_id == s.id) ? 'selected' : '';
-                            controlHtml += `<option value="${s.id}" ${sel}>${s.nombre}</option>`;
+                            const sel = String(s.id) === String(sucursalId) ? 'selected' : '';
+                            controlHtml += `<option value="${s.id}" ${sel}>${escapeHtml(s.nombre)}</option>`;
                         });
                     } else {
                         controlHtml += `<option value="">Sin sucursales</option>`;
@@ -1296,104 +1551,52 @@ $stmtC->close();
                     controlHtml += `</select>`;
                 }
 
-                let stockHtml = '';
-                if (pub) {
-                    if (stock === 0) {
-                        stockHtml = ` <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(239,90,111,0.12);color:#ef5a6f;border:1px solid rgba(239,90,111,0.25);border-radius:6px;padding:2px 8px;font-size:.7rem;font-weight:600;white-space:nowrap;"><ion-icon name="alert-circle-outline" style="font-size:.85rem;"></ion-icon> Agotado</span>`;
-                    } else if (stock != null) {
-                        stockHtml = ` <span style="font-size:.7rem;color:var(--dash-text-muted);">Stock: ${stock}</span>`;
-                    }
-                }
+                const fila = tabla.row.add([
+                    `<div class="tp-foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}">
+                        <ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon>
+                    </div>`,
+                    `<div class="tp-nombre" title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</div>
+                     <div class="tp-cod">COD: ${escapeHtml(p.codigo_barras || 'N/A')}</div>`,
+                    controlHtml,
+                    stockCelda(p, sucursalId),
+                    `<button class="btn btn-sm btn-pub ${pub ? 'btn-outline-success' : 'btn-outline-danger'}"
+                            onclick="togglePub(${p.id}, ${pub ? 0 : 1}, this)"
+                            title="${pub ? 'Quitar de la tienda' : 'Publicar en la tienda'}">
+                        <ion-icon name="${pub ? 'eye-off-outline' : 'eye-outline'}"></ion-icon>
+                        ${pub ? 'Quitar' : 'Publicar'}
+                    </button>`,
+                    `<button class="btn btn-outline-secondary btn-sm" onclick="verDetalle(${p.id})" title="Ver detalle">
+                        <ion-icon name="information-circle-outline"></ion-icon> Detalles
+                    </button>`,
+                    `<button class="btn btn-outline-secondary btn-sm" onclick="abrirFoto(${p.id})" title="${hasFoto ? 'Cambiar foto' : 'Subir foto'}">
+                        <ion-icon name="camera-outline"></ion-icon>
+                        ${hasFoto ? 'Cambiar' : 'Subir'}
+                    </button>`,
+                    `${hasFoto ? `<button class="btn btn-outline-danger btn-sm" onclick="borrarFoto(${p.id}, this)" title="Eliminar foto">
+                        <ion-icon name="trash-outline"></ion-icon>
+                    </button>` : ''}`
+                ]);
 
-                return `<tr class="${pub ? 'publicado' : ''}" data-id="${p.id}">
-            <td class="tp-col-foto">
-                <div class="tp-foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}">
-                    <ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon>
-                </div>
-            </td>
-            <td>
-                <div class="tp-nombre" title="${p.nombre}">${p.nombre}</div>
-                <div class="tp-cod">COD: ${p.codigo_barras || 'N/A'}${stockHtml}</div>
-            </td>
-            <td>${controlHtml}</td>
-            <td>
-                <button class="btn btn-sm btn-pub ${pub ? 'btn-outline-success' : 'btn-outline-danger'}"
-                        onclick="togglePub(${p.id}, ${pub ? 0 : 1}, this)"
-                        title="${pub ? 'Quitar de la tienda' : 'Publicar en la tienda'}">
-                    <ion-icon name="${pub ? 'eye-off-outline' : 'eye-outline'}"></ion-icon>
-                    ${pub ? 'Quitar' : 'Publicar'}
-                </button>
-            </td>
-            <td>
-                <button class="btn btn-outline-secondary btn-sm" onclick="verDetalle(${p.id})" title="Ver detalle">
-                    <ion-icon name="information-circle-outline"></ion-icon> Detalles
-                </button>
-            </td>
-            <td>
-                <button class="btn btn-outline-secondary btn-sm" onclick="abrirFoto(${p.id})" title="${hasFoto ? 'Cambiar foto' : 'Subir foto'}">
-                    <ion-icon name="camera-outline"></ion-icon>
-                    ${hasFoto ? 'Cambiar' : 'Subir'}
-                </button>
-            </td>
-            <td>
-                ${hasFoto ? `<button class="btn btn-outline-danger btn-sm" onclick="borrarFoto(${p.id}, this)" title="Eliminar foto">
-                    <ion-icon name="trash-outline"></ion-icon>
-                </button>` : ''}
-            </td>
-        </tr>`;
-            }).join('');
-        }
-
-        function renderPaginacion(paginaActual, totalPaginas) {
-            const el = document.getElementById('tp-paginacion');
-            if (totalPaginas <= 1) {
-                el.innerHTML = '';
-                return;
-            }
-            // En el teléfono decenas de botones ocupan media pantalla:
-            // anterior / página X de N / siguiente
-            if (window.innerWidth <= 768) {
-                el.innerHTML = `
-                    <button class="btn-pg" onclick="cargar(${Math.max(1, paginaActual - 1)})" ${paginaActual === 1 ? 'disabled' : ''} aria-label="Anterior">‹</button>
-                    <span class="tp-pg-info">Página ${paginaActual} de ${totalPaginas}</span>
-                    <button class="btn-pg" onclick="cargar(${Math.min(totalPaginas, paginaActual + 1)})" ${paginaActual === totalPaginas ? 'disabled' : ''} aria-label="Siguiente">›</button>`;
-                return;
-            }
-            // Ventana de páginas agrupada como DataTables: primera, última y actual ±2
-            const paginas = new Set([1, totalPaginas]);
-            const inicio = Math.max(1, Math.min(paginaActual - 2, totalPaginas - 4));
-            const fin = Math.min(totalPaginas, Math.max(paginaActual + 2, 5));
-            for (let i = inicio; i <= fin; i++) paginas.add(i);
-            const ordenadas = [...paginas].sort((a, b) => a - b);
-
-            let html = `<button class="btn-pg tp-pg-nav" onclick="cargar(${Math.max(1, paginaActual - 1)})" ${paginaActual === 1 ? 'disabled' : ''}>Anterior</button>`;
-            let previa = 0;
-            ordenadas.forEach(p => {
-                if (previa && p - previa > 1) html += '<span class="tp-pg-dots">…</span>';
-                html += `<button class="btn-pg ${p === paginaActual ? 'active' : ''}" onclick="cargar(${p})">${p}</button>`;
-                previa = p;
+                $(fila.node()).attr({
+                    'data-id': p.id,
+                    'data-grupo': p.categoria_grupo || '',
+                    'data-categoria': p.categoria_nombre || '',
+                    'data-pub': pub ? '1' : '0',
+                    'data-stock': String(stock)
+                }).toggleClass('publicado', pub);
             });
-            html += `<button class="btn-pg tp-pg-nav" onclick="cargar(${Math.min(totalPaginas, paginaActual + 1)})" ${paginaActual === totalPaginas ? 'disabled' : ''}>Siguiente</button>`;
-            el.innerHTML = html;
+
+            actualizarFiltros(items);
+            tabla.draw();
         }
 
         /* ── Cargar productos ────────────────────────────────────────────── */
-        function cargar(pagina = 1) {
-            paginaActual = pagina;
-            const q = encodeURIComponent(document.getElementById('buscador').value);
-            const pub = document.getElementById('filtro-pub').value;
-            let url = `${API}?action=listar&page=${pagina}&q=${q}`;
-            if (pub !== '') url += `&pub=${pub}`;
-
-            fetch(url)
+        function cargar() {
+            fetch(`${API}?action=listar`)
                 .then(r => r.json())
                 .then(data => {
                     if (!data.ok) return;
-                    // Filtro client-side por publicado si viene el param
-                    let items = data.data;
-                    if (pub !== '') items = items.filter(p => String(p.estado_publicacion) === pub);
-                    renderGrid(items);
-                    renderPaginacion(data.page, data.pages);
+                    renderGrid(data.data || []);
                 })
                 .catch(err => {
                     console.error('Error fetching data:', err);
@@ -1425,7 +1628,7 @@ $stmtC->close();
                         return;
                     }
                     toast(nuevoEstado ? 'Publicado en tu tienda' : 'Quitado de la tienda', 'success');
-                    cargar(paginaActual);
+                    cargar();
                 });
         }
 
@@ -1602,7 +1805,7 @@ $stmtC->close();
                     }
                     toast('Foto aplicada con éxito', 'success');
                     $('#modalFoto').modal('hide');
-                    cargar(paginaActual);
+                    cargar();
                 })
                 .catch(() => toast('Error al aplicar imagen', 'error'));
         }
@@ -1653,7 +1856,7 @@ $stmtC->close();
                     }
                     toast('Foto guardada con éxito', 'success');
                     $('#modalFoto').modal('hide');
-                    cargar(paginaActual);
+                    cargar();
                 });
         }
 
@@ -1688,20 +1891,93 @@ $stmtC->close();
                         return;
                     }
                     toast('Foto eliminada', 'success');
-                    cargar(paginaActual);
+                    cargar();
                 });
         }
 
-        /* ── Búsqueda con debounce ──────────────────────────────────────── */
-        let debounce;
-        document.getElementById('buscador').addEventListener('input', () => {
-            clearTimeout(debounce);
-            debounce = setTimeout(() => cargar(1), 350);
+        /* ── DataTable + filtros ────────────────────────────────────────── */
+        tabla = $('#tp-tabla').DataTable({
+            dom: 't<"tp-dt-footer"lip>',
+            pageLength: 25,
+            lengthMenu: [
+                [10, 25, 50, -1],
+                [10, 25, 50, 'Todos']
+            ],
+            ordering: false,
+            autoWidth: false,
+            columnDefs: [{
+                targets: [0, 2, 3, 4, 5, 6, 7],
+                searchable: false
+            }],
+            language: {
+                lengthMenu: 'Mostrar _MENU_ productos',
+                info: 'Mostrando _START_ a _END_ de _TOTAL_ productos',
+                infoEmpty: 'Mostrando 0 a 0 de 0 productos',
+                infoFiltered: '(filtrado de _MAX_ en total)',
+                zeroRecords: 'No se encontraron productos',
+                emptyTable: 'No se encontraron productos.',
+                paginate: {
+                    first: 'Primero',
+                    last: 'Último',
+                    next: 'Siguiente',
+                    previous: 'Anterior'
+                }
+            }
         });
-        document.getElementById('filtro-pub').addEventListener('change', () => cargar(1));
+
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (settings.nTable.id !== 'tp-tabla') return true;
+
+            const tr = settings.aoData[dataIndex] ? settings.aoData[dataIndex].nTr : null;
+            if (!tr) return true;
+
+            const grupo = document.getElementById('grupo-selector')?.value || '';
+            const categoria = document.getElementById('categoria-selector')?.value || '';
+            const pub = document.getElementById('filtro-pub')?.value || '';
+
+            if (grupo && tr.dataset.grupo !== grupo) return false;
+            if (categoria && tr.dataset.categoria !== categoria) return false;
+            if (pub !== '' && tr.dataset.pub !== pub) return false;
+            if (document.getElementById('switch-stock')?.checked && !(parseFloat(tr.dataset.stock || '0') > 0)) return false;
+            return true;
+        });
+
+        // Búsqueda del encabezado
+        let debounce;
+        document.getElementById('buscador').addEventListener('input', function() {
+            clearTimeout(debounce);
+            debounce = setTimeout(() => tabla.search(this.value).draw(), 300);
+        });
+
+        document.getElementById('filtro-pub').addEventListener('change', () => tabla.draw(false));
+        document.getElementById('switch-stock').addEventListener('change', () => tabla.draw(false));
+
+        document.getElementById('grupo-selector').addEventListener('change', function() {
+            llenarCategorias(this.value, document.getElementById('categoria-selector').value);
+            tabla.draw(false);
+        });
+        document.getElementById('categoria-selector').addEventListener('change', () => tabla.draw(false));
+
+        // Cambiar la sucursal de una fila actualiza el stock en esa fila.
+        $('#tp-tabla').on('change', '.sucursal-select', function() {
+            const tr = this.closest('tr');
+            const p = productosPorId[tr ? tr.dataset.id : ''];
+            if (!p || !tr) return;
+
+            const stock = stockDeProducto(p, this.value);
+            const valueEl = tr.querySelector('.tp-stock-value');
+            if (valueEl) {
+                valueEl.textContent = formatCantidad(stock);
+                valueEl.classList.toggle('agotado', stock <= 0);
+            }
+            tr.dataset.stock = String(stock);
+            if (document.getElementById('switch-stock').checked) {
+                tabla.draw(false);
+            }
+        });
 
         // Carga inicial
-        cargar(1);
+        cargar();
     </script>
     <script src="js/nombre_pagina.js?v=<?php echo @filemtime(__DIR__ . '/js/nombre_pagina.js'); ?>"></script>
 </body>

@@ -186,16 +186,10 @@ if ($action === 'delete_foto') {
     exit;
 }
 
-/* ─── 4. LISTAR productos (paginación + búsqueda) ─────────────────────── */
+/* ─── 4. LISTAR productos (DataTables pagina y filtra en el navegador) ─── */
 if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET')) {
-    $busqueda = '%' . ($conexion->real_escape_string($_GET['q'] ?? '')) . '%';
-    $page     = max(1, (int)($_GET['page'] ?? 1));
-    $limit    = 20;
-    $offset   = ($page - 1) * $limit;
-
-    // Una sola pasada sobre stock con GROUP BY, en vez de una subconsulta
-    // correlacionada por cada fila (que re-escaneaba stock ~20 veces).
-    $sql = "SELECT p.id, p.nombre, p.codigo_barras,
+    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.categoria,
+                   cp.nombre AS categoria_nombre, cp.grupo AS categoria_grupo,
                    np.estado_publicacion, np.foto_url, np.sucursal_id,
                    IFNULL(SUM(s.stock), 0) AS stock_cantidad
             FROM stock s
@@ -203,35 +197,55 @@ if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'G
             INNER JOIN productos p ON p.id = s.id_producto
             LEFT JOIN negocio_productos np
                    ON np.producto_id = p.id AND np.negocio_id = ?
-            WHERE s.bss_id = ? AND p.activo = 0 AND p.nombre LIKE ?
-            GROUP BY p.id, p.nombre, p.codigo_barras, np.estado_publicacion, np.foto_url, np.sucursal_id
-            ORDER BY np.estado_publicacion DESC, p.nombre ASC
-            LIMIT ? OFFSET ?";
+            LEFT JOIN categorias_producto cp ON cp.id = p.categoria
+            WHERE s.bss_id = ? AND p.activo = 0
+            GROUP BY p.id, p.nombre, p.codigo_barras, p.categoria,
+                     cp.nombre, cp.grupo, np.estado_publicacion, np.foto_url, np.sucursal_id
+            ORDER BY np.estado_publicacion DESC, p.nombre ASC";
 
     $stmt = $conexion->prepare($sql);
-    $stmt->bind_param("iisii", $bss_id, $bss_id, $busqueda, $limit, $offset);
+    $stmt->bind_param("ii", $bss_id, $bss_id);
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    $countStmt = $conexion->prepare(
-        "SELECT COUNT(DISTINCT s.id_producto) total
-         FROM stock s
-         INNER JOIN sucursales su ON su.id = s.id_sucursal AND su.bss_id = s.bss_id
-         INNER JOIN productos p ON p.id = s.id_producto
-         WHERE s.bss_id = ? AND p.activo = 0 AND p.nombre LIKE ?"
-    );
-    $countStmt->bind_param("is", $bss_id, $busqueda);
-    $countStmt->execute();
-    $total = $countStmt->get_result()->fetch_assoc()['total'];
-    $countStmt->close();
+    // Stock por sucursal de los productos listados: la tabla lo cambia al
+    // mover el selector de sucursal de cada fila, sin volver a consultar.
+    $stockSucursales = [];
+    if ($rows) {
+        $ids = array_map('intval', array_column($rows, 'id'));
+        $inIds = implode(',', $ids);
+        $stmtStock = $conexion->prepare(
+            "SELECT id_producto, id_sucursal,
+                    SUM(CAST(stock AS DECIMAL(10,2))) AS stock
+             FROM stock
+             WHERE bss_id = ? AND id_producto IN ($inIds)
+             GROUP BY id_producto, id_sucursal"
+        );
+        if ($stmtStock) {
+            $stmtStock->bind_param('i', $bss_id);
+            $stmtStock->execute();
+            $resStock = $stmtStock->get_result();
+            while ($filaStock = $resStock->fetch_assoc()) {
+                $pid = (int)$filaStock['id_producto'];
+                $sid = (string)(int)$filaStock['id_sucursal'];
+                if (!isset($stockSucursales[$pid])) $stockSucursales[$pid] = [];
+                $stockSucursales[$pid][$sid] = round((float)$filaStock['stock'], 2);
+            }
+            $stmtStock->close();
+        }
+    }
+    foreach ($rows as &$fila) {
+        $fila['stock_sucursales'] = (object)($stockSucursales[(int)$fila['id']] ?? []);
+    }
+    unset($fila);
 
     echo json_encode([
         'ok'    => true,
         'data'  => $rows,
-        'total' => (int)$total,
-        'page'  => $page,
-        'pages' => (int)ceil($total / $limit),
+        'total' => count($rows),
+        'page'  => 1,
+        'pages' => 1
     ]);
     exit;
 }

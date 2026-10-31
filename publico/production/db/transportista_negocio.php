@@ -150,6 +150,155 @@ function transportista_asignar_delivery($conexion, int $bssId, int $ordenId, int
     return $ok;
 }
 
+/**
+ * Rendimiento por transportista entre dos fechas (Y-m-d).
+ *
+ * Entregas: pedidos con status 4 cuya fecha de entrega cae en el rango.
+ * Tiempo: desde el historial status 3 → status 4; sin historial se usa la
+ * asignación → actualización del servicio completado. La evaluación usa las
+ * últimas 30 entregas, sin importar el filtro.
+ */
+function transportista_negocio_rendimiento($conexion, int $bssId, string $desde, string $hasta): array
+{
+    $bssId = (int)$bssId;
+    if (!transportista_negocio_tabla_existe($conexion)) {
+        return [];
+    }
+    transportista_negocio_asegurar($conexion);
+
+    $datos = [];
+    foreach (transportista_negocio_listar($conexion, $bssId) as $t) {
+        $datos[(int)$t['id']] = [
+            'nombre'   => (string)$t['nombre'],
+            'cedula'   => (string)$t['cedula'],
+            'entregas' => 0,
+            'minutos'  => [],
+            'ultimas'  => [],
+        ];
+    }
+    if (!$datos) {
+        return [];
+    }
+
+    $tabla = $conexion->query("SHOW TABLES LIKE 'transportista_servicios'");
+    if (!$tabla || $tabla->num_rows === 0) {
+        return array_values($datos);
+    }
+
+    $historial = $conexion->query("SHOW TABLES LIKE 'tienda_ordenes_estados'");
+    $tieneHistorial = $historial && $historial->num_rows > 0;
+    $joinHistorial = '';
+    $colsHistorial = "NULL AS enviado_en, NULL AS entregado_en";
+    $ordenFecha = 's.actualizado_en';
+    if ($tieneHistorial) {
+        $joinHistorial = "
+            LEFT JOIN (
+                SELECT orden_id,
+                       MAX(CASE WHEN status = 3 THEN created END) AS enviado_en,
+                       MAX(CASE WHEN status = 4 THEN created END) AS entregado_en
+                  FROM tienda_ordenes_estados
+                 WHERE bss_id = $bssId
+                 GROUP BY orden_id
+            ) e ON e.orden_id = o.id";
+        $colsHistorial = 'e.enviado_en, e.entregado_en';
+        $ordenFecha = 'COALESCE(e.entregado_en, s.actualizado_en)';
+    }
+
+    $sql = "SELECT s.transportista_id, s.estado, s.creado_en, s.actualizado_en, $colsHistorial
+              FROM transportista_servicios s
+              INNER JOIN tienda_ordenes o
+                      ON o.id = CAST(s.numero_pedido AS UNSIGNED) AND o.bss_id = s.bss_id
+              $joinHistorial
+             WHERE s.bss_id = $bssId
+               AND s.tipo = 'delivery'
+               AND o.status = 4
+             ORDER BY $ordenFecha DESC";
+    $res = $conexion->query($sql);
+    if (!$res) {
+        return array_values($datos);
+    }
+
+    while ($fila = $res->fetch_assoc()) {
+        $id = (int)$fila['transportista_id'];
+        if (!isset($datos[$id])) {
+            continue;
+        }
+        $fin = $fila['entregado_en'];
+        if (!$fin && $fila['estado'] === 'completado') {
+            $fin = $fila['actualizado_en'];
+        }
+        $inicio = $fila['enviado_en'] ?: $fila['creado_en'];
+        if (!$fin || !$inicio) {
+            continue;
+        }
+        $minutos = (strtotime($fin) - strtotime($inicio)) / 60;
+        if ($minutos < 0) {
+            continue;
+        }
+
+        // Las filas vienen de la más reciente a la más antigua.
+        if (count($datos[$id]['ultimas']) < 30) {
+            $datos[$id]['ultimas'][] = $minutos;
+        }
+        $dia = substr($fin, 0, 10);
+        if ($dia >= $desde && $dia <= $hasta) {
+            $datos[$id]['entregas']++;
+            $datos[$id]['minutos'][] = $minutos;
+        }
+    }
+    $res->free();
+
+    foreach ($datos as &$d) {
+        $cantidad = count($d['minutos']);
+        $d['promedio_min'] = $cantidad ? round(array_sum($d['minutos']) / $cantidad, 1) : null;
+
+        $n = count($d['ultimas']);
+        $promedio = $n ? round(array_sum($d['ultimas']) / $n, 1) : null;
+        $d['ultimas_n'] = $n;
+        $d['ultimas_min'] = $promedio;
+        $d['estrellas'] = 0;
+        $d['etiqueta'] = 'Sin datos';
+        if ($n >= 3 && $promedio !== null) {
+            if ($promedio <= 30) {
+                $d['estrellas'] = 5;
+                $d['etiqueta'] = 'Excelente';
+            } elseif ($promedio <= 45) {
+                $d['estrellas'] = 4;
+                $d['etiqueta'] = 'Muy bueno';
+            } elseif ($promedio <= 60) {
+                $d['estrellas'] = 3;
+                $d['etiqueta'] = 'Bueno';
+            } elseif ($promedio <= 90) {
+                $d['estrellas'] = 2;
+                $d['etiqueta'] = 'Regular';
+            } else {
+                $d['estrellas'] = 1;
+                $d['etiqueta'] = 'Lento';
+            }
+        }
+        unset($d['minutos'], $d['ultimas']);
+    }
+    unset($d);
+
+    usort($datos, function ($a, $b) {
+        if ($a['entregas'] !== $b['entregas']) {
+            return $b['entregas'] - $a['entregas'];
+        }
+        if ($a['ultimas_min'] !== $b['ultimas_min']) {
+            if ($a['ultimas_min'] === null) {
+                return 1;
+            }
+            if ($b['ultimas_min'] === null) {
+                return -1;
+            }
+            return $a['ultimas_min'] <=> $b['ultimas_min'];
+        }
+        return strcmp($a['nombre'], $b['nombre']);
+    });
+
+    return array_values($datos);
+}
+
 /** Push al transportista cuando se le asigna (o reasigna) un delivery. */
 function transportista_notificar_asignacion($conexion, int $bssId, int $ordenId, int $transportistaId, string $titulo = 'Nuevo delivery asignado'): array
 {

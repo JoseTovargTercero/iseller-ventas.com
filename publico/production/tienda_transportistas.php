@@ -233,6 +233,91 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
             font-weight: 600;
         }
 
+        .transp-filtros .transp-input {
+            min-width: 150px;
+        }
+
+        .transp-select {
+            flex: 0 1 170px;
+            cursor: pointer;
+        }
+
+        .transp-date {
+            flex: 0 1 190px;
+        }
+
+        .transp-table-wrap {
+            overflow-x: auto;
+        }
+
+        .transp-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .transp-table th {
+            text-align: left;
+            padding: 0 12px 10px;
+            color: var(--dash-text-muted);
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-bottom: 1px solid var(--dash-border);
+            white-space: nowrap;
+        }
+
+        .transp-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--dash-border);
+            color: var(--dash-text);
+            vertical-align: middle;
+        }
+
+        .transp-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .transp-table .num {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .transp-table .nombre {
+            font-weight: 600;
+        }
+
+        .transp-table .sub {
+            display: block;
+            margin-top: 2px;
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: var(--dash-text-muted);
+        }
+
+        .transp-eval {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .transp-eval small {
+            font-size: 0.7rem;
+            color: var(--dash-text-muted);
+        }
+
+        .transp-estrellas {
+            color: #f5b942;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .transp-estrellas .off {
+            color: var(--dash-border);
+        }
+
         @media (max-width: 640px) {
             .transp-page {
                 padding: 16px;
@@ -283,6 +368,49 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                         <p class="transp-hint">
                             <i class="bi bi-info-circle"></i>
                             El transportista debe estar registrado en la app con esa cédula.
+                        </p>
+                    </div>
+
+                    <div class="transp-card">
+                        <div class="transp-card-head">
+                            <h3><i class="bi bi-graph-up-arrow"></i> Rendimiento de transportistas</h3>
+                        </div>
+                        <div class="transp-form transp-filtros">
+                            <select id="filtroPeriodo" class="transp-input transp-select" onchange="cargarRendimiento()">
+                                <option value="dia">Día</option>
+                                <option value="semana">Semana</option>
+                                <option value="mes">Mes</option>
+                            </select>
+                            <input type="date" id="filtroFecha" class="transp-input transp-date" value="<?php echo date('Y-m-d'); ?>" onchange="cargarRendimiento()">
+                            <button type="button" class="btn btn-success" onclick="cargarRendimiento()">
+                                <i class="bi bi-funnel"></i> Filtrar
+                            </button>
+                        </div>
+                        <p class="transp-hint" id="rendimientoRango">
+                            <i class="bi bi-info-circle"></i>
+                            Elige día, semana o mes y la fecha a consultar.
+                        </p>
+                        <div class="transp-table-wrap">
+                            <table class="transp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Transportista</th>
+                                        <th class="num">Pedidos entregados</th>
+                                        <th class="num">Tiempo medio de entrega</th>
+                                        <th>Evaluación <span style="text-transform:none;font-weight:400;">(últimas 30)</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaRendimiento">
+                                    <tr>
+                                        <td colspan="4" class="transp-empty">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="transp-hint">
+                            <i class="bi bi-clock-history"></i>
+                            El tiempo se mide desde que el pedido pasa a “Enviado” hasta que pasa a “Entregado”.
+                            Las estrellas evalúan el tiempo medio de las últimas 30 entregas.
                         </p>
                     </div>
 
@@ -358,6 +486,94 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                 });
         }
 
+        function formatoMinutos(minutos) {
+            if (minutos === null || minutos === undefined || isNaN(minutos)) return '—';
+            var total = Math.round(Number(minutos));
+            if (total < 60) return total + ' min';
+            var horas = Math.floor(total / 60);
+            var resto = total % 60;
+            return horas + ' h' + (resto ? ' ' + resto + ' min' : '');
+        }
+
+        function formatoFecha(fecha) {
+            if (!fecha) return '';
+            var partes = String(fecha).split('-');
+            return partes.length === 3 ? partes[2] + '/' + partes[1] + '/' + partes[0] : fecha;
+        }
+
+        function estrellasHtml(cantidad) {
+            var html = '';
+            for (var i = 1; i <= 5; i++) {
+                html += '<span class="' + (i <= cantidad ? '' : 'off') + '">★</span>';
+            }
+            return html;
+        }
+
+        function evaluacionHtml(t) {
+            if (!t.estrellas) {
+                return '<span class="transp-eval"><small>Sin datos suficientes</small></span>';
+            }
+            var detalle = (t.ultimas_n >= 30 ? 'Últimas 30' : 'Últimas ' + t.ultimas_n) +
+                ' entregas · ' + formatoMinutos(t.ultimas_min) + ' media';
+            return '<span class="transp-eval">' +
+                '<span class="transp-estrellas">' + estrellasHtml(t.estrellas) + ' ' + escaparHtml(t.etiqueta) + '</span>' +
+                '<small>' + escaparHtml(detalle) + '</small>' +
+                '</span>';
+        }
+
+        function cargarRendimiento() {
+            var tbody = document.getElementById('tablaRendimiento');
+            var rango = document.getElementById('rendimientoRango');
+            var periodo = document.getElementById('filtroPeriodo').value;
+            var fecha = document.getElementById('filtroFecha').value;
+
+            tbody.innerHTML = '<tr><td colspan="4" class="transp-empty">Cargando...</td></tr>';
+
+            fetch(API_TRANSPORTISTAS + '?action=rendimiento&periodo=' + encodeURIComponent(periodo) + '&fecha=' + encodeURIComponent(fecha))
+                .then(function(res) {
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data.ok) throw new Error(data.msg || 'Error al cargar');
+                    var filas = data.data || [];
+
+                    var total = 0;
+                    var suma = 0;
+                    filas.forEach(function(t) {
+                        if (t.promedio_min !== null && t.entregas > 0) {
+                            total += t.entregas;
+                            suma += t.promedio_min * t.entregas;
+                        }
+                    });
+                    var media = total ? (suma / total) : null;
+                    var etiquetaRango = data.desde === data.hasta
+                        ? 'Día ' + formatoFecha(data.desde)
+                        : 'Del ' + formatoFecha(data.desde) + ' al ' + formatoFecha(data.hasta);
+                    rango.innerHTML = '<i class="bi bi-calendar3"></i> ' + escaparHtml(etiquetaRango) +
+                        ' · ' + total + ' entrega' + (total === 1 ? '' : 's') +
+                        (media !== null ? ' · media ' + formatoMinutos(media) : '');
+
+                    if (!filas.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="transp-empty">Agrega un transportista para ver su rendimiento.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = filas.map(function(t) {
+                        return '<tr>' +
+                            '<td><span class="nombre">' + escaparHtml(t.nombre) + '</span>' +
+                            '<span class="sub">' + escaparHtml(t.cedula) + '</span></td>' +
+                            '<td class="num">' + parseInt(t.entregas) + '</td>' +
+                            '<td class="num">' + formatoMinutos(t.promedio_min) + '</td>' +
+                            '<td>' + evaluacionHtml(t) + '</td>' +
+                            '</tr>';
+                    }).join('');
+                })
+                .catch(function(err) {
+                    rango.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + escaparHtml(err.message);
+                    tbody.innerHTML = '<tr><td colspan="4" class="transp-empty">' + escaparHtml(err.message) + '</td></tr>';
+                });
+        }
+
         function aviso(icono, titulo, texto) {
             if (typeof Swal === 'undefined') {
                 alert(titulo + ': ' + texto);
@@ -398,6 +614,7 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                         document.getElementById('cedula').value = '';
                         aviso('success', 'Transportista agregado', data.msg);
                         cargarTransportistas();
+                        cargarRendimiento();
                     } else {
                         aviso('error', 'No se pudo agregar', data.msg || 'Intenta de nuevo.');
                     }
@@ -423,6 +640,7 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                     .then(function(data) {
                         if (data.ok) {
                             cargarTransportistas();
+                            cargarRendimiento();
                         } else {
                             aviso('error', 'No se pudo quitar', data.msg || 'Intenta de nuevo.');
                         }
@@ -453,6 +671,7 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
         }
 
         cargarTransportistas();
+        cargarRendimiento();
     </script>
     <script src="js/nombre_pagina.js?v=<?php echo @filemtime(__DIR__ . '/js/nombre_pagina.js'); ?>"></script>
 </body>
