@@ -10,9 +10,20 @@ if (!isset($_SESSION['bss_id'])) {
 
 $bss_id = (int)$_SESSION['bss_id'];
 $action = $_GET['action'] ?? '';
+$debug = isset($_GET['debug']) && (int)($_SESSION['nivel'] ?? 0) === 1;
 $conexion->set_charset('utf8mb4');
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
+
+set_exception_handler(function (Throwable $e) use ($debug) {
+    error_log('seguimiento fatal: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'ok' => false,
+        'msg' => 'Error interno en el seguimiento',
+        'debug' => $debug ? $e->getMessage() : null,
+    ]);
+});
 
 if ($action !== 'listar') {
     http_response_code(400);
@@ -26,129 +37,112 @@ function tabla_existe($conexion, string $tabla): bool
     return $res && $res->num_rows > 0;
 }
 
-$stmt = $conexion->prepare(
+$res = $conexion->query(
     "SELECT o.id, o.status, o.created, o.cliente,
             u.nombre AS cliente_nombre, u.telefono AS cliente_telefono,
             d.direccion, d.referencia
        FROM tienda_ordenes o
        LEFT JOIN tienda_usuarios u ON u.id = o.customer_id
        LEFT JOIN tienda_usuarios_direcciones d ON d.id = o.direccion_id
-      WHERE o.bss_id = ?
+      WHERE o.bss_id = $bss_id
         AND o.tipo_entrega = 'delivery'
         AND o.status IN (2, 6, 3)
       ORDER BY o.id DESC
       LIMIT 200"
 );
-if (!$stmt) {
+if (!$res) {
     error_log('seguimiento pedidos: ' . $conexion->error);
-    echo json_encode(['ok' => false, 'msg' => 'No se pudo consultar el seguimiento']);
+    echo json_encode([
+        'ok' => false,
+        'msg' => 'No se pudo consultar el seguimiento',
+        'debug' => $debug ? $conexion->error : null,
+    ]);
     exit;
 }
-$stmt->bind_param('i', $bss_id);
-$stmt->execute();
-$filas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+
+$filas = [];
+while ($fila = $res->fetch_assoc()) {
+    $filas[] = $fila;
+}
+$res->free();
 
 $tieneServicios = tabla_existe($conexion, 'transportista_servicios');
 $tieneUbicaciones = tabla_existe($conexion, 'transportista_ubicaciones');
 $tieneOrigen = tabla_existe($conexion, 'tienda_orden_origen');
 
-$stmtServicio = null;
-if ($tieneServicios) {
-    $stmtServicio = $conexion->prepare(
-        "SELECT s.id, s.estado, s.transportista_id,
-                t.nombre AS transportista_nombre, t.telefono AS transportista_telefono
-           FROM transportista_servicios s
-           LEFT JOIN transportistas t ON t.id = s.transportista_id
-          WHERE s.bss_id = ? AND s.tipo = 'delivery' AND s.numero_pedido = ?
-          LIMIT 1"
-    );
-    if (!$stmtServicio) {
-        error_log('seguimiento servicios: ' . $conexion->error);
-    }
-}
-
-$stmtUbicacion = null;
-if ($tieneUbicaciones) {
-    $stmtUbicacion = $conexion->prepare(
-        "SELECT lat, lng, precision_m, creado_en
-           FROM transportista_ubicaciones
-          WHERE transportista_id = ?
-            AND (servicio_id = ? OR numero_pedido = ?)
-          ORDER BY id DESC
-          LIMIT 1"
-    );
-    if (!$stmtUbicacion) {
-        error_log('seguimiento ubicaciones: ' . $conexion->error);
-    }
-}
-
-$stmtOrigen = null;
-if ($tieneOrigen) {
-    $stmtOrigen = $conexion->prepare(
-        "SELECT lat, lng, creado_en FROM tienda_orden_origen WHERE orden_id = ? LIMIT 1"
-    );
-    if (!$stmtOrigen) {
-        error_log('seguimiento origen: ' . $conexion->error);
-    }
-}
-
 $data = [];
+$errores = [];
+
 foreach ($filas as $fila) {
     $ordenId = (int)$fila['id'];
-    $numeroPedido = (string)$ordenId;
     $servicio = null;
 
-    if ($stmtServicio) {
-        $stmtServicio->bind_param('iis', $bss_id, $ordenId, $numeroPedido);
-        $stmtServicio->execute();
-        $resServicio = $stmtServicio->get_result();
+    if ($tieneServicios) {
+        $resServicio = $conexion->query(
+            "SELECT s.id, s.estado, s.transportista_id,
+                    t.nombre AS transportista_nombre, t.telefono AS transportista_telefono
+               FROM transportista_servicios s
+               LEFT JOIN transportistas t ON t.id = s.transportista_id
+              WHERE s.bss_id = $bss_id AND s.tipo = 'delivery' AND s.numero_pedido = '$ordenId'
+              LIMIT 1"
+        );
         if ($resServicio) {
             $servicio = $resServicio->fetch_assoc();
             $resServicio->free();
+        } else {
+            $errores[] = 'servicios: ' . $conexion->error;
         }
     }
 
     $ubicacion = null;
-    if ($stmtUbicacion && $servicio && (int)$servicio['transportista_id'] > 0) {
+    if ($tieneUbicaciones && $servicio && (int)$servicio['transportista_id'] > 0) {
         $transportistaId = (int)$servicio['transportista_id'];
         $servicioId = (int)$servicio['id'];
-        $stmtUbicacion->bind_param('iis', $transportistaId, $servicioId, $numeroPedido);
-        $stmtUbicacion->execute();
-        $resUbicacion = $stmtUbicacion->get_result();
-        $ubic = $resUbicacion ? $resUbicacion->fetch_assoc() : null;
+        $resUbicacion = $conexion->query(
+            "SELECT lat, lng, precision_m, creado_en
+               FROM transportista_ubicaciones
+              WHERE transportista_id = $transportistaId
+                AND (servicio_id = $servicioId OR numero_pedido = '$ordenId')
+              ORDER BY id DESC
+              LIMIT 1"
+        );
         if ($resUbicacion) {
+            $ubic = $resUbicacion->fetch_assoc();
             $resUbicacion->free();
-        }
-        if ($ubic && $ubic['lat'] !== null && $ubic['lng'] !== null) {
-            $ubicacion = [
-                'lat'         => (float)$ubic['lat'],
-                'lng'         => (float)$ubic['lng'],
-                'precision_m' => $ubic['precision_m'] !== null ? (float)$ubic['precision_m'] : null,
-                'creado_en'   => (string)$ubic['creado_en'],
-            ];
+            if ($ubic && $ubic['lat'] !== null && $ubic['lng'] !== null) {
+                $ubicacion = [
+                    'lat'         => (float)$ubic['lat'],
+                    'lng'         => (float)$ubic['lng'],
+                    'precision_m' => $ubic['precision_m'] !== null ? (float)$ubic['precision_m'] : null,
+                    'creado_en'   => (string)$ubic['creado_en'],
+                ];
+            }
+        } else {
+            $errores[] = 'ubicaciones: ' . $conexion->error;
         }
     }
 
     $origen = null;
-    if ($stmtOrigen) {
-        $stmtOrigen->bind_param('i', $ordenId);
-        $stmtOrigen->execute();
-        $resOrigen = $stmtOrigen->get_result();
-        $ori = $resOrigen ? $resOrigen->fetch_assoc() : null;
+    if ($tieneOrigen) {
+        $resOrigen = $conexion->query(
+            "SELECT lat, lng, creado_en FROM tienda_orden_origen WHERE orden_id = $ordenId LIMIT 1"
+        );
         if ($resOrigen) {
+            $ori = $resOrigen->fetch_assoc();
             $resOrigen->free();
-        }
-        if ($ori && $ori['lat'] !== null && $ori['lng'] !== null) {
-            $origenLat = (float)$ori['lat'];
-            $origenLng = (float)$ori['lng'];
-            if ($origenLat !== 0.0 || $origenLng !== 0.0) {
-                $origen = [
-                    'lat'       => $origenLat,
-                    'lng'       => $origenLng,
-                    'creado_en' => $ori['creado_en'] !== null ? (string)$ori['creado_en'] : null,
-                ];
+            if ($ori && $ori['lat'] !== null && $ori['lng'] !== null) {
+                $origenLat = (float)$ori['lat'];
+                $origenLng = (float)$ori['lng'];
+                if ($origenLat !== 0.0 || $origenLng !== 0.0) {
+                    $origen = [
+                        'lat'       => $origenLat,
+                        'lng'       => $origenLng,
+                        'creado_en' => $ori['creado_en'] !== null ? (string)$ori['creado_en'] : null,
+                    ];
+                }
             }
+        } else {
+            $errores[] = 'origen: ' . $conexion->error;
         }
     }
 
@@ -169,14 +163,12 @@ foreach ($filas as $fila) {
     ];
 }
 
-if ($stmtServicio) {
-    $stmtServicio->close();
-}
-if ($stmtUbicacion) {
-    $stmtUbicacion->close();
-}
-if ($stmtOrigen) {
-    $stmtOrigen->close();
+if ($errores) {
+    error_log('seguimiento: ' . implode(' | ', $errores));
 }
 
-echo json_encode(['ok' => true, 'data' => $data]);
+$salida = ['ok' => true, 'data' => $data];
+if ($debug && $errores) {
+    $salida['debug'] = $errores;
+}
+echo json_encode($salida);
