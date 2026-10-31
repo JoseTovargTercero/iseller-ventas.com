@@ -95,6 +95,10 @@ const configPaginas = {
     titulo: "Mis transportistas",
     subtitulo: "Transportistas habilitados para tus deliveries",
   },
+  "tienda_seguimiento.php": {
+    titulo: "Seguimiento de deliverys",
+    subtitulo: "Estado, transportista y última ubicación en el mapa",
+  },
   "tienda_chat.php": {
     titulo: "Chat",
     subtitulo: "Conversaciones con tus clientes",
