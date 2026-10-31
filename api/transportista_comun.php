@@ -153,6 +153,25 @@ function asegurarTablas($conexion): void
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci"
     );
 
+    // Historial de ubicaciones: una fila por envío (cada 2 minutos) con el pedido y la hora.
+    $conexion->query(
+        "CREATE TABLE IF NOT EXISTS transportista_ubicaciones (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            transportista_id INT UNSIGNED NOT NULL,
+            servicio_id INT UNSIGNED DEFAULT NULL,
+            numero_pedido VARCHAR(40) DEFAULT NULL,
+            lat DECIMAL(10,7) NOT NULL,
+            lng DECIMAL(10,7) NOT NULL,
+            precision_m DECIMAL(8,2) DEFAULT NULL,
+            rumbo DECIMAL(5,1) DEFAULT NULL,
+            creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_ubicaciones_transportista (transportista_id, creado_en),
+            KEY idx_ubicaciones_pedido (numero_pedido, creado_en),
+            KEY idx_ubicaciones_fecha (creado_en)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci"
+    );
+
     // CREATE TABLE IF NOT EXISTS no añade columnas a tablas ya creadas en producción.
     $columnas = [
         'transportistas' => [
