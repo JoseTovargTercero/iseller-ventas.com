@@ -1969,6 +1969,11 @@ $stmtRep->close();
                     } else {
                         alert('Error: ' + data.msg);
                     }
+                })
+                .catch(function() {
+                    // El pedido pudo guardarse aunque la conexión se corte
+                    // mientras el servidor intenta enviar el push.
+                    alert('La conexión con el servidor se interrumpió. Actualiza los pedidos para ver si el cambio se guardó.');
                 });
         }
 
