@@ -185,9 +185,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 productosSucursal = Object.values(porId);
                 fuseProductos = new Fuse(productosSucursal, {
                     keys: ['nombre'],
-                    threshold: 0.35,
+                    threshold: 0.3,
                     ignoreLocation: true,
-                    ignoreDiacritics: true
+                    ignoreDiacritics: true,
+                    // Extended search trata las palabras separadas como AND: así
+                    // "hígado de pollo" no sugiere "pechuga de pollo", pero sigue
+                    // tolerando errores de escritura en cada palabra.
+                    useExtendedSearch: true
                 });
             }
 

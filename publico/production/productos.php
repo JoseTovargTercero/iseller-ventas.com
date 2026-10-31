@@ -340,6 +340,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <select class="form-control" style="max-width: 200px;" id="grupo-selector" name="grupo-selector" title="Filtrar por grupo" aria-label="Filtrar por grupo">
+                                        <option value="">Todos los grupos</option>
+                                    </select>
+                                    <select class="form-control" style="max-width: 200px;" id="categoria-selector" name="categoria-selector" title="Filtrar por categoría" aria-label="Filtrar por categoría">
+                                        <option value="">Todas las categorías</option>
+                                    </select>
                                     <div class="productos-search">
                                         <ion-icon name="search-outline"></ion-icon>
                                         <input type="search" id="productos-buscar" placeholder="Buscar producto…" autocomplete="off">
@@ -580,14 +586,24 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     tabla.search(this.value).draw();
                 });
 
-                // Filtro "solo con stock positivo": se aplica al dibujar, sin recargar
-                // datos ni perder la página actual de la tabla.
+                // Filtros "solo con stock", grupo y categoría: se aplican al dibujar,
+                // sin recargar datos ni perder la página actual de la tabla.
                 $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                     if (settings.nTable.id !== 'datatable-responsive') return true;
-                    const switchStock = document.getElementById('switch-stock');
-                    if (!switchStock || !switchStock.checked) return true;
+
                     const fila = settings.aoData[dataIndex] ? settings.aoData[dataIndex].nTr : null;
-                    return fila ? parseFloat(fila.dataset.stock || '0') > 0 : true;
+                    if (!fila) return true;
+
+                    const grupo = document.getElementById('grupo-selector')?.value || '';
+                    const categoria = document.getElementById('categoria-selector')?.value || '';
+                    if (grupo && fila.dataset.grupo !== grupo) return false;
+                    if (categoria && fila.dataset.categoria !== categoria) return false;
+
+                    const switchStock = document.getElementById('switch-stock');
+                    if (switchStock && switchStock.checked) {
+                        return parseFloat(fila.dataset.stock || '0') > 0;
+                    }
+                    return true;
                 });
 
                 const switchSoloStock = document.getElementById('switch-stock');
@@ -596,6 +612,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         tabla.draw(false);
                     });
                 }
+
+                $('#grupo-selector').on('change', function() {
+                    llenarCategoriasProductos(this.value, document.getElementById('categoria-selector').value);
+                    tabla.draw(false);
+                });
+
+                $('#categoria-selector').on('change', function() {
+                    tabla.draw(false);
+                });
 
                 let productos_editar
                 let metodo_editar
@@ -703,6 +728,59 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                 let productos = []
+                let categoriasPorGrupo = new Map();
+
+                // Rellena el selector de categorías con las que pertenecen al grupo elegido.
+                function llenarCategoriasProductos(grupo, seleccionada) {
+                    const catSel = document.getElementById('categoria-selector');
+                    if (!catSel) return;
+
+                    const actual = seleccionada || '';
+                    const categorias = [];
+                    categoriasPorGrupo.forEach(function(g, nombre) {
+                        if (!grupo || g === grupo) categorias.push(nombre);
+                    });
+                    categorias.sort(function(a, b) {
+                        return a.localeCompare(b, 'es');
+                    });
+
+                    catSel.innerHTML = '';
+                    catSel.add(new Option('Todas las categorías', ''));
+                    categorias.forEach(function(nombre) {
+                        catSel.add(new Option(nombre, nombre));
+                    });
+                    catSel.value = categorias.indexOf(actual) !== -1 ? actual : '';
+                }
+
+                // Reconstruye los filtros con los grupos/categorías del listado actual.
+                function actualizarFiltrosProductos(rows) {
+                    const grupoSel = document.getElementById('grupo-selector');
+                    const catSel = document.getElementById('categoria-selector');
+                    if (!grupoSel || !catSel) return;
+
+                    const grupos = new Set();
+                    categoriasPorGrupo = new Map();
+                    rows.forEach(function(row) {
+                        if (row.categoria_grupo) grupos.add(row.categoria_grupo);
+                        if (row.categoria_nombre) {
+                            categoriasPorGrupo.set(row.categoria_nombre, row.categoria_grupo || '');
+                        }
+                    });
+
+                    const grupoActual = grupoSel.value;
+                    const categoriaActual = catSel.value;
+
+                    grupoSel.innerHTML = '';
+                    grupoSel.add(new Option('Todos los grupos', ''));
+                    Array.from(grupos).sort(function(a, b) {
+                        return a.localeCompare(b, 'es');
+                    }).forEach(function(grupo) {
+                        grupoSel.add(new Option(grupo, grupo));
+                    });
+                    grupoSel.value = grupos.has(grupoActual) ? grupoActual : '';
+
+                    llenarCategoriasProductos(grupoSel.value, categoriaActual);
+                }
 
                 // Cargar etabla de productos
                 function cargarProductos(sucursal = '') {
@@ -747,9 +825,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             `<a href="ficha.php?id=${row.id}"><i style="color: #41c1af" class="icon-gray line icon-chart"></i></a>`,
                                             `<a class="c-pointer btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
                                         ]);
-                                        $(filaNueva.node()).attr('data-stock', row.stock);
+                                        $(filaNueva.node()).attr({
+                                            'data-stock': row.stock,
+                                            'data-grupo': row.categoria_grupo || '',
+                                            'data-categoria': row.categoria_nombre || ''
+                                        });
                                     });
 
+                                    actualizarFiltrosProductos(data.data);
                                     tabla.draw(); // Redibuja la tabla
 
                                     if (sucursal == '') {
@@ -1252,7 +1335,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     display: flex;
                     align-items: center;
                     gap: 12px;
-                    flex-wrap: nowrap;
+                    flex-wrap: wrap;
                     margin-left: auto;
                 }
 
