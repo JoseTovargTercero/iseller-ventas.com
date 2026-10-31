@@ -58,13 +58,14 @@ $stmtCats = $conexion->prepare("
     SELECT 
         cp.id, 
         cp.nombre, 
+        cp.grupo,
         COUNT(p.id) AS total_productos
     FROM categorias_producto cp
     INNER JOIN productos p ON p.categoria = cp.id
     WHERE p.bss_id = ? AND p.activo = 0
-    GROUP BY cp.id, cp.nombre
+    GROUP BY cp.id, cp.nombre, cp.grupo
     HAVING total_productos > 0
-    ORDER BY cp.nombre ASC
+    ORDER BY (cp.grupo IS NULL OR cp.grupo = '') ASC, cp.grupo ASC, cp.nombre ASC
 ");
 $stmtCats->bind_param('i', $bss_id);
 $stmtCats->execute();
@@ -107,6 +108,7 @@ if ($tipo_u === 1) {
     <title>Rendimiento por Categoría | iSeller POS</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
     <script src="../vendors/apexcharts/apexcharts.min.js"></script>
 
     <style>
@@ -488,6 +490,113 @@ if ($tipo_u === 1) {
             margin-bottom: 0;
         }
 
+        /* Tabla de productos de la categoría */
+        .tabla-productos-cat {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.tabla-productos-cat thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--dash-bg);
+            padding: 10px 18px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--dash-text-muted);
+            text-align: left;
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        table.tabla-productos-cat tbody td {
+            padding: 11px 18px;
+            font-size: 13px;
+            color: var(--dash-text);
+            border-bottom: 1px solid rgba(46, 53, 62, 0.5);
+        }
+
+        table.tabla-productos-cat tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tabla-productos-cat .stock-col {
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tabla-productos-cat .prod-empty {
+            text-align: center;
+            color: var(--dash-text-muted);
+            padding: 28px 18px;
+        }
+
+        /* Controles de paginación de DataTables */
+        .rend-dt-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 12px 18px;
+            border-top: 1px solid var(--dash-border);
+        }
+
+        .rend-dt-footer .dataTables_length {
+            margin-right: auto;
+            color: var(--dash-text-muted);
+            font-size: 12px;
+        }
+
+        .rend-dt-footer .dataTables_length select {
+            background: var(--dash-bg);
+            color: var(--dash-text);
+            border: 1px solid var(--dash-border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin: 0 4px;
+        }
+
+        .rend-dt-footer .dataTables_info {
+            color: var(--dash-text-muted);
+            font-size: 12px;
+            padding: 0;
+        }
+
+        .rend-dt-footer .dataTables_paginate {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0;
+        }
+
+        .rend-dt-footer .paginate_button {
+            color: var(--dash-text-muted) !important;
+            border: 1px solid var(--dash-border) !important;
+            border-radius: 6px !important;
+            padding: 4px 10px !important;
+            margin: 0 !important;
+            background: transparent !important;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        .rend-dt-footer .paginate_button.current {
+            background: rgba(45, 212, 160, 0.12) !important;
+            border-color: rgba(45, 212, 160, 0.5) !important;
+            color: var(--dash-mint) !important;
+        }
+
+        .rend-dt-footer .paginate_button.disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
         @media (max-width: 1024px) {
             .kpi-row-3 {
                 grid-template-columns: 1fr;
@@ -512,26 +621,17 @@ if ($tipo_u === 1) {
                 <!-- Barra de Controles superior -->
                 <div class="d-flex justify-content-end dash-header">
                     <div class="dash-controls">
-                        <!-- Selector de Categorias -->
+                        <!-- Selector de Grupo -->
                         <div class="select-filter-wrap">
-                            <select id="selectCategoria" class="select-filter" title="Seleccionar categoría de productos">
-                                <?php if (!empty($categorias)): ?>
-                                    <?php foreach ($categorias as $cat): ?>
-                                        <option value="<?php echo $cat['id']; ?>">
-                                            <?php echo htmlspecialchars($cat['nombre']); ?> (<?php echo $cat['total_productos']; ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
+                            <select id="selectGrupo" class="select-filter" title="Filtrar primero por grupo" aria-label="Filtrar por grupo">
+                                <option value="">Todos los grupos</option>
+                            </select>
+                        </div>
 
-                                <?php if ($total_sin_cat > 0): ?>
-                                    <option value="0" <?php echo empty($categorias) ? 'selected' : ''; ?>>
-                                        Sin categoría asignada (<?php echo $total_sin_cat; ?>)
-                                    </option>
-                                <?php endif; ?>
-
-                                <?php if (empty($categorias) && $total_sin_cat === 0): ?>
-                                    <option value="" disabled selected>Catálogo sin existencias</option>
-                                <?php endif; ?>
+                        <!-- Selector de Categorias (depende del grupo) -->
+                        <div class="select-filter-wrap">
+                            <select id="selectCategoria" class="select-filter" title="Seleccionar categoría de productos" aria-label="Seleccionar categoría">
+                                <option value="" disabled selected>Catálogo sin existencias</option>
                             </select>
                         </div>
 
@@ -694,18 +794,47 @@ if ($tipo_u === 1) {
                     </div>
                 </div>
 
+                <!-- 4. Productos de la categoría y su stock actual -->
+                <div class="dash-panel" style="margin-top: 20px;">
+                    <div class="panel-header">
+                        <h6>Productos de la categoría</h6>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span class="panel-badge" id="badgeProductosCat">0 productos</span>
+                            <span class="panel-badge" id="badgeStockAlcance">Todas las sucursales</span>
+                        </div>
+                    </div>
+                    <div class="panel-body p-0">
+                        <div style="overflow-x: auto;">
+                            <table class="tabla-productos-cat">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th class="stock-col">Stock actual</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaProductosCategoria"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
     <!-- Scripts requeridos -->
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
+    <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/nombre_pagina.js"></script>
 
     <script>
+        const CATEGORIAS = <?= json_encode($categorias, JSON_UNESCAPED_UNICODE) ?>;
+        const TOTAL_SIN_CAT = <?= (int)$total_sin_cat ?>;
+
         document.addEventListener('DOMContentLoaded', function() {
             let weeklyChart = null;
+            let tablaProductosCat = null;
 
             function formatMoney(amount) {
                 const val = Number(amount) || 0;
@@ -713,6 +842,119 @@ if ($tipo_u === 1) {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 });
+            }
+
+            function normalizarGrupo(grupo) {
+                const valor = String(grupo == null ? '' : grupo).trim();
+                return valor !== '' ? valor : 'Sin grupo';
+            }
+
+            function formatCantidad(cantidad) {
+                return (Number(cantidad) || 0).toLocaleString('en-US', {
+                    maximumFractionDigits: 2
+                });
+            }
+
+            function escapeHtml(texto) {
+                return String(texto == null ? '' : texto).replace(/[&<>"']/g, function(c) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    } [c];
+                });
+            }
+
+            // Los grupos salen de las categorías con productos del negocio.
+            function llenarSelectGrupos() {
+                const sel = document.getElementById('selectGrupo');
+                if (!sel) return;
+
+                const grupos = Array.from(new Set(CATEGORIAS.map(function(c) {
+                    return normalizarGrupo(c.grupo);
+                }))).sort(function(a, b) {
+                    if (a === 'Sin grupo') return 1;
+                    if (b === 'Sin grupo') return -1;
+                    return a.localeCompare(b, 'es');
+                });
+
+                sel.innerHTML = '';
+                sel.add(new Option('Todos los grupos', ''));
+                grupos.forEach(function(grupo) {
+                    sel.add(new Option(grupo, grupo));
+                });
+            }
+
+            // El selector de categorías solo muestra las del grupo elegido.
+            function llenarSelectCategorias(grupo, seleccionada) {
+                const sel = document.getElementById('selectCategoria');
+                if (!sel) return;
+
+                const actual = seleccionada == null ? '' : String(seleccionada);
+                let categorias = CATEGORIAS.slice();
+                if (grupo) {
+                    categorias = categorias.filter(function(c) {
+                        return normalizarGrupo(c.grupo) === grupo;
+                    });
+                }
+
+                sel.innerHTML = '';
+
+                const puedeSinCategoria = TOTAL_SIN_CAT > 0 && !grupo;
+                if (categorias.length === 0 && !puedeSinCategoria) {
+                    const opt = new Option('Catálogo sin existencias', '');
+                    opt.disabled = true;
+                    opt.selected = true;
+                    sel.add(opt);
+                    return;
+                }
+
+                categorias.forEach(function(c) {
+                    sel.add(new Option(c.nombre + ' (' + c.total_productos + ')', String(c.id)));
+                });
+                if (puedeSinCategoria) {
+                    sel.add(new Option('Sin categoría asignada (' + TOTAL_SIN_CAT + ')', '0'));
+                }
+
+                const existe = Array.from(sel.options).some(function(o) {
+                    return o.value === actual;
+                });
+                sel.value = existe ? actual : (sel.options[0] ? sel.options[0].value : '');
+            }
+
+            function renderProductosCategoria(productos) {
+                const badge = document.getElementById('badgeProductosCat');
+                const lista = Array.isArray(productos) ? productos : [];
+
+                if (badge) {
+                    badge.textContent = lista.length + (lista.length === 1 ? ' producto' : ' productos');
+                }
+
+                if (!tablaProductosCat) return;
+
+                tablaProductosCat.clear();
+                if (lista.length > 0) {
+                    tablaProductosCat.rows.add(lista.map(function(p) {
+                        return [escapeHtml(p.nombre), formatCantidad(p.stock)];
+                    }));
+                }
+                tablaProductosCat.draw();
+            }
+
+            function actualizarAlcanceStock() {
+                const badge = document.getElementById('badgeStockAlcance');
+                const sel = document.getElementById('selectSucursal');
+                if (!badge) return;
+
+                if (!sel) {
+                    badge.textContent = 'Sucursal asignada';
+                } else if (sel.value === 'todas') {
+                    badge.textContent = 'Todas las sucursales (sumatoria)';
+                } else {
+                    badge.textContent = 'Sucursal: ' + sel.options[sel.selectedIndex].text;
+                }
             }
 
             function initWeeklyChart() {
@@ -884,7 +1126,11 @@ if ($tipo_u === 1) {
                 const selectSuc = document.getElementById('selectSucursal');
                 const btnRef = document.getElementById('btnRefresh');
 
-                if (!selectCat || selectCat.value === "") return;
+                if (!selectCat || selectCat.value === "") {
+                    renderProductosCategoria([]);
+                    actualizarAlcanceStock();
+                    return;
+                }
 
                 const catVal = selectCat.value;
                 const sucVal = selectSuc ? selectSuc.value : '';
@@ -953,6 +1199,10 @@ if ($tipo_u === 1) {
                         // 5. Actualizar Clasificacion de Productos
                         renderTopProductos(data.top_productos);
                         renderTopRentables(data.top_productos_rentables);
+
+                        // 6. Productos de la categoría y su stock actual
+                        renderProductosCategoria(data.productos);
+                        actualizarAlcanceStock();
                     })
                     .catch(err => {
                         if (btnRef) btnRef.classList.remove('spinning');
@@ -960,8 +1210,47 @@ if ($tipo_u === 1) {
                     });
             }
 
+            tablaProductosCat = $('#tablaProductosCategoria').DataTable({
+                dom: 't<"rend-dt-footer"lip>',
+                pageLength: 10,
+                lengthMenu: [
+                    [10, 25, 50, -1],
+                    [10, 25, 50, 'Todos']
+                ],
+                ordering: false,
+                columnDefs: [{
+                    targets: 1,
+                    className: 'stock-col'
+                }],
+                language: {
+                    lengthMenu: 'Mostrar _MENU_ productos',
+                    info: 'Mostrando _START_ a _END_ de _TOTAL_ productos',
+                    infoEmpty: 'Mostrando 0 a 0 de 0 productos',
+                    infoFiltered: '(filtrado de _MAX_ en total)',
+                    zeroRecords: 'No se encontraron productos',
+                    emptyTable: 'Esta categoría no tiene productos registrados.',
+                    paginate: {
+                        first: 'Primero',
+                        last: 'Último',
+                        next: 'Siguiente',
+                        previous: 'Anterior'
+                    }
+                }
+            });
+
             initWeeklyChart();
+            llenarSelectGrupos();
+            llenarSelectCategorias('', '');
+            actualizarAlcanceStock();
             cargarDatos();
+
+            const selectGrupo = document.getElementById('selectGrupo');
+            if (selectGrupo) {
+                selectGrupo.addEventListener('change', function() {
+                    llenarSelectCategorias(this.value, '');
+                    cargarDatos();
+                });
+            }
 
             const selectCategoria = document.getElementById('selectCategoria');
             if (selectCategoria) {

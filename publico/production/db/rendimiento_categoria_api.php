@@ -322,7 +322,33 @@ usort($topProductosRentables, function ($a, $b) {
 });
 $topProductosRentables = array_slice($topProductosRentables, 0, 5);
 
-// 8. Responder JSON con toda la estructura
+// 8. Productos de la categoría con su stock actual. Con una sucursal elegida
+// se usa esa; con "Todas" se suma el stock de todas las sucursales del negocio.
+$sqlProductosCat = "
+    SELECT p.id, p.nombre,
+           COALESCE(SUM(CAST(s.stock AS DECIMAL(10,2))), 0) AS stock_actual
+    FROM productos p
+    LEFT JOIN stock s ON s.id_producto = p.id AND s.bss_id = $bss_id
+        " . ($sucursal_id > 0 ? "AND s.id_sucursal = $sucursal_id" : "") . "
+    WHERE p.activo = 0
+      AND p.bss_id = $bss_id
+      AND $catCondP
+    GROUP BY p.id, p.nombre
+    ORDER BY p.nombre ASC
+";
+$productosCategoria = [];
+$resProdCat = $conexion->query($sqlProductosCat);
+if ($resProdCat) {
+    while ($rowPC = $resProdCat->fetch_assoc()) {
+        $productosCategoria[] = [
+            'id' => (int)$rowPC['id'],
+            'nombre' => $rowPC['nombre'],
+            'stock' => round((float)$rowPC['stock_actual'], 2)
+        ];
+    }
+}
+
+// 9. Responder JSON con toda la estructura
 echo json_encode([
     'success' => true,
     'categoria' => [
@@ -355,5 +381,6 @@ echo json_encode([
         'ganancias' => array_values($diasGanancias)
     ],
     'top_productos' => $topProductos,
-    'top_productos_rentables' => $topProductosRentables
+    'top_productos_rentables' => $topProductosRentables,
+    'productos' => $productosCategoria
 ], JSON_UNESCAPED_UNICODE);
