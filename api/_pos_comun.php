@@ -13,6 +13,13 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
 
+// El catálogo lleva todos los clientes del negocio (decenas de miles): sin gzip
+// pesa varios MB y el POS no alcanza a bajarlo. El POS pide y descomprime gzip.
+if (strpos($_SERVER['HTTP_ACCEPT_ENCODING'] ?? '', 'gzip') !== false) {
+    ini_set('zlib.output_compression', '1');
+    ini_set('zlib.output_compression_level', '6');
+}
+
 set_exception_handler(function ($e) {
     // Rastro local para diagnosticar; al cliente solo se le da un error genérico.
     @file_put_contents(

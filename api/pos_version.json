@@ -1,6 +1,6 @@
 {
-    "sha256":  "56420bc0e2482f64c7817f8f1afd5715c37dcbe9f620f1e159974b63f0859a49",
+    "sha256":  "2ff23754bce2b284caf7618d26f360fc267cd4bc68d2190e986c98ae35d1488b",
     "archivo":  "pos_update.zip",
-    "version":  "1.0.1",
-    "notas":  "Tasas al iniciar sesión, tasas y versión en la barra inferior, catálogo por sucursal."
+    "version":  "1.0.4",
+    "notas":  "Impresion: usa la predeterminada si no hay configurada, reintenta con el driver de la POS-58 y avisa si no imprime."
 }
