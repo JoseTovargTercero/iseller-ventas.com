@@ -40,7 +40,7 @@ function tabla_existe($conexion, string $tabla): bool
 $res = $conexion->query(
     "SELECT o.id, o.status, o.created, o.cliente,
             u.nombre AS cliente_nombre, u.telefono AS cliente_telefono,
-            d.direccion, d.referencia
+            d.direccion, d.referencia, d.lat AS destino_lat, d.lng AS destino_lng
        FROM tienda_ordenes o
        LEFT JOIN tienda_usuarios u ON u.id = o.customer_id
        LEFT JOIN tienda_usuarios_direcciones d ON d.id = o.direccion_id
@@ -146,6 +146,15 @@ foreach ($filas as $fila) {
         }
     }
 
+    $destino = null;
+    if ($fila['destino_lat'] !== null && $fila['destino_lng'] !== null) {
+        $destinoLat = (float)$fila['destino_lat'];
+        $destinoLng = (float)$fila['destino_lng'];
+        if ($destinoLat !== 0.0 || $destinoLng !== 0.0) {
+            $destino = ['lat' => $destinoLat, 'lng' => $destinoLng];
+        }
+    }
+
     $data[] = [
         'id'                     => $ordenId,
         'status'                 => (int)$fila['status'],
@@ -154,6 +163,7 @@ foreach ($filas as $fila) {
         'cliente_telefono'       => (string)($fila['cliente_telefono'] ?? ''),
         'direccion'              => (string)($fila['direccion'] ?? ''),
         'referencia'             => (string)($fila['referencia'] ?? ''),
+        'destino'                => $destino,
         'transportista_id'       => $servicio ? (int)$servicio['transportista_id'] : null,
         'transportista_nombre'   => (string)($servicio['transportista_nombre'] ?? ''),
         'transportista_telefono' => (string)($servicio['transportista_telefono'] ?? ''),

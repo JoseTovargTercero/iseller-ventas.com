@@ -304,6 +304,12 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
             border-color: #fff;
         }
 
+        .seg-marker-dot.destino {
+            background: #ef5a6f;
+            color: #fff;
+            border-color: #fff;
+        }
+
         @media (max-width: 980px) {
             .seg-layout {
                 grid-template-columns: 1fr;
@@ -421,6 +427,8 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
         var segSelectedId = null;
         var segMap = null;
         var segLayer = null;
+        var segRouteCache = {};
+        var segRouteToken = 0;
 
         function escaparHtml(texto) {
             return String(texto == null ? '' : texto).replace(/[&<>"']/g, function(c) {
@@ -473,16 +481,21 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
             if (segMap) return;
             segMap = L.map('segMapa', { zoomControl: true }).setView([10.5, -66.9], 5);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap'
+                attribution: '&copy; OpenStreetMap · Ruta: OSRM'
             }).addTo(segMap);
             segLayer = L.layerGroup().addTo(segMap);
         }
 
         function iconoPunto(tipo) {
+            var iconos = {
+                origen: 'bi-shop',
+                destino: 'bi-geo-alt-fill',
+                transp: 'bi-truck'
+            };
             return L.divIcon({
                 className: '',
                 html: '<span class="seg-marker-dot ' + tipo + '"><i class="bi ' +
-                    (tipo === 'transp' ? 'bi-truck' : 'bi-shop') + '"></i></span>',
+                    (iconos[tipo] || 'bi-geo-alt') + '"></i></span>',
                 iconSize: [34, 34],
                 iconAnchor: [17, 17],
                 popupAnchor: [0, -18]
@@ -563,6 +576,7 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
 
         function renderSeleccion(reencuadrar) {
             initMapa();
+            segRouteToken++;
             segLayer.clearLayers();
 
             var o = segOrders.find(function(item) { return item.id === segSelectedId; });
@@ -610,22 +624,20 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                     .bindPopup('Punto de origen');
                 puntos.push(marcadorOrigen.getLatLng());
             }
+            if (o.destino) {
+                var marcadorDestino = L.marker([o.destino.lat, o.destino.lng], { icon: iconoPunto('destino') })
+                    .addTo(segLayer)
+                    .bindPopup('<strong>Destino de entrega</strong><br>' + escaparHtml(o.direccion || o.cliente || ''));
+                puntos.push(marcadorDestino.getLatLng());
+            }
             if (o.ubicacion) {
                 var marcadorTransp = L.marker([o.ubicacion.lat, o.ubicacion.lng], { icon: iconoPunto('transp') })
                     .addTo(segLayer)
                     .bindPopup('<strong>Transportista</strong><br>' + escaparHtml(o.transportista_nombre || 'Sin asignar'));
                 puntos.push(marcadorTransp.getLatLng());
             }
-            if (o.origen && o.ubicacion) {
-                L.polyline([
-                    [o.origen.lat, o.origen.lng],
-                    [o.ubicacion.lat, o.ubicacion.lng]
-                ], {
-                    color: '#2dd4a0',
-                    weight: 3,
-                    opacity: 0.7,
-                    dashArray: '6 8'
-                }).addTo(segLayer);
+            if (o.origen && o.destino) {
+                dibujarRutaCalzada(o.origen, o.destino, segRouteToken);
             }
 
             if (puntos.length === 1) {
@@ -637,6 +649,47 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
             } else if (reencuadrar) {
                 segMap.setView([10.5, -66.9], 5);
             }
+        }
+
+        function claveRuta(origen, destino) {
+            return [origen.lat.toFixed(5), origen.lng.toFixed(5),
+                    destino.lat.toFixed(5), destino.lng.toFixed(5)].join(',');
+        }
+
+        function pintarRutaCalzada(coordenadas) {
+            var puntosRuta = coordenadas.map(function(c) {
+                return [c[1], c[0]];
+            });
+            L.polyline(puntosRuta, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(segLayer);
+            L.polyline(puntosRuta, { color: '#2dd4a0', weight: 4, opacity: 0.95 }).addTo(segLayer);
+        }
+
+        // Ruta real por calles entre la tienda (origen) y la dirección del cliente.
+        function dibujarRutaCalzada(origen, destino, token) {
+            var clave = claveRuta(origen, destino);
+            if (segRouteCache[clave]) {
+                pintarRutaCalzada(segRouteCache[clave]);
+                return;
+            }
+
+            var url = 'https://router.project-osrm.org/route/v1/driving/' +
+                origen.lng + ',' + origen.lat + ';' +
+                destino.lng + ',' + destino.lat +
+                '?overview=full&geometries=geojson';
+
+            fetch(url)
+                .then(function(res) {
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data.routes || !data.routes[0] || !data.routes[0].geometry) return;
+                    segRouteCache[clave] = data.routes[0].geometry.coordinates;
+                    if (token !== segRouteToken) return;
+                    pintarRutaCalzada(segRouteCache[clave]);
+                })
+                .catch(function(err) {
+                    console.warn('No se pudo calcular la ruta por calles:', err);
+                });
         }
 
         document.getElementById('segBuscar').addEventListener('input', renderLista);
