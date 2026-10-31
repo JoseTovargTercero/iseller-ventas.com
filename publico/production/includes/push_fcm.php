@@ -292,7 +292,10 @@ if (!function_exists('push_habilitado')) {
                     $del->execute();
                     $del->close();
                 } elseif ($r['status'] < 200 || $r['status'] >= 300) {
-                    error_log('FCM: error ' . $r['status'] . ' ' . substr($cuerpoError, 0, 300));
+                    $pista = $r['status'] === 403
+                        ? ' (revisa que FCM_SERVICE_ACCOUNT sea del MISMO proyecto Firebase que google-services.json y que FCM_PROJECT_ID no apunte a otro proyecto)'
+                        : '';
+                    error_log('FCM: error ' . $r['status'] . $pista . ' ' . substr($cuerpoError, 0, 300));
                 }
             }
         } catch (Throwable $e) {

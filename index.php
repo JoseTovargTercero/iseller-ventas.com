@@ -3841,6 +3841,7 @@ $zona_tienda = $es_tienda_individual
                     codigo: item.c,
                     stock: item.s,
                     mayor: item.m,
+                    cantidadPaca: item.paca || 1,
                     precio_dolar_visible: item.pd,
                     precio_weight_visible: item.pp,
                     precio_bs_visible: item.pb,
@@ -4183,7 +4184,7 @@ $zona_tienda = $es_tienda_individual
                             <div class="d-flex align-items-center gap-2" >
                                 <div class="quantity-control form-control-sm border px-1">
                                     ${(()=>{
-                                        const _isD = DECIMAL_QTY_IDS.has(String(item.id));
+                                        const _isD = String(item.mayor) !== '1' && DECIMAL_QTY_IDS.has(String(item.id));
                                         const _step = _isD ? '0.5' : '1';
                                         const _min  = _isD ? '0.5' : '1';
                                         const _val  = _isD ? '0.5' : '1';
@@ -4412,7 +4413,9 @@ $zona_tienda = $es_tienda_individual
             listaProductos.forEach(producto => {
 
                 const isSocio = producto.sucursal === 'loreamny';
-                const isOutOfStock = !isSocio && producto.stock <= 0 && producto.mayor !== '1';
+                const esMayor = String(producto.mayor) === '1';
+                const esDecimal = !esMayor && DECIMAL_QTY_IDS.has(String(producto.id));
+                const isOutOfStock = !isSocio && producto.stock <= 0 && !esMayor;
                 const opacityClass = isOutOfStock ? 'opacity-50 grayscale' : '';
                 const btnDisabled = isOutOfStock ? 'disabled btn-disabled' : '';
                 const btnText = isOutOfStock ? 'Agotado' : '';
@@ -4490,11 +4493,11 @@ $zona_tienda = $es_tienda_individual
                                     <button class="btn-qty" onclick="changeQty(this, -1)">-</button>
                                     <input type="number" class="qty-input" 
                                         data-cantidad-id="${producto.id}"
-                                        value="${DECIMAL_QTY_IDS.has(String(producto.id)) ? '0.5' : '1'}"
-                                        min="${DECIMAL_QTY_IDS.has(String(producto.id)) ? '0.5' : '1'}"
-                                        data-step="${DECIMAL_QTY_IDS.has(String(producto.id)) ? '0.5' : '1'}"
-                                        data-min="${DECIMAL_QTY_IDS.has(String(producto.id)) ? '0.5' : '1'}"
-                                        step="${DECIMAL_QTY_IDS.has(String(producto.id)) ? '0.5' : '1'}" readonly>
+                                        value="${esDecimal ? '0.5' : '1'}"
+                                        min="${esDecimal ? '0.5' : '1'}"
+                                        data-step="${esDecimal ? '0.5' : '1'}"
+                                        data-min="${esDecimal ? '0.5' : '1'}"
+                                        step="${esDecimal ? '0.5' : '1'}" readonly>
                                     <button class="btn-qty" onclick="changeQty(this, 1, ${isSocio ? null : producto.stock})">+</button>
                                 </div>
                                 <button class="btn btn-add btn-add-to-car ${btnDisabled}" 
@@ -5300,8 +5303,8 @@ $zona_tienda = $es_tienda_individual
                     pricePeso: parseFloat(pesoventa_p),
                     priceBolivar: parseFloat(bolivarventa_p),
                     qty: cant,
-                    mayor: mayor,
-                    cantidadPaca: 1,
+                    mayor: producto.mayor,
+                    cantidadPaca: String(producto.mayor) === '1' ? (producto.cantidadPaca || 1) : 1,
                     priceCosto: parseFloat(producto.precio_costo),
                     bss_id: producto.bss_id,
                     id_sucursal: producto.id_sucursal,

@@ -60,9 +60,9 @@ function metricas_negocio(mysqli $c, $bss_id, $dias, $gracia)
                (SELECT u.nombre  FROM usuarios u WHERE u.bss_id = n.id ORDER BY u.id LIMIT 1) AS dueno,
                (SELECT COUNT(*) FROM productos p WHERE p.bss_id = n.id) AS productos,
                (SELECT COUNT(*) FROM orden o WHERE o.bss_id = n.id AND o.status IN (1,4)) AS ventas_pos,
-               (SELECT COUNT(*) FROM tienda_ordenes t WHERE t.bss_id = n.id AND t.status IN (1,2,3,4)) AS ventas_web,
+               (SELECT COUNT(*) FROM tienda_ordenes t WHERE t.bss_id = n.id AND t.status IN (1,2,3,4,6)) AS ventas_web,
                (SELECT MAX(o.created) FROM orden o WHERE o.bss_id = n.id AND o.status IN (1,4)) AS ult_pos,
-               (SELECT MAX(t.created) FROM tienda_ordenes t WHERE t.bss_id = n.id AND t.status IN (1,2,3,4)) AS ult_web
+               (SELECT MAX(t.created) FROM tienda_ordenes t WHERE t.bss_id = n.id AND t.status IN (1,2,3,4,6)) AS ult_web
         FROM negocio n
         WHERE n.id = $bss_id
     ")->fetch_assoc();

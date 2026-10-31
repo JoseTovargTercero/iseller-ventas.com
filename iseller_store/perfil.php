@@ -1413,8 +1413,12 @@ $userName = getUserName();
 
         function orderCard(o, idx) {
             const esRetiro = o.tipo_entrega !== 'delivery';
-            const st = OH_STATUS[o.estado] || { label: o.estado, cls: '' };
-            const label = (o.estado === 'enviada' && esRetiro) ? 'Listo para retirar' : st.label;
+            // El estado 6 es interno del panel; el cliente ve "Transportista asignado".
+            const asignado = Number(o.orden_status) === 6 && !esRetiro;
+            const st = asignado
+                ? { label: 'Transportista asignado', cls: 'is-ship' }
+                : (OH_STATUS[o.estado] || { label: o.estado, cls: '' });
+            const label = (!asignado && o.estado === 'enviada' && esRetiro) ? 'Listo para retirar' : st.label;
 
             const base = (parseFloat(o.valor_compra) || 0); // valor_compra ya incluye el envío
             const ahorro = parseFloat(o.ahorrado) || 0;
@@ -1425,11 +1429,13 @@ $userName = getUserName();
             const unidadTxt = unidades > 0 ? `${unidades} unidad${unidades === 1 ? '' : 'es'}` : '';
             const productosTxt = productos > 1 ? `${productos} productos` : '';
 
-            const frase = o.estado === 'rechazada'
-                ? (o.motivo_rechazo ? escapeHtml(o.motivo_rechazo) : 'Esta compra fue rechazada. Contáctanos para más información.')
-                : (o.estado === 'enviada' && esRetiro
-                    ? 'Tu pedido está listo para retirar en tienda'
-                    : (OH_PHRASE[o.estado] || 'Compra registrada'));
+            const frase = asignado
+                ? 'Tu pedido ya tiene un transportista asignado'
+                : (o.estado === 'rechazada'
+                    ? (o.motivo_rechazo ? escapeHtml(o.motivo_rechazo) : 'Esta compra fue rechazada. Contáctanos para más información.')
+                    : (o.estado === 'enviada' && esRetiro
+                        ? 'Tu pedido está listo para retirar en tienda'
+                        : (OH_PHRASE[o.estado] || 'Compra registrada')));
 
             const puedeCalificar = o.estado === 'entregada' && Number(o.orden_status) === 4 && o.orden_id && !Number(o.ya_calificada);
             const yaCalificada = o.estado === 'entregada' && Number(o.orden_status) === 4 && Number(o.ya_calificada);

@@ -129,6 +129,10 @@ opcionales (la app los pide, pero el permiso puede denegarse).
 total_cop, delivery_type, status, payment_reference, store_id, store_name,
 store_slug, item_count`.
 
+`status` puede ser `pendiente`, `en_revision`, `transportista_asignado`
+(delivery, antes de `enviada`), `enviada`, `entregada` o `rechazada`. En la tabla,
+`tienda_ordenes.status = 6` se expone como `transportista_asignado`.
+
 ### GET orders.php?id=41
 
 `{ order, items[], address, store }`. Solo el dueño puede verlo (IDOR filtrado).

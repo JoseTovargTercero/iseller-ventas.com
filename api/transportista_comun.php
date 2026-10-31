@@ -100,6 +100,10 @@ function asegurarTablas($conexion): void
             password_hash VARCHAR(255) NOT NULL,
             deliverys TINYINT(1) NOT NULL DEFAULT 1,
             carreras TINYINT(1) NOT NULL DEFAULT 0,
+            foto_url VARCHAR(255) DEFAULT NULL,
+            moto_marca VARCHAR(60) DEFAULT NULL,
+            moto_modelo VARCHAR(60) DEFAULT NULL,
+            moto_color VARCHAR(40) DEFAULT NULL,
             activo TINYINT(1) NOT NULL DEFAULT 1,
             creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -137,6 +141,7 @@ function asegurarTablas($conexion): void
             lat DECIMAL(10,7) DEFAULT NULL,
             lng DECIMAL(10,7) DEFAULT NULL,
             estado ENUM('asignado','aceptado','en_camino','completado','cancelado','rechazado') NOT NULL DEFAULT 'asignado',
+            entregado_en DATETIME DEFAULT NULL,
             notas VARCHAR(255) DEFAULT NULL,
             creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -168,6 +173,10 @@ function perfilTransportista(array $row): array
         'telefono'  => (string)$row['telefono'],
         'deliverys' => (bool)(int)$row['deliverys'],
         'carreras'  => (bool)(int)$row['carreras'],
+        'foto_url'  => (string)($row['foto_url'] ?? ''),
+        'moto_marca' => (string)($row['moto_marca'] ?? ''),
+        'moto_modelo' => (string)($row['moto_modelo'] ?? ''),
+        'moto_color' => (string)($row['moto_color'] ?? ''),
     ];
 }
 

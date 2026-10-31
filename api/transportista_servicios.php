@@ -22,7 +22,7 @@ $tipo = (($_GET['tipo'] ?? 'delivery') === 'carrera') ? 'carrera' : 'delivery';
 
 $stmt = $conexion->prepare(
     "SELECT s.id, s.tipo, s.bss_id, s.codigo_ruta, s.numero_pedido, s.cliente,
-            s.direccion, s.telefono, s.lat, s.lng, s.estado, s.notas, s.creado_en,
+            s.direccion, s.telefono, s.lat, s.lng, s.estado, s.entregado_en, s.notas, s.creado_en,
             COALESCE(NULLIF(n.nombre_visible, ''), n.nombre, '') AS tienda_nombre
        FROM transportista_servicios s
        LEFT JOIN negocio n ON n.id = s.bss_id
@@ -53,6 +53,7 @@ while ($row = $res->fetch_assoc()) {
         'lat'           => $row['lat'] !== null ? (float)$row['lat'] : null,
         'lng'           => $row['lng'] !== null ? (float)$row['lng'] : null,
         'estado'        => (string)$row['estado'],
+        'entregado_en'  => (string)($row['entregado_en'] ?? ''),
         'notas'         => (string)($row['notas'] ?? ''),
         'creado_en'     => (string)$row['creado_en'],
     ];

@@ -34,7 +34,10 @@ function api_order_summary(array $o): array
         'total_bs'          => (float)($o['total_price_bs'] ?? 0),
         'total_cop'         => (float)($o['total_price_cop'] ?? 0),
         'delivery_type'     => (string)($o['tipo_entrega'] ?? ''),
-        'status'            => (string)($o['estatus'] ?? 'pendiente'),
+        // El estado 6 es interno del panel; para el cliente es "transportista_asignado".
+        'status'            => ((int)($o['status'] ?? 0) === 6)
+            ? 'transportista_asignado'
+            : (string)($o['estatus'] ?? 'pendiente'),
         'payment_reference' => (string)($o['numero_operacion_bancaria'] ?? ''),
         'store_id'          => (int)($o['negocio_id'] ?? 0),
         'store_name'        => (string)($o['store_name'] ?? ''),
@@ -49,7 +52,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
     $id = (int)($_GET['id'] ?? 0);
 
     $sql = "SELECT o.id, o.created, o.total_price, o.total_price_bs, o.total_price_cop,
-                   o.tipo_entrega, o.numero_operacion_bancaria, o.negocio_id, o.direccion_id,
+                   o.status, o.tipo_entrega, o.numero_operacion_bancaria, o.negocio_id, o.direccion_id,
                    COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) AS store_name, n.slug AS store_slug,
                    (SELECT c.estatus FROM tienda_compras_por_usuarios c
                      WHERE c.compra_id = o.id AND c.usuario_id = o.customer_id

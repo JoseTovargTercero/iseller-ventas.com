@@ -14,10 +14,12 @@ $cantidad = (float)$_GET['cantidad'];
 $tienda_slug = $_GET['tienda_slug'] ?? null;
 
 // Buscamos dinámicamente el stock en la sucursal donde está publicado el producto
-$sql = "SELECT s.stock 
+$sql = "SELECT s.stock, s.id_stock, p.mayor, p.cantidad_unidades,
+               sb.stock AS stock_base
         FROM productos p
         INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
         INNER JOIN stock s ON p.id = s.id_producto AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+        LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
         INNER JOIN negocio n ON np.negocio_id = n.id AND s.bss_id = n.id
         WHERE p.id = ?";
 
@@ -37,7 +39,14 @@ $res = $stmt->get_result();
 
 if ($row = $res->fetch_assoc()) {
     $stockActual = (float)$row['stock'];
-    
+
+    // Al mayor el stock físico vive en el producto base; se compara en pacas.
+    if ((string)$row['mayor'] === '1') {
+        $unidadesPaca = (float)$row['cantidad_unidades'];
+        $stockBase = (float)($row['stock_base'] ?? 0);
+        $stockActual = $unidadesPaca > 0 ? floor($stockBase / $unidadesPaca) : 0;
+    }
+
     if ($stockActual >= $cantidad) {
         echo json_encode(['success' => true, 'stock' => $stockActual]);
     } else {

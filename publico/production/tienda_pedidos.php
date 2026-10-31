@@ -214,7 +214,7 @@ $stmtRep->close();
         /* Stats row */
         .pedidos-stats {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 16px;
             margin-bottom: 24px;
         }
@@ -246,6 +246,11 @@ $stmtRep->close();
         }
 
         .stat-icon.prep {
+            background: rgba(45, 212, 160, 0.1);
+            color: var(--dash-mint);
+        }
+
+        .stat-icon.assigned {
             background: rgba(45, 212, 160, 0.1);
             color: var(--dash-mint);
         }
@@ -503,6 +508,15 @@ $stmtRep->close();
 
         .status-5::before {
             background: #ef4444;
+        }
+
+        .status-6 {
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+        }
+
+        .status-6::before {
+            background: #22d3ee;
         }
 
         /* Status stepper */
@@ -1226,6 +1240,13 @@ $stmtRep->close();
                             </div>
                         </div>
                         <div class="stat-card">
+                            <div class="stat-icon assigned"><i class="bi bi-person-check"></i></div>
+                            <div class="stat-info">
+                                <div class="stat-num" id="stat-asignados">0</div>
+                                <div class="stat-label">Transportista asignado</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
                             <div class="stat-icon shipped"><i class="bi bi-truck"></i></div>
                             <div class="stat-info">
                                 <div class="stat-num" id="stat-enviados">0</div>
@@ -1498,7 +1519,8 @@ $stmtRep->close();
                 2: 'En preparación',
                 3: 'Enviado',
                 4: 'Entregado',
-                5: 'Rechazado'
+                5: 'Rechazado',
+                6: 'Transportista asignado'
             };
             // Solo vista: retiro en tienda muestra "Confirmado" en lugar de "Enviado"
             if (status === 3 && tipoEntrega === 'retiro_tienda') return 'Confirmado';
@@ -1535,7 +1557,8 @@ $stmtRep->close();
                         1: 0,
                         2: 0,
                         3: 0,
-                        4: 0
+                        4: 0,
+                        6: 0
                     };
                     (data.data || []).forEach(function(o) {
                         var s = parseInt(o.status);
@@ -1566,6 +1589,7 @@ $stmtRep->close();
                     tablaEntregadas.clear().rows.add(filasEntregadas).draw();
                     $('#stat-pendientes').text(counts[1]);
                     $('#stat-preparacion').text(counts[2]);
+                    $('#stat-asignados').text(counts[6]);
                     $('#stat-enviados').text(counts[3]);
                     $('#stat-entregados').text(counts[4]);
                 })
@@ -1604,17 +1628,17 @@ $stmtRep->close();
                     var estadoNum = parseInt(o.status);
                     var tpBox = document.getElementById('transportista-box');
                     ordenTransportistaId = parseInt(o.transportista_id || 0);
-                    if (esDelivery && (estadoNum === 3 || estadoNum === 4)) {
+                    if (esDelivery && (estadoNum === 6 || estadoNum === 3 || estadoNum === 4)) {
                         tpBox.style.display = '';
                         document.getElementById('det-transportista').textContent = o.transportista_nombre || 'Sin transportista asignado';
                         document.getElementById('det-transportista-estado').textContent = o.transportista_estado ? ('Servicio: ' + o.transportista_estado) : '';
                         var btnTp = document.getElementById('btn-cambiar-transportista');
-                        btnTp.style.display = estadoNum === 3 ? 'inline-flex' : 'none';
+                        btnTp.style.display = (estadoNum === 6 || estadoNum === 3) ? 'inline-flex' : 'none';
                         btnTp.innerHTML = ordenTransportistaId
                             ? '<i class="bi bi-arrow-repeat"></i> Cambiar'
                             : '<i class="bi bi-truck"></i> Asignar';
                         document.getElementById('btn-notificar-transportista').style.display =
-                            (estadoNum === 3 && ordenTransportistaId) ? 'inline-flex' : 'none';
+                            ((estadoNum === 6 || estadoNum === 3) && ordenTransportistaId) ? 'inline-flex' : 'none';
                     } else {
                         tpBox.style.display = 'none';
                     }
@@ -1852,8 +1876,18 @@ $stmtRep->close();
                 1: 'Pendiente',
                 2: 'En preparación',
                 3: tipoEntrega === 'retiro_tienda' ? 'Confirmado' : 'Enviado',
-                4: 'Entregado'
+                4: 'Entregado',
+                6: 'Transportista asignado'
             };
+        }
+
+        // Siguiente estado real del pedido: delivery pasa por 6 antes de 3.
+        function siguienteEstado() {
+            if (ordenStatus === 1) return 2;
+            if (ordenStatus === 2) return ordenActualTipo === 'delivery' ? 6 : 3;
+            if (ordenStatus === 6 && ordenActualTipo === 'delivery') return 3;
+            if (ordenStatus === 3) return 4;
+            return null;
         }
 
         function renderStatusStepper(o) {
@@ -1861,15 +1895,17 @@ $stmtRep->close();
             var actual = parseInt(o.status);
             ordenStatus = actual;
             var esRechazado = actual === 5;
+            var flujo = o.tipo_entrega === 'delivery' ? [1, 2, 6, 3, 4] : [1, 2, 3, 4];
+            var idxActual = flujo.indexOf(actual);
 
             var steps = '';
-            [1, 2, 3, 4].forEach(function(s) {
+            flujo.forEach(function(s, i) {
                 var cls = '';
-                if (!esRechazado) {
-                    if (s < actual) cls = 'done';
-                    else if (s === actual) cls = 'active';
+                if (!esRechazado && idxActual >= 0) {
+                    if (i < idxActual) cls = 'done';
+                    else if (i === idxActual) cls = 'active';
                 }
-                var dot = (cls === 'done') ? '<i class="bi bi-check-lg"></i>' : s;
+                var dot = (cls === 'done') ? '<i class="bi bi-check-lg"></i>' : (i + 1);
                 steps += '<div class="status-step ' + cls + '">' +
                     '<div class="step-dot">' + dot + '</div>' +
                     '<div class="step-label">' + labels[s] + '</div>' +
@@ -1877,14 +1913,21 @@ $stmtRep->close();
             });
             document.getElementById('status-stepper').innerHTML = '<div class="status-steps">' + steps + '</div>';
 
+            var siguiente = (!esRechazado && idxActual >= 0 && idxActual < flujo.length - 1)
+                ? flujo[idxActual + 1]
+                : null;
+
             var actions = '';
             if (esRechazado) {
                 actions = '<div class="status-done-msg rejected"><i class="bi bi-x-circle"></i> Pedido rechazado</div>';
-            } else if (actual >= 4) {
+            } else if (actual === 4) {
                 actions = '<div class="status-done-msg"><i class="bi bi-check-circle"></i> Pedido entregado</div>';
+            } else if (!siguiente) {
+                actions = '';
             } else {
+                var accion = siguiente === 6 ? 'Asignar transportista' : 'Marcar como ' + labels[siguiente];
                 actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">' +
-                    '<button class="btn btn-success" onclick="avanzarEstado()">Marcar como ' + labels[actual + 1] + ' <i class="bi bi-arrow-right"></i></button>' +
+                    '<button class="btn btn-success" onclick="avanzarEstado()">' + accion + ' <i class="bi bi-arrow-right"></i></button>' +
                     '<button class="btn btn-outline-danger" onclick="rechazarEstado()"><i class="bi bi-x-lg"></i> Rechazar pedido</button>' +
                     '</div>';
             }
@@ -1930,10 +1973,11 @@ $stmtRep->close();
         }
 
         function avanzarEstado() {
-            var siguiente = ordenStatus + 1;
-            if (siguiente === 3 && ordenActualTipo === 'delivery') {
+            var siguiente = siguienteEstado();
+            if (!siguiente) return;
+            if (siguiente === 6) {
                 elegirTransportista(function(id) {
-                    enviarEstado(3, null, id);
+                    enviarEstado(6, null, id);
                 });
                 return;
             }

@@ -308,6 +308,15 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
             background: #ef4444;
         }
 
+        .status-6 {
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+        }
+
+        .status-6::before {
+            background: #22d3ee;
+        }
+
         /* Modal & Stepper */
         .modal-content {
             background: var(--dash-card);
@@ -837,7 +846,8 @@ if (!$tienda || !$tienda['tiene_tienda_virtual']) {
                 2: 'En preparación',
                 3: 'Enviado',
                 4: 'Entregado',
-                5: 'Rechazado'
+                5: 'Rechazado',
+                6: 'Transportista asignado'
             };
             return map[status] || 'Pendiente';
         }

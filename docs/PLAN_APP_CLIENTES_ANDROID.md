@@ -259,6 +259,10 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
 - Nueva dirección: primero pregunta si usar la ubicación actual; con GPS toma el
   punto, completa estado/municipio con geocodificación inversa y deja solo
   dirección y referencia. Si se niega o el GPS falla, formulario manual.
+- Agregar producto: modal de cantidad con Aceptar/Cancelar; cancelar lo quita
+  del carrito. La tarjeta muestra la cantidad en el carrito, sin stepper inline.
+- Estado de pedido `transportista_asignado` (delivery, previo a `enviada`)
+  reconocido en la píldora de estado.
 - Fallback de logo (iSeller) y portada (`bg-hero-2a.webp`) para tiendas sin
   imágenes; el perfil de la tienda ya no queda en blanco.
 - El build debug apunta a producción por defecto; para local se pasa

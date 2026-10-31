@@ -51,9 +51,23 @@ $estadoActual = (string)$servicio['estado'];
 
 // ── Entregado ─────────────────────────────────────────────────────────────────
 if ($accion === 'entregar') {
+    // Si el reporte ya se había enviado (reintento de la cola offline), es idempotente.
+    if ($estadoActual === 'completado') {
+        salirJson(200, ['ok' => true, 'estado' => 'completado']);
+    }
     if (!in_array($estadoActual, ['aceptado', 'en_camino'], true)) {
         salirJson(409, ['ok' => false, 'error' => 'Acepta el servicio antes de marcarlo como entregado']);
     }
+
+    // Hora real de la entrega capturada en el teléfono (puede llegar mucho después).
+    $entregadoMs = (int)($in['entregado_ms'] ?? 0);
+    $ahoraMs = (int)floor(microtime(true) * 1000);
+    if ($entregadoMs <= 0 || $entregadoMs > $ahoraMs + 5 * 60 * 1000
+        || $entregadoMs < $ahoraMs - 60 * 24 * 60 * 60 * 1000) {
+        $entregadoMs = $ahoraMs;
+    }
+    $fechaEntrega = date('Y-m-d H:i:s', (int)floor($entregadoMs / 1000));
+    $horaEntrega = date('H:i', (int)floor($entregadoMs / 1000));
 
     $ordenId = (int)($servicio['numero_pedido'] ?? 0);
     $bssId = (int)($servicio['bss_id'] ?? 0);
@@ -84,68 +98,77 @@ if ($accion === 'entregar') {
         salirJson(409, ['ok' => false, 'error' => 'El pedido aún no está en envío']);
     }
 
-    $stmt = $conexion->prepare("UPDATE transportista_servicios SET estado = 'completado' WHERE id = ?");
-    $stmt->bind_param('i', $servicioId);
-    $stmt->execute();
-    $stmt->close();
-
-    if ($estadoOrden === 3) {
-        $stmt = $conexion->prepare("UPDATE tienda_ordenes SET status = 4 WHERE id = ? AND bss_id = ?");
-        $stmt->bind_param('ii', $ordenId, $bssId);
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    $conexion->begin_transaction();
+    try {
+        $stmt = $conexion->prepare(
+            "UPDATE transportista_servicios SET estado = 'completado', entregado_en = ? WHERE id = ?"
+        );
+        $stmt->bind_param('si', $fechaEntrega, $servicioId);
         $stmt->execute();
         $stmt->close();
 
-        $stmt = $conexion->prepare(
-            "UPDATE tienda_compras_por_usuarios SET estatus = 'entregada', estado = 'entregada' WHERE compra_id = ?"
-        );
-        if ($stmt) {
+        if ($estadoOrden === 3) {
+            $stmt = $conexion->prepare("UPDATE tienda_ordenes SET status = 4 WHERE id = ? AND bss_id = ?");
+            $stmt->bind_param('ii', $ordenId, $bssId);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conexion->prepare(
+                "UPDATE tienda_compras_por_usuarios SET estatus = 'entregada', estado = 'entregada' WHERE compra_id = ?"
+            );
             $stmt->bind_param('i', $ordenId);
             $stmt->execute();
             $stmt->close();
+
+            $archivoEstados = __DIR__ . '/../iseller_store/core/estados_orden.php';
+            if (file_exists($archivoEstados)) {
+                require_once $archivoEstados;
+                if (function_exists('registrar_estado_orden')) {
+                    registrar_estado_orden($conexion, $ordenId, $bssId, 4, 'transportista', $fechaEntrega);
+                }
+            }
         }
 
-        $archivoEstados = __DIR__ . '/../iseller_store/core/estados_orden.php';
-        if (file_exists($archivoEstados)) {
-            require_once $archivoEstados;
-            if (function_exists('registrar_estado_orden')) {
-                try {
-                    registrar_estado_orden($conexion, $ordenId, $bssId, 4, 'transportista');
-                } catch (Throwable $e) {
-                    error_log('transportista entregado historial: ' . $e->getMessage());
+        $conexion->commit();
+    } catch (Throwable $e) {
+        $conexion->rollback();
+        error_log('transportista entregado: ' . $e->getMessage());
+        salirJson(500, ['ok' => false, 'error' => 'No se pudo guardar la entrega']);
+    }
+
+    // Avisos: cliente (in-app + push) y administrador de la tienda (in-app + push).
+    // Solo si esta misma petición cambió el pedido a Entregado.
+    if ($estadoOrden === 3) {
+        $customerId = (int)($orden['customer_id'] ?? 0);
+        $titulo = "Pedido #$ordenId entregado";
+        $cuerpoCliente = "Tu pedido fue entregado a las $horaEntrega. ¡Gracias por tu compra!";
+
+        $archivoAvisos = __DIR__ . '/../iseller_store/api/chat/crear_notificacion_cliente.php';
+        if ($customerId > 0 && file_exists($archivoAvisos)) {
+            require_once $archivoAvisos;
+            if (function_exists('notificar_cliente')) {
+                notificar_cliente($conexion, $customerId, $titulo, $cuerpoCliente, 'compra', 'perfil.php?tab=orders');
+            }
+        }
+
+        $archivoAdmin = __DIR__ . '/../iseller_store/core/notificaciones_admin.php';
+        if (file_exists($archivoAdmin)) {
+            require_once $archivoAdmin;
+            if (function_exists('enviar_push_usuario')) {
+                if ($customerId > 0) {
+                    enviar_push_usuario($conexion, 'cliente', $customerId, $titulo, $cuerpoCliente,
+                            ['tipo' => 'compra', 'pedido' => (string)$ordenId]);
+                }
+                if (function_exists('notificar_admin_tienda')) {
+                    notificar_admin_tienda($conexion, $bssId, $titulo,
+                            "El transportista marcó el pedido como entregado a las $horaEntrega.", 'compra');
                 }
             }
         }
     }
 
-    // Avisos: cliente (in-app + push) y administrador de la tienda (in-app + push)
-    $customerId = (int)($orden['customer_id'] ?? 0);
-    $titulo = "Pedido #$ordenId entregado";
-    $cuerpoCliente = 'Tu pedido fue entregado. ¡Gracias por tu compra!';
-
-    $archivoAvisos = __DIR__ . '/../iseller_store/api/chat/crear_notificacion_cliente.php';
-    if ($customerId > 0 && file_exists($archivoAvisos)) {
-        require_once $archivoAvisos;
-        if (function_exists('notificar_cliente')) {
-            notificar_cliente($conexion, $customerId, $titulo, $cuerpoCliente, 'compra', 'perfil.php?tab=orders');
-        }
-    }
-
-    $archivoAdmin = __DIR__ . '/../iseller_store/core/notificaciones_admin.php';
-    if (file_exists($archivoAdmin)) {
-        require_once $archivoAdmin;
-        if (function_exists('enviar_push_usuario')) {
-            if ($customerId > 0) {
-                enviar_push_usuario($conexion, 'cliente', $customerId, $titulo, $cuerpoCliente,
-                        ['tipo' => 'compra', 'pedido' => (string)$ordenId]);
-            }
-            if (function_exists('notificar_admin_tienda')) {
-                notificar_admin_tienda($conexion, $bssId, $titulo,
-                        'El transportista marcó el pedido como entregado.', 'compra');
-            }
-        }
-    }
-
-    salirJson(200, ['ok' => true, 'estado' => 'completado']);
+    salirJson(200, ['ok' => true, 'estado' => 'completado', 'entregado_en' => $fechaEntrega]);
 }
 
 // ── Aceptar / rechazar ────────────────────────────────────────────────────────
@@ -168,7 +191,8 @@ if ($accion === 'rechazar' && $servicio['numero_pedido'] !== null && $servicio['
     $ordenId = (int)$servicio['numero_pedido'];
     $bssId = (int)($servicio['bss_id'] ?? 0);
 
-    $stmt = $conexion->prepare("UPDATE tienda_ordenes SET status = 2 WHERE id = ? AND status = 3");
+    // También desde 6 (transportista asignado) el pedido vuelve a preparación.
+    $stmt = $conexion->prepare("UPDATE tienda_ordenes SET status = 2 WHERE id = ? AND status IN (3, 6)");
     if ($stmt) {
         $stmt->bind_param('i', $ordenId);
         $stmt->execute();

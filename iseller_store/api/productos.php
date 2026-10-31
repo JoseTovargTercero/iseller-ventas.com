@@ -151,7 +151,8 @@ function formatearProducto(array $row, array $recompensas = []): array
     return [
         'id' => $row['id'],
         'nombre' => ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8')),
-        'stock' => (int)$row['stock'],
+        // Al mayor se muestran las pacas completas que cubre el stock base.
+        'stock' => (int)($row['stock_visible'] ?? $row['stock']),
         'mayor' => $row['mayor'],
         'codigo' => trim((string)$row['codigo_barras']),
         'categorias' => $row['categorias_nombres'] ?? '',
@@ -170,8 +171,13 @@ function formatearProducto(array $row, array $recompensas = []): array
 }
 
 // Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global.
-// Solo se muestran productos con stock disponible.
-$where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo' AND s.stock > 0";
+// Al mayor solo se muestra si el stock del producto base cubre al menos una paca.
+$where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
+          AND (
+              (p.mayor = '1' AND p.cantidad_unidades > 0 AND sb.stock >= p.cantidad_unidades)
+              OR
+              ((p.mayor IS NULL OR p.mayor <> '1') AND s.stock > 0)
+          )";
 $params = [];
 $types = "";
 
@@ -191,13 +197,17 @@ if (!$tienda_slug && $estadoFiltro !== '') {
 }
 
 if ($mode === 'search_index') {
-    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor, 
+    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor,
+                   MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
+                            THEN FLOOR(IFNULL(sb.stock, 0) / p.cantidad_unidades)
+                            ELSE s.stock END) AS stock_visible,
                    GROUP_CONCAT(DISTINCT cat.nombre SEPARATOR ', ') AS categorias_nombres,
                    np.foto_url, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) AS tienda_nombre, s.bss_id, s.id_sucursal
             FROM productos p
             INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
             INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+            LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
             LEFT JOIN categorias_producto cat ON p.categoria = cat.id
             WHERE {$where}
             GROUP BY p.id, n.id
@@ -218,8 +228,9 @@ if ($mode === 'search_index') {
             'id' => $row['id'],
             'n' => $nombre,
             'c' => trim((string)$row['codigo_barras']),
-            's' => (int)$row['stock'],
+            's' => (int)$row['stock_visible'],
             'm' => $row['mayor'],
+            'paca' => (int)$row['cantidad_unidades'],
             'ca' => $row['categorias_nombres'] ?? '',
             'pd' => $precios['precio_venta_dolar'],
             'pp' => $precios['precio_venta_peso'],
@@ -269,11 +280,15 @@ if ($mode === 'destacados') {
 
     $listaDest = implode(',', $idsDest);
     $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
+                   MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
+                            THEN FLOOR(IFNULL(sb.stock, 0) / p.cantidad_unidades)
+                            ELSE s.stock END) AS stock_visible,
                    GROUP_CONCAT(DISTINCT cat.nombre SEPARATOR ', ') AS categorias_nombres
             FROM productos p
             INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
             INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+            LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
             LEFT JOIN categorias_producto cat ON p.categoria = cat.id
             WHERE {$where} AND p.id IN ($listaDest)
             GROUP BY p.id, n.id
@@ -332,11 +347,15 @@ if ($grupoFiltro !== '') {
 $offset = ($page - 1) * $limit;
 
 $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
+               MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
+                        THEN FLOOR(IFNULL(sb.stock, 0) / p.cantidad_unidades)
+                        ELSE s.stock END) AS stock_visible,
                GROUP_CONCAT(DISTINCT cat.nombre SEPARATOR ', ') AS categorias_nombres
         FROM productos p
         INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
         INNER JOIN negocio n ON np.negocio_id = n.id
         INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+        LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
         LEFT JOIN categorias_producto cat ON p.categoria = cat.id
         WHERE {$where}
         GROUP BY p.id, n.id
@@ -366,6 +385,7 @@ $countSql = "SELECT COUNT(DISTINCT p.id) total
              INNER JOIN negocio n ON np.negocio_id = n.id
              INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
                          AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+             LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
              WHERE {$where}";
 $countStmt = $conexion->prepare($countSql);
 if (!empty($params)) $countStmt->bind_param($types, ...$params);

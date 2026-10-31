@@ -426,12 +426,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmtProd = $conexion->prepare(
             "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
-                    s.stock, s.porcentaje, s.bss_id, s.id_sucursal
+                    s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
+                    sb.stock AS stock_base
              FROM productos p
              INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
              INNER JOIN negocio n ON np.negocio_id = n.id
              INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
                   AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+             LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
              WHERE p.id = ? AND n.id = ? AND s.id_sucursal = ?
                AND p.activo = 0 AND p.origen != 'c'
                AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
@@ -464,7 +466,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Uno de los productos ya no está disponible']);
                 exit;
             }
-            if ((float)$prod['stock'] < $qty) {
+
+            // Al mayor: el stock físico está en el producto base y se vende en pacas.
+            $esMayor = (string)$prod['mayor'] === '1';
+            $unidadesPaca = (float)$prod['cantidad_unidades'];
+            $stockDisponible = $esMayor
+                ? ($unidadesPaca > 0 ? floor((float)($prod['stock_base'] ?? 0) / $unidadesPaca) : 0)
+                : (float)$prod['stock'];
+            if ($stockDisponible < $qty) {
                 echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de ' . $prod['nombre']]);
                 exit;
             }
@@ -477,6 +486,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'precio'    => (float)$precios['precio_venta_dolar'],
                 'precio_bs' => (float)$precios['precio_venta_bs'],
                 'precio_cop' => (float)$precios['precio_venta_peso'],
+                'es_mayor'  => $esMayor,
+                'unidades_paca' => $unidadesPaca,
+                'id_stock'  => (int)($prod['id_stock'] ?? 0),
             ];
 
             $total_dolares   += floor(round($precios['precio_venta_dolar'] * $qty * 1e6) / 1e4) / 100;
@@ -561,12 +573,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Reservar stock de forma atómica (descuenta ya, no al enviar).
         $stmtStock = $conexion_store->prepare("UPDATE stock SET stock = stock - ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?");
-        if (!$stmtStock) {
+        // Al mayor se descuenta del producto base (stock.id_stock), no de la fila de la paca.
+        $stmtStockMayor = $conexion_store->prepare("UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?");
+        if (!$stmtStock || !$stmtStockMayor) {
             $conexion_store->rollback();
             echo json_encode(['success' => false, 'message' => 'No se pudo reservar el stock']);
             exit;
         }
         foreach ($items as $it) {
+            if (!empty($it['es_mayor'])) {
+                $idStockMayor = (int)($it['id_stock'] ?? 0);
+                $unidadesPaca = (float)($it['unidades_paca'] ?? 0);
+                $descontar = (float)$it['qty'] * $unidadesPaca;
+                if ($idStockMayor <= 0 || $unidadesPaca <= 0) {
+                    $stmtStock->close();
+                    $stmtStockMayor->close();
+                    $conexion_store->rollback();
+                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                    exit;
+                }
+                $stmtStockMayor->bind_param("diid", $descontar, $idStockMayor, $bss_id, $descontar);
+                $stmtStockMayor->execute();
+                if ($stmtStockMayor->affected_rows !== 1) {
+                    $stmtStock->close();
+                    $stmtStockMayor->close();
+                    $conexion_store->rollback();
+                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                    exit;
+                }
+                continue;
+            }
+
             $qtyStock = (float)$it['qty'];
             $pidStock = (int)$it['id'];
             $sidStock = (int)$it['sucursal'];
@@ -574,12 +611,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtStock->execute();
             if ($stmtStock->affected_rows !== 1) {
                 $stmtStock->close();
+                $stmtStockMayor->close();
                 $conexion_store->rollback();
                 echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
                 exit;
             }
         }
         $stmtStock->close();
+        $stmtStockMayor->close();
         $descontado = "Si";
 
         $stmt = $conexion_store->prepare($sql);

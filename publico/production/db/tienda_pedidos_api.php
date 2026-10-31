@@ -124,9 +124,12 @@ if ($action === 'cambiar_estado') {
     // Antes de la transacción: CREATE TABLE provoca commit implícito.
     transportista_negocio_asegurar($conexion);
 
-    $estatus_map     = [1 => 'pendiente', 2 => 'en_revision', 3 => 'enviada', 4 => 'entregada', 5 => 'rechazada'];
+    // 6 = transportista asignado (solo delivery, antes de enviar).
+    // El historial del cliente conserva "en_revision": el perfil muestra
+    // "Transportista asignado" leyendo el status real de la orden.
+    $estatus_map     = [1 => 'pendiente', 2 => 'en_revision', 3 => 'enviada', 4 => 'entregada', 5 => 'rechazada', 6 => 'en_revision'];
     $estatus_cliente = $estatus_map[$status] ?? 'pendiente';
-    $statusLabels    = [1 => 'Pendiente', 2 => 'En preparación', 3 => 'Enviado', 4 => 'Entregado', 5 => 'Rechazado'];
+    $statusLabels    = [1 => 'Pendiente', 2 => 'En preparación', 3 => 'Enviado', 4 => 'Entregado', 5 => 'Rechazado', 6 => 'Transportista asignado'];
     $label           = $statusLabels[$status] ?? "Estatus #$status";
 
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -144,38 +147,60 @@ if ($action === 'cambiar_estado') {
             exit;
         }
 
-        // Solo avanzar al siguiente estado (o rechazar desde cualquier punto)
+        // Solo avanzar al siguiente estado (o rechazar desde cualquier punto).
+        // Delivery: 1 → 2 → 6 (transportista asignado) → 3 (enviado) → 4.
+        // Retiro:   1 → 2 → 3 → 4.
         $actual = (int)$orden['status'];
-        $permitido = ($actual < 4 && $status === $actual + 1) || ($status === 5 && $actual !== 5);
+        $esDelivery = (string)$orden['tipo_entrega'] === 'delivery';
+        $siguiente = 0;
+        if ($actual === 1) {
+            $siguiente = 2;
+        } elseif ($actual === 2) {
+            $siguiente = $esDelivery ? 6 : 3;
+        } elseif ($actual === 6 && $esDelivery) {
+            $siguiente = 3;
+        } elseif ($actual === 3) {
+            $siguiente = 4;
+        }
+        $permitido = ($siguiente > 0 && $status === $siguiente) || ($status === 5 && $actual !== 5);
         if (!$permitido) {
             $conexion->rollback();
             echo json_encode(['ok' => false, 'msg' => 'Transición no válida: solo se puede avanzar al siguiente estado']);
             exit;
         }
 
-        // Al pasar a "Enviado" un delivery hay que asignarle un transportista.
+        // Delivery: al asignar (6) o enviar (3) debe haber transportista.
         $transportistaAsignado = null;
-        if ($status === 3 && (string)$orden['tipo_entrega'] === 'delivery') {
-            if ($transportistaId <= 0) {
+        if ($esDelivery && ($status === 6 || $status === 3)) {
+            if ($transportistaId > 0) {
+                $stmtT = $conexion->prepare(
+                    "SELECT t.id, t.nombre
+                       FROM transportista_por_negocio r
+                       INNER JOIN transportistas t ON t.id = r.transportista_id
+                      WHERE r.bss_id = ? AND t.id = ? AND t.activo = 1 AND t.deliverys = 1
+                      LIMIT 1"
+                );
+                $stmtT->bind_param("ii", $bss_id, $transportistaId);
+                $stmtT->execute();
+                $transportistaAsignado = $stmtT->get_result()->fetch_assoc();
+                $stmtT->close();
+                if (!$transportistaAsignado) {
+                    $conexion->rollback();
+                    echo json_encode(['ok' => false, 'msg' => 'Transportista no válido o inactivo']);
+                    exit;
+                }
+            } elseif ($status === 6) {
                 $conexion->rollback();
-                echo json_encode(['ok' => false, 'msg' => 'Selecciona un transportista para enviar el delivery']);
+                echo json_encode(['ok' => false, 'msg' => 'Selecciona un transportista para asignar el delivery']);
                 exit;
-            }
-            $stmtT = $conexion->prepare(
-                "SELECT t.id, t.nombre
-                   FROM transportista_por_negocio r
-                   INNER JOIN transportistas t ON t.id = r.transportista_id
-                  WHERE r.bss_id = ? AND t.id = ? AND t.activo = 1 AND t.deliverys = 1
-                  LIMIT 1"
-            );
-            $stmtT->bind_param("ii", $bss_id, $transportistaId);
-            $stmtT->execute();
-            $transportistaAsignado = $stmtT->get_result()->fetch_assoc();
-            $stmtT->close();
-            if (!$transportistaAsignado) {
-                $conexion->rollback();
-                echo json_encode(['ok' => false, 'msg' => 'Transportista no válido o inactivo']);
-                exit;
+            } else {
+                // Enviar: el transportista ya se asignó en el estado anterior.
+                $tpActual = transportista_servicio_actual($conexion, (int)$bss_id, $id);
+                if (!$tpActual || in_array((string)$tpActual['estado'], ['rechazado', 'cancelado'], true)) {
+                    $conexion->rollback();
+                    echo json_encode(['ok' => false, 'msg' => 'Asigna un transportista antes de enviar el delivery']);
+                    exit;
+                }
             }
         }
 
@@ -247,7 +272,7 @@ if ($action === 'cambiar_estado') {
             $stmt->close();
         }
 
-        // 4. Asignación al transportista (solo delivery al pasar a Enviado)
+        // 4. Asignación al transportista (delivery: al asignar o reasignar)
         if ($transportistaAsignado) {
             transportista_asignar_delivery($conexion, (int)$bss_id, $id, $transportistaId);
         }
@@ -310,8 +335,8 @@ if ($action === 'cambiar_transportista') {
         echo json_encode(['ok' => false, 'msg' => 'Solo los pedidos delivery tienen transportista']);
         exit;
     }
-    if ((int)$orden['status'] !== 3) {
-        echo json_encode(['ok' => false, 'msg' => 'Solo se puede cambiar el transportista de un pedido enviado']);
+    if (!in_array((int)$orden['status'], [6, 3], true)) {
+        echo json_encode(['ok' => false, 'msg' => 'Solo se puede cambiar el transportista de un pedido asignado o enviado']);
         exit;
     }
 
@@ -466,7 +491,7 @@ if ($action === 'listar_delivery_disponibles') {
             FROM tienda_ordenes o
             LEFT JOIN tienda_usuarios u ON o.customer_id = u.id
             LEFT JOIN tienda_usuarios_direcciones d ON o.direccion_id = d.id
-            WHERE o.bss_id = ? AND o.tipo_entrega = 'delivery' AND o.status IN (1, 2, 3)
+            WHERE o.bss_id = ? AND o.tipo_entrega = 'delivery' AND o.status IN (1, 2, 3, 6)
             ORDER BY o.id DESC";
     $stmt = $conexion->prepare($sql);
     $stmt->bind_param("i", $bss_val);
