@@ -157,7 +157,8 @@ control en tablets.
 
 **Fase 3 — operación**
 - Firma de release (keystore + Play App Signing), `google-services.json` real, SHA-1.
-- Versionado remoto (`app_version.json` equivalente para clientes) y actualización forzada.
+- Actualización remota implementada con `version.json` en el VPS (versión, APK y
+  sha256); pendiente la actualización forzada (bloquear el uso hasta instalar).
 - Observabilidad: logs de API, alertas de errores 5xx, métricas de checkout.
 - Limpieza de refresh tokens vencidos (cron).
 
@@ -280,6 +281,10 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   al usuario; lo demás es código no reconocido. El botón queda bloqueado con un
   indicador hasta terminar el arranque y la carga de coordenadas de tiendas.
   `products.php` devuelve `codigo_barras` y busca por él.
+- Autoactualización: la app consulta `https://166.1.85.221.nip.io/version.json` al
+  arrancar, compara `versionCode`, descarga la APK del VPS, verifica su SHA-256 y
+  abre el instalador del sistema. El VPS redirige cualquier ruta a la APK única;
+  Android exige confirmar la instalación y permitir apps desconocidas.
 - Buscador con lista de coincidencias (producto, tienda y precio) en un panel
   elevado debajo del campo; no tapa las categorías ni filtra el catálogo del
   inicio y al tocar un resultado se abre el modal de cantidad.

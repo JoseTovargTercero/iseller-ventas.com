@@ -449,6 +449,60 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 white-space: normal;
             }
         }
+
+        /* Loader de registro: bloquea la pantalla para evitar dobles envíos */
+        .np-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 30000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(8, 13, 11, 0.78);
+            backdrop-filter: blur(2px);
+        }
+
+        .np-loader.show {
+            display: flex;
+        }
+
+        .np-loader-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            max-width: 320px;
+            padding: 26px 30px;
+            text-align: center;
+            background: var(--dash-card, #181b22);
+            border: 1px solid rgba(45, 212, 160, 0.35);
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            color: var(--dash-text, #e8edf2);
+        }
+
+        .np-loader-box strong {
+            font-size: 15px;
+        }
+
+        .np-loader-box span:last-child {
+            font-size: 12px;
+            color: var(--dash-text-muted, #8892a0);
+        }
+
+        .np-spinner {
+            width: 34px;
+            height: 34px;
+            border: 3px solid rgba(45, 212, 160, 0.2);
+            border-top-color: #2dd4a0;
+            border-radius: 50%;
+            animation: np-spin 0.8s linear infinite;
+        }
+
+        @keyframes np-spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 
     <body class='nav-md'>
@@ -899,6 +953,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
         <?php require('../assets/templates/modal.html'); ?>
 
+        <div id="np-loader" class="np-loader" aria-hidden="true">
+            <div class="np-loader-box" role="status" aria-live="polite">
+                <span class="np-spinner"></span>
+                <strong>Registrando producto…</strong>
+                <span>No cierres esta ventana.</span>
+            </div>
+        </div>
+
         <!-- jQuery -->
         <script src='../vendors/jquery/dist/jquery.min.js'></script>
         <script src='../vendors/select2/dist/js/select2.full.min.js'></script>
@@ -916,6 +978,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             let currentSectionIndex = 0;
             let sections = [];
+            let npRegistrandoProducto = false;
+
+            function npMostrarLoader(mostrar) {
+                const loader = document.getElementById('np-loader');
+                if (!loader) return;
+                loader.classList.toggle('show', !!mostrar);
+                loader.setAttribute('aria-hidden', mostrar ? 'false' : 'true');
+            }
+
+            function npFinalizarRegistro() {
+                npRegistrandoProducto = false;
+                npMostrarLoader(false);
+                const btnGuardar = document.querySelector("button.btn-success.actualizar");
+                if (btnGuardar) btnGuardar.disabled = false;
+            }
 
             document.addEventListener('DOMContentLoaded', () => {
                 // Recolectar todas las secciones automáticamente
@@ -1065,13 +1142,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             // Enviar el producto al back
             document.getElementById('form-data').addEventListener('submit', function(e) {
                 e.preventDefault();
+                if (npRegistrandoProducto) return;
+
+                npRegistrandoProducto = true;
 
                 const formElement = this; // <- El formulario real
                 const formData = new FormData(formElement); // <- El objeto FormData
 
 
                 // Usar tu función para obtener sucursales seleccionadas con su stock
-                const stockPorSucursal = obtenerStockPorSucursal();
+                let stockPorSucursal;
+                try {
+                    stockPorSucursal = obtenerStockPorSucursal();
+                } catch (err) {
+                    npFinalizarRegistro();
+                    Alerta.mostrar('error', 'Completa el stock de las sucursales antes de guardar.');
+                    return;
+                }
 
                 // Guardar en FormData como JSON
                 formData.append('sucursales_stock', JSON.stringify(stockPorSucursal));
@@ -1086,10 +1173,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     if (!confirm("¿Deseas enviar el formulario con estos datos?")) {
                         Alerta.toast('info', 'Envío cancelado por el usuario (modo debug activo).');
+                        npFinalizarRegistro();
                         return;
                     }
                 }
 
+                npMostrarLoader(true);
+                const btnGuardar = document.querySelector("button.btn-success.actualizar");
+                if (btnGuardar) btnGuardar.disabled = true;
 
                 // Envío por fetch
                 fetch('../../configurar/agregarProducto.php', {
@@ -1128,6 +1219,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         Alerta.toast(json.tipo, json.mensaje);
 
                     })
+                    .catch(function(err) {
+                        console.error('Error al registrar el producto:', err);
+                        Alerta.mostrar('error', 'No se pudo registrar el producto. Intenta de nuevo.');
+                    })
+                    .finally(function() {
+                        npFinalizarRegistro();
+                    });
 
             });
 
