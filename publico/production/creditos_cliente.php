@@ -5,6 +5,26 @@ require_once('includes/requires.php');
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $topnav = topnav();
   $cliente = $_GET['cliente'];
+
+  // Teléfono del cliente para compartir la deuda por WhatsApp
+  $telefonoCliente = '';
+  $stmtTel = $conexion->prepare("SELECT c.telefono FROM creditos cr INNER JOIN clientes c ON c.cedula = cr.cedula AND c.bss_id = cr.bss_id WHERE cr.negocio = ? AND cr.bss_id = ? AND cr.estado = '2' AND cr.cedula <> '' LIMIT 1");
+  $stmtTel->bind_param('si', $cliente, $bss_id);
+  $stmtTel->execute();
+  $rowTel = $stmtTel->get_result()->fetch_assoc();
+  $stmtTel->close();
+  if ($rowTel) $telefonoCliente = trim($rowTel['telefono'] ?? '');
+
+  // Guarda el teléfono capturado en el Swal, solo si el cliente aún no tiene uno
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telefono'])) {
+    header('Content-Type: application/json');
+    $telefonoNuevo = trim($_POST['telefono']);
+    $stmtGuardar = $conexion->prepare("UPDATE clientes SET telefono = ? WHERE bss_id = ? AND (telefono IS NULL OR telefono = '') AND cedula = (SELECT cedula FROM creditos WHERE negocio = ? AND bss_id = ? AND estado = '2' AND cedula <> '' LIMIT 1)");
+    $stmtGuardar->bind_param('siis', $telefonoNuevo, $bss_id, $cliente, $bss_id);
+    echo json_encode(['success' => $stmtGuardar->execute()]);
+    $stmtGuardar->close();
+    exit;
+  }
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -33,6 +53,24 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       margin: 2px 0 0;
       font-size: 13px;
     }
+
+    .dash-btn-wa {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      align-self: center;
+      background: rgba(37,211,102,.1);
+      border: 1px solid rgba(37,211,102,.35);
+      color: #25d366;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 16px;
+      border-radius: 10px;
+      transition: all .2s ease;
+      cursor: pointer;
+    }
+    .dash-btn-wa:hover { background: rgba(37,211,102,.18); }
+    .dash-btn-wa ion-icon { font-size: 16px; }
 
     
     .nav-tabs.dash-tabs {
@@ -348,6 +386,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
           <h3>Créditos</h3>
           <p>Cliente: <?= htmlspecialchars($cliente) ?></p>
         </div>
+        <button type="button" class="dash-btn-wa" onclick="compartirWhatsApp()">
+          <ion-icon name="logo-whatsapp"></ion-icon> Compartir deuda
+        </button>
       </div>
 
       <!-- NAV TABS -->
@@ -459,9 +500,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 <script>
 const cliente = <?php echo json_encode($cliente); ?>;
+const telefonoCliente = <?php echo json_encode($telefonoCliente); ?>;
 let creditosCount = null;
 let abonosCount = 0;
 let deudaActual = null;
+let ordenesCredito = [];
+let deudaInicialUSD = 0;
 
 async function cargarCreditos() {
   const tbody = document.querySelector('#tabla-creditos tbody');
@@ -476,6 +520,8 @@ async function cargarCreditos() {
     const data = await res.json();
     tbody.innerHTML = '';
     creditosCount = data.ordenes.length;
+    ordenesCredito = data.ordenes;
+    deudaInicialUSD = data.totales_global.usd;
     if (data.ordenes.length === 0) { window.location.href = 'creditos.php'; }
 
     data.ordenes.forEach(ord => {
@@ -684,6 +730,61 @@ function formatearMiles(n) {
   const num = parseFloat(n);
   if (isNaN(num)) return n;
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function normalizarTelefono(tel) {
+  const digitos = String(tel || '').replace(/\D/g, '');
+  return digitos.length >= 10 ? digitos : '';
+}
+
+function guardarTelefono(telefono) {
+  const fd = new FormData();
+  fd.append('telefono', telefono);
+  fetch(`creditos_cliente.php?cliente=${encodeURIComponent(cliente)}`, { method: 'POST', body: fd }).catch(() => {});
+}
+
+function textoDeuda() {
+  const total = deudaActual.usd;
+  const abonado = Math.max(0, deudaInicialUSD - total);
+  const lineas = [
+    '*ESTADO DE CUENTA*',
+    `Cliente: ${cliente}`,
+    `Fecha: ${new Date().toLocaleDateString('es-VE')}`,
+    '',
+    '*Créditos pendientes*'
+  ];
+  ordenesCredito.forEach((ord, i) => {
+    lineas.push(`*Crédito ${i + 1}* — ${ord.fecha}`);
+    ord.productos.forEach(p => lineas.push(`• ${p.cantidad} x ${p.datos.nombre}`));
+  });
+  lineas.push('', `*Total deuda: $${total.toFixed(2)}*`);
+  if (abonado >= 0.01) lineas.push(`*Total abonado: $${abonado.toFixed(2)}*`);
+  return lineas.join('\n');
+}
+
+async function compartirWhatsApp() {
+  if (!deudaActual || ordenesCredito.length === 0) {
+    Alerta.toast('info', 'Espera a que termine de cargar la deuda');
+    return;
+  }
+  let telefono = normalizarTelefono(telefonoCliente);
+  if (!telefono) {
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Teléfono del cliente',
+      input: 'tel',
+      inputLabel: `Número de WhatsApp de ${cliente}`,
+      inputPlaceholder: '+58 412-1234567',
+      inputAttributes: { inputmode: 'tel' },
+      showCancelButton: true,
+      confirmButtonText: 'Enviar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: v => normalizarTelefono(v) ? undefined : 'Ingresa un número válido (mín. 10 dígitos)'
+    });
+    if (!isConfirmed) return;
+    telefono = normalizarTelefono(value);
+    guardarTelefono(value.trim());
+  }
+  window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(textoDeuda())}`, '_blank');
 }
 
 function eliminarCredito(orderId) {
