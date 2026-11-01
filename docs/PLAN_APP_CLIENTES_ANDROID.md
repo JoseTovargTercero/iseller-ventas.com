@@ -265,6 +265,17 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   agregar productos, editar, eliminar y cargar al carrito). El carrito permite
   guardar cada grupo de tienda como mercado; al cargar se respeta el stock
   actual. El editor pagina el catálogo completo de la tienda (40 por página).
+- Inicio rediseñado: saludo + carrito con badge, buscador, categorías con imagen
+  y scroll horizontal, carrusel de tiendas locales y grupos por categoría con
+  productos en scroll horizontal. Fondo gris `#F2F3F5` y verde más oscuro
+  `#2E8B63`; barra superior oculta en Inicio. El carrusel usa `cover_url` con
+  fallback a degradado + logo; las categorías usan la imagen de su primer
+  producto o la inicial.
+- Seguimiento delivery: botón en el detalle de pedidos activos; mapa OSM con ruta
+  OSRM tienda → entrega, origen con la foto/logo de la tienda, destino con icono
+  de usuario y transportista (círculo + carrito) con solo su última posición
+  cuando el estado es `enviada`. Polling cada 12 s; API `tracking.php` con origen
+  (`tienda_orden_origen`), destino y `transportista_ubicaciones`.
 - Estado de pedido `transportista_asignado` (delivery, previo a `enviada`)
   reconocido en la píldora de estado.
 - Fallback de logo (iSeller) y portada (`bg-hero-2a.webp`) para tiendas sin

@@ -196,6 +196,31 @@ formato que `?id=`. Solo el dueño del pedido puede abrirla.
 Inserta el mensaje como cliente, actualiza `ultimo_mensaje_en` y avisa al
 comercio (in-app/push). No permite escribir en conversaciones cerradas.
 
+## Seguimiento (Bearer)
+
+### GET tracking.php?order_id=42
+
+Solo el dueño del pedido, y solo para pedidos `delivery`:
+
+```json
+{
+  "order_id": 42, "status": "enviada",
+  "store": { "name": "loreannys", "lat": 5.671, "lng": -67.591 },
+  "origin": { "lat": 5.671, "lng": -67.591, "created_at": "..." },
+  "destination": { "address": "URBMAISANTA", "reference": "FRENTE",
+                   "lat": 5.674, "lng": -67.596 },
+  "carrier": { "id": 1, "name": "Moto Prueba", "phone": "0414...",
+               "service_status": "en_camino" },
+  "location": { "lat": 5.673, "lng": -67.595, "accuracy": 6, "created_at": "..." },
+  "history": [ { "lat": 5.672, "lng": -67.592, "created_at": "..." } ],
+  "updated_at": "..."
+}
+```
+
+El origen sale de `tienda_orden_origen` (si falta, se usa la tienda), el destino
+de la dirección de entrega y el recorrido de `transportista_ubicaciones`. La app
+muestra el punto del transportista solo cuando el estado es `enviada`/`enviado`.
+
 ## Push (Bearer)
 
 ### POST push/token.php

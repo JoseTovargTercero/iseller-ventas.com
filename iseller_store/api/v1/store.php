@@ -52,7 +52,7 @@ function api_categorias(?int $bssId): array
 function api_tiendas_registradas(): array
 {
     global $conexion;
-    $sql = "SELECT id, slug, nombre, nombre_visible, logo_url, categoria
+    $sql = "SELECT id, slug, nombre, nombre_visible, logo_url, portada_url, categoria
             FROM negocio
             WHERE tiene_tienda_virtual = 1
               AND estado = 'activo'
@@ -69,11 +69,16 @@ function api_tiendas_registradas(): array
         if ($logo === '') {
             $logo = 'assets/img/logo-tienda.png';
         }
+        $cover = trim((string)($fila['portada_url'] ?? ''));
+        if ($cover === '') {
+            $cover = 'assets/img/bg-hero-2a.webp';
+        }
         $items[] = [
             'id'       => (int)$fila['id'],
             'slug'     => (string)$fila['slug'],
             'name'     => ($fila['nombre_visible'] ?? '') !== '' ? $fila['nombre_visible'] : $fila['nombre'],
             'logo_url' => api_image($logo, 160, 78),
+            'cover_url' => api_image($cover, 600, 72),
             'category' => (string)($fila['categoria'] ?? ''),
         ];
     }
@@ -81,10 +86,10 @@ function api_tiendas_registradas(): array
 }
 
 $themeBase = [
-    'primary'      => '#36A97C',
-    'primary_dark' => '#2A8562',
-    'accent'       => '#2DD4A0',
-    'background'   => '#F5F7F6',
+    'primary'      => '#2E8B63',
+    'primary_dark' => '#236B4C',
+    'accent'       => '#26B88A',
+    'background'   => '#F2F3F5',
     'surface'      => '#FFFFFF',
     'text'         => '#1F2933',
     'muted'        => '#6B7280',

@@ -123,8 +123,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
             $stmt->close();
             if ($dir) {
                 $direccion = [
-                    'address'   => $dir['direccion'],
-                    'reference' => $dir['referencia'],
+                    'address'   => (string)($dir['direccion'] ?? ''),
+                    'reference' => (string)($dir['referencia'] ?? ''),
                     'lat'       => $dir['lat'] !== null ? (float)$dir['lat'] : null,
                     'lng'       => $dir['lng'] !== null ? (float)$dir['lng'] : null,
                 ];

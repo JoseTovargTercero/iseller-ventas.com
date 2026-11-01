@@ -29,7 +29,7 @@ $stmt = $conexion_store->prepare(
               WHERE c.compra_id = o.id AND c.usuario_id = o.customer_id
               ORDER BY c.id DESC LIMIT 1) AS estatus,
             COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) AS store_name,
-            n.lat AS store_lat, n.lng AS store_lng
+            n.lat AS store_lat, n.lng AS store_lng, n.logo_url AS store_logo
        FROM tienda_ordenes o
        LEFT JOIN negocio n ON n.id = o.negocio_id
       WHERE o.id = ? AND o.customer_id = ?
@@ -60,6 +60,13 @@ $store = [
     'name' => (string)($orden['store_name'] ?? ''),
     'lat'  => $orden['store_lat'] !== null ? (float)$orden['store_lat'] : null,
     'lng'  => $orden['store_lng'] !== null ? (float)$orden['store_lng'] : null,
+    'logo_url' => api_image(
+        trim((string)($orden['store_logo'] ?? '')) !== ''
+            ? (string)$orden['store_logo']
+            : 'assets/img/logo-tienda.png',
+        160,
+        78
+    ),
 ];
 
 // Origen: punto guardado al pasar el pedido a enviado; si no, la tienda.
