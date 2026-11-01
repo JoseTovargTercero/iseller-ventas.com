@@ -274,6 +274,181 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             font-size: 16px;
             color: var(--dash-text-muted, #8892a0);
         }
+
+        /* Botones de herramientas del producto */
+        .np-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .np-toolbar .btn {
+            width: 100%;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .np-toolbar .btn ion-icon {
+            font-size: 15px;
+        }
+
+        /* Modal para copiar datos de otro producto */
+        #modalCopiarProducto {
+            z-index: 10050;
+        }
+
+        .modal-backdrop {
+            z-index: 10040;
+        }
+
+        #modalCopiarProducto .modal-content {
+            background: var(--dash-card, #181b22);
+            border: 1px solid var(--dash-border, #2e353e);
+            border-radius: 14px;
+            color: var(--dash-text, #e8edf2);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+        }
+
+        #modalCopiarProducto .modal-header {
+            border-bottom: 1px solid var(--dash-border, #2e353e);
+            padding: 16px 20px;
+        }
+
+        #modalCopiarProducto .modal-title {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        #modalCopiarProducto .modal-title ion-icon {
+            color: #2dd4a0;
+            font-size: 18px;
+        }
+
+        #modalCopiarProducto .modal-body {
+            padding: 16px 20px 20px;
+        }
+
+        #modalCopiarProducto .close {
+            color: #8892a0;
+            opacity: 1;
+            text-shadow: none;
+            font-size: 22px;
+        }
+
+        #modalCopiarProducto .close:hover {
+            color: #e8edf2;
+        }
+
+        .np-copy-search {
+            position: relative;
+        }
+
+        .np-copy-search ion-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8892a0;
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        .np-copy-search input {
+            width: 100%;
+            background: var(--dash-bg, #1a1e24);
+            border: 1px solid var(--dash-border, #2e353e);
+            color: var(--dash-text, #e8edf2);
+            border-radius: 9px;
+            padding: 10px 12px 10px 38px;
+            font-size: 13px;
+        }
+
+        .np-copy-search input:focus {
+            outline: none;
+            border-color: #2dd4a0;
+            box-shadow: 0 0 0 3px rgba(45, 212, 160, 0.12);
+        }
+
+        .np-copy-results {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 380px;
+            overflow-y: auto;
+            margin-top: 14px;
+            padding-right: 2px;
+        }
+
+        .np-copy-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--dash-border, #2e353e);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--dash-text, #e8edf2);
+            cursor: pointer;
+            transition: border-color .15s ease, background .15s ease;
+        }
+
+        .np-copy-item:hover {
+            border-color: rgba(45, 212, 160, 0.5);
+            background: rgba(45, 212, 160, 0.05);
+        }
+
+        .np-copy-item-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .np-copy-item-name {
+            font-size: 13px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .np-copy-item-meta {
+            font-size: 11px;
+            color: #8892a0;
+            margin-top: 2px;
+        }
+
+        .np-copy-item-price {
+            flex-shrink: 0;
+            font-size: 13px;
+            font-weight: 700;
+            color: #2dd4a0;
+            text-align: right;
+        }
+
+        .np-copy-empty {
+            text-align: center;
+            color: #8892a0;
+            font-size: 13px;
+            padding: 28px 12px;
+        }
+
+        @media (max-width: 575px) {
+            .np-toolbar {
+                margin-top: 8px;
+            }
+
+            .np-toolbar .btn {
+                white-space: normal;
+            }
+        }
     </style>
 
     <body class='nav-md'>
@@ -469,12 +644,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <label class='col-form-label' for='nombre'>Nombre del producto</label>
                                                         <div class="row">
 
-                                                            <div class='col-md-7  col-sm-7'>
+                                                            <div class='col-md-6 col-sm-6'>
                                                                 <input type='text' id='nombre' required placeholder="Nombre del producto" name='nombre' class='form-control '>
                                                             </div>
 
-                                                            <div class='col-md-5 col-sm-5'>
-                                                                <button type="button" style="text-wrap: nowrap;" class="btn w-100 btn-info" id="open-modal">Calcular precio</button>
+                                                            <div class='col-md-6 col-sm-6'>
+                                                                <div class="np-toolbar">
+                                                                    <button type="button" class="btn btn-info" id="open-modal">
+                                                                        <ion-icon name="calculator-outline"></ion-icon> Calcular precio
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-info" id="btn-copiar-producto">
+                                                                        <ion-icon name="copy-outline"></ion-icon> Copiar de otro producto
+                                                                    </button>
+                                                                </div>
                                                             </div>
 
                                                         </div>
@@ -690,6 +872,31 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         </div>
         </div>
         </div>
+        <!-- Copiar datos de otro producto -->
+        <div class="modal fade" id="modalCopiarProducto" tabindex="-1" role="dialog" aria-labelledby="modalCopiarProductoTitulo" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalCopiarProductoTitulo">
+                            <ion-icon name="copy-outline"></ion-icon> Copiar de otro producto
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="np-copy-search">
+                            <ion-icon name="search-outline"></ion-icon>
+                            <input type="search" id="np-copy-search" placeholder="Buscar por nombre o código de barras..." autocomplete="off">
+                        </div>
+                        <div id="np-copy-results" class="np-copy-results">
+                            <div class="np-copy-empty">Escribe para buscar entre tus productos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <?php require('../assets/templates/modal.html'); ?>
 
         <!-- jQuery -->
@@ -1231,6 +1438,147 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         $cat.val($opcion.val()).trigger('change');
                     }
                 });
+            });
+        </script>
+
+        <script>
+            // Copiar datos de otro producto del mismo negocio.
+            const NP_COPY_API = '../../configurar/buscar_productos_copiar.php';
+            let npCopyResultados = [];
+            let npCopyTimer = null;
+
+            function npCopyEsc(texto) {
+                return String(texto == null ? '' : texto).replace(/[&<>"']/g, function(c) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    } [c];
+                });
+            }
+
+            function npCopyAbrir() {
+                const input = document.getElementById('np-copy-search');
+                input.value = '';
+                npCopyResultados = [];
+                document.getElementById('np-copy-results').innerHTML =
+                    '<div class="np-copy-empty">Cargando productos...</div>';
+
+                $('#modalCopiarProducto').modal('show');
+                npCopyBuscar('');
+
+                setTimeout(function() {
+                    input.focus();
+                }, 250);
+            }
+
+            function npCopyBuscar(query) {
+                fetch(NP_COPY_API + '?q=' + encodeURIComponent(query), {
+                        cache: 'no-store'
+                    })
+                    .then(function(res) {
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        if (!data.ok) throw new Error(data.msg || 'Error al buscar productos');
+                        npCopyResultados = data.data || [];
+                        npCopyRender();
+                    })
+                    .catch(function(err) {
+                        npCopyResultados = [];
+                        document.getElementById('np-copy-results').innerHTML =
+                            '<div class="np-copy-empty">' + npCopyEsc(err.message) + '</div>';
+                    });
+            }
+
+            function npCopyRender() {
+                const cont = document.getElementById('np-copy-results');
+
+                if (!npCopyResultados.length) {
+                    cont.innerHTML = '<div class="np-copy-empty">No se encontraron productos.</div>';
+                    return;
+                }
+
+                cont.innerHTML = npCopyResultados.map(function(p, index) {
+                    const meta = [];
+                    if (p.codigo) meta.push('COD: ' + p.codigo);
+                    if (p.proveedor) meta.push(p.proveedor);
+                    if (p.categoria_nombre) meta.push(p.categoria_nombre);
+                    meta.push('Und/bulto: ' + p.cantidad_unidades);
+
+                    return '<button type="button" class="np-copy-item" data-index="' + index + '">' +
+                        '<div class="np-copy-item-main">' +
+                        '<div class="np-copy-item-name">' + npCopyEsc(p.nombre) + '</div>' +
+                        '<div class="np-copy-item-meta">' + npCopyEsc(meta.join(' · ')) + '</div>' +
+                        '</div>' +
+                        '<div class="np-copy-item-price">' +
+                        (p.precio_compra !== '' ? '$' + npCopyEsc(p.precio_compra) : '—') +
+                        '</div>' +
+                        '</button>';
+                }).join('');
+            }
+
+            function npCopyAplicar(p) {
+                if (!p) return;
+
+                document.getElementById('precioMonedaOrigen').value = p.precio_compra || '';
+                document.getElementById('origenProducto').value = p.origen || '';
+                document.getElementById('cantidad').value = p.cantidad_unidades || '';
+                document.getElementById('porcentaje').value = p.porcentaje || '';
+                document.getElementById('proveedor').value = p.proveedor || '';
+
+                const $cat = $('#categoria_select');
+                if (p.categoria_id) {
+                    const catId = String(p.categoria_id);
+                    if ($cat.find('option[value="' + catId + '"]').length === 0) {
+                        $cat.append(new Option(p.categoria_nombre || 'Categoría', catId, true, true));
+                    }
+                    $cat.val(catId).trigger('change');
+                } else {
+                    $cat.val(null).trigger('change');
+                }
+
+                ['precioMonedaOrigen', 'cantidad', 'porcentaje'].forEach(function(id) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.dispatchEvent(new Event('input', {
+                        bubbles: true
+                    }));
+                    el.dispatchEvent(new Event('keyup', {
+                        bubbles: true
+                    }));
+                });
+                document.getElementById('origenProducto').dispatchEvent(new Event('change', {
+                    bubbles: true
+                }));
+
+                if (typeof calcularPrecioVenta === 'function') {
+                    calcularPrecioVenta();
+                }
+
+                $('#modalCopiarProducto').modal('hide');
+
+                if (typeof Alerta !== 'undefined' && typeof Alerta.toast === 'function') {
+                    Alerta.toast('success', 'Datos copiados del producto');
+                }
+            }
+
+            document.getElementById('btn-copiar-producto').addEventListener('click', npCopyAbrir);
+
+            document.getElementById('np-copy-search').addEventListener('input', function() {
+                clearTimeout(npCopyTimer);
+                const q = this.value;
+                npCopyTimer = setTimeout(function() {
+                    npCopyBuscar(q);
+                }, 250);
+            });
+
+            document.getElementById('np-copy-results').addEventListener('click', function(e) {
+                const item = e.target.closest('.np-copy-item');
+                if (!item) return;
+                npCopyAplicar(npCopyResultados[Number(item.dataset.index)]);
             });
         </script>
     </body>
