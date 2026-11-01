@@ -20,14 +20,23 @@ if (!$transportista) {
 
 $tipo = (($_GET['tipo'] ?? 'delivery') === 'carrera') ? 'carrera' : 'delivery';
 
+// Solicitudes abiertas: visibles para los transportistas vinculados al negocio.
+$resTabla = $conexion->query("SHOW TABLES LIKE 'transportista_por_negocio'");
+$conVinculo = $resTabla && $resTabla->num_rows > 0;
+$condicion = $conVinculo
+    ? "(s.transportista_id = ? OR (s.transportista_id IS NULL AND s.estado = 'esperando'
+        AND EXISTS (SELECT 1 FROM transportista_por_negocio r
+                     WHERE r.bss_id = s.bss_id AND r.transportista_id = ?)))"
+    : "s.transportista_id = ?";
+
 $stmt = $conexion->prepare(
     "SELECT s.id, s.tipo, s.bss_id, s.codigo_ruta, s.numero_pedido, s.cliente,
             s.direccion, s.telefono, s.lat, s.lng, s.estado, s.entregado_en, s.notas, s.creado_en,
             COALESCE(NULLIF(n.nombre_visible, ''), n.nombre, '') AS tienda_nombre
        FROM transportista_servicios s
        LEFT JOIN negocio n ON n.id = s.bss_id
-      WHERE s.transportista_id = ? AND s.tipo = ?
-      ORDER BY FIELD(s.estado, 'asignado', 'aceptado', 'en_camino', 'completado', 'cancelado', 'rechazado'),
+      WHERE $condicion AND s.tipo = ?
+      ORDER BY FIELD(s.estado, 'esperando', 'asignado', 'aceptado', 'en_camino', 'completado', 'cancelado', 'rechazado'),
                s.creado_en DESC
       LIMIT 200"
 );
@@ -35,7 +44,11 @@ if (!$stmt) {
     salirJson(500, ['ok' => false, 'error' => 'Error interno']);
 }
 $id = (int)$transportista['id'];
-$stmt->bind_param('is', $id, $tipo);
+if ($conVinculo) {
+    $stmt->bind_param('iis', $id, $id, $tipo);
+} else {
+    $stmt->bind_param('is', $id, $tipo);
+}
 $stmt->execute();
 $res = $stmt->get_result();
 $servicios = [];

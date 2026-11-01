@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS transportista_tokens (
 
 CREATE TABLE IF NOT EXISTS transportista_servicios (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    transportista_id INT UNSIGNED NOT NULL,
+    transportista_id INT UNSIGNED NULL,
     tipo ENUM('delivery','carrera') NOT NULL DEFAULT 'delivery',
     bss_id INT UNSIGNED DEFAULT NULL,
     codigo_ruta VARCHAR(20) DEFAULT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS transportista_servicios (
     telefono VARCHAR(20) DEFAULT NULL,
     lat DECIMAL(10,7) DEFAULT NULL,
     lng DECIMAL(10,7) DEFAULT NULL,
-    estado ENUM('asignado','aceptado','en_camino','completado','cancelado','rechazado') NOT NULL DEFAULT 'asignado',
+    estado ENUM('esperando','asignado','aceptado','en_camino','completado','cancelado','rechazado') NOT NULL DEFAULT 'asignado',
     entregado_en DATETIME DEFAULT NULL,
     notas VARCHAR(255) DEFAULT NULL,
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -29,16 +29,29 @@ if ($servicioId <= 0 || !in_array($accion, ['aceptar', 'rechazar', 'entregar'], 
 
 $transportistaId = (int)$transportista['id'];
 
+// Un servicio propio o una solicitud abierta de un negocio vinculado.
+$resTabla = $conexion->query("SHOW TABLES LIKE 'transportista_por_negocio'");
+$conVinculo = $resTabla && $resTabla->num_rows > 0;
+$condicion = $conVinculo
+    ? "(s.transportista_id = ? OR (s.transportista_id IS NULL AND s.estado = 'esperando'
+        AND EXISTS (SELECT 1 FROM transportista_por_negocio r
+                     WHERE r.bss_id = s.bss_id AND r.transportista_id = ?)))"
+    : "s.transportista_id = ?";
+
 $stmt = $conexion->prepare(
-    "SELECT id, bss_id, numero_pedido, estado
-       FROM transportista_servicios
-      WHERE id = ? AND transportista_id = ?
+    "SELECT s.id, s.bss_id, s.numero_pedido, s.estado, s.transportista_id
+       FROM transportista_servicios s
+      WHERE s.id = ? AND $condicion
       LIMIT 1"
 );
 if (!$stmt) {
     salirJson(500, ['ok' => false, 'error' => 'Error interno']);
 }
-$stmt->bind_param('ii', $servicioId, $transportistaId);
+if ($conVinculo) {
+    $stmt->bind_param('iii', $servicioId, $transportistaId, $transportistaId);
+} else {
+    $stmt->bind_param('ii', $servicioId, $transportistaId);
+}
 $stmt->execute();
 $servicio = $stmt->get_result()->fetch_assoc();
 $stmt->close();
@@ -172,6 +185,68 @@ if ($accion === 'entregar') {
 }
 
 // ── Aceptar / rechazar ────────────────────────────────────────────────────────
+if ($accion === 'aceptar' && $estadoActual === 'esperando') {
+    // Solicitud abierta: gana el primero que acepte (update atómico).
+    $stmt = $conexion->prepare(
+        "UPDATE transportista_servicios
+            SET transportista_id = ?, estado = 'aceptado', actualizado_en = NOW()
+          WHERE id = ? AND transportista_id IS NULL AND estado = 'esperando'"
+    );
+    $stmt->bind_param('ii', $transportistaId, $servicioId);
+    $stmt->execute();
+    $ganado = $stmt->affected_rows === 1;
+    $stmt->close();
+
+    if (!$ganado) {
+        salirJson(409, ['ok' => false, 'error' => 'Otro transportista ya tomó este delivery']);
+    }
+
+    // El pedido pasa a "Transportista asignado" (6).
+    $ordenId = (int)($servicio['numero_pedido'] ?? 0);
+    $bssId = (int)($servicio['bss_id'] ?? 0);
+    if ($ordenId > 0) {
+        $stmt = $conexion->prepare("UPDATE tienda_ordenes SET status = 6 WHERE id = ? AND bss_id = ? AND status = 2");
+        $stmt->bind_param('ii', $ordenId, $bssId);
+        $stmt->execute();
+        $cambio = $stmt->affected_rows > 0;
+        $stmt->close();
+
+        if ($cambio) {
+            $stmt = $conexion->prepare(
+                "UPDATE tienda_compras_por_usuarios SET estatus = 'en_revision', estado = 'en_revision' WHERE compra_id = ?"
+            );
+            if ($stmt) {
+                $stmt->bind_param('i', $ordenId);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            $archivoEstados = __DIR__ . '/../iseller_store/core/estados_orden.php';
+            if ($bssId > 0 && file_exists($archivoEstados)) {
+                require_once $archivoEstados;
+                if (function_exists('registrar_estado_orden')) {
+                    try {
+                        registrar_estado_orden($conexion, $ordenId, $bssId, 6, 'transportista');
+                    } catch (Throwable $e) {
+                        error_log('transportista aceptado historial: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            $archivoAdmin = __DIR__ . '/../iseller_store/core/notificaciones_admin.php';
+            if ($bssId > 0 && file_exists($archivoAdmin)) {
+                require_once $archivoAdmin;
+                if (function_exists('notificar_admin_tienda')) {
+                    notificar_admin_tienda($conexion, $bssId, "Pedido #$ordenId aceptado",
+                            'El transportista ' . $transportista['nombre'] . ' aceptó el delivery.', 'compra');
+                }
+            }
+        }
+    }
+
+    salirJson(200, ['ok' => true, 'estado' => 'aceptado']);
+}
+
 if ($accion === 'aceptar' && $estadoActual !== 'asignado') {
     salirJson(409, ['ok' => false, 'error' => 'Este servicio ya fue atendido']);
 }

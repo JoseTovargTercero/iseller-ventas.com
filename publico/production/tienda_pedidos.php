@@ -1623,15 +1623,19 @@ $stmtRep->close();
                     $('#det-email').text(o.cliente_email || 'N/A');
                     renderStatusStepper(o);
 
-                    // Transportista (delivery enviado o entregado)
+                    // Transportista (delivery enviado, entregado o esperando)
                     var esDelivery = (o.tipo_entrega === 'delivery');
                     var estadoNum = parseInt(o.status);
+                    var estadoTp = String(o.transportista_estado || '');
                     var tpBox = document.getElementById('transportista-box');
                     ordenTransportistaId = parseInt(o.transportista_id || 0);
-                    if (esDelivery && (estadoNum === 6 || estadoNum === 3 || estadoNum === 4)) {
+                    if (esDelivery && (estadoNum === 6 || estadoNum === 3 || estadoNum === 4 || estadoTp === 'esperando')) {
                         tpBox.style.display = '';
-                        document.getElementById('det-transportista').textContent = o.transportista_nombre || 'Sin transportista asignado';
-                        document.getElementById('det-transportista-estado').textContent = o.transportista_estado ? ('Servicio: ' + o.transportista_estado) : '';
+                        document.getElementById('det-transportista').textContent = o.transportista_nombre
+                            || (estadoTp === 'esperando' ? 'Esperando transportista' : 'Sin transportista asignado');
+                        var etiquetaTp = estadoTp === 'esperando' ? 'Esperando transportista' : estadoTp;
+                        document.getElementById('det-transportista-estado').textContent =
+                            etiquetaTp ? ('Servicio: ' + etiquetaTp) : '';
                         var btnTp = document.getElementById('btn-cambiar-transportista');
                         btnTp.style.display = (estadoNum === 6 || estadoNum === 3) ? 'inline-flex' : 'none';
                         btnTp.innerHTML = ordenTransportistaId
@@ -1925,7 +1929,7 @@ $stmtRep->close();
             } else if (!siguiente) {
                 actions = '';
             } else {
-                var accion = siguiente === 6 ? 'Asignar transportista' : 'Marcar como ' + labels[siguiente];
+                var accion = siguiente === 6 ? 'Gestionar entrega' : 'Marcar como ' + labels[siguiente];
                 actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">' +
                     '<button class="btn btn-success" onclick="avanzarEstado()">' + accion + ' <i class="bi bi-arrow-right"></i></button>' +
                     '<button class="btn btn-outline-danger" onclick="rechazarEstado()"><i class="bi bi-x-lg"></i> Rechazar pedido</button>' +
@@ -1981,12 +1985,84 @@ $stmtRep->close();
             var siguiente = siguienteEstado();
             if (!siguiente) return;
             if (siguiente === 6) {
-                elegirTransportista(function(id) {
-                    enviarEstado(6, null, id);
-                });
+                gestionarEntrega();
                 return;
             }
             enviarEstado(siguiente);
+        }
+
+        // Paso 3 del delivery: asignar a mano o solicitar a todos los transportistas.
+        function gestionarEntrega() {
+            Swal.fire({
+                title: 'Gestionar entrega',
+                html: '<p style="margin:0;font-size:13px;color:#8892a0;">' +
+                    'Elige cómo asignar este delivery.</p>',
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: 'Asignar transportista',
+                denyButtonText: 'Solicitar transportista',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#049fa5',
+                denyButtonColor: '#2dd4a0'
+            }).then(function(r) {
+                if (r.isConfirmed) {
+                    elegirTransportista(function(id) {
+                        enviarEstado(6, null, id);
+                    });
+                } else if (r.isDenied) {
+                    solicitarTransportista();
+                }
+            });
+        }
+
+        function solicitarTransportista() {
+            if (!ordenActual) return;
+            var fd = new FormData();
+            fd.append('action', 'solicitar_transportista');
+            fd.append('id', ordenActual);
+
+            fetch('db/tienda_pedidos_api.php', {
+                    method: 'POST',
+                    body: fd
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (!data.ok) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'No se pudo solicitar',
+                            text: data.msg || 'Inténtalo de nuevo.',
+                            confirmButtonColor: '#2dd4a0'
+                        });
+                        return;
+                    }
+                    cargarPedidos();
+                    verDetalle(ordenActual);
+                    if (data.total === 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Solicitud creada',
+                            text: data.msg,
+                            confirmButtonColor: '#2dd4a0'
+                        });
+                        return;
+                    }
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Solicitud enviada',
+                        text: 'Se notificó a ' + data.enviados + ' de ' + data.total +
+                            ' transportista(s). El primero que acepte queda asignado.',
+                        confirmButtonColor: '#2dd4a0'
+                    });
+                })
+                .catch(function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Sin conexión',
+                        text: 'No se pudo enviar la solicitud. Inténtalo de nuevo.',
+                        confirmButtonColor: '#2dd4a0'
+                    });
+                });
         }
 
         function elegirTransportista(alConfirmar, opciones) {

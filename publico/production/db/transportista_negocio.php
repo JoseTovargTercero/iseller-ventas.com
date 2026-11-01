@@ -25,6 +25,9 @@ function transportista_negocio_asegurar($conexion): void
             KEY idx_tpn_transportista (transportista_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci"
     );
+
+    // Solicitudes abiertas: transportista_id NULL y estado 'esperando'.
+    transportista_servicios_preparar_espera($conexion);
 }
 
 function transportista_negocio_tabla_existe($conexion): bool
@@ -90,6 +93,21 @@ function transportista_servicio_actual($conexion, int $bssId, int $ordenId): ?ar
  */
 function transportista_asignar_delivery($conexion, int $bssId, int $ordenId, int $transportistaId, string $notas = 'Asignado desde el panel'): bool
 {
+    return transportista_guardar_delivery($conexion, $bssId, $ordenId, $transportistaId, 'asignado', $notas);
+}
+
+/** Solicitud abierta: sin transportista, visible para todos los del negocio. */
+function transportista_solicitar_delivery($conexion, int $bssId, int $ordenId, string $notas = 'Solicitado desde el panel'): bool
+{
+    return transportista_guardar_delivery($conexion, $bssId, $ordenId, null, 'esperando', $notas);
+}
+
+/**
+ * Crea o actualiza el servicio delivery del pedido. Con transportistaId null
+ * queda como solicitud abierta (estado 'esperando').
+ */
+function transportista_guardar_delivery($conexion, int $bssId, int $ordenId, ?int $transportistaId, string $estado, string $notas): bool
+{
     $stmt = $conexion->prepare(
         "SELECT o.cliente,
                 u.nombre AS cliente_nombre, u.telefono AS cliente_telefono,
@@ -128,7 +146,7 @@ function transportista_asignar_delivery($conexion, int $bssId, int $ordenId, int
         "INSERT INTO transportista_servicios
             (transportista_id, tipo, bss_id, numero_pedido, cliente, direccion, telefono,
              lat, lng, estado, notas)
-         VALUES (?, 'delivery', ?, ?, ?, ?, ?, ?, ?, 'asignado', ?)
+         VALUES (?, 'delivery', ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
             transportista_id = VALUES(transportista_id),
             bss_id = VALUES(bss_id),
@@ -137,17 +155,46 @@ function transportista_asignar_delivery($conexion, int $bssId, int $ordenId, int
             telefono = VALUES(telefono),
             lat = VALUES(lat),
             lng = VALUES(lng),
-            estado = 'asignado',
+            estado = VALUES(estado),
             notas = VALUES(notas),
             actualizado_en = NOW()"
     );
     if (!$stmt) {
         return false;
     }
-    $stmt->bind_param('iissssdds', $transportistaId, $bssId, $numeroPedido, $cliente, $direccion, $telefono, $lat, $lng, $notas);
+    $stmt->bind_param('iissssddss', $transportistaId, $bssId, $numeroPedido, $cliente, $direccion, $telefono, $lat, $lng, $estado, $notas);
     $ok = $stmt->execute();
     $stmt->close();
     return $ok;
+}
+
+/**
+ * Prepara la tabla para las solicitudes abiertas: transportista_id debe aceptar
+ * NULL y el estado ENUM debe incluir 'esperando'. Idempotente.
+ */
+function transportista_servicios_preparar_espera($conexion): void
+{
+    static $hecho = false;
+    if ($hecho) {
+        return;
+    }
+    $hecho = true;
+
+    $res = $conexion->query("SHOW COLUMNS FROM transportista_servicios LIKE 'transportista_id'");
+    $col = $res ? $res->fetch_assoc() : null;
+    if ($col && strtoupper((string)$col['Null']) === 'NO') {
+        $conexion->query("ALTER TABLE transportista_servicios MODIFY transportista_id INT UNSIGNED NULL");
+    }
+
+    $res = $conexion->query("SHOW COLUMNS FROM transportista_servicios LIKE 'estado'");
+    $col = $res ? $res->fetch_assoc() : null;
+    if ($col && strpos((string)$col['Type'], "'esperando'") === false) {
+        $conexion->query(
+            "ALTER TABLE transportista_servicios MODIFY estado
+                ENUM('esperando','asignado','aceptado','en_camino','completado','cancelado','rechazado')
+                NOT NULL DEFAULT 'asignado'"
+        );
+    }
 }
 
 /**

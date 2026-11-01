@@ -17,7 +17,7 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 // La tabla de planes es utf8mb4; con la conexión en utf8 (3 bytes) un nombre
 // con emoji falla en hosting con sql_mode estricto.
 $conexion->set_charset('utf8mb4');
-if (in_array($action, ['cambiar_estado', 'cambiar_transportista', 'notificar_transportista'], true)) {
+if (in_array($action, ['cambiar_estado', 'cambiar_transportista', 'notificar_transportista', 'solicitar_transportista'], true)) {
     push_asegurar_tabla($conexion);
 }
 
@@ -313,6 +313,79 @@ if ($action === 'cambiar_estado') {
 }
 
 /* ─── 3b. Cambiar transportista de un delivery ya enviado ─────────────── */
+/* 3c. Solicitar transportista (solicitud abierta) */
+if ($action === 'solicitar_transportista') {
+    $id = (int)($_POST['id'] ?? 0);
+    if (!$id) {
+        echo json_encode(['ok' => false, 'msg' => 'Datos inválidos']);
+        exit;
+    }
+
+    $stmt = $conexion->prepare("SELECT status, tipo_entrega FROM tienda_ordenes WHERE id = ? AND bss_id = ? LIMIT 1");
+    $stmt->bind_param('ii', $id, $bss_id);
+    $stmt->execute();
+    $orden = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$orden) {
+        echo json_encode(['ok' => false, 'msg' => 'Orden no encontrada']);
+        exit;
+    }
+    if ((string)$orden['tipo_entrega'] !== 'delivery') {
+        echo json_encode(['ok' => false, 'msg' => 'El pedido no es un delivery']);
+        exit;
+    }
+    if ((int)$orden['status'] !== 2) {
+        echo json_encode(['ok' => false, 'msg' => 'El pedido debe estar en preparación']);
+        exit;
+    }
+
+    transportista_negocio_asegurar($conexion);
+
+    $actual = transportista_servicio_actual($conexion, (int)$bss_id, $id);
+    if ($actual && in_array((string)$actual['estado'], ['asignado', 'aceptado', 'en_camino', 'completado'], true)) {
+        echo json_encode(['ok' => false, 'msg' => 'El pedido ya tiene un transportista asignado']);
+        exit;
+    }
+    if (!$actual || (string)$actual['estado'] !== 'esperando') {
+        if (!transportista_solicitar_delivery($conexion, (int)$bss_id, $id)) {
+            echo json_encode(['ok' => false, 'msg' => 'No se pudo crear la solicitud']);
+            exit;
+        }
+    }
+
+    // Push a todos los transportistas activos del negocio.
+    $enviados = 0;
+    $total = 0;
+    foreach (transportista_negocio_listar($conexion, (int)$bss_id) as $t) {
+        if ((int)$t['activo'] !== 1 || (int)$t['deliverys'] !== 1) {
+            continue;
+        }
+        $total++;
+        $r = enviar_push_transportista(
+            $conexion,
+            (int)$t['id'],
+            'Delivery disponible',
+            'Pedido #' . $id . ' — toca para aceptarlo',
+            ['tipo' => 'delivery', 'pedido' => (string)$id, 'bss_id' => (string)$bss_id]
+        );
+        if (!empty($r['ok'])) {
+            $enviados++;
+        }
+    }
+
+    echo json_encode([
+        'ok' => true,
+        'estado' => 'esperando',
+        'enviados' => $enviados,
+        'total' => $total,
+        'msg' => $total === 0
+            ? 'No hay transportistas activos registrados en la tienda.'
+            : '',
+    ]);
+    exit;
+}
+
 if ($action === 'cambiar_transportista') {
     $id = (int)($_POST['id'] ?? 0);
     $transportistaId = (int)($_POST['transportista_id'] ?? 0);
