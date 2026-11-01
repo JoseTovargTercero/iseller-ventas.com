@@ -52,7 +52,8 @@ function api_categorias(?int $bssId): array
 function api_tiendas_registradas(): array
 {
     global $conexion;
-    $sql = "SELECT id, slug, nombre, nombre_visible, logo_url, portada_url, categoria
+    $sql = "SELECT id, slug, nombre, nombre_visible, logo_url, portada_url, categoria,
+                   lat, lng, geo_estado, geo_municipio
             FROM negocio
             WHERE tiene_tienda_virtual = 1
               AND estado = 'activo'
@@ -80,6 +81,10 @@ function api_tiendas_registradas(): array
             'logo_url' => api_image($logo, 160, 78),
             'cover_url' => api_image($cover, 600, 72),
             'category' => (string)($fila['categoria'] ?? ''),
+            'lat'      => $fila['lat'] !== null ? (float)$fila['lat'] : null,
+            'lng'      => $fila['lng'] !== null ? (float)$fila['lng'] : null,
+            'state'    => (string)($fila['geo_estado'] ?? ''),
+            'municipality' => (string)($fila['geo_municipio'] ?? ''),
         ];
     }
     return $items;

@@ -44,7 +44,7 @@ if ($row = $res->fetch_assoc()) {
     if ((string)$row['mayor'] === '1') {
         $unidadesPaca = (float)$row['cantidad_unidades'];
         $stockBase = (float)($row['stock_base'] ?? 0);
-        $stockActual = $unidadesPaca > 0 ? floor($stockBase / $unidadesPaca) : 0;
+        $stockActual = $unidadesPaca > 0 ? round($stockBase / $unidadesPaca, 2) : 0;
     }
 
     if ($stockActual >= $cantidad) {

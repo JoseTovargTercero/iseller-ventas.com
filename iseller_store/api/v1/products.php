@@ -7,6 +7,10 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../../core/api_v1.php';
+require_once __DIR__ . '/../../core/reglas_producto.php';
+
+global $conexion;
+reglas_producto_asegurar($conexion);
 
 api_method('GET');
 api_rate_limit('products_ip', 180, 60);
@@ -47,26 +51,32 @@ if ($category > 0) {
 }
 if ($q !== '') {
     $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
-    $where .= " AND p.nombre LIKE ?";
-    $types .= 's';
+    $where .= " AND (p.nombre LIKE ? OR p.codigo_barras = ? OR p.codigo_barras LIKE ?)";
+    $types .= 'sss';
+    $params[] = $like;
+    $params[] = $q;
     $params[] = $like;
 }
 
 global $conexion;
 
 $sql = "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
+               p.codigo_barras,
                s.stock, s.porcentaje, s.bss_id, s.id_sucursal, np.foto_url,
                c.id AS categoria_id, c.nombre AS categoria_nombre,
                n.slug AS store_slug,
-               COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) AS store_name
+               COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) AS store_name,
+               COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
+               COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
         FROM productos p
         INNER JOIN negocio_productos np ON p.id = np.producto_id
         INNER JOIN negocio n ON np.negocio_id = n.id
         INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
              AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
         LEFT JOIN categorias_producto c ON c.id = p.categoria
+        LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
         WHERE $where
-        GROUP BY p.id, s.id
+        GROUP BY p.id, s.id, pr.minimo_cantidad, pr.paso_cantidad
         ORDER BY p.nombre $sort, p.id ASC
         LIMIT ? OFFSET ?";
 $paramsQuery = array_merge($params, [$limit, $offset]);
@@ -104,16 +114,19 @@ while ($fila = $res->fetch_assoc()) {
         'price_usd'     => api_trunc2((float)$precios['precio_venta_dolar']),
         'price_bs'      => api_trunc2((float)$precios['precio_venta_bs']),
         'price_cop'     => api_trunc2((float)$precios['precio_venta_peso']),
-        'stock'         => (int)$fila['stock'],
-        'in_stock'      => (int)$fila['stock'] > 0,
+        'stock'         => (float)$fila['stock'],
+        'in_stock'      => (float)$fila['stock'] > 0,
         'pack_size'     => (int)$fila['cantidad_unidades'],
         'bulk'          => (string)$fila['mayor'] === '1',
+        'min_quantity'  => (float)$fila['minimo_cantidad'],
+        'step_quantity' => (float)$fila['paso_cantidad'],
         'category_id'   => $fila['categoria_id'] !== null ? (int)$fila['categoria_id'] : null,
         'category_name' => (string)($fila['categoria_nombre'] ?? ''),
         'store_id'      => $bssProducto,
         'store_slug'    => (string)$fila['store_slug'],
         'store_name'    => (string)$fila['store_name'],
         'branch_id'     => (int)$fila['id_sucursal'],
+        'codigo_barras' => (string)($fila['codigo_barras'] ?? ''),
     ];
 }
 $stmt->close();

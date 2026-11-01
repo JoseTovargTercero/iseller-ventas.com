@@ -12,6 +12,7 @@ require_once('core/session.php');
 require_once('core/venezuela_geo.php');
 // carga la calculadora de precios
 require_once('core/_calculadrora_precios.php');
+require_once('core/reglas_producto.php');
 require_once('../publico/production/includes/notificaciones.php');
 require_once('core/notificaciones_admin.php');
 
@@ -418,6 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         $calculadora = getCalculadora($bss_id);
+        reglas_producto_asegurar($conexion);
 
         $total_dolares  = 0;
         $total_pesos    = 0;
@@ -427,13 +429,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtProd = $conexion->prepare(
             "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
                     s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
-                    sb.stock AS stock_base
+                    sb.stock AS stock_base,
+                    COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
+                    COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
              FROM productos p
              INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
              INNER JOIN negocio n ON np.negocio_id = n.id
              INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
                   AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
              LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
+             LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
              WHERE p.id = ? AND n.id = ? AND s.id_sucursal = ?
                AND p.activo = 0 AND p.origen != 'c'
                AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
@@ -467,11 +472,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
+            $minimoRegla = (float)($prod['minimo_cantidad'] ?? 1);
+            $pasoRegla = (float)($prod['paso_cantidad'] ?? 1);
+            if (!reglas_producto_cantidad_valida($qty, $minimoRegla, $pasoRegla)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'La cantidad de ' . $prod['nombre'] . ' no es válida. Mínimo '
+                        . $minimoRegla . ', incrementos de ' . $pasoRegla . '.'
+                ]);
+                exit;
+            }
+
             // Al mayor: el stock físico está en el producto base y se vende en pacas.
             $esMayor = (string)$prod['mayor'] === '1';
             $unidadesPaca = (float)$prod['cantidad_unidades'];
             $stockDisponible = $esMayor
-                ? ($unidadesPaca > 0 ? floor((float)($prod['stock_base'] ?? 0) / $unidadesPaca) : 0)
+                ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
                 : (float)$prod['stock'];
             if ($stockDisponible < $qty) {
                 echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de ' . $prod['nombre']]);

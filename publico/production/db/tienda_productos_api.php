@@ -2,6 +2,7 @@
 require_once('../../../configurar/configuracion.php');
 require_once('../../../configurar/session.php');
 require_once('../../../iseller_store/core/imagenes.php');
+require_once('../../../iseller_store/core/reglas_producto.php');
 
 if (!isset($_SESSION['bss_id'])) {
     http_response_code(403);
@@ -13,6 +14,61 @@ $bss_id = $_SESSION['bss_id'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 header('Content-Type: application/json');
+reglas_producto_asegurar($conexion);
+
+/* ─── 0. Guardar reglas de cantidad ─────────────────────────────────── */
+if ($action === 'guardar_reglas') {
+    $producto_id = (int)($_POST['producto_id'] ?? 0);
+    $minimoRaw   = trim((string)($_POST['minimo_cantidad'] ?? ''));
+    $pasoRaw     = trim((string)($_POST['paso_cantidad'] ?? ''));
+
+    if ($producto_id <= 0 || !is_numeric($minimoRaw) || !is_numeric($pasoRaw)) {
+        echo json_encode(['ok' => false, 'msg' => 'Datos inválidos']);
+        exit;
+    }
+
+    $minimo = round((float)$minimoRaw, 1);
+    $paso   = round((float)$pasoRaw, 1);
+    if ($minimo < 0.1 || $minimo > 9999.9 || $paso < 0.1 || $paso > 9999.9) {
+        echo json_encode(['ok' => false, 'msg' => 'El mínimo y el paso deben estar entre 0.1 y 9999.9']);
+        exit;
+    }
+
+    $check = $conexion->prepare("SELECT id FROM stock WHERE id_producto = ? AND bss_id = ? LIMIT 1");
+    $check->bind_param("ii", $producto_id, $bss_id);
+    $check->execute();
+    $pertenece = $check->get_result()->num_rows > 0;
+    $check->close();
+    if (!$pertenece) {
+        echo json_encode(['ok' => false, 'msg' => 'Producto no pertenece a este negocio']);
+        exit;
+    }
+
+    $stmt = $conexion->prepare(
+        "INSERT INTO producto_reglas (producto_id, bss_id, minimo_cantidad, paso_cantidad)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+            bss_id = VALUES(bss_id),
+            minimo_cantidad = VALUES(minimo_cantidad),
+            paso_cantidad = VALUES(paso_cantidad)"
+    );
+    $stmt->bind_param("iidd", $producto_id, $bss_id, $minimo, $paso);
+    $guardado = $stmt->execute();
+    $stmt->close();
+
+    if (!$guardado) {
+        echo json_encode(['ok' => false, 'msg' => 'No se pudieron guardar las reglas']);
+        exit;
+    }
+
+    echo json_encode([
+        'ok' => true,
+        'msg' => 'Reglas guardadas',
+        'minimo_cantidad' => $minimo,
+        'paso_cantidad' => $paso,
+    ]);
+    exit;
+}
 
 /* ─── 1. TOGGLE publicación ─────────────────────────────────────────── */
 if ($action === 'toggle') {
@@ -191,6 +247,8 @@ if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'G
     $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.categoria,
                    cp.nombre AS categoria_nombre, cp.grupo AS categoria_grupo,
                    np.estado_publicacion, np.foto_url, np.sucursal_id,
+                   COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
+                   COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad,
                    IFNULL(SUM(s.stock), 0) AS stock_cantidad
             FROM stock s
             INNER JOIN sucursales su ON su.id = s.id_sucursal AND su.bss_id = s.bss_id
@@ -198,9 +256,11 @@ if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'G
             LEFT JOIN negocio_productos np
                    ON np.producto_id = p.id AND np.negocio_id = ?
             LEFT JOIN categorias_producto cp ON cp.id = p.categoria
+            LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
             WHERE s.bss_id = ? AND p.activo = 0
             GROUP BY p.id, p.nombre, p.codigo_barras, p.categoria,
-                     cp.nombre, cp.grupo, np.estado_publicacion, np.foto_url, np.sucursal_id
+                     cp.nombre, cp.grupo, np.estado_publicacion, np.foto_url, np.sucursal_id,
+                     pr.minimo_cantidad, pr.paso_cantidad
             ORDER BY np.estado_publicacion DESC, p.nombre ASC";
 
     $stmt = $conexion->prepare($sql);
@@ -283,9 +343,12 @@ if ($action === 'detalle') {
     $stmt = $conexion->prepare(
         "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.mayor,
                 p.cantidad_unidades, p.origen, p.proveedor,
-                s.stock, s.porcentaje
+                s.stock, s.porcentaje,
+                COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
+                COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
          FROM productos p
          INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = ?{$sucursal_filter}
+         LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
          WHERE p.id = ? AND p.activo = 0
          LIMIT 1"
     );
@@ -324,6 +387,8 @@ if ($action === 'detalle') {
             'unidades'      => (int)$row['cantidad_unidades'],
             'stock'         => (int)$row['stock'],
             'porcentaje'    => (float)$row['porcentaje'],
+            'minimo_cantidad' => (float)$row['minimo_cantidad'],
+            'paso_cantidad' => (float)$row['paso_cantidad'],
             'origen'        => $row['origen'] ?? '',
             'proveedor'     => $row['proveedor'] ?? '',
             'foto_url'      => $foto,

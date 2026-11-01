@@ -20,10 +20,12 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../core/api_v1.php';
 require_once __DIR__ . '/../../core/notificaciones_admin.php';
+require_once __DIR__ . '/../../core/reglas_producto.php';
 
 $user = api_auth();
 $userId = (int)$user['id'];
 global $conexion, $conexion_store;
+reglas_producto_asegurar($conexion);
 
 function api_order_summary(array $o): array
 {
@@ -196,12 +198,17 @@ if (!is_array($itemsIn) || count($itemsIn) < 1 || count($itemsIn) > 50) {
 $calc = api_calc($bssId);
 $stmtProd = $conexion->prepare(
     "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
-            s.stock, s.porcentaje, s.bss_id, s.id_sucursal
+            s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
+            sb.stock AS stock_base,
+            COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
+            COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
      FROM productos p
      INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
      INNER JOIN negocio n ON np.negocio_id = n.id
      INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
           AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+     LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
+     LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
      WHERE p.id = ? AND n.id = ? AND s.id_sucursal = ?
        AND p.activo = 0 AND p.origen != 'c'
        AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
@@ -237,7 +244,21 @@ foreach ($itemsIn as $item) {
     if (!$prod) {
         api_error(409, 'Uno de los productos ya no está disponible', 'product_unavailable');
     }
-    if ((float)$prod['stock'] < $qty) {
+
+    $minimoRegla = (float)($prod['minimo_cantidad'] ?? 1);
+    $pasoRegla = (float)($prod['paso_cantidad'] ?? 1);
+    if (!reglas_producto_cantidad_valida($qty, $minimoRegla, $pasoRegla)) {
+        $stmtProd->close();
+        api_error(400, 'La cantidad de ' . $prod['nombre'] . ' no es válida. Mínimo '
+            . $minimoRegla . ', incrementos de ' . $pasoRegla . '.', 'invalid_quantity');
+    }
+
+    $esMayor = (string)$prod['mayor'] === '1';
+    $unidadesPaca = (float)$prod['cantidad_unidades'];
+    $stockDisponible = $esMayor
+        ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
+        : (float)$prod['stock'];
+    if ($stockDisponible < $qty) {
         $stmtProd->close();
         api_error(409, 'No hay stock suficiente de ' . $prod['nombre'], 'out_of_stock');
     }
@@ -250,6 +271,9 @@ foreach ($itemsIn as $item) {
         'price_usd' => (float)$precios['precio_venta_dolar'],
         'price_bs'  => (float)$precios['precio_venta_bs'],
         'price_cop' => (float)$precios['precio_venta_peso'],
+        'es_mayor'  => $esMayor,
+        'unidades_paca' => $unidadesPaca,
+        'id_stock'  => (int)($prod['id_stock'] ?? 0),
     ];
     $totalUsd += api_trunc2((float)$precios['precio_venta_dolar'] * $qty);
     $totalBs  += api_trunc2((float)$precios['precio_venta_bs'] * $qty);
@@ -302,18 +326,41 @@ try {
         "UPDATE stock SET stock = stock - ?
          WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?"
     );
-    if (!$stmt) {
+    $stmtMayor = $conexion_store->prepare(
+        "UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?"
+    );
+    if (!$stmt || !$stmtMayor) {
         throw new RuntimeException('stock_prepare');
     }
     foreach ($items as $it) {
+        if (!empty($it['es_mayor'])) {
+            $descontar = (float)$it['qty'] * (float)$it['unidades_paca'];
+            $idStockMayor = (int)$it['id_stock'];
+            if ($idStockMayor <= 0 || $descontar <= 0) {
+                $stmt->close();
+                $stmtMayor->close();
+                throw new DomainException('out_of_stock');
+            }
+            $stmtMayor->bind_param('diid', $descontar, $idStockMayor, $bssId, $descontar);
+            $stmtMayor->execute();
+            if ($stmtMayor->affected_rows !== 1) {
+                $stmt->close();
+                $stmtMayor->close();
+                throw new DomainException('out_of_stock');
+            }
+            continue;
+        }
+
         $stmt->bind_param('diiid', $it['qty'], $it['id'], $it['branch'], $bssId, $it['qty']);
         $stmt->execute();
         if ($stmt->affected_rows !== 1) {
             $stmt->close();
+            $stmtMayor->close();
             throw new DomainException('out_of_stock');
         }
     }
     $stmt->close();
+    $stmtMayor->close();
 
     $stmt = $conexion_store->prepare(
         "INSERT INTO tienda_ordenes

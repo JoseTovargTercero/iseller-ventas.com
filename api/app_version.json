@@ -1,6 +1,6 @@
 {
-    "version_code": 14,
-    "version_name": "2.3",
-    "notas": "Ubicación cada 2 minutos con historial por pedido (hora y coordenadas) y punto de partida de la tienda al enviar el pedido. Aviso claro para permitir la ubicación «Todo el tiempo»; sin ese permiso no se accede a deliverys ni carreras.",
+    "version_code": 22,
+    "version_name": "3.1",
+    "notas": "Nueva tarjeta del cliente en el mapa: nombre, teléfono, dirección y referencia, con botones de llamar y WhatsApp. La ruta por calles se genera automáticamente al ver el destino.",
     "archivo": "apk/iseller_pos.apk"
 }

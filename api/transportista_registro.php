@@ -20,14 +20,19 @@ $nombre   = trim((string)($in['nombre'] ?? ''));
 $cedula   = normalizarCedula((string)($in['cedula'] ?? ''));
 $telefono = normalizarTelefono((string)($in['telefono'] ?? ''));
 $password = (string)($in['password'] ?? '');
+$email     = strtolower(trim((string)($in['email'] ?? '')));
 $deliverys = !empty($in['deliverys']) ? 1 : 0;
 $carreras  = !empty($in['carreras']) ? 1 : 0;
 $foto      = (string)($in['foto'] ?? '');
 $motoMarca = trim((string)($in['moto_marca'] ?? ''));
 $motoModelo = trim((string)($in['moto_modelo'] ?? ''));
 $motoColor = trim((string)($in['moto_color'] ?? ''));
+$motoTipo = trim((string)($in['moto_tipo'] ?? ''));
+if (!in_array($motoTipo, ['Moto', 'Carro', 'PickUp'], true)) {
+    $motoTipo = 'Moto';
+}
 
-if ($nombre === '' || $cedula === '' || $telefono === '' || $password === '') {
+if ($nombre === '' || $cedula === '' || $telefono === '' || $password === '' || $email === '') {
     salirJson(400, ['ok' => false, 'error' => 'Faltan datos']);
 }
 if (mb_strlen($nombre) < 2 || mb_strlen($nombre) > 120) {
@@ -39,6 +44,9 @@ if (!preg_match('/^\d{5,10}$/', $cedula)) {
 if (!preg_match('/^\d{7,15}$/', $telefono)) {
     salirJson(400, ['ok' => false, 'error' => 'El teléfono no es válido']);
 }
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) {
+    salirJson(400, ['ok' => false, 'error' => 'El correo no es válido']);
+}
 if (strlen($password) < 6 || strlen($password) > 72) {
     salirJson(400, ['ok' => false, 'error' => 'La contraseña debe tener entre 6 y 72 caracteres']);
 }
@@ -46,10 +54,10 @@ if ($deliverys + $carreras < 1) {
     salirJson(400, ['ok' => false, 'error' => 'Selecciona al menos un servicio']);
 }
 if ($motoMarca === '' || $motoModelo === '' || $motoColor === '') {
-    salirJson(400, ['ok' => false, 'error' => 'Completa la marca, el modelo y el color de la moto']);
+    salirJson(400, ['ok' => false, 'error' => 'Completa la marca, el modelo y el color del vehículo']);
 }
 if (mb_strlen($motoMarca) > 60 || mb_strlen($motoModelo) > 60 || mb_strlen($motoColor) > 40) {
-    salirJson(400, ['ok' => false, 'error' => 'Los datos de la moto son demasiado largos']);
+    salirJson(400, ['ok' => false, 'error' => 'Los datos del vehículo son demasiado largos']);
 }
 if ($foto === '') {
     salirJson(400, ['ok' => false, 'error' => 'Falta la foto del transportista']);
@@ -68,6 +76,19 @@ $stmt->close();
 
 if ($existe) {
     salirJson(409, ['ok' => false, 'error' => 'Ya existe una cuenta con esa cédula']);
+}
+
+$stmt = $conexion->prepare(
+    "SELECT id FROM transportistas WHERE email = ? LIMIT 1"
+);
+if ($stmt) {
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $existeEmail = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($existeEmail) {
+        salirJson(409, ['ok' => false, 'error' => 'Ya existe una cuenta con ese correo']);
+    }
 }
 
 // ── Foto del transportista (base64; se guarda como archivo) ───────────────────
@@ -108,16 +129,16 @@ $fotoUrl = $host !== ''
 $hash = password_hash($password, PASSWORD_DEFAULT);
 $stmt = $conexion->prepare(
     "INSERT INTO transportistas
-        (nombre, cedula, telefono, password_hash, deliverys, carreras,
-         foto_url, moto_marca, moto_modelo, moto_color)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        (nombre, cedula, telefono, email, password_hash, deliverys, carreras,
+         foto_url, moto_marca, moto_modelo, moto_color, moto_tipo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 if (!$stmt) {
     @unlink($rutaFoto);
     salirJson(500, ['ok' => false, 'error' => 'Error interno']);
 }
-$stmt->bind_param('ssssiissss', $nombre, $cedula, $telefono, $hash, $deliverys, $carreras,
-        $fotoUrl, $motoMarca, $motoModelo, $motoColor);
+$stmt->bind_param('sssssiisssss', $nombre, $cedula, $telefono, $email, $hash, $deliverys, $carreras,
+        $fotoUrl, $motoMarca, $motoModelo, $motoColor, $motoTipo);
 $ok = $stmt->execute();
 $nuevoId = $conexion->insert_id;
 $errno = $conexion->errno;
@@ -141,11 +162,13 @@ salirJson(201, [
         'nombre'    => $nombre,
         'cedula'    => $cedula,
         'telefono'  => $telefono,
+        'email'     => $email,
         'deliverys' => $deliverys,
         'carreras'  => $carreras,
         'foto_url'  => $fotoUrl,
         'moto_marca' => $motoMarca,
         'moto_modelo' => $motoModelo,
         'moto_color' => $motoColor,
+        'moto_tipo' => $motoTipo,
     ]),
 ]);

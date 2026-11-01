@@ -261,16 +261,42 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   dirección y referencia. Si se niega o el GPS falla, formulario manual.
 - Agregar producto: modal de cantidad con Aceptar/Cancelar; cancelar lo quita
   del carrito. La tarjeta muestra la cantidad en el carrito, sin stepper inline.
-- Mis mercados: pestaña con listas guardadas por tienda (crear con nombre,
-  agregar productos, editar, eliminar y cargar al carrito). El carrito permite
-  guardar cada grupo de tienda como mercado; al cargar se respeta el stock
-  actual. El editor pagina el catálogo completo de la tienda (40 por página).
+- Mis mercados: se abre desde el carrito o el perfil (ya no es pestaña) para
+  listas guardadas por tienda (crear con nombre, agregar productos, editar,
+  eliminar y cargar al carrito). El carrito permite guardar cada grupo de tienda
+  como mercado; al cargar se respeta el stock actual. El editor pagina el catálogo
+  completo de la tienda (40 por página).
+- Menú inferior tipo isla: barra blanca redondeada con el botón de escaneo
+  circular sobresaliendo al centro. A la izquierda, en Inicio está el acceso para
+  seguir pedido (Pedidos) y en las demás vistas una casita que vuelve al inicio; a
+  la derecha, Favoritas. La barra superior lleva al inicio al tocar el
+  logo/nombre y muestra el carrito con badge; el perfil se abre al tocar el saludo
+  del inicio.
+- Escanear: lector de códigos de Google con captura manual como respaldo. Un QR
+  con `iseller-tiendas.com/<slug>` se valida contra la API y abre la tienda en la
+  app. Un código de barras usa la ubicación actual: busca el negocio aliado con
+  tienda online a ≤30 m y el producto publicado con ese código; si existe abre el
+  modal para agregarlo al carrito. Fuera del negocio o sin coincidencia se informa
+  al usuario; lo demás es código no reconocido. El botón queda bloqueado con un
+  indicador hasta terminar el arranque y la carga de coordenadas de tiendas.
+  `products.php` devuelve `codigo_barras` y busca por él.
+- Buscador con lista de coincidencias (producto, tienda y precio) en un panel
+  elevado debajo del campo; no tapa las categorías ni filtra el catálogo del
+  inicio y al tocar un resultado se abre el modal de cantidad.
+- Tiendas favoritas: corazón en el carrusel y pestaña Favoritas, persistidas en el
+  dispositivo.
+- Iconografía unificada a estilo outlined/línea en toda la app (incluye flechas,
+  carrito, navegación, acciones y marcadores del mapa); el buscador muestra una X
+  para limpiar cuando hay texto.
 - Inicio rediseñado: saludo + carrito con badge, buscador, categorías con imagen
   y scroll horizontal, carrusel de tiendas locales y grupos por categoría con
-  productos en scroll horizontal. Fondo gris `#F2F3F5` y verde más oscuro
-  `#2E8B63`; barra superior oculta en Inicio. El carrusel usa `cover_url` con
-  fallback a degradado + logo; las categorías usan la imagen de su primer
-  producto o la inicial.
+  productos en lista vertical, uno por fila (foto a la izquierda, datos y acción a
+  la derecha). La cabecera de cada categoría queda fija al hacer scroll y muestra
+  un chip con la categoría siguiente para saltar a ella. Fondo gris `#F2F3F5` y
+  verde más oscuro `#2E8B63`; barra superior oculta en Inicio. El carrusel completa
+  la portada desde el detalle de la tienda si la lista no la trae y ordena por
+  estado/municipio de la dirección principal y distancia; las categorías usan la
+  imagen de su primer producto o la inicial.
 - Seguimiento delivery: botón en el detalle de pedidos activos; mapa OSM con ruta
   OSRM tienda → entrega, origen con la foto/logo de la tienda, destino con icono
   de usuario y transportista (círculo + carrito) con solo su última posición

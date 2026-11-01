@@ -3902,6 +3902,8 @@ $zona_tienda = $es_tienda_individual
                     stock: item.s,
                     mayor: item.m,
                     cantidadPaca: item.paca || 1,
+                    minimo_cantidad: Number(item.mq) > 0 ? Number(item.mq) : 1,
+                    paso_cantidad: Number(item.sq) > 0 ? Number(item.sq) : 1,
                     precio_dolar_visible: item.pd,
                     precio_weight_visible: item.pp,
                     precio_bs_visible: item.pb,
@@ -4244,15 +4246,13 @@ $zona_tienda = $es_tienda_individual
                             <div class="d-flex align-items-center gap-2" >
                                 <div class="quantity-control form-control-sm border px-1">
                                     ${(()=>{
-                                        const _isD = String(item.mayor) !== '1' && DECIMAL_QTY_IDS.has(String(item.id));
-                                        const _step = _isD ? '0.5' : '1';
-                                        const _min  = _isD ? '0.5' : '1';
-                                        const _val  = _isD ? '0.5' : '1';
+                                        const _min  = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
+                                        const _step = Number(item.paso_cantidad) > 0 ? Number(item.paso_cantidad) : 1;
                                         return `
                                             <button class="btn-qty" onclick="changeQty(this, -1)" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">-</button>
                                             <input type="number" class="qty-input form-control-plaintext p-0 text-center" 
                                                 data-cantidad-id="${item.id}"
-                                                value="${_val}" min="${_min}"
+                                                value="${_min}" min="${_min}"
                                                 data-step="${_step}" data-min="${_min}"
                                                 step="${_step}" readonly
                                                 style="width: 40px; height: 30px;">
@@ -4476,7 +4476,8 @@ $zona_tienda = $es_tienda_individual
 
                 const isSocio = producto.sucursal === 'loreamny';
                 const esMayor = String(producto.mayor) === '1';
-                const esDecimal = !esMayor && DECIMAL_QTY_IDS.has(String(producto.id));
+                const qtyMin = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
+                const qtyStep = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
                 const isOutOfStock = !isSocio && producto.stock <= 0 && !esMayor;
                 const opacityClass = isOutOfStock ? 'opacity-50 grayscale' : '';
                 const btnDisabled = isOutOfStock ? 'disabled btn-disabled' : '';
@@ -4556,11 +4557,11 @@ $zona_tienda = $es_tienda_individual
                                     <button class="btn-qty" onclick="changeQty(this, -1)">-</button>
                                     <input type="number" class="qty-input" 
                                         data-cantidad-id="${producto.id}"
-                                        value="${esDecimal ? '0.5' : '1'}"
-                                        min="${esDecimal ? '0.5' : '1'}"
-                                        data-step="${esDecimal ? '0.5' : '1'}"
-                                        data-min="${esDecimal ? '0.5' : '1'}"
-                                        step="${esDecimal ? '0.5' : '1'}" readonly>
+                                        value="${qtyMin}"
+                                        min="${qtyMin}"
+                                        data-step="${qtyStep}"
+                                        data-min="${qtyMin}"
+                                        step="${qtyStep}" readonly>
                                     <button class="btn-qty" onclick="changeQty(this, 1, ${isSocio ? null : producto.stock})">+</button>
                                 </div>
                                 <button class="btn btn-add btn-add-to-car ${btnDisabled}" 
@@ -4636,8 +4637,15 @@ $zona_tienda = $es_tienda_individual
                 if (modalNoImg) modalNoImg.style.display = 'flex';
             }
 
-            // Reset Qty
-            document.getElementById('modal-product-qty').value = 1;
+            // Reset Qty según reglas del producto
+            const modalQty = document.getElementById('modal-product-qty');
+            const modalMin = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
+            const modalStep = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
+            modalQty.value = modalMin;
+            modalQty.min = modalMin;
+            modalQty.step = modalStep;
+            modalQty.dataset.min = modalMin;
+            modalQty.dataset.step = modalStep;
 
             // Update Add to Cart Button
             const btn = document.getElementById('modal-btn-add');
@@ -4688,10 +4696,11 @@ $zona_tienda = $es_tienda_individual
 
         function changeModalQty(delta) {
             const input = document.getElementById('modal-product-qty');
-            let val = parseInt(input.value) || 1;
-            val += delta;
-            if (val < 1) val = 1;
-
+            const step = parseFloat(input.dataset.step) || 1;
+            const min = parseFloat(input.dataset.min) || step;
+            let val = parseFloat(input.value) || min;
+            val = Math.round((val + delta * step) * 10) / 10;
+            if (val < min) val = min;
             input.value = val;
         }
 
@@ -4714,18 +4723,29 @@ $zona_tienda = $es_tienda_individual
 
 
 
-        // Helper for quantity buttons
-        const DECIMAL_QTY_IDS = new Set([4584, 4789, 5330, 4087, 4362, 4796, 4798, 4660, 4102, 1658, 2874, 1628, 2872, 1659, 3803, 3805, 1652, 4097, 1652, 3806, 1684, 1627].map(String));
+        function cantidadValidaRegla(qty, min, step) {
+            const qT = Math.round((Number(qty) || 0) * 10);
+            const mT = Math.round((Number(min) || 1) * 10);
+            const sT = Math.round((Number(step) || 1) * 10);
+            return sT > 0 && qT >= mT && ((qT - mT) % sT) === 0;
+        }
 
+        // Helper for quantity buttons
         window.changeQty = function(btn, delta, max = null) {
             const input = btn.parentNode.querySelector('input');
             const step = parseFloat(input.dataset.step) || 1;
             const minVal = parseFloat(input.dataset.min) || step;
             let val = parseFloat(input.value);
             if (isNaN(val)) val = minVal;
-            val = Math.round((val + delta * step) * 100) / 100;
+            val = Math.round((val + delta * step) * 10) / 10;
             if (val < minVal) val = minVal;
-            if (max != null && max > 0 && val > max) val = max;
+            if (max != null && max > 0 && val > max) {
+                const minT = Math.round(minVal * 10);
+                const stepT = Math.round(step * 10);
+                const maxT = Math.round(max * 10);
+                const saltos = Math.floor((maxT - minT) / stepT);
+                val = saltos >= 0 ? (minT + saltos * stepT) / 10 : minVal;
+            }
             input.value = val;
         };
 
@@ -5312,17 +5332,30 @@ $zona_tienda = $es_tienda_individual
 
         async function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null, btnElement = null) {
             const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
+            const idStr = id.toString();
+            const producto = productos_por_id[idStr] || productos_por_id[id];
+            if (!producto) {
+                console.error(`Producto con ID ${id} no encontrado.`);
+                return;
+            }
+
+            const minRule = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
+            const stepRule = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
+
             // Determine quantity to check (New + Existing in Cart)
-            let newQty = inputCantidad ? parseFloat(inputCantidad.value) : 1;
+            let newQty = inputCantidad ? parseFloat(inputCantidad.value) : minRule;
             if (cantidad_scann != null) newQty = parseFloat(cantidad_scann);
 
-            const idStr = id.toString();
             let currentInCart = 0;
             if (carritoActivo[idStr]) {
                 currentInCart = carritoActivo[idStr].qty;
             }
 
             const totalQtyToCheck = newQty + currentInCart;
+            if (!cantidadValidaRegla(totalQtyToCheck, minRule, stepRule)) {
+                Notiflix.Notify.warning('La cantidad total no cumple la regla de venta de este producto.');
+                return;
+            }
 
             const disponible = await verificarStock(id, totalQtyToCheck);
             if (!disponible['result']) {
@@ -5353,14 +5386,9 @@ $zona_tienda = $es_tienda_individual
                 return;
             }
 
-            if (inputCantidad) inputCantidad.value = 1;
+            if (inputCantidad) inputCantidad.value = minRule;
 
-            if (!productos_por_id[id]) {
-                console.error(`Producto con ID ${id} no encontrado.`);
-                return;
-            }
-            const idPedido = id.toString();
-            const producto = productos_por_id[idPedido];
+            const idPedido = idStr;
 
             if (carritoActivo[idPedido]) {
                 carritoActivo[idPedido].qty += cant;
@@ -5379,6 +5407,8 @@ $zona_tienda = $es_tienda_individual
                     qty: cant,
                     mayor: producto.mayor,
                     cantidadPaca: String(producto.mayor) === '1' ? (producto.cantidadPaca || 1) : 1,
+                    minimo_cantidad: minRule,
+                    paso_cantidad: stepRule,
                     priceCosto: parseFloat(producto.precio_costo),
                     bss_id: producto.bss_id,
                     id_sucursal: producto.id_sucursal,

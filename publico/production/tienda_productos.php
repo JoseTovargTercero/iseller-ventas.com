@@ -369,6 +369,20 @@ $stmtC->close();
             margin-top: 2px;
         }
 
+        .tp-regla-mini {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--dash-mint);
+            background: rgba(45, 212, 160, 0.1);
+            border: 1px solid rgba(45, 212, 160, 0.25);
+        }
+
         .sucursal-select {
             width: 100%;
             background: var(--dash-bg);
@@ -1269,12 +1283,102 @@ $stmtC->close();
                             </div>
                         </div>
                     </div>
+
+                    <div class="tp-reglas-box">
+                        <div class="tp-reglas-head">
+                            <ion-icon name="options-outline"></ion-icon>
+                            Reglas de venta
+                        </div>
+                        <p class="tp-reglas-hint">
+                            Sin regla, la tienda usa mínimo 1 y paso 1. Para vender media paca,
+                            usa por ejemplo mínimo 0.5 y paso 0.5.
+                        </p>
+                        <div class="tp-reglas-grid">
+                            <label>
+                                <span>Cantidad mínima</span>
+                                <input id="det-regla-min" type="number" min="0.1" max="9999.9" step="0.1" value="1">
+                            </label>
+                            <label>
+                                <span>Incremento de + / -</span>
+                                <input id="det-regla-paso" type="number" min="0.1" max="9999.9" step="0.1" value="1">
+                            </label>
+                        </div>
+                        <button type="button" class="btn btn-success btn-sm" onclick="guardarReglasProducto()">
+                            <ion-icon name="save-outline"></ion-icon> Guardar reglas
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <style>
+        .tp-reglas-box {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--dash-border);
+        }
+
+        .tp-reglas-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--dash-text-muted);
+        }
+
+        .tp-reglas-head ion-icon {
+            color: var(--dash-mint);
+            font-size: 1rem;
+        }
+
+        .tp-reglas-hint {
+            font-size: .75rem;
+            color: var(--dash-text-muted);
+            margin: .35rem 0 .75rem;
+        }
+
+        .tp-reglas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .75rem;
+            margin-bottom: .75rem;
+        }
+
+        .tp-reglas-grid label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+            color: var(--dash-text-muted);
+        }
+
+        .tp-reglas-grid input {
+            width: 100%;
+            background: var(--dash-bg);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: .85rem;
+        }
+
+        .tp-reglas-grid input:focus {
+            outline: none;
+            border-color: var(--dash-mint);
+            box-shadow: 0 0 0 3px rgba(45, 212, 160, 0.12);
+        }
+
+        @media (max-width: 520px) {
+            .tp-reglas-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .det-field {
             display: flex;
             flex-direction: column;
@@ -1413,6 +1517,7 @@ $stmtC->close();
         const SUCURSALES = <?php echo json_encode($sucursales); ?>;
         const API = 'db/tienda_productos_api.php';
         let tabla = null;
+        let detalleProductoId = 0;
         let productosPorId = {};
         let categoriasPorGrupo = new Map();
 
@@ -1551,12 +1656,19 @@ $stmtC->close();
                     controlHtml += `</select>`;
                 }
 
+                const reglaMin = Number(p.minimo_cantidad) > 0 ? Number(p.minimo_cantidad) : 1;
+                const reglaPaso = Number(p.paso_cantidad) > 0 ? Number(p.paso_cantidad) : 1;
+                const reglaHtml = (reglaMin !== 1 || reglaPaso !== 1)
+                    ? `<div class="tp-regla-mini"><ion-icon name="options-outline"></ion-icon> Mín. ${reglaMin} · Paso ${reglaPaso}</div>`
+                    : '';
+
                 const fila = tabla.row.add([
                     `<div class="tp-foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}">
                         <ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon>
                     </div>`,
                     `<div class="tp-nombre" title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</div>
-                     <div class="tp-cod">COD: ${escapeHtml(p.codigo_barras || 'N/A')}</div>`,
+                     <div class="tp-cod">COD: ${escapeHtml(p.codigo_barras || 'N/A')}</div>
+                     ${reglaHtml}`,
                     controlHtml,
                     stockCelda(p, sucursalId),
                     `<button class="btn btn-sm btn-pub ${pub ? 'btn-outline-success' : 'btn-outline-danger'}"
@@ -1656,8 +1768,11 @@ $stmtC->close();
                         fotoEl.innerHTML = `<ion-icon name="image-outline" style="font-size:2.2rem;color:var(--dash-border);"></ion-icon>`;
                     }
 
+                    detalleProductoId = Number(d.id) || 0;
                     document.getElementById('det-nombre').textContent = d.nombre || '—';
                     document.getElementById('det-codigo').textContent = d.codigo ? `COD: ${d.codigo}` : 'Sin código';
+                    document.getElementById('det-regla-min').value = d.minimo_cantidad != null ? d.minimo_cantidad : 1;
+                    document.getElementById('det-regla-paso').value = d.paso_cantidad != null ? d.paso_cantidad : 1;
                     document.getElementById('det-sucursal').textContent = d.sucursal || '—';
                     document.getElementById('det-stock').textContent = d.stock != null ? d.stock : '—';
                     document.getElementById('det-precio').textContent = d.precio_compra != null ? `$${Number(d.precio_compra).toFixed(2)}` : '—';
@@ -1678,6 +1793,36 @@ $stmtC->close();
                     console.error('detalle error:', err);
                     toast('Error al cargar detalle', 'error');
                 });
+        }
+
+        /* ── Guardar reglas de cantidad ────────────────────────────────── */
+        function guardarReglasProducto() {
+            if (!detalleProductoId) return;
+
+            const minimo = parseFloat(document.getElementById('det-regla-min').value);
+            const paso = parseFloat(document.getElementById('det-regla-paso').value);
+            if (!isFinite(minimo) || !isFinite(paso) || minimo < 0.1 || paso < 0.1) {
+                toast('El mínimo y el paso deben ser 0.1 o mayor', 'error');
+                return;
+            }
+
+            apiPost({
+                    action: 'guardar_reglas',
+                    producto_id: detalleProductoId,
+                    minimo_cantidad: minimo,
+                    paso_cantidad: paso
+                })
+                .then(r => {
+                    if (!r.ok) {
+                        toast('Error: ' + (r.msg || 'No se pudieron guardar'), 'error');
+                        return;
+                    }
+                    document.getElementById('det-regla-min').value = r.minimo_cantidad;
+                    document.getElementById('det-regla-paso').value = r.paso_cantidad;
+                    toast('Reglas guardadas', 'success');
+                    cargar();
+                })
+                .catch(() => toast('Error al guardar las reglas', 'error'));
         }
 
         /* ── Subir foto ─────────────────────────────────────────────────── */

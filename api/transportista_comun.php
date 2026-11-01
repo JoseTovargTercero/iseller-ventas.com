@@ -97,6 +97,7 @@ function asegurarTablas($conexion): void
             nombre VARCHAR(120) NOT NULL,
             cedula VARCHAR(12) NOT NULL,
             telefono VARCHAR(20) NOT NULL,
+            email VARCHAR(190) DEFAULT NULL,
             password_hash VARCHAR(255) NOT NULL,
             deliverys TINYINT(1) NOT NULL DEFAULT 1,
             carreras TINYINT(1) NOT NULL DEFAULT 0,
@@ -104,6 +105,7 @@ function asegurarTablas($conexion): void
             moto_marca VARCHAR(60) DEFAULT NULL,
             moto_modelo VARCHAR(60) DEFAULT NULL,
             moto_color VARCHAR(40) DEFAULT NULL,
+            moto_tipo VARCHAR(20) DEFAULT NULL,
             activo TINYINT(1) NOT NULL DEFAULT 1,
             creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -175,10 +177,12 @@ function asegurarTablas($conexion): void
     // CREATE TABLE IF NOT EXISTS no añade columnas a tablas ya creadas en producción.
     $columnas = [
         'transportistas' => [
+            'email'       => 'VARCHAR(190) DEFAULT NULL',
             'foto_url'    => 'VARCHAR(255) DEFAULT NULL',
             'moto_marca'  => 'VARCHAR(60) DEFAULT NULL',
             'moto_modelo' => 'VARCHAR(60) DEFAULT NULL',
             'moto_color'  => 'VARCHAR(40) DEFAULT NULL',
+            'moto_tipo'   => 'VARCHAR(20) DEFAULT NULL',
         ],
         'transportista_servicios' => [
             'lat'          => 'DECIMAL(10,7) DEFAULT NULL',
@@ -220,12 +224,14 @@ function perfilTransportista(array $row): array
         'nombre'    => (string)$row['nombre'],
         'cedula'    => (string)$row['cedula'],
         'telefono'  => (string)$row['telefono'],
+        'email'     => (string)($row['email'] ?? ''),
         'deliverys' => (bool)(int)$row['deliverys'],
         'carreras'  => (bool)(int)$row['carreras'],
         'foto_url'  => (string)($row['foto_url'] ?? ''),
         'moto_marca' => (string)($row['moto_marca'] ?? ''),
         'moto_modelo' => (string)($row['moto_modelo'] ?? ''),
         'moto_color' => (string)($row['moto_color'] ?? ''),
+        'moto_tipo' => (string)($row['moto_tipo'] ?? ''),
     ];
 }
 
