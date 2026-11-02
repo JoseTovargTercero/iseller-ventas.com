@@ -70,7 +70,8 @@ function transportista_servicio_actual($conexion, int $bssId, int $ordenId): ?ar
     }
 
     $stmt = $conexion->prepare(
-        "SELECT s.transportista_id, s.estado, t.nombre
+        "SELECT s.transportista_id, s.estado, s.creado_en,
+                TIMESTAMPDIFF(MINUTE, s.creado_en, NOW()) AS minutos, t.nombre
            FROM transportista_servicios s
            LEFT JOIN transportistas t ON t.id = s.transportista_id
           WHERE s.tipo = 'delivery' AND s.numero_pedido = ? AND s.bss_id = ?

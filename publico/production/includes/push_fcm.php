@@ -21,6 +21,55 @@
 if (!function_exists('push_habilitado')) {
 
     /**
+     * Log de diagnostico de push: ademas de error_log, escribe en <raiz>/logs/push.log
+     * (protegido por .htaccess) para revisar fallos en produccion.
+     * Nunca lanza: el log no debe romper el envio.
+     */
+    function push_log(string $mensaje, array $contexto = []): void
+    {
+        $linea = date('Y-m-d H:i:s') . ' ' . $mensaje;
+        foreach ($contexto as $clave => $valor) {
+            if ($valor === null || $valor === '') {
+                continue;
+            }
+            if (is_string($valor)) {
+                $valor = preg_replace('/\s+/', ' ', substr($valor, 0, 400));
+            }
+            $linea .= ' ' . $clave . '=' . (is_scalar($valor) ? $valor : json_encode($valor, JSON_UNESCAPED_UNICODE));
+        }
+        error_log('FCM: ' . $linea);
+
+        try {
+            $dir = dirname(__DIR__, 3) . '/logs';
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0775, true);
+            }
+            if (!is_file($dir . '/.htaccess')) {
+                @file_put_contents($dir . '/.htaccess',
+                    "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n" .
+                    "<IfModule !mod_authz_core.c>\nOrder deny,allow\nDeny from all\n</IfModule>\n");
+            }
+            $archivo = $dir . '/push.log';
+            if (is_file($archivo) && filesize($archivo) > 2 * 1024 * 1024) {
+                @rename($archivo, $archivo . '.1');
+            }
+            @file_put_contents($archivo, $linea . PHP_EOL, FILE_APPEND | LOCK_EX);
+        } catch (Throwable $e) {
+            // el log nunca debe romper el envio
+        }
+    }
+
+    /** Token abreviado: el log no debe guardar credenciales completas. */
+    function push_token_abreviado(string $token): string
+    {
+        $token = trim($token);
+        if ($token === '') {
+            return '';
+        }
+        return substr($token, 0, 8) . '...' . substr($token, -4) . ' (' . strlen($token) . ')';
+    }
+
+    /**
      * Asegura la tabla de tokens y que un mismo teléfono pueda estar registrado
      * a la vez como panel y como transportista.
      *
@@ -128,7 +177,11 @@ if (!function_exists('push_habilitado')) {
         // FCM v1 firma con la service account: si el .env apunta a otro
         // proyecto, Google responde 403 (SenderId mismatch). Manda el del JSON.
         if ($saProject !== null && $env !== $saProject) {
-            error_log('FCM: FCM_PROJECT_ID (' . $env . ') no coincide con la service account (' . $saProject . '); se usa ' . $saProject);
+            push_log('config: FCM_PROJECT_ID distinto a la service account', [
+                'env' => $env,
+                'service_account' => $saProject,
+                'usado' => $saProject,
+            ]);
             return $saProject;
         }
 
@@ -209,7 +262,11 @@ if (!function_exists('push_habilitado')) {
         );
         $data = json_decode((string)($res['body'] ?? ''), true);
         if (empty($data['access_token'])) {
-            error_log('FCM: sin access_token (' . $res['status'] . ') ' . substr((string)$res['body'], 0, 300));
+            push_log('sin access_token', [
+                'status' => $res['status'] ?? 0,
+                'error' => (string)($res['body'] ?? ''),
+                'service_account' => $sa['client_email'] ?? '',
+            ]);
             return null;
         }
 
@@ -251,21 +308,38 @@ if (!function_exists('push_habilitado')) {
      */
     function enviar_push_usuario(mysqli $conexion, string $tipo, int $usuario_id, string $titulo, string $cuerpo, array $data = []): void
     {
-        if (!push_habilitado() || $usuario_id <= 0) return;
+        static $avisadoDeshabilitado = false;
+        if (!push_habilitado()) {
+            if (!$avisadoDeshabilitado) {
+                $avisadoDeshabilitado = true;
+                push_log('usuario: push deshabilitado en el servidor');
+            }
+            return;
+        }
+        if ($usuario_id <= 0) return;
 
         try {
             $project = push_project_id();
-            if (!$project) return;
+            if (!$project) {
+                push_log('usuario: falta FCM_SERVICE_ACCOUNT/FCM_PROJECT_ID', ['tipo' => $tipo, 'usuario' => $usuario_id]);
+                return;
+            }
 
             $access = push_access_token();
-            if (!$access) return;
+            if (!$access) {
+                // push_access_token ya deja el motivo en el log
+                return;
+            }
 
             $stmt = $conexion->prepare("SELECT id, token FROM push_dispositivos WHERE tipo = ? AND usuario_id = ?");
             $stmt->bind_param('si', $tipo, $usuario_id);
             $stmt->execute();
             $dispositivos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
-            if (!$dispositivos) return;
+            if (!$dispositivos) {
+                push_log('usuario: sin token registrado', ['tipo' => $tipo, 'usuario' => $usuario_id]);
+                return;
+            }
 
             $url = "https://fcm.googleapis.com/v1/projects/$project/messages:send";
             $headers = [
@@ -300,15 +374,27 @@ if (!function_exists('push_habilitado')) {
                     $del->bind_param('i', $d['id']);
                     $del->execute();
                     $del->close();
+                    push_log('usuario: token vencido eliminado', [
+                        'tipo' => $tipo,
+                        'usuario' => $usuario_id,
+                        'token' => push_token_abreviado((string)$d['token']),
+                        'status' => $r['status'],
+                    ]);
                 } elseif ($r['status'] < 200 || $r['status'] >= 300) {
                     $pista = $r['status'] === 403
                         ? ' (revisa que FCM_SERVICE_ACCOUNT sea del MISMO proyecto Firebase que google-services.json y que FCM_PROJECT_ID no apunte a otro proyecto)'
                         : '';
-                    error_log('FCM: error ' . $r['status'] . $pista . ' ' . substr($cuerpoError, 0, 300));
+                    push_log('usuario: error de Firebase' . $pista, [
+                        'tipo' => $tipo,
+                        'usuario' => $usuario_id,
+                        'token' => push_token_abreviado((string)$d['token']),
+                        'status' => $r['status'],
+                        'error' => $cuerpoError,
+                    ]);
                 }
             }
         } catch (Throwable $e) {
-            error_log('FCM: ' . $e->getMessage());
+            push_log('usuario: excepcion', ['tipo' => $tipo, 'usuario' => $usuario_id, 'error' => $e->getMessage()]);
         }
     }
 
@@ -323,6 +409,7 @@ if (!function_exists('push_habilitado')) {
     function enviar_push_transportista(mysqli $conexion, int $transportistaId, string $titulo, string $cuerpo, array $data = []): array
     {
         if (!push_habilitado()) {
+            push_log('transp: push deshabilitado en el servidor', ['transportista' => $transportistaId]);
             return ['ok' => false, 'sent' => 0, 'msg' => 'Las notificaciones push no están habilitadas en el servidor.'];
         }
         if ($transportistaId <= 0) {
@@ -332,7 +419,7 @@ if (!function_exists('push_habilitado')) {
         try {
             $project = push_project_id();
             if (!$project) {
-                error_log('FCM transportista: falta FCM_SERVICE_ACCOUNT/FCM_PROJECT_ID');
+                push_log('transp: falta FCM_SERVICE_ACCOUNT/FCM_PROJECT_ID', ['transportista' => $transportistaId]);
                 return ['ok' => false, 'sent' => 0, 'msg' => 'Firebase no está configurado en el servidor.'];
             }
 
@@ -343,7 +430,7 @@ if (!function_exists('push_habilitado')) {
 
             $stmt = $conexion->prepare("SELECT id, token FROM push_dispositivos WHERE tipo = 'transp' AND usuario_id = ?");
             if (!$stmt) {
-                error_log('FCM transportista: ' . $conexion->error);
+                push_log('transp: no se pudieron leer los dispositivos', ['transportista' => $transportistaId, 'error' => $conexion->error]);
                 return ['ok' => false, 'sent' => 0, 'msg' => 'No se pudieron leer los dispositivos del transportista.'];
             }
             $stmt->bind_param('i', $transportistaId);
@@ -351,7 +438,7 @@ if (!function_exists('push_habilitado')) {
             $dispositivos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
             if (!$dispositivos) {
-                error_log('FCM transportista: sin token para transportista ' . $transportistaId);
+                push_log('transp: sin token registrado', ['transportista' => $transportistaId]);
                 return ['ok' => false, 'sent' => 0, 'msg' => 'El transportista no tiene la app con notificaciones registradas.'];
             }
 
@@ -392,6 +479,11 @@ if (!function_exists('push_habilitado')) {
                     $del->bind_param('i', $d['id']);
                     $del->execute();
                     $del->close();
+                    push_log('transp: token vencido eliminado', [
+                        'transportista' => $transportistaId,
+                        'token' => push_token_abreviado((string)$d['token']),
+                        'status' => $r['status'],
+                    ]);
                     $ultimoError = 'La app del transportista tiene un token vencido; debe abrir la app para registrarse de nuevo.';
                 } elseif ($r['status'] < 200 || $r['status'] >= 300) {
                     $errorGoogle = '';
@@ -402,7 +494,13 @@ if (!function_exists('push_habilitado')) {
                     $pista = $r['status'] === 403
                         ? ' (revisa que FCM_SERVICE_ACCOUNT sea del MISMO proyecto Firebase que google-services.json y que FCM_PROJECT_ID no apunte a otro proyecto)'
                         : '';
-                    error_log('FCM transportista: error ' . $r['status'] . ' proyecto=' . push_project_id() . $pista . ' ' . substr($cuerpoError, 0, 500));
+                    push_log('transp: error de Firebase' . $pista, [
+                        'transportista' => $transportistaId,
+                        'token' => push_token_abreviado((string)$d['token']),
+                        'status' => $r['status'],
+                        'proyecto' => push_project_id(),
+                        'error' => $cuerpoError,
+                    ]);
                     $ultimoError = $tokenAjeno
                         ? 'El token de la app y la service account no son del mismo proyecto Firebase (servidor: ' . push_project_id() . '). Debe coincidir con el proyecto de la app.'
                         : 'Firebase rechazó la notificación (' . $r['status'] . ').' . $errorGoogle;
@@ -412,11 +510,12 @@ if (!function_exists('push_habilitado')) {
             }
 
             if ($enviados > 0) {
+                push_log('transp: enviado', ['transportista' => $transportistaId, 'sent' => $enviados]);
                 return ['ok' => true, 'sent' => $enviados, 'msg' => ''];
             }
             return ['ok' => false, 'sent' => 0, 'msg' => $ultimoError ?: 'Firebase rechazó la notificación.'];
         } catch (Throwable $e) {
-            error_log('FCM transportista: ' . $e->getMessage());
+            push_log('transp: excepcion', ['transportista' => $transportistaId, 'error' => $e->getMessage()]);
             return ['ok' => false, 'sent' => 0, 'msg' => 'Error interno al enviar la notificación.'];
         }
     }

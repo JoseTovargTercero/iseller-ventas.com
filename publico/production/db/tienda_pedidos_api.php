@@ -25,13 +25,28 @@ if (in_array($action, ['cambiar_estado', 'cambiar_transportista', 'notificar_tra
 header('Content-Type: application/json');
 
 if ($action === 'listar') {
+    $tieneServicios = false;
+    $resTp = $conexion->query("SHOW TABLES LIKE 'transportista_servicios'");
+    $tieneServicios = $resTp && $resTp->num_rows > 0;
+    $joinTp = $tieneServicios
+        ? "LEFT JOIN transportista_servicios s
+                 ON s.tipo = 'delivery' AND s.numero_pedido = CAST(o.id AS CHAR) AND s.bss_id = o.bss_id"
+        : '';
+    $colsTp = $tieneServicios
+        ? "s.estado AS transportista_estado, s.creado_en AS transportista_desde,
+           TIMESTAMPDIFF(MINUTE, s.creado_en, NOW()) AS transportista_minutos,"
+        : "NULL AS transportista_estado, NULL AS transportista_desde, NULL AS transportista_minutos,";
+
     $sql = "SELECT o.id, o.status, o.total_price, o.total_price_bs, o.total_price_cop,
                    o.created, o.cliente, o.negocio_id, o.bss_id,
                    o.tipoPago, o.tipo_entrega, o.numero_operacion_bancaria,
                    o.hora_operacion_bancaria, o.direccion_id,
-                   u.nombre AS cliente_nombre, u.telefono AS cliente_telefono, u.email AS cliente_email
+                   u.nombre AS cliente_nombre, u.telefono AS cliente_telefono, u.email AS cliente_email,
+                   $colsTp
+                   o.id AS _dummy
             FROM tienda_ordenes o
             LEFT JOIN tienda_usuarios u ON o.customer_id = u.id
+            $joinTp
             WHERE o.bss_id = ?
             ORDER BY o.id DESC";
             
@@ -88,6 +103,8 @@ if ($action === 'detalle') {
     $orden['transportista_id'] = $tpActual['transportista_id'] ?? null;
     $orden['transportista_nombre'] = $tpActual['nombre'] ?? null;
     $orden['transportista_estado'] = $tpActual['estado'] ?? null;
+    $orden['transportista_desde'] = $tpActual['creado_en'] ?? null;
+    $orden['transportista_minutos'] = isset($tpActual['minutos']) ? (int)$tpActual['minutos'] : null;
 
     // Artículos de la orden
     $sqlArts = "SELECT a.*, p.nombre AS producto_nombre, s.nombre AS sucursal_nombre
@@ -267,22 +284,63 @@ if ($action === 'cambiar_estado') {
             $stmt->close();
         } elseif ($status === 3 && $descontado !== 'Si' && $descontado !== 'R') {
             // Compatibilidad con órdenes creadas antes de reservar en el checkout.
-            $stmt = $conexion->prepare("SELECT product_id, quantity, id_sucursal, bss_id FROM tienda_orden_articulos WHERE order_id = ?");
+            $stmt = $conexion->prepare(
+                "SELECT a.product_id, a.quantity, a.id_sucursal, a.bss_id, p.es_combo
+                   FROM tienda_orden_articulos a
+                   LEFT JOIN productos p ON p.id = a.product_id
+                  WHERE a.order_id = ?"
+            );
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $arts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
 
             $stmtUpd = $conexion->prepare("UPDATE stock SET stock = GREATEST(stock - ?, 0) WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
+            $stmtUpdCombo = $conexion->prepare(
+                "UPDATE stock SET stock = stock - ?
+                  WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?"
+            );
+            $sinStock = false;
+
             foreach ($arts as $a) {
-                $qty = (int)$a['quantity'];
+                $qty = (float)$a['quantity'];
                 $pid = (int)$a['product_id'];
                 $sid = (int)$a['id_sucursal'];
                 $sbss = (int)$a['bss_id'];
-                $stmtUpd->bind_param("iiii", $qty, $pid, $sid, $sbss);
+
+                if ((int)($a['es_combo'] ?? 0) === 1) {
+                    $piezas = combo_items($conexion, $pid, $sbss);
+                    if (!$piezas) {
+                        $sinStock = true;
+                        break;
+                    }
+                    foreach ($piezas as $ci) {
+                        $descontar = $qty * (float)$ci['cantidad'];
+                        $childId = (int)$ci['producto_id'];
+                        $stmtUpdCombo->bind_param("diiid", $descontar, $childId, $sid, $sbss, $descontar);
+                        $stmtUpdCombo->execute();
+                        if ($stmtUpdCombo->affected_rows !== 1) {
+                            $sinStock = true;
+                            break 2;
+                        }
+                    }
+                    continue;
+                }
+
+                $stmtUpd->bind_param("diii", $qty, $pid, $sid, $sbss);
                 $stmtUpd->execute();
             }
             $stmtUpd->close();
+            $stmtUpdCombo->close();
+
+            if ($sinStock) {
+                $conexion->rollback();
+                echo json_encode([
+                    'ok' => false,
+                    'msg' => 'No hay stock suficiente de las piezas del combo para enviar este pedido.',
+                ]);
+                exit;
+            }
 
             $stmt = $conexion->prepare("UPDATE tienda_ordenes SET descontado = 'Si' WHERE id = ?");
             $stmt->bind_param("i", $id);
@@ -375,6 +433,7 @@ if ($action === 'solicitar_transportista') {
     // Push a todos los transportistas activos del negocio.
     $enviados = 0;
     $total = 0;
+    $errores = [];
     foreach (transportista_negocio_listar($conexion, (int)$bss_id) as $t) {
         if ((int)$t['activo'] !== 1 || (int)$t['deliverys'] !== 1) {
             continue;
@@ -389,6 +448,8 @@ if ($action === 'solicitar_transportista') {
         );
         if (!empty($r['ok'])) {
             $enviados++;
+        } else {
+            $errores[] = $t['nombre'] . ': ' . ($r['msg'] ?? 'No se pudo enviar');
         }
     }
 
@@ -397,6 +458,7 @@ if ($action === 'solicitar_transportista') {
         'estado' => 'esperando',
         'enviados' => $enviados,
         'total' => $total,
+        'errores' => $errores,
         'msg' => $total === 0
             ? 'No hay transportistas activos registrados en la tienda.'
             : '',

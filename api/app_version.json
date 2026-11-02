@@ -1,6 +1,6 @@
 {
-    "version_code": 22,
-    "version_name": "3.1",
-    "notas": "Nueva tarjeta del cliente en el mapa: nombre, teléfono, dirección y referencia, con botones de llamar y WhatsApp. La ruta por calles se genera automáticamente al ver el destino.",
+    "version_code": 23,
+    "version_name": "3.2",
+    "notas": "Gestionar entrega: la tienda puede asignar un transportista o solicitar uno a todos. El primero que acepta queda asignado y el delivery desaparece de los demás.",
     "archivo": "apk/iseller_pos.apk"
 }

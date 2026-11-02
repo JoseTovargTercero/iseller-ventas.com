@@ -474,6 +474,43 @@ $stmtRep->close();
             background: #facc15;
         }
 
+        .status-esperando {
+            background: rgba(250, 204, 21, 0.12);
+            color: #facc15;
+        }
+
+        .status-esperando::before {
+            background: #facc15;
+        }
+
+        .status-waiting {
+            text-align: center;
+            padding: 12px;
+            border: 1px solid rgba(250, 204, 21, 0.35);
+            background: rgba(250, 204, 21, 0.06);
+            border-radius: 12px;
+        }
+
+        .status-waiting .waiting-title {
+            font-weight: 700;
+            color: #facc15;
+            font-size: 0.85rem;
+        }
+
+        .status-waiting .waiting-time {
+            color: #8892a0;
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+
+        .status-waiting .waiting-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
         .status-2 {
             background: rgba(59, 130, 246, 0.1);
             color: #3b82f6;
@@ -1527,7 +1564,10 @@ $stmtRep->close();
             return map[status] || 'Pendiente';
         }
 
-        function getStatusBadge(status, tipoEntrega) {
+        function getStatusBadge(status, tipoEntrega, esperando) {
+            if (esperando) {
+                return '<span class="badge-status status-esperando">Esperando transportista</span>';
+            }
             return '<span class="badge-status status-' + status + '">' + getStatusText(status, tipoEntrega) + '</span>';
         }
 
@@ -1579,7 +1619,7 @@ $stmtRep->close();
                             o.cliente_telefono || '—',
                             entrega,
                             '$' + trunc2(o.total_price),
-                            getStatusBadge(o.status, o.tipo_entrega),
+                            getStatusBadge(o.status, o.tipo_entrega, o.transportista_estado === 'esperando'),
                             btns
                         ];
                         // Cerradas: entregadas (4) y rechazadas (5)
@@ -1615,7 +1655,7 @@ $stmtRep->close();
                     // Header
                     $('#det-id').text(o.id);
                     $('#det-fecha').text(o.created);
-                    $('#det-status-header').html(getStatusBadge(o.status, o.tipo_entrega));
+                    $('#det-status-header').html(getStatusBadge(o.status, o.tipo_entrega, o.transportista_estado === 'esperando'));
 
                     // Cliente tab
                     $('#det-cliente').text(o.cliente_nombre || o.cliente || 'N/A');
@@ -1894,6 +1934,36 @@ $stmtRep->close();
             return null;
         }
 
+        function escaparHtml(texto) {
+            return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function textoEspera(minutos) {
+            minutos = parseInt(minutos || 0);
+            if (minutos < 1) return 'desde hace menos de 1 minuto';
+            if (minutos < 60) return 'desde hace ' + minutos + (minutos === 1 ? ' minuto' : ' minutos');
+            var horas = Math.floor(minutos / 60);
+            var resto = minutos % 60;
+            return 'desde hace ' + horas + ' h' + (resto ? ' ' + resto + ' min' : '');
+        }
+
+        function bloqueEspera(o) {
+            return '<div class="status-waiting">' +
+                '<div class="waiting-title"><i class="bi bi-hourglass-split"></i> Esperando transportista</div>' +
+                '<div class="waiting-time">' + textoEspera(o.transportista_minutos) + '</div>' +
+                '<div class="waiting-actions">' +
+                '<button class="btn btn-success" onclick="asignarEsperando()"><i class="bi bi-person-check"></i> Asignar transportista</button>' +
+                '<button class="btn btn-outline-success" onclick="solicitarTransportista(true)"><i class="bi bi-bell"></i> Solicitar de nuevo</button>' +
+                '<button class="btn btn-outline-danger" onclick="rechazarEstado()"><i class="bi bi-x-lg"></i> Rechazar pedido</button>' +
+                '</div></div>';
+        }
+
+        function asignarEsperando() {
+            elegirTransportista(function(id) {
+                enviarEstado(6, null, id);
+            });
+        }
+
         function renderStatusStepper(o) {
             var labels = getStatusLabels(o.tipo_entrega);
             var actual = parseInt(o.status);
@@ -1922,8 +1992,11 @@ $stmtRep->close();
                 : null;
 
             var actions = '';
+            var esperando = (String(o.transportista_estado || '') === 'esperando');
             if (esRechazado) {
                 actions = '<div class="status-done-msg rejected"><i class="bi bi-x-circle"></i> Pedido rechazado</div>';
+            } else if (esperando) {
+                actions = bloqueEspera(o);
             } else if (actual === 4) {
                 actions = '<div class="status-done-msg"><i class="bi bi-check-circle"></i> Pedido entregado</div>';
             } else if (!siguiente) {
@@ -2015,7 +2088,7 @@ $stmtRep->close();
             });
         }
 
-        function solicitarTransportista() {
+        function solicitarTransportista(reenvio) {
             if (!ordenActual) return;
             var fd = new FormData();
             fd.append('action', 'solicitar_transportista');
@@ -2047,11 +2120,19 @@ $stmtRep->close();
                         });
                         return;
                     }
+                    var errores = data.errores || [];
+                    var base = (reenvio ? 'Se reenvió a ' : 'Se notificó a ') + data.enviados +
+                        ' de ' + data.total + ' transportista(s). El primero que acepte queda asignado.';
+                    var html = escaparHtml(base);
+                    if (errores.length) {
+                        html += '<div style="margin-top:10px;font-size:12px;color:#f5b45b;text-align:left;">' +
+                            errores.slice(0, 6).map(function(e) { return '• ' + escaparHtml(e); }).join('<br>') +
+                            '</div>';
+                    }
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Solicitud enviada',
-                        text: 'Se notificó a ' + data.enviados + ' de ' + data.total +
-                            ' transportista(s). El primero que acepte queda asignado.',
+                        icon: errores.length ? 'warning' : 'success',
+                        title: reenvio ? 'Notificaciones reenviadas' : 'Solicitud enviada',
+                        html: html,
                         confirmButtonColor: '#2dd4a0'
                     });
                 })
