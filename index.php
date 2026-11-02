@@ -3887,10 +3887,9 @@ $zona_tienda = $es_tienda_individual
     <style>
         .modal-combo-box {
             margin: 0 0 1rem;
-            padding: 12px 14px;
-            border: 1px solid rgba(34, 211, 238, 0.3);
-            background: rgba(34, 211, 238, 0.06);
-            border-radius: 10px;
+            padding: 0;
+            border: none;
+            background: transparent;
         }
 
         .modal-combo-box h6 {
@@ -3904,14 +3903,36 @@ $zona_tienda = $es_tienda_individual
         }
 
         .modal-combo-box ul {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 7px 18px;
             margin: 0;
-            padding-left: 18px;
+            padding: 0;
+            list-style: none;
             color: var(--dash-text, #e8edf2);
             font-size: 0.82rem;
         }
 
-        .modal-combo-box li + li {
-            margin-top: 3px;
+        .modal-combo-box li {
+            display: flex;
+            align-items: flex-start;
+            gap: 7px;
+            min-width: 0;
+            line-height: 1.35;
+        }
+
+        .modal-combo-box li::before {
+            content: '✓';
+            flex-shrink: 0;
+            color: #22c55e;
+            font-weight: 800;
+            line-height: 1.35;
+        }
+
+        @media (max-width: 575px) {
+            .modal-combo-box ul {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 
@@ -4412,11 +4433,11 @@ $zona_tienda = $es_tienda_individual
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2" >
-                                ${Number(item.es_combo) === 1 ? '' : `
                                 <div class="quantity-control form-control-sm border px-1" onclick="event.stopPropagation()">
                                     ${(()=>{
                                         const _min  = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
                                         const _step = Number(item.paso_cantidad) > 0 ? Number(item.paso_cantidad) : 1;
+                                        const _stock = Number(item.stock) || 0;
                                         return `
                                             <button class="btn-qty" onclick="changeQty(this, -1)" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">-</button>
                                             <input type="number" class="qty-input form-control-plaintext p-0 text-center" 
@@ -4425,10 +4446,10 @@ $zona_tienda = $es_tienda_individual
                                                 data-step="${_step}" data-min="${_min}"
                                                 step="${_step}" readonly
                                                 style="width: 40px; height: 30px;">
-                                            <button class="btn-qty" onclick="changeQty(this, 1, null)" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">+</button>
+                                            <button class="btn-qty" onclick="changeQty(this, 1, ${_stock})" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">+</button>
                                         `;
                                     })()}
-                                </div>`}
+                                </div>
                                 <button class="btn btn-sm btn-action-primary d-flex align-items-center justify-content-center btn-add-to-car" 
                                     style="width: 38px; height: 32px; border-radius: 50%; background: var(--primary-color); color: white; border: none;"
                                     onclick="event.stopPropagation(); addtocarHero(this)"
@@ -4735,7 +4756,7 @@ $zona_tienda = $es_tienda_individual
                                 <div class="stock-text">${esCombo ? (producto.stock > 0 ? 'Combo' : 'Agotado') : (producto.stock > 0 ? 'Disponible: ' + producto.stock : 'Agotado')}</div>
                             </div>
                             <div class="card-actions">
-                                ${esCombo ? '' : `<div class="quantity-control">
+                                <div class="quantity-control">
                                     <button class="btn-qty" onclick="changeQty(this, -1)">-</button>
                                     <input type="number" class="qty-input" 
                                         data-cantidad-id="${producto.id}"
@@ -4745,7 +4766,7 @@ $zona_tienda = $es_tienda_individual
                                         data-min="${qtyMin}"
                                         step="${qtyStep}" readonly>
                                     <button class="btn-qty" onclick="changeQty(this, 1, ${isSocio ? null : producto.stock})">+</button>
-                                </div>`}
+                                </div>
                                 <button class="btn btn-add btn-add-to-car ${btnDisabled}" 
                                     data-add-id="${producto.id}"
                                     data-codigo="${producto.codigo || ''}"
@@ -4828,16 +4849,17 @@ $zona_tienda = $es_tienda_individual
             modalQty.step = modalStep;
             modalQty.dataset.min = modalMin;
             modalQty.dataset.step = modalStep;
+            modalQty.dataset.max = Number(producto.stock) || 0;
 
-            // Combo: sin selector de cantidad y con el detalle de sus piezas.
+            // Combo: se permite elegir cantidad, pero se muestra el detalle de sus piezas.
             const esCombo = Number(producto.es_combo) === 1;
             const comboBox = document.getElementById('modal-combo-box');
             const comboList = document.getElementById('modal-combo-items');
             const qtyWrapper = document.querySelector('#modalProductoDetalle .modal-qty-wrapper');
 
+            if (qtyWrapper) qtyWrapper.style.display = '';
+
             if (esCombo) {
-                modalQty.value = 1;
-                if (qtyWrapper) qtyWrapper.style.display = 'none';
                 comboBox.style.display = 'block';
                 comboList.innerHTML = '';
 
@@ -4856,7 +4878,6 @@ $zona_tienda = $es_tienda_individual
                     });
                 }
             } else {
-                if (qtyWrapper) qtyWrapper.style.display = '';
                 comboBox.style.display = 'none';
             }
 
@@ -4887,9 +4908,22 @@ $zona_tienda = $es_tienda_individual
             const input = document.getElementById('modal-product-qty');
             const step = parseFloat(input.dataset.step) || 1;
             const min = parseFloat(input.dataset.min) || step;
+            const max = parseFloat(input.dataset.max) || 0;
             let val = parseFloat(input.value) || min;
             val = Math.round((val + delta * step) * 10) / 10;
             if (val < min) val = min;
+
+            if (max === 0) {
+                input.value = min;
+                return;
+            }
+            if (val > max) {
+                const minT = Math.round(min * 10);
+                const stepT = Math.round(step * 10);
+                const maxT = Math.round(max * 10);
+                const saltos = Math.floor((maxT - minT) / stepT);
+                val = saltos >= 0 ? (minT + saltos * stepT) / 10 : min;
+            }
             input.value = val;
         }
 
@@ -6568,10 +6602,9 @@ $zona_tienda = $es_tienda_individual
                         const tiendaLabel = it.tienda_nombre ? '<div class="item-meta" style="color:#6b7a8d;font-size:0.72rem;"><i class="bi bi-shop" style="font-size:0.65rem;"></i> ' + it.tienda_nombre + '</div>' : '';
                         const qtyMin = Number(it.minimo_cantidad) > 0 ? Number(it.minimo_cantidad) : 1;
                         const qtyStep = Number(it.paso_cantidad) > 0 ? Number(it.paso_cantidad) : 1;
-                        const esCombo = Number(it.es_combo) === 1;
                         const stockActual = Number(it.stock) || 0;
                         const sinStock = stockActual <= 0;
-                        const qtyHtml = esCombo ? '' :
+                        const qtyHtml =
                             '<div class="mkt-hero-qty">' +
                                 '<button type="button" onclick="changeQty(this, -1)">-</button>' +
                                 '<input type="number" data-cantidad-id="' + it.id + '" value="' + qtyMin + '" min="' + qtyMin + '" data-step="' + qtyStep + '" data-min="' + qtyMin + '" step="' + qtyStep + '" readonly>' +
