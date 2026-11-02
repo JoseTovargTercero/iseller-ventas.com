@@ -383,6 +383,21 @@ $stmtC->close();
             border: 1px solid rgba(45, 212, 160, 0.25);
         }
 
+        .tp-combo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+            margin-left: 4px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: .68rem;
+            font-weight: 700;
+            color: #22d3ee;
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.25);
+        }
+
         .sucursal-select {
             width: 100%;
             background: var(--dash-bg);
@@ -1661,6 +1676,9 @@ $stmtC->close();
                 const reglaHtml = (reglaMin !== 1 || reglaPaso !== 1)
                     ? `<div class="tp-regla-mini"><ion-icon name="options-outline"></ion-icon> Mín. ${reglaMin} · Paso ${reglaPaso}</div>`
                     : '';
+                const comboHtml = Number(p.es_combo) === 1
+                    ? `<span class="tp-combo-badge"><ion-icon name="layers-outline"></ion-icon> Combo</span>`
+                    : '';
 
                 const fila = tabla.row.add([
                     `<div class="tp-foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}">
@@ -1668,7 +1686,7 @@ $stmtC->close();
                     </div>`,
                     `<div class="tp-nombre" title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</div>
                      <div class="tp-cod">COD: ${escapeHtml(p.codigo_barras || 'N/A')}</div>
-                     ${reglaHtml}`,
+                     ${comboHtml}${reglaHtml}`,
                     controlHtml,
                     stockCelda(p, sucursalId),
                     `<button class="btn btn-sm btn-pub ${pub ? 'btn-outline-success' : 'btn-outline-danger'}"

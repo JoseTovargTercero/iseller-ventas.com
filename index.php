@@ -1987,6 +1987,27 @@ $zona_tienda = $es_tienda_individual
                 color: #ffffff;
             }
 
+            .store-app-download {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                margin-top: 0.9rem;
+                padding: 0.55rem 1.1rem;
+                border-radius: 999px;
+                background: #ffffff;
+                color: #1a7f4b;
+                font-weight: 700;
+                font-size: 0.88rem;
+                text-decoration: none;
+                border: 1.5px solid rgba(255, 255, 255, 0.9);
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+            }
+
+            .store-app-download:hover {
+                background: #f0fdf4;
+                color: #146c3f;
+            }
+
             .store-title {
                 font-size: 1.9rem;
                 font-weight: 800;
@@ -2726,6 +2747,9 @@ $zona_tienda = $es_tienda_individual
                                 </div>
                             </div>
                         <?php endif; ?>
+                        <a class="store-app-download" href="https://166.1.85.221.nip.io/iseller_store.apk" download>
+                            <i class="bi bi-android2"></i> Descargar la app
+                        </a>
                     </div>
                 </div>
                 <!-- Decorative slogan right -->
@@ -3050,9 +3074,14 @@ $zona_tienda = $es_tienda_individual
                         <i class="bi bi-search me-2" style="color:#aaa; font-size:0.95rem;"></i>
                         <input type="text" id="hero-search-input" placeholder="Buscar productos o tiendas..." oninput="heroSearch(this.value)">
                     </div>
-                    <button type="button" class="btn rounded-pill px-4 py-2 fw-semibold mt-3" data-bs-toggle="modal" data-bs-target="#modalTiendasCercanas" style="background:#1a7f4b;color:#fff;border:none;box-shadow:0 2px 12px rgba(26,127,75,0.25);">
-                        <i class="bi bi-shop-window me-2"></i> Encontrar tiendas cercanas
-                    </button>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" class="btn rounded-pill px-4 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTiendasCercanas" style="background:#1a7f4b;color:#fff;border:none;box-shadow:0 2px 12px rgba(26,127,75,0.25);">
+                            <i class="bi bi-shop-window me-2"></i> Encontrar tiendas cercanas
+                        </button>
+                        <a href="https://166.1.85.221.nip.io/iseller_store.apk" class="btn rounded-pill px-4 py-2 fw-semibold" style="background:#fff;color:#1a7f4b;border:1.5px solid #1a7f4b;" download>
+                            <i class="bi bi-android2 me-2"></i> Descargar la app
+                        </a>
+                    </div>
                 </div>
                 <div class="mkt-hero-img-col">
                     <img src="assets/img/bat-1.webp" alt="iSeller Store - Mercado local" loading="eager">
@@ -3673,15 +3702,15 @@ $zona_tienda = $es_tienda_individual
                                 </div>
                             </div>
 
-                            <div class="modal-section-title">DETALLES Y BENEFICIOS</div>
-                            <ul id="modal-product-description" class="modal-benefits-list">
-                                <!-- Bullet points inserted via JS -->
-                            </ul>
-
                             <div id="modal-product-category" class="mb-3" style="display: none;">
                                 <span class="badge bg-light text-muted fw-normal p-1" style="font-size: 0.8rem;">
                                     <i class="bi bi-tag small"></i> <span id="modal-category-text"></span>
                                 </span>
+                            </div>
+
+                            <div id="modal-combo-box" class="modal-combo-box" style="display: none;">
+                                <h6><i class="bi bi-box-seam"></i> Este combo incluye</h6>
+                                <ul id="modal-combo-items"></ul>
                             </div>
 
                             <div class="modal-actions-container">
@@ -3750,6 +3779,37 @@ $zona_tienda = $es_tienda_individual
     <?php endif; ?>
 
     <!-- jQuery -->
+    <style>
+        .modal-combo-box {
+            margin: 0 0 1rem;
+            padding: 12px 14px;
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            background: rgba(34, 211, 238, 0.06);
+            border-radius: 10px;
+        }
+
+        .modal-combo-box h6 {
+            margin: 0 0 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0891b2;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modal-combo-box ul {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--dash-text, #e8edf2);
+            font-size: 0.82rem;
+        }
+
+        .modal-combo-box li + li {
+            margin-top: 3px;
+        }
+    </style>
+
     <script src="assets/js/jquery.min.js"></script>
     <!-- Bootstrap Bundle -->
     <script src="../publico/vendors/bootstrap5/js/bootstrap.bundle.min.js"></script>
@@ -3902,6 +3962,8 @@ $zona_tienda = $es_tienda_individual
                     stock: item.s,
                     mayor: item.m,
                     cantidadPaca: item.paca || 1,
+                    es_combo: Number(item.combo) === 1 ? 1 : 0,
+                    combo_items: Array.isArray(item.ci) ? item.ci : [],
                     minimo_cantidad: Number(item.mq) > 0 ? Number(item.mq) : 1,
                     paso_cantidad: Number(item.sq) > 0 ? Number(item.sq) : 1,
                     precio_dolar_visible: item.pd,
@@ -4224,6 +4286,7 @@ $zona_tienda = $es_tienda_individual
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="fw-semibold text-primary-dark">${item.nombre}</span>
+                                    ${Number(item.es_combo) === 1 ? '<span class="badge" style="background:rgba(34,211,238,.12);color:#0891b2;font-size:.65rem;">Combo</span>' : ''}
                                     <span class="text-muted" style="font-size: 0.72rem;">
                                         <i class="bi bi-tag small"></i> ${item.ca || item.categorias || 'Sin categoría'}
                                     </span>
@@ -4244,6 +4307,7 @@ $zona_tienda = $es_tienda_individual
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2" >
+                                ${Number(item.es_combo) === 1 ? '' : `
                                 <div class="quantity-control form-control-sm border px-1">
                                     ${(()=>{
                                         const _min  = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
@@ -4259,7 +4323,7 @@ $zona_tienda = $es_tienda_individual
                                             <button class="btn-qty" onclick="changeQty(this, 1, null)" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">+</button>
                                         `;
                                     })()}
-                                </div>
+                                </div>`}
                                 <button class="btn btn-sm btn-action-primary d-flex align-items-center justify-content-center btn-add-to-car" 
                                     style="width: 38px; height: 32px; border-radius: 50%; background: var(--primary-color); color: white; border: none;"
                                     data-add-id="${item.id}"
@@ -4476,9 +4540,10 @@ $zona_tienda = $es_tienda_individual
 
                 const isSocio = producto.sucursal === 'loreamny';
                 const esMayor = String(producto.mayor) === '1';
+                const esCombo = Number(producto.es_combo) === 1;
                 const qtyMin = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
                 const qtyStep = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
-                const isOutOfStock = !isSocio && producto.stock <= 0 && !esMayor;
+                const isOutOfStock = !isSocio && producto.stock <= 0 && (esCombo || !esMayor);
                 const opacityClass = isOutOfStock ? 'opacity-50 grayscale' : '';
                 const btnDisabled = isOutOfStock ? 'disabled btn-disabled' : '';
                 const btnText = isOutOfStock ? 'Agotado' : '';
@@ -4537,6 +4602,7 @@ $zona_tienda = $es_tienda_individual
                         <div class="product-card ${opacityClass}">
                             <div class="product-img-wrapper ${hasImg ? '' : 'no-img'}" style="cursor: pointer;" onclick="openProductModal('${producto.id}')">
                                 ${esMayor ? `<span class="product-mayor-badge" title="${producto.cantidadPaca} unidades por paca">x${producto.cantidadPaca}</span>` : ''}
+                                ${esCombo ? `<span class="product-mayor-badge" style="background:#0891b2;color:#fff;">Combo</span>` : ''}
                                 ${hasImg
                                     ? `<img src="${imgSrc}" loading="lazy" class="product-img" alt="${producto.nombre}" onerror="productImgError(this)">`
                                     : `<div class="no-img-inner"><i class="bi bi-box-seam"></i></div>`
@@ -4550,10 +4616,10 @@ $zona_tienda = $es_tienda_individual
                             <div class="price-container">
                                 <div class="price-main"><span class="price-dolar">${precio_dolar}</span></div>
                                 <div class="price-sub"><span class="price-bs">${precio_bs}</span></div>
-                                <div class="stock-text">${producto.stock > 0 ? 'Disponible: ' + producto.stock : 'Agotado'}</div>
+                                <div class="stock-text">${esCombo ? (producto.stock > 0 ? 'Combo' : 'Agotado') : (producto.stock > 0 ? 'Disponible: ' + producto.stock : 'Agotado')}</div>
                             </div>
                             <div class="card-actions">
-                                <div class="quantity-control">
+                                ${esCombo ? '' : `<div class="quantity-control">
                                     <button class="btn-qty" onclick="changeQty(this, -1)">-</button>
                                     <input type="number" class="qty-input" 
                                         data-cantidad-id="${producto.id}"
@@ -4563,7 +4629,7 @@ $zona_tienda = $es_tienda_individual
                                         data-min="${qtyMin}"
                                         step="${qtyStep}" readonly>
                                     <button class="btn-qty" onclick="changeQty(this, 1, ${isSocio ? null : producto.stock})">+</button>
-                                </div>
+                                </div>`}
                                 <button class="btn btn-add btn-add-to-car ${btnDisabled}" 
                                     data-add-id="${producto.id}"
                                     data-codigo="${producto.codigo || ''}"
@@ -4647,6 +4713,37 @@ $zona_tienda = $es_tienda_individual
             modalQty.dataset.min = modalMin;
             modalQty.dataset.step = modalStep;
 
+            // Combo: sin selector de cantidad y con el detalle de sus piezas.
+            const esCombo = Number(producto.es_combo) === 1;
+            const comboBox = document.getElementById('modal-combo-box');
+            const comboList = document.getElementById('modal-combo-items');
+            const qtyWrapper = document.querySelector('#modalProductoDetalle .modal-qty-wrapper');
+
+            if (esCombo) {
+                modalQty.value = 1;
+                if (qtyWrapper) qtyWrapper.style.display = 'none';
+                comboBox.style.display = 'block';
+                comboList.innerHTML = '';
+
+                const items = Array.isArray(producto.combo_items) ? producto.combo_items : [];
+                if (!items.length) {
+                    const li = document.createElement('li');
+                    li.textContent = 'Sin detalle de piezas';
+                    comboList.appendChild(li);
+                } else {
+                    items.forEach(function(it) {
+                        const nombre = it.nombre != null ? it.nombre : (it.n || 'Producto');
+                        const cantidad = it.cantidad != null ? it.cantidad : (it.q != null ? it.q : 1);
+                        const li = document.createElement('li');
+                        li.textContent = cantidad + ' × ' + nombre;
+                        comboList.appendChild(li);
+                    });
+                }
+            } else {
+                if (qtyWrapper) qtyWrapper.style.display = '';
+                comboBox.style.display = 'none';
+            }
+
             // Update Add to Cart Button
             const btn = document.getElementById('modal-btn-add');
             btn.dataset.addId = producto.id;
@@ -4654,30 +4751,6 @@ $zona_tienda = $es_tienda_individual
             btn.dataset.P_D = producto.precio_dolar_visible;
             btn.dataset.P_P = producto.precio_peso_visible;
             btn.dataset.P_B = producto.precio_bs_visible;
-
-            // Benefits / Description Logic
-            const descList = document.getElementById('modal-product-description');
-            descList.innerHTML = '';
-
-            // Try to use description if available, otherwise generic benefits or nothing
-            if (producto.descripcion) {
-                // Split by newlines or bullets if structured
-                const lines = producto.descripcion.split(/\r?\n|•|- /).filter(line => line.trim() !== '');
-                if (lines.length > 0) {
-                    lines.forEach(line => {
-                        descList.innerHTML += `<li>${line.trim()}</li>`;
-                    });
-                } else {
-                    descList.innerHTML += `<li>${producto.descripcion}</li>`;
-                }
-            } else {
-                // Default generic benefits if empty
-                descList.innerHTML = `
-                    <li>Alta calidad garantizada</li>
-                    <li>Disponibilidad inmediata</li>
-                    <li>Mejor relación precio-valor</li>
-                `;
-            }
 
             // Category
             const categoryWrapper = document.getElementById('modal-product-category');

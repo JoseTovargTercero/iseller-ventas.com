@@ -21,6 +21,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../core/api_v1.php';
 require_once __DIR__ . '/../../core/notificaciones_admin.php';
 require_once __DIR__ . '/../../core/reglas_producto.php';
+require_once __DIR__ . '/../../core/combos.php';
 
 $user = api_auth();
 $userId = (int)$user['id'];
@@ -197,7 +198,7 @@ if (!is_array($itemsIn) || count($itemsIn) < 1 || count($itemsIn) > 50) {
 
 $calc = api_calc($bssId);
 $stmtProd = $conexion->prepare(
-    "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
+    "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor, p.es_combo,
             s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
             sb.stock AS stock_base,
             COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
@@ -253,11 +254,19 @@ foreach ($itemsIn as $item) {
             . $minimoRegla . ', incrementos de ' . $pasoRegla . '.', 'invalid_quantity');
     }
 
+    $esCombo = (int)($prod['es_combo'] ?? 0) === 1;
+    $comboItems = [];
     $esMayor = (string)$prod['mayor'] === '1';
     $unidadesPaca = (float)$prod['cantidad_unidades'];
-    $stockDisponible = $esMayor
-        ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
-        : (float)$prod['stock'];
+
+    if ($esCombo) {
+        $comboItems = combo_items($conexion, $pid, (int)$prod['bss_id']);
+        $stockDisponible = combo_stock($conexion, $pid, (int)$prod['bss_id'], $sid);
+    } else {
+        $stockDisponible = $esMayor
+            ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
+            : (float)$prod['stock'];
+    }
     if ($stockDisponible < $qty) {
         $stmtProd->close();
         api_error(409, 'No hay stock suficiente de ' . $prod['nombre'], 'out_of_stock');
@@ -272,6 +281,8 @@ foreach ($itemsIn as $item) {
         'price_bs'  => (float)$precios['precio_venta_bs'],
         'price_cop' => (float)$precios['precio_venta_peso'],
         'es_mayor'  => $esMayor,
+        'es_combo'  => $esCombo,
+        'combo_items' => $comboItems,
         'unidades_paca' => $unidadesPaca,
         'id_stock'  => (int)($prod['id_stock'] ?? 0),
     ];
@@ -333,6 +344,26 @@ try {
         throw new RuntimeException('stock_prepare');
     }
     foreach ($items as $it) {
+        if (!empty($it['es_combo'])) {
+            if (empty($it['combo_items'])) {
+                $stmt->close();
+                $stmtMayor->close();
+                throw new DomainException('out_of_stock');
+            }
+            foreach ($it['combo_items'] as $ci) {
+                $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
+                $childId = (int)$ci['producto_id'];
+                $stmt->bind_param('diiid', $descontar, $childId, $it['branch'], $bssId, $descontar);
+                $stmt->execute();
+                if ($stmt->affected_rows !== 1) {
+                    $stmt->close();
+                    $stmtMayor->close();
+                    throw new DomainException('out_of_stock');
+                }
+            }
+            continue;
+        }
+
         if (!empty($it['es_mayor'])) {
             $descontar = (float)$it['qty'] * (float)$it['unidades_paca'];
             $idStockMayor = (int)$it['id_stock'];

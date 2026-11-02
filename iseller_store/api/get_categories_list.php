@@ -80,5 +80,33 @@ if ($tienda_slug !== '') {
     }
 }
 
+// Categoría especial "Combos": combos publicados por la tienda.
+$sqlCombos = "
+    SELECT COUNT(DISTINCT p.id) AS total
+    FROM productos p
+    INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
+    INNER JOIN negocio n ON n.id = np.negocio_id
+    WHERE p.activo = 0 AND p.es_combo = 1
+      AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
+";
+if ($tienda_slug !== '') {
+    $sqlCombos .= " AND n.slug = ?";
+    $stmtCombos = $conexion->prepare($sqlCombos);
+    if ($stmtCombos) {
+        $stmtCombos->bind_param("s", $tienda_slug);
+        $stmtCombos->execute();
+        $resCombos = $stmtCombos->get_result()->fetch_assoc();
+        $stmtCombos->close();
+        if ((int)($resCombos['total'] ?? 0) > 0) {
+            $categories[] = ['id' => 'combos', 'nombre' => 'Combos'];
+        }
+    }
+} else {
+    $resCombos = $conexion->query($sqlCombos);
+    if ($resCombos && (int)($resCombos->fetch_assoc()['total'] ?? 0) > 0) {
+        $categories[] = ['id' => 'combos', 'nombre' => 'Combos'];
+    }
+}
+
 echo json_encode(['success' => true, 'categories' => $categories]);
 ?>

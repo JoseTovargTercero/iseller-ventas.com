@@ -6,6 +6,7 @@ require_once('../core/session.php');
 require_once('../core/_tasas_cambio.php');
 require_once('../core/_calculadrora_precios.php');
 require_once('../core/reglas_producto.php');
+require_once('../core/combos.php');
 
 header('Content-Type: application/json');
 
@@ -154,8 +155,13 @@ function formatearProducto(array $row, array $recompensas = []): array
         'id' => $row['id'],
         'nombre' => ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8')),
         // Al mayor se muestran las pacas (pueden ser medias) que cubre el stock base.
-        'stock' => (float)($row['stock_visible'] ?? $row['stock']),
+        // Los combos usan el stock calculado de sus piezas.
+        'stock' => ((int)($row['es_combo'] ?? 0) === 1)
+            ? (float)($row['combo_stock'] ?? 0)
+            : (float)($row['stock_visible'] ?? $row['stock']),
         'mayor' => $row['mayor'],
+        'es_combo' => (int)($row['es_combo'] ?? 0),
+        'combo_items' => $row['combo_items'] ?? [],
         'codigo' => trim((string)$row['codigo_barras']),
         'categorias' => $row['categorias_nombres'] ?? '',
         'precio_dolar_visible' => $precios['precio_venta_dolar'],
@@ -174,6 +180,17 @@ function formatearProducto(array $row, array $recompensas = []): array
     ];
 }
 
+/** Adjunta piezas y stock armable a una fila de combo. */
+function prepararCombo(array $row, $conexion): array
+{
+    $row['combo_items'] = [];
+    if ((int)($row['es_combo'] ?? 0) === 1) {
+        $row['combo_items'] = combo_items($conexion, (int)$row['id'], (int)$row['bss_id']);
+        $row['combo_stock'] = combo_stock($conexion, (int)$row['id'], (int)$row['bss_id'], (int)$row['id_sucursal']);
+    }
+    return $row;
+}
+
 // Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global.
 // Al mayor solo se muestra si el stock del producto base cubre al menos una paca.
 $where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
@@ -183,6 +200,8 @@ $where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
               OR
               ((p.mayor IS NULL OR p.mayor <> '1')
                AND s.stock >= COALESCE(pr.minimo_cantidad, 1))
+              OR
+              (p.es_combo = 1)
           )";
 $params = [];
 $types = "";
@@ -208,7 +227,7 @@ if ((string)($_GET['mayor'] ?? '') === '1') {
 }
 
 if ($mode === 'search_index') {
-    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor,
+    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor, p.es_combo,
                    MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
                             THEN ROUND(IFNULL(sb.stock, 0) / p.cantidad_unidades, 2)
                             ELSE s.stock END) AS stock_visible,
@@ -238,12 +257,24 @@ if ($mode === 'search_index') {
         $nombre = ucfirst(mb_strtolower(trim((string)$row['nombre']), 'UTF-8'));
         $img = urlImagenProducto($row);
 
+        $esCombo = (int)($row['es_combo'] ?? 0);
+        $comboItems = [];
+        $stockVisible = (float)$row['stock_visible'];
+        if ($esCombo === 1) {
+            $comboItems = combo_items($conexion, (int)$row['id'], (int)$row['bss_id']);
+            $stockVisible = (float)combo_stock($conexion, (int)$row['id'], (int)$row['bss_id'], (int)$row['id_sucursal']);
+        }
+
         $searchIndex[] = [
             'id' => $row['id'],
             'n' => $nombre,
             'c' => trim((string)$row['codigo_barras']),
-            's' => (float)$row['stock_visible'],
+            's' => $stockVisible,
             'm' => $row['mayor'],
+            'combo' => $esCombo,
+            'ci' => array_map(function ($it) {
+                return ['n' => $it['nombre'], 'q' => $it['cantidad']];
+            }, $comboItems),
             'paca' => (int)$row['cantidad_unidades'],
             'mq' => (float)($row['minimo_cantidad'] ?? 1),
             'sq' => (float)($row['paso_cantidad'] ?? 1),
@@ -322,6 +353,7 @@ if ($mode === 'destacados') {
 
     $destacados = [];
     while ($row = $result->fetch_assoc()) {
+        $row = prepararCombo($row, $conexion);
         $destacados[] = formatearProducto($row, $recompensas);
     }
 
@@ -333,7 +365,9 @@ if ($mode === 'destacados') {
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 24;
 $sort = $_GET['order'] ?? '';
-$categoryId = isset($_GET['category']) ? (int)$_GET['category'] : null;
+$categoryRaw = trim((string)($_GET['category'] ?? ''));
+$esCategoriaCombos = ($categoryRaw === 'combos');
+$categoryId = ($categoryRaw !== '' && ctype_digit($categoryRaw)) ? (int)$categoryRaw : null;
 
 // Order logic
 if (!$tienda_slug) {
@@ -347,7 +381,10 @@ if (!$tienda_slug) {
     }
 }
 
-if ($categoryId) {
+if ($esCategoriaCombos) {
+    $where .= " AND p.es_combo = 1";
+    if (!$tienda_slug) $order = 'p.nombre ASC';
+} elseif ($categoryId) {
     $where .= " AND p.categoria = ?";
     $params[] = $categoryId;
     $types .= "i";
@@ -397,6 +434,7 @@ $result = $stmt->get_result();
 
 $products = [];
 while ($row = $result->fetch_assoc()) {
+    $row = prepararCombo($row, $conexion);
     $products[] = formatearProducto($row, $recompensas);
 }
 

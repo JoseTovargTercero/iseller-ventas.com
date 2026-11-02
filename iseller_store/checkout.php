@@ -13,6 +13,7 @@ require_once('core/venezuela_geo.php');
 // carga la calculadora de precios
 require_once('core/_calculadrora_precios.php');
 require_once('core/reglas_producto.php');
+require_once('core/combos.php');
 require_once('../publico/production/includes/notificaciones.php');
 require_once('core/notificaciones_admin.php');
 
@@ -427,7 +428,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $items = [];
 
         $stmtProd = $conexion->prepare(
-            "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
+            "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor, p.es_combo,
                     s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
                     sb.stock AS stock_base,
                     COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
@@ -483,12 +484,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
-            // Al mayor: el stock físico está en el producto base y se vende en pacas.
+            $esCombo = (int)($prod['es_combo'] ?? 0) === 1;
+            $comboItems = [];
             $esMayor = (string)$prod['mayor'] === '1';
             $unidadesPaca = (float)$prod['cantidad_unidades'];
-            $stockDisponible = $esMayor
-                ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
-                : (float)$prod['stock'];
+
+            if ($esCombo) {
+                // El combo se arma con las piezas base, no con su propia fila de stock.
+                $comboItems = combo_items($conexion, $pid, (int)$prod['bss_id']);
+                $stockDisponible = combo_stock($conexion, $pid, (int)$prod['bss_id'], $sid);
+            } else {
+                // Al mayor: el stock físico está en el producto base y se vende en pacas.
+                $stockDisponible = $esMayor
+                    ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
+                    : (float)$prod['stock'];
+            }
             if ($stockDisponible < $qty) {
                 echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de ' . $prod['nombre']]);
                 exit;
@@ -503,6 +513,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'precio_bs' => (float)$precios['precio_venta_bs'],
                 'precio_cop' => (float)$precios['precio_venta_peso'],
                 'es_mayor'  => $esMayor,
+                'es_combo'  => $esCombo,
+                'combo_items' => $comboItems,
                 'unidades_paca' => $unidadesPaca,
                 'id_stock'  => (int)($prod['id_stock'] ?? 0),
             ];
@@ -597,6 +609,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         foreach ($items as $it) {
+            if (!empty($it['es_combo'])) {
+                $comboCompleto = !empty($it['combo_items']);
+                foreach ($it['combo_items'] as $ci) {
+                    $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
+                    $childId = (int)$ci['producto_id'];
+                    $stmtStock->bind_param("diiid", $descontar, $childId, $it['sucursal'], $bss_id, $descontar);
+                    $stmtStock->execute();
+                    if ($stmtStock->affected_rows !== 1) {
+                        $comboCompleto = false;
+                        break;
+                    }
+                }
+                if (!$comboCompleto) {
+                    $stmtStock->close();
+                    $stmtStockMayor->close();
+                    $conexion_store->rollback();
+                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                    exit;
+                }
+                continue;
+            }
+
             if (!empty($it['es_mayor'])) {
                 $idStockMayor = (int)($it['id_stock'] ?? 0);
                 $unidadesPaca = (float)($it['unidades_paca'] ?? 0);

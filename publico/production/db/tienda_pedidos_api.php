@@ -4,6 +4,7 @@ require_once('../../../configurar/session.php');
 require_once('../../../iseller_store/core/estados_orden.php');
 require_once(__DIR__ . '/../includes/push_fcm.php');
 require_once(__DIR__ . '/transportista_negocio.php');
+require_once(__DIR__ . '/../../../iseller_store/core/combos.php');
 
 if (!isset($_SESSION['bss_id'])) {
     http_response_code(403);
@@ -226,7 +227,12 @@ if ($action === 'cambiar_estado') {
 
         if ($status === 5) {
             if ($descontado === 'Si') {
-                $stmt = $conexion->prepare("SELECT product_id, quantity, id_sucursal, bss_id FROM tienda_orden_articulos WHERE order_id = ?");
+                $stmt = $conexion->prepare(
+                    "SELECT a.product_id, a.quantity, a.id_sucursal, a.bss_id, p.es_combo
+                       FROM tienda_orden_articulos a
+                       LEFT JOIN productos p ON p.id = a.product_id
+                      WHERE a.order_id = ?"
+                );
                 $stmt->bind_param("i", $id);
                 $stmt->execute();
                 $arts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -238,6 +244,18 @@ if ($action === 'cambiar_estado') {
                     $pid = (int)$a['product_id'];
                     $sid = (int)$a['id_sucursal'];
                     $sbss = (int)$a['bss_id'];
+
+                    if ((int)($a['es_combo'] ?? 0) === 1) {
+                        // El combo descontó stock de sus piezas, no de su propia fila.
+                        foreach (combo_items($conexion, $pid, $sbss) as $ci) {
+                            $devolver = $qty * (float)$ci['cantidad'];
+                            $childId = (int)$ci['producto_id'];
+                            $stmtUpd->bind_param("diii", $devolver, $childId, $sid, $sbss);
+                            $stmtUpd->execute();
+                        }
+                        continue;
+                    }
+
                     $stmtUpd->bind_param("diii", $qty, $pid, $sid, $sbss);
                     $stmtUpd->execute();
                 }

@@ -3,6 +3,7 @@ require_once('../../../configurar/configuracion.php');
 require_once('../../../configurar/session.php');
 require_once('../../../iseller_store/core/imagenes.php');
 require_once('../../../iseller_store/core/reglas_producto.php');
+require_once('../../../iseller_store/core/combos.php');
 
 if (!isset($_SESSION['bss_id'])) {
     http_response_code(403);
@@ -244,7 +245,7 @@ if ($action === 'delete_foto') {
 
 /* ─── 4. LISTAR productos (DataTables pagina y filtra en el navegador) ─── */
 if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET')) {
-    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.categoria,
+    $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.categoria, p.es_combo,
                    cp.nombre AS categoria_nombre, cp.grupo AS categoria_grupo,
                    np.estado_publicacion, np.foto_url, np.sucursal_id,
                    COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
@@ -258,7 +259,7 @@ if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'G
             LEFT JOIN categorias_producto cp ON cp.id = p.categoria
             LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
             WHERE s.bss_id = ? AND p.activo = 0
-            GROUP BY p.id, p.nombre, p.codigo_barras, p.categoria,
+            GROUP BY p.id, p.nombre, p.codigo_barras, p.categoria, p.es_combo,
                      cp.nombre, cp.grupo, np.estado_publicacion, np.foto_url, np.sucursal_id,
                      pr.minimo_cantidad, pr.paso_cantidad
             ORDER BY np.estado_publicacion DESC, p.nombre ASC";
@@ -295,8 +296,26 @@ if ($action === 'listar' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'G
             $stmtStock->close();
         }
     }
+    $sucursalesIds = [];
+    $resSucursales = $conexion->query("SELECT id FROM sucursales WHERE bss_id = " . (int)$bss_id);
+    if ($resSucursales) {
+        while ($suc = $resSucursales->fetch_assoc()) {
+            $sucursalesIds[] = (int)$suc['id'];
+        }
+        $resSucursales->free();
+    }
+
     foreach ($rows as &$fila) {
-        $fila['stock_sucursales'] = (object)($stockSucursales[(int)$fila['id']] ?? []);
+        if ((int)($fila['es_combo'] ?? 0) === 1) {
+            // Un combo no tiene stock propio: se calcula con las piezas base.
+            $stockCombo = [];
+            foreach ($sucursalesIds as $sid) {
+                $stockCombo[(string)$sid] = combo_stock($conexion, (int)$fila['id'], (int)$bss_id, $sid);
+            }
+            $fila['stock_sucursales'] = (object)$stockCombo;
+        } else {
+            $fila['stock_sucursales'] = (object)($stockSucursales[(int)$fila['id']] ?? []);
+        }
     }
     unset($fila);
 
@@ -341,9 +360,9 @@ if ($action === 'detalle') {
     }
 
     $stmt = $conexion->prepare(
-        "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.mayor,
+        "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.mayor, p.es_combo,
                 p.cantidad_unidades, p.origen, p.proveedor,
-                s.stock, s.porcentaje,
+                s.stock, s.porcentaje, s.id_sucursal,
                 COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
                 COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
          FROM productos p
@@ -376,6 +395,11 @@ if ($action === 'detalle') {
         }
     }
 
+    $esCombo = (int)($row['es_combo'] ?? 0);
+    $stockCombo = $esCombo === 1
+        ? combo_stock($conexion, (int)$row['id'], (int)$bss_id, (int)$row['id_sucursal'])
+        : null;
+
     echo json_encode([
         'ok'   => true,
         'data' => [
@@ -384,8 +408,10 @@ if ($action === 'detalle') {
             'codigo'        => trim($row['codigo_barras'] ?? ''),
             'precio_compra' => (float)$row['precio_compra'],
             'mayor'         => (int)$row['mayor'],
+            'es_combo'      => $esCombo,
+            'combo_items'   => $esCombo === 1 ? combo_items($conexion, (int)$row['id'], (int)$bss_id) : [],
             'unidades'      => (int)$row['cantidad_unidades'],
-            'stock'         => (int)$row['stock'],
+            'stock'         => $esCombo === 1 ? (int)$stockCombo : (int)$row['stock'],
             'porcentaje'    => (float)$row['porcentaje'],
             'minimo_cantidad' => (float)$row['minimo_cantidad'],
             'paso_cantidad' => (float)$row['paso_cantidad'],

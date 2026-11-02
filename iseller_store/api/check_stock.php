@@ -3,6 +3,7 @@
 header('Content-Type: application/json');
 require_once('../core/db.php');
 require_once('../core/session.php');
+require_once('../core/combos.php');
 
 if (!isset($_GET['id']) || !isset($_GET['cantidad'])) {
     echo json_encode(['success' => false, 'message' => 'Faltan parámetros']);
@@ -14,7 +15,8 @@ $cantidad = (float)$_GET['cantidad'];
 $tienda_slug = $_GET['tienda_slug'] ?? null;
 
 // Buscamos dinámicamente el stock en la sucursal donde está publicado el producto
-$sql = "SELECT s.stock, s.id_stock, p.mayor, p.cantidad_unidades,
+$sql = "SELECT s.stock, s.id_stock, s.id_sucursal, s.bss_id,
+               p.mayor, p.es_combo, p.cantidad_unidades,
                sb.stock AS stock_base
         FROM productos p
         INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
@@ -40,8 +42,16 @@ $res = $stmt->get_result();
 if ($row = $res->fetch_assoc()) {
     $stockActual = (float)$row['stock'];
 
-    // Al mayor el stock físico vive en el producto base; se compara en pacas.
-    if ((string)$row['mayor'] === '1') {
+    // Los combos no tienen stock propio: se calcula con las piezas base.
+    if ((int)($row['es_combo'] ?? 0) === 1) {
+        $stockActual = combo_stock(
+            $conexion,
+            $id,
+            (int)$row['bss_id'],
+            (int)$row['id_sucursal']
+        );
+    } elseif ((string)$row['mayor'] === '1') {
+        // Al mayor el stock físico vive en el producto base; se compara en pacas.
         $unidadesPaca = (float)$row['cantidad_unidades'];
         $stockBase = (float)($row['stock_base'] ?? 0);
         $stockActual = $unidadesPaca > 0 ? round($stockBase / $unidadesPaca, 2) : 0;
