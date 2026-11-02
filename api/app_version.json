@@ -1,6 +1,6 @@
 {
-    "version_code": 23,
-    "version_name": "3.2",
-    "notas": "Gestionar entrega: la tienda puede asignar un transportista o solicitar uno a todos. El primero que acepta queda asignado y el delivery desaparece de los demás.",
+    "version_code": 24,
+    "version_name": "3.3",
+    "notas": "En el registro del transportista, el paso de servicios ahora dice «Servicios que te interesan».",
     "archivo": "apk/iseller_pos.apk"
 }
