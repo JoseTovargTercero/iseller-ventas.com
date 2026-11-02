@@ -614,9 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach ($it['combo_items'] as $ci) {
                     $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
                     $childId = (int)$ci['producto_id'];
-                    $stmtStock->bind_param("diiid", $descontar, $childId, $it['sucursal'], $bss_id, $descontar);
-                    $stmtStock->execute();
-                    if ($stmtStock->affected_rows !== 1) {
+                    if (!producto_stock_descontar($conexion_store, $childId, $it['sucursal'], $bss_id, $descontar)) {
                         $comboCompleto = false;
                         break;
                     }

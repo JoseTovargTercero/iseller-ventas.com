@@ -255,7 +255,6 @@ if ($action === 'cambiar_estado') {
                 $arts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 $stmt->close();
 
-                $stmtUpd = $conexion->prepare("UPDATE stock SET stock = stock + ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
                 foreach ($arts as $a) {
                     $qty = (float)$a['quantity'];
                     $pid = (int)$a['product_id'];
@@ -267,16 +266,17 @@ if ($action === 'cambiar_estado') {
                         foreach (combo_items($conexion, $pid, $sbss) as $ci) {
                             $devolver = $qty * (float)$ci['cantidad'];
                             $childId = (int)$ci['producto_id'];
-                            $stmtUpd->bind_param("diii", $devolver, $childId, $sid, $sbss);
-                            $stmtUpd->execute();
+                            if (!producto_stock_devolver($conexion, $childId, $sid, $sbss, $devolver)) {
+                                error_log("Rechazo pedido $id: no se pudo devolver stock de pieza $childId");
+                            }
                         }
                         continue;
                     }
 
-                    $stmtUpd->bind_param("diii", $qty, $pid, $sid, $sbss);
-                    $stmtUpd->execute();
+                    if (!producto_stock_devolver($conexion, $pid, $sid, $sbss, $qty)) {
+                        error_log("Rechazo pedido $id: no se pudo devolver stock del producto $pid");
+                    }
                 }
-                $stmtUpd->close();
             }
             $stmt = $conexion->prepare("UPDATE tienda_ordenes SET descontado = 'R' WHERE id = ?");
             $stmt->bind_param("i", $id);
@@ -295,11 +295,6 @@ if ($action === 'cambiar_estado') {
             $arts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
 
-            $stmtUpd = $conexion->prepare("UPDATE stock SET stock = GREATEST(stock - ?, 0) WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
-            $stmtUpdCombo = $conexion->prepare(
-                "UPDATE stock SET stock = stock - ?
-                  WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?"
-            );
             $sinStock = false;
 
             foreach ($arts as $a) {
@@ -317,9 +312,7 @@ if ($action === 'cambiar_estado') {
                     foreach ($piezas as $ci) {
                         $descontar = $qty * (float)$ci['cantidad'];
                         $childId = (int)$ci['producto_id'];
-                        $stmtUpdCombo->bind_param("diiid", $descontar, $childId, $sid, $sbss, $descontar);
-                        $stmtUpdCombo->execute();
-                        if ($stmtUpdCombo->affected_rows !== 1) {
+                        if (!producto_stock_descontar($conexion, $childId, $sid, $sbss, $descontar)) {
                             $sinStock = true;
                             break 2;
                         }
@@ -327,17 +320,17 @@ if ($action === 'cambiar_estado') {
                     continue;
                 }
 
-                $stmtUpd->bind_param("diii", $qty, $pid, $sid, $sbss);
-                $stmtUpd->execute();
+                if (!producto_stock_descontar($conexion, $pid, $sid, $sbss, $qty)) {
+                    $sinStock = true;
+                    break;
+                }
             }
-            $stmtUpd->close();
-            $stmtUpdCombo->close();
 
             if ($sinStock) {
                 $conexion->rollback();
                 echo json_encode([
                     'ok' => false,
-                    'msg' => 'No hay stock suficiente de las piezas del combo para enviar este pedido.',
+                    'msg' => 'No hay stock suficiente para enviar este pedido.',
                 ]);
                 exit;
             }

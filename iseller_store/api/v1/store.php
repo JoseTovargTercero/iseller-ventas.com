@@ -48,6 +48,43 @@ function api_categorias(?int $bssId): array
     return $items;
 }
 
+/** Grupos de categorías con productos publicados + filtros especiales. */
+function api_filtros(?int $bssId): array
+{
+    global $conexion;
+    $filtro = $bssId !== null ? 'AND np.negocio_id = ?' : '';
+    $sql = "SELECT DISTINCT c.grupo
+            FROM categorias_producto c
+            INNER JOIN productos p ON p.categoria = c.id AND p.activo = 0 AND p.origen != 'c'
+            INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
+            INNER JOIN negocio n ON np.negocio_id = n.id
+                 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
+            INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+                 AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+            WHERE c.grupo IS NOT NULL AND c.grupo <> '' $filtro
+            ORDER BY c.grupo ASC";
+    $stmt = $conexion->prepare($sql);
+    if ($bssId !== null && $stmt) {
+        $stmt->bind_param('i', $bssId);
+    }
+    $items = [
+        ['key' => 'al_mayor', 'name' => 'Al mayor'],
+        ['key' => 'combos', 'name' => 'Combos'],
+    ];
+    if ($stmt) {
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($fila = $res->fetch_assoc()) {
+            $items[] = [
+                'key' => 'grupo:' . $fila['grupo'],
+                'name' => $fila['grupo'],
+            ];
+        }
+        $stmt->close();
+    }
+    return $items;
+}
+
 /** Tiendas virtuales activas para el cintillo del marketplace. */
 function api_tiendas_registradas(): array
 {
@@ -135,6 +172,7 @@ if ($slug === '') {
         'delivery' => null,
         'payment' => null,
         'categories' => api_categorias(null),
+        'filters' => api_filtros(null),
         'stores' => api_tiendas_registradas(),
         'rates' => ['bcv' => 0, 'usd_cop' => 0, 'usd_bs' => 0],
         'server_time' => date('c'),
@@ -219,6 +257,7 @@ api_ok([
     'delivery'       => $delivery,
     'payment'        => $pago,
     'categories'     => api_categorias($bssId),
+    'filters'        => api_filtros($bssId),
     'stores'         => api_tiendas_registradas(),
     'rates'          => [
         'bcv'       => $calc->getTasa('bcv'),

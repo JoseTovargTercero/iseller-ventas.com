@@ -353,9 +353,7 @@ try {
             foreach ($it['combo_items'] as $ci) {
                 $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
                 $childId = (int)$ci['producto_id'];
-                $stmt->bind_param('diiid', $descontar, $childId, $it['branch'], $bssId, $descontar);
-                $stmt->execute();
-                if ($stmt->affected_rows !== 1) {
+                if (!producto_stock_descontar($conexion_store, $childId, (int)$it['branch'], $bssId, $descontar)) {
                     $stmt->close();
                     $stmtMayor->close();
                     throw new DomainException('out_of_stock');

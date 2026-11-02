@@ -293,15 +293,23 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
 - Iconografía unificada a estilo outlined/línea en toda la app (incluye flechas,
   carrito, navegación, acciones y marcadores del mapa); el buscador muestra una X
   para limpiar cuando hay texto.
-- Inicio rediseñado: saludo + carrito con badge, buscador, categorías con imagen
-  y scroll horizontal, carrusel de tiendas locales y grupos por categoría con
-  productos en lista vertical, uno por fila (foto a la izquierda, datos y acción a
-  la derecha). La cabecera de cada categoría queda fija al hacer scroll y muestra
-  un chip con la categoría siguiente para saltar a ella. Fondo gris `#F2F3F5` y
+- Inicio rediseñado: saludo + carrito con badge, buscador, **grupos**
+  (`categorias_producto.grupo`) con scroll horizontal más los filtros **Al mayor**
+  y **Combos**, carrusel de tiendas locales y grupos por categoría con productos
+  en lista vertical, uno por fila (foto a la izquierda, datos y acción a la
+  derecha). La cabecera de cada categoría queda fija al hacer scroll y muestra un
+  chip con la categoría siguiente para saltar a ella. Fondo gris `#F2F3F5` y
   verde más oscuro `#2E8B63`; barra superior oculta en Inicio. El carrusel completa
   la portada desde el detalle de la tienda si la lista no la trae y ordena por
   estado/municipio de la dirección principal y distancia; las categorías usan la
   imagen de su primer producto o la inicial.
+- Combos: la API v1 devuelve `es_combo` y `combo_items`, con stock calculado por
+  las piezas (mínimo armable). La tarjeta muestra “Combo” y **Ver detalle** abre
+  la lista de piezas incluidas con opción de agregarlo al carrito; el alta del
+  pedido valida y descuenta los hijos en `orders.php`, igual que la tienda web.
+- Filtros superiores: `store.php` devuelve `filters` con los grupos de
+  `categorias_producto.grupo`, **Al mayor** y **Combos**; `products.php` acepta
+  `filter=grupo:<nombre>`, `al_mayor` o `combos`.
 - Seguimiento delivery: botón en el detalle de pedidos activos; mapa OSM con ruta
   OSRM tienda → entrega, origen con la foto/logo de la tienda, destino con icono
   de usuario y transportista (círculo + carrito) con solo su última posición

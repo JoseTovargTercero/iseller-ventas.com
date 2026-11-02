@@ -4406,6 +4406,10 @@ $zona_tienda = $es_tienda_individual
                     }
                 }
 
+                const _itemMin = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
+                const _itemStock = Number(item.stock) || 0;
+                const _itemSinStock = _itemStock < _itemMin;
+
                 html += `
                     <div class="list-group-item list-group-item-action border-0 border-bottom py-2" style="cursor: pointer;" onclick="seleccionarProductoBusqueda('${item.id}')">
                         <div class="d-flex justify-content-between align-items-center">
@@ -4453,6 +4457,7 @@ $zona_tienda = $es_tienda_individual
                                 <button class="btn btn-sm btn-action-primary d-flex align-items-center justify-content-center btn-add-to-car" 
                                     style="width: 38px; height: 32px; border-radius: 50%; background: var(--primary-color); color: white; border: none;"
                                     onclick="event.stopPropagation(); addtocarHero(this)"
+                                    ${_itemSinStock ? 'disabled' : ''}
                                     data-add-id="${item.id}"
                                     data-codigo="${item.codigo || ''}"
                                     data-P_D="${precio_dolar_visible}"
@@ -4680,7 +4685,7 @@ $zona_tienda = $es_tienda_individual
                 const esCombo = Number(producto.es_combo) === 1;
                 const qtyMin = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
                 const qtyStep = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
-                const isOutOfStock = !isSocio && producto.stock <= 0 && (esCombo || !esMayor);
+                const isOutOfStock = !isSocio && Number(producto.stock) < qtyMin;
                 const opacityClass = isOutOfStock ? 'opacity-50 grayscale' : '';
                 const btnDisabled = isOutOfStock ? 'disabled btn-disabled' : '';
                 const btnText = isOutOfStock ? 'Agotado' : '';
@@ -4753,7 +4758,7 @@ $zona_tienda = $es_tienda_individual
                             <div class="price-container">
                                 <div class="price-main"><span class="price-dolar">${precio_dolar}</span></div>
                                 <div class="price-sub"><span class="price-bs">${precio_bs}</span></div>
-                                <div class="stock-text">${esCombo ? (producto.stock > 0 ? 'Combo' : 'Agotado') : (producto.stock > 0 ? 'Disponible: ' + producto.stock : 'Agotado')}</div>
+                                <div class="stock-text">${esCombo ? (Number(producto.stock) >= qtyMin ? 'Combo' : 'Agotado') : (producto.stock > 0 ? 'Disponible: ' + producto.stock : 'Agotado')}</div>
                             </div>
                             <div class="card-actions">
                                 <div class="quantity-control">
@@ -4883,6 +4888,7 @@ $zona_tienda = $es_tienda_individual
 
             // Update Add to Cart Button
             const btn = document.getElementById('modal-btn-add');
+            btn.disabled = esCombo && Number(producto.stock) < modalMin;
             btn.dataset.addId = producto.id;
             btn.dataset.codigo = producto.codigo || '';
             btn.dataset.P_D = producto.precio_dolar_visible;
@@ -4960,6 +4966,10 @@ $zona_tienda = $es_tienda_individual
             const minVal = parseFloat(input.dataset.min) || step;
             let val = parseFloat(input.value);
             if (isNaN(val)) val = minVal;
+            if (max != null && Number(max) === 0) {
+                input.value = minVal;
+                return;
+            }
             val = Math.round((val + delta * step) * 10) / 10;
             if (val < minVal) val = minVal;
             if (max != null && max > 0 && val > max) {
@@ -6603,7 +6613,7 @@ $zona_tienda = $es_tienda_individual
                         const qtyMin = Number(it.minimo_cantidad) > 0 ? Number(it.minimo_cantidad) : 1;
                         const qtyStep = Number(it.paso_cantidad) > 0 ? Number(it.paso_cantidad) : 1;
                         const stockActual = Number(it.stock) || 0;
-                        const sinStock = stockActual <= 0;
+                        const sinStock = stockActual < qtyMin;
                         const qtyHtml =
                             '<div class="mkt-hero-qty">' +
                                 '<button type="button" onclick="changeQty(this, -1)">-</button>' +

@@ -8,6 +8,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../core/api_v1.php';
 require_once __DIR__ . '/../../core/reglas_producto.php';
+require_once __DIR__ . '/../../core/combos.php';
 
 global $conexion;
 reglas_producto_asegurar($conexion);
@@ -33,7 +34,13 @@ $sort = ($_GET['sort'] ?? '') === 'name_desc' ? 'DESC' : 'ASC';
 
 $where = "np.estado_publicacion = 1
           AND p.activo = 0
-          AND s.stock > 0
+          AND (
+              p.es_combo = 1
+              OR (p.mayor = '1' AND p.cantidad_unidades > 0
+                  AND COALESCE(sb.stock, 0) >= p.cantidad_unidades * COALESCE(pr.minimo_cantidad, 1))
+              OR ((p.mayor IS NULL OR p.mayor <> '1')
+                  AND s.stock >= COALESCE(pr.minimo_cantidad, 1))
+          )
           AND n.tiene_tienda_virtual = 1
           AND n.estado = 'activo'";
 $types = '';
@@ -58,10 +65,24 @@ if ($q !== '') {
     $params[] = $like;
 }
 
+$filter = trim((string)($_GET['filter'] ?? ''));
+if ($filter === 'al_mayor') {
+    $where .= " AND p.mayor = '1'";
+} elseif ($filter === 'combos') {
+    $where .= " AND p.es_combo = 1";
+} elseif (str_starts_with($filter, 'grupo:')) {
+    $grupo = mb_substr(trim(substr($filter, 6)), 0, 100, 'UTF-8');
+    if ($grupo !== '') {
+        $where .= " AND c.grupo = ?";
+        $types .= 's';
+        $params[] = $grupo;
+    }
+}
+
 global $conexion;
 
 $sql = "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,
-               p.codigo_barras,
+               p.codigo_barras, p.es_combo,
                s.stock, s.porcentaje, s.bss_id, s.id_sucursal, np.foto_url,
                c.id AS categoria_id, c.nombre AS categoria_nombre,
                n.slug AS store_slug,
@@ -73,6 +94,7 @@ $sql = "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p
         INNER JOIN negocio n ON np.negocio_id = n.id
         INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
              AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+        LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
         LEFT JOIN categorias_producto c ON c.id = p.categoria
         LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
         WHERE $where
@@ -92,7 +114,28 @@ $res = $stmt->get_result();
 $items = [];
 while ($fila = $res->fetch_assoc()) {
     $bssProducto = (int)$fila['bss_id'];
+    $idSucursal = (int)$fila['id_sucursal'];
     $precios = api_calc($bssProducto)->calcularPrecios($fila);
+
+    $esCombo = (int)($fila['es_combo'] ?? 0) === 1;
+    $comboItems = [];
+    $stockProducto = (float)$fila['stock'];
+    if ($esCombo) {
+        $comboItems = combo_items($conexion, (int)$fila['id'], $bssProducto);
+        $stockProducto = (float)combo_stock(
+            $conexion,
+            (int)$fila['id'],
+            $bssProducto,
+            $idSucursal
+        );
+    } elseif ((string)$fila['mayor'] === '1') {
+        $infoStock = producto_stock_info($conexion, (int)$fila['id'], $idSucursal, $bssProducto);
+        if ($infoStock) {
+            $stockProducto = (float)$infoStock['stock'];
+        }
+    }
+
+    $minProducto = (float)($fila['minimo_cantidad'] ?? 1);
 
     $imagen = '';
     if (!empty($fila['foto_url'])) {
@@ -114,8 +157,8 @@ while ($fila = $res->fetch_assoc()) {
         'price_usd'     => api_trunc2((float)$precios['precio_venta_dolar']),
         'price_bs'      => api_trunc2((float)$precios['precio_venta_bs']),
         'price_cop'     => api_trunc2((float)$precios['precio_venta_peso']),
-        'stock'         => (float)$fila['stock'],
-        'in_stock'      => (float)$fila['stock'] > 0,
+        'stock'         => $stockProducto,
+        'in_stock'      => $stockProducto >= $minProducto,
         'pack_size'     => (int)$fila['cantidad_unidades'],
         'bulk'          => (string)$fila['mayor'] === '1',
         'min_quantity'  => (float)$fila['minimo_cantidad'],
@@ -127,6 +170,8 @@ while ($fila = $res->fetch_assoc()) {
         'store_name'    => (string)$fila['store_name'],
         'branch_id'     => (int)$fila['id_sucursal'],
         'codigo_barras' => (string)($fila['codigo_barras'] ?? ''),
+        'es_combo'      => $esCombo ? 1 : 0,
+        'combo_items'   => $comboItems,
     ];
 }
 $stmt->close();
@@ -137,7 +182,9 @@ $countSql = "SELECT COUNT(DISTINCT p.id) AS total
              INNER JOIN negocio n ON np.negocio_id = n.id
              INNER JOIN stock s ON p.id = s.id_producto AND s.bss_id = n.id
                   AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
+             LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
              LEFT JOIN categorias_producto c ON c.id = p.categoria
+             LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
              WHERE $where";
 $stmtCount = $conexion->prepare($countSql);
 if (!$stmtCount) {
