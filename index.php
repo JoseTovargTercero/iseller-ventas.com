@@ -4776,6 +4776,7 @@ $zona_tienda = $es_tienda_individual
                                     data-add-id="${producto.id}"
                                     data-codigo="${producto.codigo || ''}"
                                     data-P_D="${precio_dolar_visible}"
+                                    data-P_P="${producto.precio_peso_visible}"
                                     data-P_B="${precio_bs_visible}"
                                     data-P_C="${producto.precio_costo}"
                                     data-P_C_BS="${producto.precio_costo_bs}">
@@ -4891,9 +4892,9 @@ $zona_tienda = $es_tienda_individual
             btn.disabled = esCombo && Number(producto.stock) < modalMin;
             btn.dataset.addId = producto.id;
             btn.dataset.codigo = producto.codigo || '';
-            btn.dataset.P_D = producto.precio_dolar_visible;
-            btn.dataset.P_P = producto.precio_peso_visible;
-            btn.dataset.P_B = producto.precio_bs_visible;
+            btn.dataset.p_d = producto.precio_dolar_visible;
+            btn.dataset.p_p = producto.precio_peso_visible ?? producto.precio_weight_visible;
+            btn.dataset.p_b = producto.precio_bs_visible;
 
             // Category
             const categoryWrapper = document.getElementById('modal-product-category');
@@ -5632,8 +5633,20 @@ $zona_tienda = $es_tienda_individual
 
             const idPedido = idStr;
 
+            // El precio viene del atributo del botón; si falta, se usa el del producto.
+            const precioNumerico = (valor, respaldo) => {
+                const n = parseFloat(valor);
+                return Number.isFinite(n) ? n : (parseFloat(respaldo) || 0);
+            };
+            const precioDolar = precioNumerico(dolarventa_p, producto.precio_dolar_visible);
+            const precioPeso = precioNumerico(pesoventa_p, producto.precio_peso_visible ?? producto.precio_weight_visible);
+            const precioBolivar = precioNumerico(bolivarventa_p, producto.precio_bs_visible);
+
             if (carritoActivo[idPedido]) {
                 carritoActivo[idPedido].qty += cant;
+                carritoActivo[idPedido].price = precioDolar;
+                carritoActivo[idPedido].pricePeso = precioPeso;
+                carritoActivo[idPedido].priceBolivar = precioBolivar;
                 // Actualizar por si acaso (items viejos o búsqueda incompleta)
                 carritoActivo[idPedido].id_sucursal = producto.id_sucursal;
                 carritoActivo[idPedido].bss_id = producto.bss_id;
@@ -5643,9 +5656,9 @@ $zona_tienda = $es_tienda_individual
                     name: producto.nombre,
                     price_C: parseFloat(producto.precio_costo),
                     price_C_Bs: parseFloat(producto.precio_costo_bs),
-                    price: parseFloat(dolarventa_p),
-                    pricePeso: parseFloat(pesoventa_p),
-                    priceBolivar: parseFloat(bolivarventa_p),
+                    price: precioDolar,
+                    pricePeso: precioPeso,
+                    priceBolivar: precioBolivar,
                     qty: cant,
                     mayor: producto.mayor,
                     cantidadPaca: String(producto.mayor) === '1' ? (producto.cantidadPaca || 1) : 1,
@@ -6688,9 +6701,9 @@ $zona_tienda = $es_tienda_individual
             }
             addtocarJS(
                 id,
-                btn.dataset.P_D,
-                btn.dataset.P_P,
-                btn.dataset.P_B,
+                btn.getAttribute('data-P_D'),
+                btn.getAttribute('data-P_P'),
+                btn.getAttribute('data-P_B'),
                 null,
                 null,
                 btn

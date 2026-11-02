@@ -405,7 +405,8 @@ $url_tienda = $protocolo . '://' . $_SERVER['HTTP_HOST'] . $raiz . '/' . rawurle
                 nombre: <?php echo json_encode($nombre_tienda); ?>,
                 slug: <?php echo json_encode($slug); ?>,
                 url: <?php echo json_encode($url_tienda); ?>,
-                logo: <?php echo json_encode($logo_src); ?>
+                logo: <?php echo json_encode($logo_src); ?>,
+                pdf: <?php echo json_encode($raiz . '/publico/production/api/tienda_publicidad_pdf.php'); ?>
             };
 
             var MINT = '#2dd4a0';
@@ -883,15 +884,25 @@ $url_tienda = $protocolo . '://' . $_SERVER['HTTP_HOST'] . $raiz . '/' . rawurle
                 boton.disabled = true;
                 boton.innerHTML = 'Generando PDF…';
                 try {
+                    // JPEG binario (no base64): pesa ~25% menos y evita bloqueos del WAF.
+                    var imagen = await new Promise(function(resolve, reject) {
+                        posterExportable().toBlob(function(blob) {
+                            if (blob) resolve(blob);
+                            else reject(new Error('No se pudo generar la imagen.'));
+                        }, 'image/jpeg', 0.95);
+                    });
                     var datos = new FormData();
-                    datos.append('imagen', posterExportable().toDataURL('image/jpeg', 0.95));
+                    datos.append('imagen', imagen, 'poster.jpg');
                     datos.append('nombre', PUB.slug || '');
-                    var respuesta = await fetch('api/tienda_publicidad_pdf.php', {
+                    var respuesta = await fetch(PUB.pdf, {
                         method: 'POST',
                         body: datos
                     });
-                    if (!respuesta.ok) {
-                        throw new Error(await respuesta.text());
+                    var tipo = respuesta.headers.get('content-type') || '';
+                    if (!respuesta.ok || tipo.indexOf('application/pdf') === -1) {
+                        // Nunca mostrar HTML del servidor en el alert.
+                        var detalle = tipo.indexOf('text/plain') === 0 ? await respuesta.text() : '';
+                        throw new Error(detalle || 'No se pudo generar el PDF. Vuelve a iniciar sesión e inténtalo de nuevo.');
                     }
                     var url = URL.createObjectURL(await respuesta.blob());
                     descargar(url, archivoNombre('pdf'));
