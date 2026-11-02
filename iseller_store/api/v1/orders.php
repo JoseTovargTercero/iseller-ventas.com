@@ -155,6 +155,11 @@ api_rate_limit('orders_post', 20, 300);
 $in = api_body();
 
 $tienda = api_store_by_slug(api_str($in, 'slug', 150));
+$estadoUsuario = trim((string)($user['geo_estado'] ?? ''));
+$estadoTienda = trim((string)($tienda['geo_estado'] ?? ''));
+if ($estadoUsuario !== '' && $estadoTienda !== '' && $estadoUsuario !== $estadoTienda) {
+    api_error(409, 'No puedes comprar productos de otra región.', 'region_blocked');
+}
 $bssId = (int)$tienda['id'];
 
 $entrega = api_str($in, 'delivery_type', 30);

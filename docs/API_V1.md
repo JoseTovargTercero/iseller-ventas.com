@@ -221,6 +221,34 @@ El origen sale de `tienda_orden_origen` (si falta, se usa la tienda), el destino
 de la dirección de entrega y el recorrido de `transportista_ubicaciones`. La app
 muestra el punto del transportista solo cuando el estado es `enviada`/`enviado`.
 
+## Notificaciones (Bearer)
+
+### GET notifications.php?limit=30
+
+```json
+{
+  "items": [
+    { "id": 21, "title": "Pedido #42 actualizado",
+      "body": "Tu pedido ahora está: Enviado", "type": "compra",
+      "link": "perfil.php?tab=orders", "read": false,
+      "created_at": "2026-10-22 19:44:43" }
+  ],
+  "unread": 1
+}
+```
+
+Lee `tienda_cliente_notificaciones` (las crean el chat, el cambio de estado del
+pedido y el transportista). `type`: `chat`, `compra`, `sistema`. Máximo 50.
+
+### POST notifications.php
+
+```json
+{ "id": 21 }
+```
+
+Marca una notificación como leída. `id: 0` (o sin `id`) marca todas. Responde
+`{ "unread": 0 }`.
+
 ## Push (Bearer)
 
 ### POST push/token.php

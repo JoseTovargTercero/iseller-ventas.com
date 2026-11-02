@@ -54,9 +54,10 @@ if ($existe) {
 
 $hash = password_hash($password, PASSWORD_DEFAULT);
 $stmt = $conexion_store->prepare(
-    "INSERT INTO tienda_usuarios (nombre, email, password, telefono, estado) VALUES (?, ?, ?, ?, 1)"
+    "INSERT INTO tienda_usuarios (nombre, email, password, telefono, geo_estado, geo_municipio, estado)
+     VALUES (?, ?, ?, ?, ?, ?, 1)"
 );
-$stmt->bind_param('ssss', $nombre, $email, $hash, $telefono);
+$stmt->bind_param('ssssss', $nombre, $email, $hash, $telefono, $geoEstado, $geoMunicipio);
 if (!$stmt->execute()) {
     $stmt->close();
     api_error(500, 'No se pudo crear la cuenta');
@@ -71,7 +72,8 @@ $stmt->execute();
 $stmt->close();
 
 $stmt = $conexion_store->prepare(
-    "SELECT id, nombre, email, telefono, foto, estado, puntos, nivel, referral_code, creado_en
+    "SELECT id, nombre, email, telefono, foto, estado, geo_estado, geo_municipio,
+            puntos, nivel, referral_code, creado_en
      FROM tienda_usuarios WHERE id = ? LIMIT 1"
 );
 $stmt->bind_param('i', $userId);

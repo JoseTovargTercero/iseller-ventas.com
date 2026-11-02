@@ -124,7 +124,8 @@ $location = null;
 $history = [];
 if (api_tabla_existe($conexion_store, 'transportista_servicios')) {
     $stmt = $conexion_store->prepare(
-        "SELECT s.id, s.estado, s.transportista_id, t.nombre, t.telefono
+        "SELECT s.id, s.estado, s.transportista_id, t.nombre, t.telefono, t.foto_url,
+                t.moto_tipo, t.moto_marca, t.moto_modelo, t.moto_color
            FROM transportista_servicios s
            LEFT JOIN transportistas t ON t.id = s.transportista_id
           WHERE s.bss_id = ? AND s.tipo = 'delivery' AND s.numero_pedido = ?
@@ -142,6 +143,17 @@ if (api_tabla_existe($conexion_store, 'transportista_servicios')) {
             'id'             => (int)$servicio['transportista_id'],
             'name'           => (string)($servicio['nombre'] ?? ''),
             'phone'          => (string)($servicio['telefono'] ?? ''),
+            'photo_url'      => api_image(
+                trim((string)($servicio['foto_url'] ?? '')) !== ''
+                    ? (string)$servicio['foto_url']
+                    : null,
+                160,
+                78
+            ),
+            'vehicle_type'   => (string)($servicio['moto_tipo'] ?? ''),
+            'vehicle_brand'  => (string)($servicio['moto_marca'] ?? ''),
+            'vehicle_model'  => (string)($servicio['moto_modelo'] ?? ''),
+            'vehicle_color'  => (string)($servicio['moto_color'] ?? ''),
             'service_status' => (string)($servicio['estado'] ?? ''),
         ];
     }

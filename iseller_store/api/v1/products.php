@@ -79,6 +79,13 @@ if ($filter === 'al_mayor') {
     }
 }
 
+$state = trim((string)($_GET['state'] ?? ''));
+if ($state !== '') {
+    $where .= " AND n.geo_estado = ?";
+    $types .= 's';
+    $params[] = $state;
+}
+
 global $conexion;
 
 $sql = "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor,

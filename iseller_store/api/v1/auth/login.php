@@ -25,7 +25,8 @@ api_rate_limit('login_email', 10, 900, $email);
 
 global $conexion_store;
 $stmt = $conexion_store->prepare(
-    "SELECT id, nombre, email, telefono, foto, password, estado, puntos, nivel, referral_code, creado_en
+    "SELECT id, nombre, email, telefono, foto, password, estado, geo_estado, geo_municipio,
+            puntos, nivel, referral_code, creado_en
      FROM tienda_usuarios WHERE email = ? LIMIT 1"
 );
 $stmt->bind_param('s', $email);

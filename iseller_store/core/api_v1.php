@@ -259,7 +259,8 @@ function api_auth(): array
         api_error(401, 'Sesión no válida para este dispositivo', 'device_mismatch');
     }
     $stmt = $conexion_store->prepare(
-        "SELECT id, nombre, email, telefono, foto, estado, puntos, nivel, referral_code, creado_en
+        "SELECT id, nombre, email, telefono, foto, estado, geo_estado, geo_municipio,
+                puntos, nivel, referral_code, creado_en
          FROM tienda_usuarios WHERE id = ? LIMIT 1"
     );
     $id = (int)$payload['sub'];
@@ -326,7 +327,8 @@ function api_refresh_rotate(string $raw, string $deviceId): array
     }
 
     $stmt = $conexion_store->prepare(
-        "SELECT id, nombre, email, telefono, foto, estado, puntos, nivel, referral_code, creado_en
+        "SELECT id, nombre, email, telefono, foto, estado, geo_estado, geo_municipio,
+                puntos, nivel, referral_code, creado_en
          FROM tienda_usuarios WHERE id = ? LIMIT 1"
     );
     $stmt->bind_param('i', $fila['usuario_id']);
@@ -497,6 +499,8 @@ function api_user_public(array $u): array
         'email'         => $u['email'] ?? '',
         'phone'         => $u['telefono'] ?? '',
         'photo_url'     => api_image($u['foto'] ?? '', 200, 75),
+        'geo_estado'    => (string)($u['geo_estado'] ?? ''),
+        'geo_municipio' => (string)($u['geo_municipio'] ?? ''),
         'level'         => (int)($u['nivel'] ?? 1),
         'points'        => (float)($u['puntos'] ?? 0),
         'referral_code' => $u['referral_code'] ?? '',
