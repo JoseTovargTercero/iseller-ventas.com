@@ -6,6 +6,7 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../../../core/api_v1.php';
+require_once __DIR__ . '/../../../core/venezuela_geo.php';
 
 api_method('POST');
 api_rate_limit('register_ip', 5, 3600);
@@ -18,6 +19,12 @@ $password = is_string($in['password'] ?? null) ? (string)$in['password'] : '';
 $confirm = is_string($in['password_confirm'] ?? null) ? (string)$in['password_confirm'] : '';
 $deviceId = api_device_id();
 $deviceName = api_str($in, 'device_name', 120) ?: 'Android';
+$geoEstado = trim((string)($in['geo_estado'] ?? ''));
+$geoMunicipio = trim((string)($in['geo_municipio'] ?? ''));
+$geoLista = venezuela_estados_municipios();
+if (!isset($geoLista[$geoEstado]) || !in_array($geoMunicipio, $geoLista[$geoEstado], true)) {
+    api_error(400, 'Selecciona tu estado y municipio', 'invalid_region');
+}
 
 if (mb_strlen($nombre) < 2) {
     api_error(400, 'Escribe tu nombre', 'invalid_name');

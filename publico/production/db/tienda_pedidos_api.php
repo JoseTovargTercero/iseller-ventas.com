@@ -24,6 +24,38 @@ if (in_array($action, ['cambiar_estado', 'cambiar_transportista', 'notificar_tra
 
 header('Content-Type: application/json');
 
+// La API siempre responde JSON: un error fatal no debe dejar el cuerpo vacío
+// (el panel muestra "Unexpected end of JSON input" y no hay forma de saber qué pasó).
+$__debugPedidos = (int)($_SESSION['nivel'] ?? 0) === 1;
+set_exception_handler(function (Throwable $e) use ($__debugPedidos) {
+    error_log('tienda_pedidos_api: ' . $e->getMessage());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    echo json_encode([
+        'ok'    => false,
+        'msg'   => 'Error interno al procesar los pedidos',
+        'debug' => $__debugPedidos ? $e->getMessage() : null,
+    ]);
+    exit;
+});
+register_shutdown_function(function () use ($__debugPedidos) {
+    $err = error_get_last();
+    if (!$err || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        return;
+    }
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    echo json_encode([
+        'ok'    => false,
+        'msg'   => 'Error interno al procesar los pedidos',
+        'debug' => $__debugPedidos ? $err['message'] : null,
+    ]);
+});
+
 if ($action === 'listar') {
     $tieneServicios = false;
     $resTp = $conexion->query("SHOW TABLES LIKE 'transportista_servicios'");
@@ -37,26 +69,48 @@ if ($action === 'listar') {
            TIMESTAMPDIFF(MINUTE, s.creado_en, NOW()) AS transportista_minutos,"
         : "NULL AS transportista_estado, NULL AS transportista_desde, NULL AS transportista_minutos,";
 
-    $sql = "SELECT o.id, o.status, o.total_price, o.total_price_bs, o.total_price_cop,
-                   o.created, o.cliente, o.negocio_id, o.bss_id,
-                   o.tipoPago, o.tipo_entrega, o.numero_operacion_bancaria,
-                   o.hora_operacion_bancaria, o.direccion_id,
-                   u.nombre AS cliente_nombre, u.telefono AS cliente_telefono, u.email AS cliente_email,
-                   $colsTp
-                   o.id AS _dummy
-            FROM tienda_ordenes o
-            LEFT JOIN tienda_usuarios u ON o.customer_id = u.id
-            $joinTp
-            WHERE o.bss_id = ?
-            ORDER BY o.id DESC";
-            
-    $stmt = $conexion->prepare($sql);
+    $sqlListar = function (string $colsTp, string $joinTp): string {
+        return "SELECT o.id, o.status, o.total_price, o.total_price_bs, o.total_price_cop,
+                       o.created, o.cliente, o.negocio_id, o.bss_id,
+                       o.tipoPago, o.tipo_entrega, o.numero_operacion_bancaria,
+                       o.hora_operacion_bancaria, o.direccion_id,
+                       u.nombre AS cliente_nombre, u.telefono AS cliente_telefono, u.email AS cliente_email,
+                       $colsTp
+                       o.id AS _dummy
+                FROM tienda_ordenes o
+                LEFT JOIN tienda_usuarios u ON o.customer_id = u.id
+                $joinTp
+                WHERE o.bss_id = ?
+                ORDER BY o.id DESC";
+    };
+
+    $stmt = $conexion->prepare($sqlListar($colsTp, $joinTp));
+    if (!$stmt && $tieneServicios) {
+        // La tabla existe pero puede tener el esquema viejo (sin bss_id) o el
+        // usuario de la BD no puede leerla: los pedidos deben listarse igual.
+        error_log('tienda_pedidos_api listar transportista: ' . $conexion->error);
+        transportista_servicios_preparar_espera($conexion);
+        $stmt = $conexion->prepare($sqlListar($colsTp, $joinTp));
+        if (!$stmt) {
+            $stmt = $conexion->prepare($sqlListar(
+                "NULL AS transportista_estado, NULL AS transportista_desde, NULL AS transportista_minutos,",
+                ''
+            ));
+        }
+    }
+    if (!$stmt) {
+        throw new RuntimeException('listar: ' . $conexion->error);
+    }
     $stmt->bind_param("i", $bss_id);
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    
-    echo json_encode(['ok' => true, 'bss_id' => $bss_id, 'count' => count($rows), 'data' => $rows]);
+
+    $json = json_encode(['ok' => true, 'bss_id' => $bss_id, 'count' => count($rows), 'data' => $rows]);
+    if ($json === false) {
+        throw new RuntimeException('listar json: ' . json_last_error_msg());
+    }
+    echo $json;
     exit;
 }
 

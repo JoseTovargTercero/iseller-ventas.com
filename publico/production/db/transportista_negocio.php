@@ -171,7 +171,8 @@ function transportista_guardar_delivery($conexion, int $bssId, int $ordenId, ?in
 
 /**
  * Prepara la tabla para las solicitudes abiertas: transportista_id debe aceptar
- * NULL y el estado ENUM debe incluir 'esperando'. Idempotente.
+ * NULL, el estado ENUM debe incluir 'esperando' y bss_id debe existir.
+ * Idempotente.
  */
 function transportista_servicios_preparar_espera($conexion): void
 {
@@ -180,6 +181,11 @@ function transportista_servicios_preparar_espera($conexion): void
         return;
     }
     $hecho = true;
+
+    $res = $conexion->query("SHOW COLUMNS FROM transportista_servicios LIKE 'bss_id'");
+    if ($res && $res->num_rows === 0) {
+        $conexion->query("ALTER TABLE transportista_servicios ADD COLUMN bss_id INT UNSIGNED DEFAULT NULL");
+    }
 
     $res = $conexion->query("SHOW COLUMNS FROM transportista_servicios LIKE 'transportista_id'");
     $col = $res ? $res->fetch_assoc() : null;
