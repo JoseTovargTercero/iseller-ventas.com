@@ -268,11 +268,11 @@ Probado en un teléfono **TECNO BG7** (Android 13, 720×1612) contra la API loca
   como mercado; al cargar se respeta el stock actual. El editor pagina el catálogo
   completo de la tienda (40 por página).
 - Menú inferior tipo isla: barra blanca redondeada con el botón de escaneo
-  circular sobresaliendo al centro. A la izquierda, en Inicio está el acceso para
-  seguir pedido (Pedidos) y en las demás vistas una casita que vuelve al inicio; a
-  la derecha, Favoritas. La barra superior lleva al inicio al tocar el
-  logo/nombre y muestra el carrito con badge; el perfil se abre al tocar el saludo
-  del inicio.
+  circular sobresaliendo al centro. A la izquierda, la bolsa **Mis mercados** y el
+  acceso dinámico (seguir pedido en Inicio, casita en las demás vistas); a la
+  derecha, **Favoritas** y **Perfil**. La barra superior lleva al inicio al tocar
+  el logo/nombre y muestra el carrito con badge; el perfil también se abre al tocar
+  el saludo del inicio.
 - Escanear: lector de códigos de Google con captura manual como respaldo. Un QR
   con `iseller-tiendas.com/<slug>` se valida contra la API y abre la tienda en la
   app. Un código de barras usa la ubicación actual: busca el negocio aliado con

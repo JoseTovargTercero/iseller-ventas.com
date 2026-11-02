@@ -331,6 +331,40 @@ if (!$es_tienda_individual) {
         ]);
     }
 
+    // Categoría especial "Combos": combos publicados aunque su stock se calcule
+    // con las piezas base y su fila de stock esté en 0.
+    $resCombosHome = $conexion->query("
+        SELECT COUNT(DISTINCT p.id) AS total_productos,
+               SUBSTRING_INDEX(GROUP_CONCAT(np.foto_url ORDER BY (np.foto_url IS NOT NULL AND np.foto_url <> '') DESC, p.id DESC SEPARATOR '|'), '|', 1) AS foto_url,
+               SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY (np.foto_url IS NOT NULL AND np.foto_url <> '') DESC, p.id DESC SEPARATOR ','), ',', 1) AS producto_id
+        FROM productos p
+        INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
+        INNER JOIN negocio n ON n.id = np.negocio_id
+        WHERE p.activo = 0 AND p.es_combo = 1
+          AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
+    ");
+    $comboHomeRow = $resCombosHome ? $resCombosHome->fetch_assoc() : null;
+    $total_combos_home = (int)($comboHomeRow['total_productos'] ?? 0);
+    if ($total_combos_home > 0) {
+        $comboHome = [
+            'grupo' => 'Combos',
+            'total_productos' => $total_combos_home,
+            'foto_url' => (string)($comboHomeRow['foto_url'] ?? ''),
+            'producto_id' => (int)($comboHomeRow['producto_id'] ?? 0),
+            'es_combos' => true
+        ];
+
+        // Colocarlo después de "Al mayor" (o al inicio si no existe).
+        $indiceCombos = 0;
+        foreach ($grupos_home as $i => $grupoHome) {
+            if (!empty($grupoHome['es_mayor'])) {
+                $indiceCombos = $i + 1;
+                break;
+            }
+        }
+        array_splice($grupos_home, $indiceCombos, 0, [$comboHome]);
+    }
+
     $grupoGet = trim((string)($_GET['grupo'] ?? ''));
     if ($grupoGet !== '') {
         foreach ($grupos_home as $grupoHome) {
@@ -383,6 +417,7 @@ function home_categoria_icono(?string $grupo): string
         'Farmacia y bienestar' => 'bi-capsule',
         'Otras categorías' => 'bi-grid',
         'Al mayor' => 'bi-box-seam',
+        'Combos' => 'bi-boxes',
     ];
     return $iconos[$grupo ?? ''] ?? 'bi-tag';
 }
@@ -3004,6 +3039,76 @@ $zona_tienda = $es_tienda_individual
                 flex-shrink: 0;
             }
 
+            .mkt-hero-item-actions {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            .mkt-hero-qty {
+                display: flex;
+                align-items: center;
+                height: 32px;
+                overflow: hidden;
+                background: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+            }
+
+            .mkt-hero-qty button {
+                width: 26px;
+                height: 100%;
+                border: none;
+                background: #fff;
+                color: #495057;
+                font-size: 0.95rem;
+                font-weight: 700;
+                line-height: 1;
+                cursor: pointer;
+                padding: 0;
+            }
+
+            .mkt-hero-qty button:hover {
+                background: #f0fdf4;
+            }
+
+            .mkt-hero-qty input {
+                width: 34px;
+                height: 100%;
+                border: none;
+                border-left: 1px solid #eef0f2;
+                border-right: 1px solid #eef0f2;
+                background: #fff;
+                color: #1a1a1a;
+                text-align: center;
+                font-size: 0.78rem;
+                padding: 0;
+            }
+
+            .mkt-hero-qty input:focus {
+                outline: none;
+            }
+
+            .mkt-hero-add {
+                width: 32px;
+                height: 32px;
+                border: none;
+                border-radius: 50%;
+                background: var(--primary-color, #1a7f4b);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.9rem;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+
+            .mkt-hero-add:hover {
+                opacity: 0.88;
+            }
+
             .mkt-hero-img-col {
                 flex-shrink: 0;
                 position: relative;
@@ -3710,7 +3815,7 @@ $zona_tienda = $es_tienda_individual
 
                             <div id="modal-combo-box" class="modal-combo-box" style="display: none;">
                                 <h6><i class="bi bi-box-seam"></i> Este combo incluye</h6>
-                                <ul id="modal-combo-items"></ul>
+                                <ul id="modal-combo-items" style="color: #515151;"></ul>
                             </div>
 
                             <div class="modal-actions-container">
@@ -4308,7 +4413,7 @@ $zona_tienda = $es_tienda_individual
                             </div>
                             <div class="d-flex align-items-center gap-2" >
                                 ${Number(item.es_combo) === 1 ? '' : `
-                                <div class="quantity-control form-control-sm border px-1">
+                                <div class="quantity-control form-control-sm border px-1" onclick="event.stopPropagation()">
                                     ${(()=>{
                                         const _min  = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
                                         const _step = Number(item.paso_cantidad) > 0 ? Number(item.paso_cantidad) : 1;
@@ -4326,6 +4431,7 @@ $zona_tienda = $es_tienda_individual
                                 </div>`}
                                 <button class="btn btn-sm btn-action-primary d-flex align-items-center justify-content-center btn-add-to-car" 
                                     style="width: 38px; height: 32px; border-radius: 50%; background: var(--primary-color); color: white; border: none;"
+                                    onclick="event.stopPropagation(); addtocarHero(this)"
                                     data-add-id="${item.id}"
                                     data-codigo="${item.codigo || ''}"
                                     data-P_D="${precio_dolar_visible}"
@@ -4357,7 +4463,17 @@ $zona_tienda = $es_tienda_individual
         }
 
         function seleccionarProductoBusqueda(id) {
-            // Optional: Navigate to product detail or highlight it
+            $("#search-results, #search-results-mobile").removeClass('show');
+            $('#search, #search-mobile').blur();
+
+            if (!productos_por_id[id] && typeof searchItems !== 'undefined') {
+                const encontrado = searchItems.find(function(p) {
+                    return String(p.id) === String(id);
+                });
+                if (encontrado) productos_por_id[id] = encontrado;
+            }
+
+            openProductModal(id);
         }
 
         // Infinite Scroll & Sorting Logic
@@ -4844,7 +4960,7 @@ $zona_tienda = $es_tienda_individual
 
                 $('#search, #search-mobile').val('')
                 $("#search-results, #search-results-mobile").removeClass('show');
-                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, null, null);
+                addtocarJS(id_p, dolarventa_p, pesoventa_p, bolivarventa_p, null, null, btn);
             }
         });
 
@@ -5404,7 +5520,16 @@ $zona_tienda = $es_tienda_individual
         }
 
         async function addtocarJS(id, dolarventa_p, pesoventa_p, bolivarventa_p, mayor, cantidad_scann = null, btnElement = null) {
-            const inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
+            let inputCantidad = null;
+            if (btnElement) {
+                const contenedor = btnElement.closest('.product-card, .list-group-item, .mkt-hero-results-item');
+                if (contenedor) {
+                    inputCantidad = contenedor.querySelector(`input[data-cantidad-id="${id}"]`);
+                }
+            }
+            if (!inputCantidad) {
+                inputCantidad = document.querySelector(`input[data-cantidad-id="${id}"]`);
+            }
             const idStr = id.toString();
             const producto = productos_por_id[idStr] || productos_por_id[id];
             if (!producto) {
@@ -6437,11 +6562,41 @@ $zona_tienda = $es_tienda_individual
                 if (prods.length) {
                     html += '<div class="mkt-hero-results-section">Productos</div>';
                     prods.forEach(r => {
-                        const it = r.item;
+                        const it = r.item || r;
                         _heroLastProds[it.id] = it;
                         const img = it.img ? '<img class="item-img" src="' + it.img + '" alt="" onerror="imgFallback(this)">' : '<div class="item-img" style="display:flex;align-items:center;justify-content:center;"><i class="bi bi-box-seam" style="color:#94a3b8;"></i></div>';
                         const tiendaLabel = it.tienda_nombre ? '<div class="item-meta" style="color:#6b7a8d;font-size:0.72rem;"><i class="bi bi-shop" style="font-size:0.65rem;"></i> ' + it.tienda_nombre + '</div>' : '';
-                        html += '<div class="mkt-hero-results-item" role="button" onclick="heroSearchPick(' + it.id + ')">' + img + '<div class="item-info"><div class="item-name">' + it.nombre + '</div><div class="item-meta">' + (it.categorias || '') + '</div>' + tiendaLabel + '</div><div class="item-price">$' + parseFloat(it.precio_dolar_visible || 0).toFixed(2) + '</div></div>';
+                        const qtyMin = Number(it.minimo_cantidad) > 0 ? Number(it.minimo_cantidad) : 1;
+                        const qtyStep = Number(it.paso_cantidad) > 0 ? Number(it.paso_cantidad) : 1;
+                        const esCombo = Number(it.es_combo) === 1;
+                        const stockActual = Number(it.stock) || 0;
+                        const sinStock = stockActual <= 0;
+                        const qtyHtml = esCombo ? '' :
+                            '<div class="mkt-hero-qty">' +
+                                '<button type="button" onclick="changeQty(this, -1)">-</button>' +
+                                '<input type="number" data-cantidad-id="' + it.id + '" value="' + qtyMin + '" min="' + qtyMin + '" data-step="' + qtyStep + '" data-min="' + qtyMin + '" step="' + qtyStep + '" readonly>' +
+                                '<button type="button" onclick="changeQty(this, 1, ' + stockActual + ')">+</button>' +
+                            '</div>';
+
+                        html += '<div class="mkt-hero-results-item" role="button" onclick="heroSearchPick(' + it.id + ')">' +
+                            img +
+                            '<div class="item-info"><div class="item-name">' + it.nombre + '</div><div class="item-meta">' + (it.categorias || '') + '</div>' + tiendaLabel + '</div>' +
+                            '<div class="item-price">$' + parseFloat(it.precio_dolar_visible || 0).toFixed(2) + '</div>' +
+                            '<div class="mkt-hero-item-actions" onclick="event.stopPropagation()">' +
+                                qtyHtml +
+                                '<button type="button" class="mkt-hero-add" data-add-id="' + it.id + '"' +
+                                    ' data-codigo="' + (it.codigo || '') + '"' +
+                                    ' data-P_D="' + it.precio_dolar_visible + '"' +
+                                    ' data-P_P="' + it.precio_weight_visible + '"' +
+                                    ' data-P_B="' + it.precio_bs_visible + '"' +
+                                    ' data-P_C="' + it.precio_costo + '"' +
+                                    ' data-P_C_BS="' + it.precio_costo_bs + '"' +
+                                    (sinStock ? ' disabled' : '') +
+                                    ' onclick="event.stopPropagation(); addtocarHero(this)" title="Agregar al carrito">' +
+                                    '<i class="bi bi-cart-plus"></i>' +
+                                '</button>' +
+                            '</div>' +
+                        '</div>';
                     });
                 }
             }
@@ -6480,6 +6635,23 @@ $zona_tienda = $es_tienda_individual
                 productos_por_id[id] = _heroLastProds[id];
             }
             openProductModal(id);
+        }
+
+        function addtocarHero(btn) {
+            if (!btn || btn.disabled) return;
+            const id = btn.dataset.addId;
+            if (!productos_por_id[id] && _heroLastProds[id]) {
+                productos_por_id[id] = _heroLastProds[id];
+            }
+            addtocarJS(
+                id,
+                btn.dataset.P_D,
+                btn.dataset.P_P,
+                btn.dataset.P_B,
+                null,
+                null,
+                btn
+            );
         }
         document.addEventListener('click', function(e) {
             if (_heroSearchBox && !_heroSearchBox.contains(e.target) && e.target.id !== 'hero-search-input') {

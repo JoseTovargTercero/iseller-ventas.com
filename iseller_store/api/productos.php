@@ -394,9 +394,13 @@ if ($esCategoriaCombos) {
 
 $grupoFiltro = trim((string)($_GET['grupo'] ?? ''));
 if ($grupoFiltro !== '') {
-    $where .= " AND p.categoria IN (SELECT id FROM categorias_producto WHERE grupo = ?)";
-    $params[] = $grupoFiltro;
-    $types .= "s";
+    if ($grupoFiltro === 'Combos') {
+        $where .= " AND p.es_combo = 1";
+    } else {
+        $where .= " AND p.categoria IN (SELECT id FROM categorias_producto WHERE grupo = ?)";
+        $params[] = $grupoFiltro;
+        $types .= "s";
+    }
     if (!$tienda_slug) $order = 'p.nombre ASC';
 }
 
