@@ -6,7 +6,7 @@
 require_once('core/db.php');
 require_once('core/session.php');
 
-$token = $_GET['token'] ?? '';
+$token = trim((string)($_GET['token'] ?? ''));
 $error = '';
 $success = '';
 $user_id = null;

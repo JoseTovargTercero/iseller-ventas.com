@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Por favor, ingrese su correo electrónico.';
     } else {
         // Verificar si el correo existe
-        $stmt = $conexion_store->prepare("SELECT id FROM tienda_usuarios WHERE email = ? LIMIT 1");
+        $stmt = $conexion_store->prepare("SELECT id, nombre FROM tienda_usuarios WHERE email = ? LIMIT 1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -33,25 +33,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
-
-            // Guardar token en DB
-            $update = $conexion_store->prepare("UPDATE tienda_usuarios SET reset_token = ?, reset_expires = ? WHERE id = ?");
-            $update->bind_param("ssi", $token, $expires, $user['id']);
+            // El vencimiento lo calcula MySQL: si PHP y la base usan zonas
+            // horarias distintas, el enlace nacería ya vencido.
+            $update = $conexion_store->prepare(
+                "UPDATE tienda_usuarios
+                 SET reset_token = ?, reset_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR)
+                 WHERE id = ?"
+            );
+            $update->bind_param("si", $token, $user['id']);
 
             if ($update->execute()) {
                 $reset_link = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . dirname($_SERVER['PHP_SELF']) . "/reset_password.php?token=" . $token;
 
-                $asunto = 'Restablece tu contraseña - iSeller Store';
-                $cuerpo = "Hola,\n\n"
-                    . "Recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\n"
-                    . "Abre este enlace (vence en 1 hora):\n" . $reset_link . "\n\n"
-                    . "Si no solicitaste el cambio, ignora este correo.\n";
-                $headers = "From: iSeller Store <no-reply@iseller-tiendas.com>\r\n"
-                    . "Reply-To: no-reply@iseller-tiendas.com\r\n"
-                    . "MIME-Version: 1.0\r\n"
-                    . "Content-Type: text/plain; charset=UTF-8\r\n";
-                @mail($email, $asunto, $cuerpo, $headers);
+                require_once(__DIR__ . '/core/email_recuperacion.php');
+                $correo = email_recuperacion(
+                    (string)($user['nombre'] ?? ''),
+                    $email,
+                    $reset_link,
+                    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . "://$_SERVER[HTTP_HOST]"
+                );
+                @mail($email, $correo['asunto'], $correo['cuerpo'], $correo['cabeceras'], $correo['sobre']);
             } else {
                 $error = 'Hubo un error al procesar la solicitud.';
             }
