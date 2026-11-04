@@ -469,7 +469,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtProd->execute();
             $prod = $stmtProd->get_result()->fetch_assoc();
             if (!$prod) {
-                echo json_encode(['success' => false, 'message' => 'Uno de los productos ya no está disponible']);
+                // El producto pudo despublicarse o eliminarse después de agregarlo.
+                $nombreProd = '';
+                $stmtNombre = $conexion->prepare("SELECT nombre FROM productos WHERE id = ? LIMIT 1");
+                if ($stmtNombre) {
+                    $stmtNombre->bind_param("i", $pid);
+                    $stmtNombre->execute();
+                    $nombreProd = (string)($stmtNombre->get_result()->fetch_assoc()['nombre'] ?? '');
+                    $stmtNombre->close();
+                }
+                $etiqueta = $nombreProd !== '' ? '«' . $nombreProd . '»' : 'Uno de los productos';
+                echo json_encode([
+                    'success' => false,
+                    'message' => $etiqueta . ' ya no está disponible. Quítalo del carrito para continuar.',
+                ]);
                 exit;
             }
 
@@ -500,13 +513,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     : (float)$prod['stock'];
             }
             if ($stockDisponible < $qty) {
-                echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de ' . $prod['nombre']]);
+                echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $prod['nombre'] . '». Disponible: ' . $stockDisponible]);
                 exit;
             }
 
             $precios = $calculadora->calcularPrecios($prod);
             $items[$clave] = [
                 'id'        => $pid,
+                'nombre'    => $prod['nombre'],
                 'qty'       => $qty,
                 'sucursal'  => $sid,
                 'precio'    => (float)$precios['precio_venta_dolar'],
@@ -609,6 +623,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         foreach ($items as $it) {
+            $nombreIt = (string)($it['nombre'] ?? '');
             if (!empty($it['es_combo'])) {
                 $comboCompleto = !empty($it['combo_items']);
                 foreach ($it['combo_items'] as $ci) {
@@ -623,7 +638,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtStock->close();
                     $stmtStockMayor->close();
                     $conexion_store->rollback();
-                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $nombreIt . '» para completar el pedido']);
                     exit;
                 }
                 continue;
@@ -637,7 +652,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtStock->close();
                     $stmtStockMayor->close();
                     $conexion_store->rollback();
-                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $nombreIt . '» para completar el pedido']);
                     exit;
                 }
                 $stmtStockMayor->bind_param("diid", $descontar, $idStockMayor, $bss_id, $descontar);
@@ -646,7 +661,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtStock->close();
                     $stmtStockMayor->close();
                     $conexion_store->rollback();
-                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                    echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $nombreIt . '» para completar el pedido']);
                     exit;
                 }
                 continue;
@@ -661,7 +676,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtStock->close();
                 $stmtStockMayor->close();
                 $conexion_store->rollback();
-                echo json_encode(['success' => false, 'message' => 'No hay stock suficiente para completar el pedido']);
+                echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $nombreIt . '» para completar el pedido']);
                 exit;
             }
         }
@@ -3193,14 +3208,14 @@ if ($dolarBolivar == 0) {
                             behavior: 'smooth'
                         });
                     } else {
-                        Notiflix.Notify.failure(data.message || 'Error al procesar');
+                        Notiflix.Notify.failure(escapeHtml(data.message || 'Error al procesar'));
                         btn.disabled = false;
                         btn.innerHTML = 'Confirmar Pedido <i class="bi bi-lock-fill ms-1"></i>';
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    Notiflix.Notify.failure('Error: ' + (err.message || 'Intenta de nuevo'));
+                    Notiflix.Notify.failure('Error: ' + escapeHtml(err.message || 'Intenta de nuevo'));
                     btn.disabled = false;
                     btn.innerHTML = 'Confirmar Pedido <i class="bi bi-lock-fill ms-1"></i>';
                 });

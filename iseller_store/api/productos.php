@@ -191,6 +191,16 @@ function prepararCombo(array $row, $conexion): array
     return $row;
 }
 
+/** Un producto sin stock para su mínimo de compra no debe listarse. */
+function productoAgotado(array $row): bool
+{
+    $stock = ((int)($row['es_combo'] ?? 0) === 1)
+        ? (float)($row['combo_stock'] ?? 0)
+        : (float)($row['stock_visible'] ?? $row['stock'] ?? 0);
+    $minimo = (float)($row['minimo_cantidad'] ?? 1);
+    return $stock < ($minimo > 0 ? $minimo : 1);
+}
+
 // Construcción de la consulta basada en si hay un slug de tienda o es el marketplace global.
 // Al mayor solo se muestra si el stock del producto base cubre al menos una paca.
 $where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
@@ -264,6 +274,10 @@ if ($mode === 'search_index') {
             $comboItems = combo_items($conexion, (int)$row['id'], (int)$row['bss_id']);
             $stockVisible = (float)combo_stock($conexion, (int)$row['id'], (int)$row['bss_id'], (int)$row['id_sucursal']);
         }
+
+        // Los combos se incluyen en el SQL aunque no tengan piezas suficientes.
+        $minimoVisible = (float)($row['minimo_cantidad'] ?? 1);
+        if ($stockVisible < ($minimoVisible > 0 ? $minimoVisible : 1)) continue;
 
         $searchIndex[] = [
             'id' => $row['id'],
@@ -354,6 +368,7 @@ if ($mode === 'destacados') {
     $destacados = [];
     while ($row = $result->fetch_assoc()) {
         $row = prepararCombo($row, $conexion);
+        if (productoAgotado($row)) continue;
         $destacados[] = formatearProducto($row, $recompensas);
     }
 
@@ -439,6 +454,7 @@ $result = $stmt->get_result();
 $products = [];
 while ($row = $result->fetch_assoc()) {
     $row = prepararCombo($row, $conexion);
+    if (productoAgotado($row)) continue;
     $products[] = formatearProducto($row, $recompensas);
 }
 

@@ -248,7 +248,17 @@ foreach ($itemsIn as $item) {
     $stmtProd->execute();
     $prod = $stmtProd->get_result()->fetch_assoc();
     if (!$prod) {
-        api_error(409, 'Uno de los productos ya no está disponible', 'product_unavailable');
+        // El producto pudo despublicarse o eliminarse después de agregarlo.
+        $nombreProd = '';
+        $stmtNombre = $conexion->prepare("SELECT nombre FROM productos WHERE id = ? LIMIT 1");
+        if ($stmtNombre) {
+            $stmtNombre->bind_param('i', $pid);
+            $stmtNombre->execute();
+            $nombreProd = (string)($stmtNombre->get_result()->fetch_assoc()['nombre'] ?? '');
+            $stmtNombre->close();
+        }
+        $etiqueta = $nombreProd !== '' ? '«' . $nombreProd . '»' : 'Uno de los productos';
+        api_error(409, $etiqueta . ' ya no está disponible. Quítalo del carrito para continuar.', 'product_unavailable');
     }
 
     $minimoRegla = (float)($prod['minimo_cantidad'] ?? 1);
@@ -274,12 +284,13 @@ foreach ($itemsIn as $item) {
     }
     if ($stockDisponible < $qty) {
         $stmtProd->close();
-        api_error(409, 'No hay stock suficiente de ' . $prod['nombre'], 'out_of_stock');
+        api_error(409, 'No hay stock suficiente de «' . $prod['nombre'] . '». Disponible: ' . $stockDisponible, 'out_of_stock');
     }
 
     $precios = $calc->calcularPrecios($prod);
     $items[$clave] = [
         'id'        => $pid,
+        'nombre'    => $prod['nombre'],
         'qty'       => $qty,
         'branch'    => $sid,
         'price_usd' => (float)$precios['precio_venta_dolar'],
@@ -353,7 +364,7 @@ try {
             if (empty($it['combo_items'])) {
                 $stmt->close();
                 $stmtMayor->close();
-                throw new DomainException('out_of_stock');
+                throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
             }
             foreach ($it['combo_items'] as $ci) {
                 $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
@@ -361,7 +372,7 @@ try {
                 if (!producto_stock_descontar($conexion_store, $childId, (int)$it['branch'], $bssId, $descontar)) {
                     $stmt->close();
                     $stmtMayor->close();
-                    throw new DomainException('out_of_stock');
+                    throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
                 }
             }
             continue;
@@ -373,14 +384,14 @@ try {
             if ($idStockMayor <= 0 || $descontar <= 0) {
                 $stmt->close();
                 $stmtMayor->close();
-                throw new DomainException('out_of_stock');
+                throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
             }
             $stmtMayor->bind_param('diid', $descontar, $idStockMayor, $bssId, $descontar);
             $stmtMayor->execute();
             if ($stmtMayor->affected_rows !== 1) {
                 $stmt->close();
                 $stmtMayor->close();
-                throw new DomainException('out_of_stock');
+                throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
             }
             continue;
         }
@@ -390,7 +401,7 @@ try {
         if ($stmt->affected_rows !== 1) {
             $stmt->close();
             $stmtMayor->close();
-            throw new DomainException('out_of_stock');
+            throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
         }
     }
     $stmt->close();
@@ -485,7 +496,12 @@ try {
     if ($e->getMessage() === 'payment_duplicate') {
         api_error(409, 'Esa referencia de pago ya fue usada en otro pedido', 'payment_duplicate');
     }
-    api_error(409, 'No hay stock suficiente para completar el pedido', 'out_of_stock');
+    $nombreStock = str_starts_with($e->getMessage(), 'out_of_stock:')
+        ? substr($e->getMessage(), strlen('out_of_stock:'))
+        : '';
+    api_error(409, $nombreStock !== ''
+        ? 'No hay stock suficiente de «' . $nombreStock . '» para completar el pedido'
+        : 'No hay stock suficiente para completar el pedido', 'out_of_stock');
 } catch (Throwable $e) {
     $conexion_store->rollback();
     error_log('API orders: ' . $e->getMessage());

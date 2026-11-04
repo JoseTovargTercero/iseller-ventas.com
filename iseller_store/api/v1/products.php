@@ -143,6 +143,10 @@ while ($fila = $res->fetch_assoc()) {
     }
 
     $minProducto = (float)($fila['minimo_cantidad'] ?? 1);
+    // Los combos se incluyen en el SQL aunque no tengan piezas suficientes.
+    if ($stockProducto < ($minProducto > 0 ? $minProducto : 1)) {
+        continue;
+    }
 
     $imagen = '';
     if (!empty($fila['foto_url'])) {
