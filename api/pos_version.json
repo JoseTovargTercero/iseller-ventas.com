@@ -1,6 +1,6 @@
 {
-    "sha256":  "2ff23754bce2b284caf7618d26f360fc267cd4bc68d2190e986c98ae35d1488b",
+    "sha256":  "e8f0153e40ff163619a60c93081fa1c1c61ffbe13a956da78ceaf1fe9d7fca02",
     "archivo":  "pos_update.zip",
-    "version":  "1.0.4",
-    "notas":  "Impresion: usa la predeterminada si no hay configurada, reintenta con el driver de la POS-58 y avisa si no imprime."
+    "version":  "1.0.5",
+    "notas":  "cambios de seguridad."
 }
