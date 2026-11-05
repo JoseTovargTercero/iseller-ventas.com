@@ -3616,15 +3616,10 @@ $zona_tienda = $es_tienda_individual
                         <div class="row align-items-center">
                             <div class="col-lg-7">
                                 <h6 class="fw-bold mb-1">Visítanos directamente</h6>
-                                <p class="text-muted small mb-3">Estamos ubicados en una zona accesible y segura para tu comodidad.</p>
                                 <?php if (!empty($store_config['direccion'])): ?>
-                                    <div class="d-flex align-items-start gap-3 mb-2">
-                                        <i class="bi bi-pin-map text-success fs-5"></i>
-                                        <div>
-                                            <p class="mb-0 fw-semibold">Dirección</p>
-                                            <p class="text-muted small mb-0"><?= nl2br(htmlspecialchars($store_config['direccion'], ENT_QUOTES, 'UTF-8')) ?></p>
-                                        </div>
-                                    </div>
+                                    <p class="text-muted small mb-3">
+                                        <i class="bi bi-pin-map text-success me-1"></i><?= nl2br(htmlspecialchars($store_config['direccion'], ENT_QUOTES, 'UTF-8')) ?>
+                                    </p>
                                 <?php endif; ?>
                                 <?php if (!empty($store_config['horario'])): ?>
                                     <div class="d-flex align-items-start gap-3 mb-2">

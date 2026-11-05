@@ -37,6 +37,14 @@ const configPaginas = {
     titulo: "Transferir stock",
     subtitulo: "Transfiera stock entre sucursales",
   },
+  "asignaciones.php": {
+    titulo: "Asignación de mercancía",
+    subtitulo: "Distribuya mercancía entre sucursales y genere obligaciones económicas",
+  },
+  "deudas_sucursales.php": {
+    titulo: "Deudas entre sucursales",
+    subtitulo: "Consulta de obligaciones, abonos y saldos entre sucursales",
+  },
   "nuevaCompra.php": {
     titulo: "Compras",
     subtitulo: "Registro de productos agregados al stock",
