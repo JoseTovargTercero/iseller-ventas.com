@@ -103,6 +103,13 @@ if ($_SESSION['nivel'] == 1) {
     }
 }
 
+// Modo del buscador: por defecto al mayor. Solo el administrador o quien tenga
+// el permiso "Venta de productos al mayor" puede cambiarlo.
+$modo_mayor = false;
+if ($puede_vender_al_mayor) {
+    $modo_mayor = !isset($_SESSION['pos_modo_mayor']) || (bool)$_SESSION['pos_modo_mayor'];
+}
+
 // Pre-cargar items de combos para el negocio y sucursal actual
 $combos_mapa = [];
 $stmtCombos = $conexion->prepare("
@@ -289,7 +296,9 @@ if ($result->num_rows > 0) {
 
 
         //  PARA LA BUSQUEDA POR CODIGO DE BARRA  
-        if (strlen($codigo) > 5 && $row['mayor'] != '1') {
+        // Quien puede vender al mayor también puede escanear sus códigos; el modo
+        // del buscador decide cuáles se muestran.
+        if (strlen($codigo) > 5 && ($puede_vender_al_mayor || $row['mayor'] != '1')) {
 
 
             $data["$codigo"] = [
@@ -454,6 +463,10 @@ $stmt->close();
         font-size: 13px !important;
         border-radius: 8px !important;
         min-width: 110px;
+    }
+
+    #modalDespacho #btnNotaEntrega {
+        margin-left: 0 !important;
     }
 
     .btn-success {
@@ -975,8 +988,19 @@ $stmt->close();
         font-weight: 600 !important;
     }
 
-    .modal-header .btn-close {
-        filter: invert(0.7);
+    .modal-header .close {
+        color: var(--dash-text) !important;
+        opacity: 0.8;
+        text-shadow: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        padding: 0;
+        margin: 0;
+    }
+
+    .modal-header .close:hover {
+        color: var(--dash-mint) !important;
+        opacity: 1;
     }
 
     .modal-body {
@@ -1215,9 +1239,91 @@ $stmt->close();
         gap: 8px;
     }
 
-    .acciones-caja .btn {
-        padding: 7px 16px !important;
+    .acciones-caja .btn,
+    .acciones-caja .modo-mayor-switch {
+        height: 32px !important;
+        margin: 0 !important;
+        padding: 0 16px !important;
         font-size: 12px !important;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Botón de modo de venta (mayor / detal) con check */
+    .modo-mayor-switch {
+        position: relative;
+        gap: 8px;
+        border: 1px solid var(--dash-border);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--dash-text-muted);
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        transition: border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .modo-mayor-switch:hover {
+        border-color: var(--dash-mint);
+        color: var(--dash-mint);
+    }
+
+    .modo-mayor-switch input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        pointer-events: none;
+    }
+
+    .modo-mayor-check {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        border: 1.5px solid var(--dash-text-muted);
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .modo-mayor-check::after {
+        content: "";
+        width: 8px;
+        height: 4px;
+        border-left: 2px solid #fff;
+        border-bottom: 2px solid #fff;
+        margin-top: -2px;
+        transform: rotate(-45deg) scale(0);
+        transition: transform 0.15s ease;
+    }
+
+    .modo-mayor-switch:hover .modo-mayor-check {
+        border-color: var(--dash-mint);
+    }
+
+    .modo-mayor-switch input:checked+.modo-mayor-check {
+        background: var(--dash-mint);
+        border-color: var(--dash-mint);
+    }
+
+    .modo-mayor-switch input:checked+.modo-mayor-check::after {
+        transform: rotate(-45deg) scale(1);
+    }
+
+    .modo-mayor-switch input:checked~.modo-mayor-texto {
+        color: var(--dash-mint);
+    }
+
+    .modo-mayor-switch input:focus-visible+.modo-mayor-check {
+        outline: 2px solid var(--dash-mint);
+        outline-offset: 2px;
     }
 
     @media (max-width: 576px) {
@@ -1946,6 +2052,14 @@ $stmt->close();
                                     <span><b>SUCURSAL: </b><span id="sucursal_nombre">
                                 </div>
                                 <div class="acciones-caja">
+                                    <?php if ($puede_vender_al_mayor): ?>
+                                        <label class="modo-mayor-switch" id="modo-mayor-label" for="modo-mayor-toggle"
+                                            title="<?= $modo_mayor ? 'El buscador muestra solo productos al mayor' : 'El buscador muestra solo productos al detal' ?>">
+                                            <input type="checkbox" id="modo-mayor-toggle" <?= $modo_mayor ? 'checked' : '' ?>>
+                                            <span class="modo-mayor-check" aria-hidden="true"></span>
+                                            <span class="modo-mayor-texto" id="modo-mayor-texto"><?= $modo_mayor ? 'PRODUCTOS AL MAYOR' : 'PRODUCTOS AL DETAL' ?></span>
+                                        </label>
+                                    <?php endif; ?>
                                     <button class="btn btn-sm d-none btn-danger" style="height: min-content"
                                         id="btn-cerrar-caja"> CERRAR CAJA</button>
                                     <button class="btn btn-sm btn-success" style="height: min-content" id="open-modal">
@@ -2137,7 +2251,9 @@ $stmt->close();
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="modalDespachoLabel">Información del despacho</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
                         <div class="modal-body">
 
@@ -2291,7 +2407,9 @@ $stmt->close();
 
                             <div class="modal-footer p-0 mt-2">
                                 <button type="button" class="btn btn-secondary"
-                                    data-bs-dismiss="modal" id="btnCancelarDespacho">Cancelar</button>
+                                    data-dismiss="modal" id="btnCancelarDespacho">Cancelar</button>
+                                <button type="button" class="btn btn-info"
+                                    id="btnNotaEntrega">Nota de entrega</button>
                                 <button type="button" class="btn btn-secondary d-none"
                                     id="btnAtrasDespacho">Atrás</button>
                                 <button type="button" class="btn btn-primary"
@@ -2309,7 +2427,9 @@ $stmt->close();
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="modalImgNombre"></h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
                     <div class="modal-body text-center">
                         <div class="modal-img-wrap">
@@ -2714,6 +2834,67 @@ $stmt->close();
             var productos_por_id = <?php echo json_encode($productos_por_id); ?>;
             var codigos = []
 
+            let modoMayor = <?php echo json_encode((bool)$modo_mayor); ?>;
+            const esProductoDelModo = p => (String(p.mayor) === '1') === modoMayor;
+
+            // Tasas para recalcular pesos y bolívares cuando se aplica un precio
+            // especial en dólares a un producto al mayor.
+            const tasasCalculo = {
+                pesoDolar: <?php echo json_encode((float)$pesoDolar); ?>,
+                pesoBolivar: <?php echo json_encode((float)$peso_bolivar); ?>,
+                dolarBolivar: <?php echo json_encode((float)$dolarBolivar); ?>,
+                bolivarPeso: <?php echo json_encode((float)$bolivar_peso); ?>,
+                bcv: <?php echo json_encode((float)$bcv); ?>,
+                precioDolarVisible: <?php echo json_encode(is_array($data_monedas) && isset($data_monedas['precio_dolar_visible'])); ?>,
+                precioPesoVisible: <?php echo json_encode(is_array($data_monedas) && isset($data_monedas['precio_peso_visible'])); ?>
+            };
+
+            // Precios especiales aplicados en esta pantalla: id -> { usd, peso, bs }.
+            const preciosEspeciales = {};
+
+            function limpiarPreciosEspeciales() {
+                Object.keys(preciosEspeciales).forEach(function(id) {
+                    delete preciosEspeciales[id];
+                });
+            }
+
+            function redondearPeso(valor) {
+                if (!isFinite(valor) || valor <= 0) return 0;
+                if (valor < 100) return 100;
+                const residuo = valor % 100;
+                return residuo >= 50 ? Math.ceil(valor / 100) * 100 : Math.floor(valor / 100) * 100;
+            }
+
+            // Mismos cálculos de CalculadoraPrecios, pero partiendo de un precio
+            // de venta en dólares fijado a mano.
+            function calcularPreciosDesdeUsd(producto, usd) {
+                const precioUsd = Math.round(Number(usd) * 100) / 100;
+                const t = tasasCalculo;
+                if (!t || t.pesoBolivar <= 0 || t.bcv <= 0) {
+                    return { usd: precioUsd, peso: 0, bs: 0 };
+                }
+
+                const precioPesoVenta = redondearPeso(precioUsd * t.pesoDolar);
+                const origen = String(producto.origen || 'v');
+                let precioBsVenta;
+                if (origen === 'c') {
+                    precioBsVenta = (precioPesoVenta / t.pesoBolivar) / 1000;
+                } else if (origen === 'm') {
+                    precioBsVenta = precioUsd * t.bcv;
+                } else {
+                    precioBsVenta = precioUsd * t.dolarBolivar;
+                }
+
+                const precioBolivarPeso = redondearPeso((precioBsVenta * t.bolivarPeso) * 1000);
+                const peso = (t.precioPesoVisible || origen === 'c') ? precioPesoVenta : precioBolivarPeso;
+
+                return {
+                    usd: precioUsd,
+                    peso: peso,
+                    bs: Math.round(precioBsVenta * 100) / 100
+                };
+            }
+
             /* buscador de productos */
             const codigos_indexados = Object.values(productos);
             const productos_indexados = Object.values(productos_por_id);
@@ -2736,9 +2917,10 @@ $stmt->close();
                 useExtendedSearch: true // Acelera búsqueda si no usas operadores especiales
             });
 
-            // Función de búsqueda rápida y limpia
-            const buscarConFuse = termino => fuse.search(`=${termino}`).map(r => r.item);
-            const buscarCodigoFuse = codigo => fuseCodigos.search(codigo).map(r => r.item);
+            // Función de búsqueda rápida y limpia. El modo activo decide si se
+            // muestran productos al mayor o al detal.
+            const buscarConFuse = termino => fuse.search(`=${termino}`).map(r => r.item).filter(esProductoDelModo);
+            const buscarCodigoFuse = codigo => fuseCodigos.search(codigo).map(r => r.item).filter(esProductoDelModo);
 
             /* buscador de productos */
 
@@ -3286,6 +3468,102 @@ $stmt->close();
 
             }
 
+            function abrirNotaEntrega() {
+                if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
+                    Swal.fire('Carrito vacío', 'Agrega productos antes de generar la nota de entrega.', 'warning');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Nota de entrega',
+                    text: 'Selecciona la moneda con la que se mostrarán los precios.',
+                    input: 'select',
+                    inputOptions: {
+                        USD: 'Dólares (USD)',
+                        COP: 'Pesos (COP)',
+                        BS: 'Bolívares (BS)'
+                    },
+                    inputPlaceholder: 'Selecciona una moneda',
+                    showCancelButton: true,
+                    confirmButtonText: 'Generar PDF',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#2dd4a0',
+                    background: '#181b22',
+                    color: '#e8edf2',
+                    inputValidator: value => !value ? 'Selecciona una moneda.' : null,
+                    didOpen: () => {
+                        const select = Swal.getInput();
+                        if (select) {
+                            // Evita que el lector de códigos capture el teclado; Enter confirma.
+                            select.addEventListener('keydown', e => {
+                                if (e.key === 'Escape') return;
+                                e.stopPropagation();
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    Swal.clickConfirm();
+                                }
+                            });
+                            select.addEventListener('keyup', e => {
+                                if (e.key !== 'Escape') e.stopPropagation();
+                            });
+                        }
+                    }
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        generarNotaEntrega(result.value);
+                    }
+                });
+            }
+
+            function generarNotaEntrega(moneda) {
+                const cliente = document.getElementById('nombreClienteModal').value.trim();
+                const productos = Object.values(carritoActivo).map(function(p) {
+                    return {
+                        name: p.name,
+                        qty: p.qty,
+                        // Estos precios ya incluyen cualquier precio especial aplicado.
+                        price: p.price,
+                        pricePeso: p.pricePeso,
+                        priceBolivar: p.priceBolivar
+                    };
+                });
+
+                if (productos.length === 0) {
+                    Swal.fire('Carrito vacío', 'No hay productos para la nota de entrega.', 'warning');
+                    return;
+                }
+
+                // Formulario con target _blank: el PDF se abre en otra pestaña
+                // y también se puede visualizar desde el móvil.
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'nota_entrega.php';
+                form.target = '_blank';
+                form.style.display = 'none';
+
+                const agregar = (nombre, valor) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = nombre;
+                    input.value = valor;
+                    form.appendChild(input);
+                };
+
+                agregar('cliente', cliente);
+                agregar('moneda', moneda);
+                agregar('sucursal', sucursal_n || '');
+                agregar('productos', JSON.stringify(productos));
+
+                document.body.appendChild(form);
+                form.submit();
+                setTimeout(() => form.remove(), 1000);
+            }
+
+            const btnNotaEntrega = document.getElementById('btnNotaEntrega');
+            if (btnNotaEntrega) {
+                btnNotaEntrega.addEventListener('click', abrirNotaEntrega);
+            }
+
             function indicadorCampoVacio(campo_id, campo_nombre) {
                 console.log(campo_id)
                 const campo = document.getElementById(campo_id).value;
@@ -3633,6 +3911,45 @@ $stmt->close();
 
             let modo = 2
 
+            // Suiche mayor/detal: cambia el filtro del buscador y guarda la
+            // elección en la sesión del usuario.
+            const toggleModoMayor = document.getElementById('modo-mayor-toggle');
+            if (toggleModoMayor) {
+                toggleModoMayor.addEventListener('change', async function() {
+                    modoMayor = this.checked;
+
+                    const texto = document.getElementById('modo-mayor-texto');
+                    const label = document.getElementById('modo-mayor-label');
+                    if (texto) texto.textContent = modoMayor ? 'PRODUCTOS AL MAYOR' : 'PRODUCTOS AL DETAL';
+                    if (label) {
+                        label.title = modoMayor ?
+                            'El buscador muestra solo productos al mayor' :
+                            'El buscador muestra solo productos al detal';
+                    }
+
+                    const buscador = document.getElementById('search');
+                    if (buscador && buscador.value.trim() !== '') {
+                        $(buscador).trigger('keyup');
+                    } else {
+                        mostrarGridSiVacio();
+                    }
+
+                    try {
+                        await fetch('guardar_modo_mayor.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: new URLSearchParams({
+                                modo: modoMayor ? '1' : '0'
+                            })
+                        });
+                    } catch (e) {
+                        // La preferencia queda aplicada en esta pantalla; se reintenta al cambiar de nuevo.
+                    }
+                });
+            }
+
             // Abrir el modal
             openModalButton.addEventListener("click", () => {
                 modo = 1
@@ -3685,6 +4002,10 @@ $stmt->close();
                     return
                 } else {
                     const datos = productos[lectura.trim()];
+                    const especial = preciosEspeciales[datos.id];
+                    const precioD = especial ? especial.usd : datos.precio_dolar_visible;
+                    const precioP = especial ? especial.peso : datos.precio_peso_visible;
+                    const precioB = especial ? especial.bs : datos.precio_bs_visible;
                     $('.section-scanner').removeClass('hide');
 
                     // Construir solo las tasas visibles según tasasMostrar
@@ -3696,9 +4017,9 @@ $stmt->close();
                     </div>
 
                     <div class="scan-prices">
-                        <span class="scan-price-usd">$${formatNumber(datos.precio_dolar_visible)}</span>
-                        <span class="scan-price-cop">${formatearMiles(datos.precio_peso_visible)} P</span>
-                        <span class="scan-price-bs">${formatNumber(recortarADosDecimales(datos.precio_bs_visible))} Bs</span>
+                        <span class="scan-price-usd">$${formatNumber(precioD)}</span>
+                        <span class="scan-price-cop">${formatearMiles(precioP)} P</span>
+                        <span class="scan-price-bs">${formatNumber(recortarADosDecimales(precioB))} Bs</span>
                     </div>
 
                     <div class="scan-controls">
@@ -3709,9 +4030,9 @@ $stmt->close();
                             id="btn_${datos.id}"
                             data-add-id="${datos.id}"
                             data-codigo="${datos.codigo}"
-                            data-P_D="${datos.precio_dolar_visible}"
-                            data-P_P="${datos.precio_peso_visible}"
-                            data-P_B="${datos.precio_bs_visible}"
+                            data-P_D="${precioD}"
+                            data-P_P="${precioP}"
+                            data-P_B="${precioB}"
                             data-mayor="${datos.mayor}"
                             data-cantidad_por_mayor="${datos.cantidadPaca}">
                             <i class="bx bx-cart-add"></i>
@@ -3773,6 +4094,11 @@ $stmt->close();
 
                 resultado.forEach(item => {
                     const esCombo = Number(item.es_combo) === 1;
+                    const especial = preciosEspeciales[item.id];
+                    const precioD = especial ? especial.usd : item.precio_dolar_visible;
+                    const precioP = especial ? especial.peso : item.precio_peso_visible;
+                    const precioB = especial ? especial.bs : item.precio_bs_visible;
+
                     // mayor llega como número desde productos_por_id; comparar como texto
                     const rest = (String(item.mayor) === '1' ?
                         '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' :
@@ -3784,6 +4110,15 @@ $stmt->close();
                         </button>
                     ` : '';
 
+                    const btnPrecio = (modoMayor && String(item.mayor) === '1') ? `
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2 btn-precio-especial"
+                            data-pid="${item.id}" title="Modificar precio de venta">
+                            <ion-icon name="pricetag-outline" style="font-size:13px;vertical-align:middle;"></ion-icon> Precio
+                        </button>
+                    ` : '';
+
+                    const marcaEspecial = especial ? '<span class="badge bg-info ms-1">Especial</span>' : '';
+
                     $("#tabla_resultado_codigo_producto").append(`
                         <tr>
                             <td class="thumb-cell text-center">
@@ -3792,21 +4127,21 @@ $stmt->close();
                                     <i class="fa fa-eye"></i>
                                 </button>
                             </td>
-                            <td style="padding-left:15px !important; font-size: 15px;"><span>${item.nombre}</span>${btnVerCombo}</td>
+                            <td style="padding-left:15px !important; font-size: 15px;"><span>${item.nombre}</span>${marcaEspecial}${btnVerCombo}${btnPrecio}</td>
                             <td>${rest}</td>
                             <td style="place-content: center" class="text-center text-total text-success">
-                                <span>${formatNumber(item.precio_dolar_visible)}$</span>
+                                <span>${formatNumber(precioD)}$</span>
                             </td>
                             <td style="place-content: center" class="text-center text-total text-info">
-                                <span>${formatearMiles(formatPeso(item.precio_peso_visible))} Cop</span>
+                                <span>${formatearMiles(precioP)} Cop</span>
                             </td>
                             <td style="place-content: center" class="text-center text-total text-danger">
-                                <span>${formatNumber(recortarADosDecimales(item.precio_bs_visible))} Bs</span>
+                                <span>${formatNumber(recortarADosDecimales(precioB))} Bs</span>
                             </td>
                             <td class="text-center">
                                 <input 
                                     data-nombre='${item.nombre}' 
-                                    data-precios='${item.precio_peso_visible}/${item.precio_dolar_visible}/${item.precio_bs_visible}' 
+                                    data-precios='${precioP}/${precioD}/${precioB}' 
                                     type="number" 
                                     style="width: 70px; text-align: center;" 
                                     class="form-control-sm cantidad-input" 
@@ -3817,9 +4152,9 @@ $stmt->close();
                                 <button class="btn btn-sm btn-success btn-add-to-car" 
                                     data-add-id="${item.id}"
                                     data-codigo="${item.codigo || ''}"
-                                    data-P_D="${item.precio_dolar_visible}"
-                                    data-P_P="${item.precio_peso_visible}"
-                                    data-P_B="${item.precio_bs_visible}"
+                                    data-P_D="${precioD}"
+                                    data-P_P="${precioP}"
+                                    data-P_B="${precioB}"
                                     data-mayor="${item.mayor}"
                                     data-cantidad_por_mayor="${item.cantidadPaca}">
                                     <i class="fa fa-shopping-cart"></i>
@@ -3836,23 +4171,151 @@ $stmt->close();
                 });
             }
 
+            // Precio especial solo para productos al mayor: se parte del precio de
+            // venta en dólares y se recalculan pesos y bolívares con las tasas del día.
+            function abrirModificadorPrecio(id) {
+                const prod = productos_por_id[id];
+                if (!prod || String(prod.mayor) !== '1') return;
+
+                const compra = Number(prod.price_C) || 0;
+                const actual = preciosEspeciales[id] || {
+                    usd: Number(prod.precio_dolar_visible),
+                    peso: Number(prod.precio_peso_visible),
+                    bs: Number(prod.precio_bs_visible)
+                };
+                const minUsd = compra > 0 ? compra.toFixed(2) : '0.01';
+                const usdTexto = n => Number(n).toFixed(2);
+
+                Swal.fire({
+                    title: 'Precio especial',
+                    html: `
+                        <div style="text-align:left;font-size:13px;">
+                            <div style="font-weight:600;margin-bottom:4px;">${prod.nombre}</div>
+                            <div style="color:#8892a0;margin-bottom:12px;">
+                                Precio de compra: $${usdTexto(compra)} · Venta actual: $${usdTexto(actual.usd)}
+                            </div>
+                            <label for="precio-especial-usd" style="display:block;margin-bottom:4px;">Precio de venta en dólares</label>
+                            <input id="precio-especial-usd" type="number" min="${minUsd}" step="0.01"
+                                value="${usdTexto(actual.usd)}" class="swal2-input" style="width:100%;margin:0;">
+                            <div id="precio-especial-error" style="color:#ef5a6f;font-size:12px;margin-top:6px;min-height:16px;"></div>
+                            <div id="precio-especial-calc" style="margin-top:8px;padding:10px;border:1px solid #2e353e;border-radius:8px;background:#1a1e24;"></div>
+                        </div>`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Aplicar precio',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#2dd4a0',
+                    background: '#181b22',
+                    color: '#e8edf2',
+                    didOpen: () => {
+                        const input = document.getElementById('precio-especial-usd');
+                        const error = document.getElementById('precio-especial-error');
+                        const calc = document.getElementById('precio-especial-calc');
+
+                        const pintar = () => {
+                            const usd = parseFloat(input.value);
+                            if (!isFinite(usd) || usd <= 0) {
+                                error.textContent = 'Escribe un precio válido.';
+                                calc.innerHTML = '';
+                                return;
+                            }
+                            if (compra > 0 && usd < compra) {
+                                error.textContent = 'No puede ser menor al precio de compra ($' + usdTexto(compra) + ').';
+                                calc.innerHTML = '';
+                                return;
+                            }
+
+                            error.textContent = '';
+                            const p = calcularPreciosDesdeUsd(prod, usd);
+                            calc.innerHTML = `
+                                <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                                    <span class="text-success">$${usdTexto(p.usd)}</span>
+                                    <span class="text-info">${formatearMiles(p.peso)} COP</span>
+                                    <span class="text-danger">${formatNumber(recortarADosDecimales(p.bs))} Bs</span>
+                                </div>`;
+                        };
+
+                        // Evita que el lector de códigos y los atajos del POS capturen el tecleo.
+                        // Escape se deja pasar para que SweetAlert pueda cerrar el modal.
+                        input.addEventListener('keydown', e => {
+                            if (e.key !== 'Escape') e.stopPropagation();
+                        });
+                        input.addEventListener('keyup', e => {
+                            if (e.key !== 'Escape') e.stopPropagation();
+                        });
+                        input.addEventListener('input', pintar);
+                        input.addEventListener('keydown', e => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                Swal.clickConfirm();
+                            }
+                        });
+                        input.focus();
+                        input.select();
+                        pintar();
+                    },
+                    preConfirm: () => {
+                        const input = document.getElementById('precio-especial-usd');
+                        const usd = parseFloat(input.value);
+                        if (!isFinite(usd) || usd <= 0) {
+                            Swal.showValidationMessage('Escribe un precio válido.');
+                            return false;
+                        }
+                        if (compra > 0 && usd < compra) {
+                            Swal.showValidationMessage('El precio no puede ser menor al de compra ($' + usdTexto(compra) + ').');
+                            return false;
+                        }
+                        return { usd: usd };
+                    }
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+
+                    const precio = calcularPreciosDesdeUsd(prod, result.value.usd);
+                    preciosEspeciales[id] = precio;
+
+                    // Si el producto ya está en el carrito, se actualiza para que la
+                    // venta registre el precio rebajado.
+                    if (carritoActivo[id]) {
+                        carritoActivo[id].price = precio.usd;
+                        carritoActivo[id].pricePeso = precio.peso;
+                        carritoActivo[id].priceBolivar = precio.bs;
+                        db.carritoActivo.put(carritoActivo[id]).then(() => actualizarCarritoJs());
+                    }
+
+                    // Se repinta solo la lista actual; el precio especial sigue visible
+                    // hasta agregar el producto o volver a buscar.
+                    const buscador = document.getElementById('search');
+                    if (buscador && buscador.value.trim() !== '') {
+                        representarResultado(buscarConFuse(buscador.value));
+                    }
+                    Alerta.toast('success', 'Precio especial aplicado.');
+                });
+            }
+
+            $(document).on('click', '.btn-precio-especial', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                abrirModificadorPrecio(String(this.dataset.pid));
+            });
+
 
             // ── Grilla: 9 productos más vendidos de la sucursal (cálculo del servidor) ──
             // El ranking se resuelve en PHP y se reutiliza el catálogo ya cargado (nombre y precios).
-            const topVendidos = <?php echo json_encode($top_vendidos_ids); ?>
+            const topVendidosTodos = <?php echo json_encode($top_vendidos_ids); ?>
                 .map(function(id) {
                     return productos_por_id[id];
                 })
-                .filter(Boolean)
-                .slice(0, 9);
+                .filter(Boolean);
+
+            let topVendidosVisibles = [];
 
             function renderTopVendidos() {
                 const cont = document.getElementById('posTopVendidos');
                 if (!cont) return;
-                if (!topVendidos.length) {
+                topVendidosVisibles = topVendidosTodos.filter(esProductoDelModo).slice(0, 9);
+                if (!topVendidosVisibles.length) {
                     cont.innerHTML = '<div class="pos-top-vacio">Aún no hay ventas suficientes para mostrar los más vendidos.</div>';
                 } else {
-                    cont.innerHTML = topVendidos.map(function(p, i) {
+                    cont.innerHTML = topVendidosVisibles.map(function(p, i) {
                         return `<button type="button" class="pos-top-item" data-idx="${i}">
                             <span class="pos-top-num">${i + 1}</span>
                             <span class="pos-top-nombre">${p.nombre}</span>
@@ -3894,7 +4357,7 @@ $stmt->close();
                 // No interceptar si otro campo editable (cantidad, cédula, etc.) tiene el foco.
                 const ae = document.activeElement;
                 if (ae && ae !== search && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return;
-                const prod = topVendidos[Number(event.key) - 1];
+                const prod = topVendidosVisibles[Number(event.key) - 1];
                 if (!prod) return;
                 event.preventDefault();
                 search.value = prod.nombre;
@@ -3904,7 +4367,7 @@ $stmt->close();
             // Clic en la grilla = mismo comportamiento que pulsar su número.
             $(document).on('click', '.pos-top-item', function(e) {
                 e.preventDefault();
-                const p = topVendidos[Number(this.dataset.idx)];
+                const p = topVendidosVisibles[Number(this.dataset.idx)];
                 if (!p) return;
                 const search = document.getElementById('search');
                 search.value = p.nombre;
@@ -3922,9 +4385,9 @@ $stmt->close();
                     if (data && data.ok && Array.isArray(data.ids)) {
                         const nuevos = data.ids.map(function(id) {
                             return productos_por_id[id];
-                        }).filter(Boolean).slice(0, 9);
-                        topVendidos.length = 0;
-                        Array.prototype.push.apply(topVendidos, nuevos);
+                        }).filter(Boolean);
+                        topVendidosTodos.length = 0;
+                        Array.prototype.push.apply(topVendidosTodos, nuevos);
                         if (!$('#posTopVendidos').hasClass('d-none')) renderTopVendidos();
                     }
                 } catch (e) {
@@ -3991,6 +4454,8 @@ $stmt->close();
 
 
             $(document).on('keyup', '#search', function() {
+                // Al recargar los resultados, cualquier precio especial vuelve al normal.
+                limpiarPreciosEspeciales();
                 var nombreProducto = $(this).val();
                 if (nombreProducto.trim() === '') {
                     // Buscador vacío: mostrar grilla de más vendidos y limpiar resultados
@@ -4230,6 +4695,12 @@ $stmt->close();
 
                 if (carritoActivo[idPedido]) {
                     carritoActivo[idPedido].qty += cant;
+                    const especial = preciosEspeciales[idPedido];
+                    if (especial) {
+                        carritoActivo[idPedido].price = especial.usd;
+                        carritoActivo[idPedido].pricePeso = especial.peso;
+                        carritoActivo[idPedido].priceBolivar = especial.bs;
+                    }
                 } else {
                     carritoActivo[idPedido] = {
                         id: idPedido,
@@ -4254,6 +4725,9 @@ $stmt->close();
                 } else {
                     await db.carritoActivo.put(carritoActivo[idPedido]);
                 }
+
+                // El precio especial ya quedó congelado en el carrito: se descarta.
+                delete preciosEspeciales[idPedido];
 
                 $("#tabla_resultado_codigo_producto").html('');
                 actualizarCarritoJs();

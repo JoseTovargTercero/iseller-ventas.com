@@ -470,18 +470,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $prod = $stmtProd->get_result()->fetch_assoc();
             if (!$prod) {
                 // El producto pudo despublicarse o eliminarse después de agregarlo.
-                $nombreProd = '';
-                $stmtNombre = $conexion->prepare("SELECT nombre FROM productos WHERE id = ? LIMIT 1");
-                if ($stmtNombre) {
-                    $stmtNombre->bind_param("i", $pid);
-                    $stmtNombre->execute();
-                    $nombreProd = (string)($stmtNombre->get_result()->fetch_assoc()['nombre'] ?? '');
-                    $stmtNombre->close();
+                // Se prefiere el nombre que el usuario ya vio en su carrito.
+                $nombreProd = is_string($item['name'] ?? null)
+                    ? mb_substr(trim($item['name']), 0, 150, 'UTF-8')
+                    : '';
+                if ($nombreProd === '') {
+                    $stmtNombre = $conexion->prepare("SELECT nombre FROM productos WHERE id = ? LIMIT 1");
+                    if ($stmtNombre) {
+                        $stmtNombre->bind_param("i", $pid);
+                        $stmtNombre->execute();
+                        $nombreProd = (string)($stmtNombre->get_result()->fetch_assoc()['nombre'] ?? '');
+                        $stmtNombre->close();
+                    }
                 }
                 $etiqueta = $nombreProd !== '' ? '«' . $nombreProd . '»' : 'Uno de los productos';
                 echo json_encode([
                     'success' => false,
                     'message' => $etiqueta . ' ya no está disponible. Quítalo del carrito para continuar.',
+                    'reason' => 'unavailable',
+                    'product_id' => $pid,
+                    'product_name' => $nombreProd,
                 ]);
                 exit;
             }
@@ -513,7 +521,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     : (float)$prod['stock'];
             }
             if ($stockDisponible < $qty) {
-                echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $prod['nombre'] . '». Disponible: ' . $stockDisponible]);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'No hay stock suficiente de «' . $prod['nombre'] . '». Disponible: ' . $stockDisponible,
+                    'reason' => 'out_of_stock',
+                    'product_id' => $pid,
+                    'product_name' => (string)$prod['nombre'],
+                    'available' => $stockDisponible,
+                ]);
                 exit;
             }
 
@@ -2028,7 +2043,7 @@ if ($dolarBolivar == 0) {
                         <i class="bi bi-geo-alt-fill fs-5"></i>
                         <div>
                             <div class="fw-bold">Dirección del local</div>
-                            <div class="text-secondary small"><?= htmlspecialchars($store_config['direccion']) ?></div>
+                            <div class="text-secondary small" id="pickup-address"><?= htmlspecialchars($store_config['direccion']) ?></div>
                         </div>
                     </div>
                     <div class="divider my-2"></div>
@@ -2437,6 +2452,14 @@ if ($dolarBolivar == 0) {
                 tiendaConfig = await resp.json();
             } catch (e) {
                 tiendaConfig = {};
+            }
+
+            // Dirección que se muestra al elegir "Retiro en tienda".
+            const pickupAddress = document.getElementById('pickup-address');
+            if (pickupAddress) {
+                const texto = (tiendaConfig?.direccion_tienda || '').trim()
+                    || [tiendaConfig?.comunidad, tiendaConfig?.geo_municipio, tiendaConfig?.geo_estado].filter(Boolean).join(', ');
+                pickupAddress.textContent = texto || 'Ubicación no especificada';
             }
 
             // Actualizar encabezado del paso 1
@@ -3211,6 +3234,26 @@ if ($dolarBolivar == 0) {
                         Notiflix.Notify.failure(escapeHtml(data.message || 'Error al procesar'));
                         btn.disabled = false;
                         btn.innerHTML = 'Confirmar Pedido <i class="bi bi-lock-fill ms-1"></i>';
+
+                        if (data.product_id) {
+                            Notiflix.Confirm.show(
+                                'Producto no disponible',
+                                escapeHtml(data.message || '') + '<br><br>¿Quieres quitarlo del carrito?',
+                                'Quitarlo',
+                                'Dejarlo',
+                                async () => {
+                                    const enCarrito = cartItems.find(
+                                        i => String(i.id) === String(data.product_id)
+                                    );
+                                    try {
+                                        if (enCarrito) await db.carritoActivo.delete(enCarrito.id);
+                                    } catch (e) {
+                                        console.warn('No se pudo quitar el producto', e);
+                                    }
+                                    location.reload();
+                                }
+                            );
+                        }
                     }
                 })
                 .catch(err => {

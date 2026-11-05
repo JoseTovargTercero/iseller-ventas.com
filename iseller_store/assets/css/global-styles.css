@@ -140,6 +140,12 @@ h1, h2, h3, h4, h5, h6 {
     border-color: var(--primary-color);
 }
 
+.header-actions .btn-icon.is-fav {
+    color: #e11d48;
+    border-color: #fecdd3;
+    background: #fff1f2;
+}
+
 .header-actions .btn-cart {
     border-color: var(--primary-color);
 }
@@ -1067,9 +1073,10 @@ h1, h2, h3, h4, h5, h6 {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #f3f4f6;
-    opacity: .6;
+    background-color: #f3f4f6;
+    opacity: .8;
     transition: .2s;
+    z-index: 10;
 }
 
 .product-modal-close:hover {

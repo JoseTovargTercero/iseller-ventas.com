@@ -219,6 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat = isset($_POST['lat']) && $_POST['lat'] !== '' ? floatval($_POST['lat']) : null;
     $lng = isset($_POST['lng']) && $_POST['lng'] !== '' ? floatval($_POST['lng']) : null;
     $comunidad = strip_tags(trim($_POST['comunidad'] ?? ''));
+    $direccion_tienda = mb_substr(strip_tags(trim($_POST['direccion_tienda'] ?? '')), 0, 255);
     // Solo se aceptan combinaciones estado/municipio de la lista.
     $geo = venezuela_estados_municipios();
     $geo_estado = trim($_POST['geo_estado'] ?? '');
@@ -267,11 +268,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($logo_url) {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssssssisi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, direccion_tienda = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
+        $stmt->bind_param("sssssssssssssssisi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $direccion_tienda, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
     } else {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
-        $stmt->bind_param("sssssssssssssisi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, direccion_tienda = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
+        $stmt->bind_param("ssssssssssssssisi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $direccion_tienda, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
     }
 
     $stmt->execute();
@@ -289,7 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email, destacados_activo, destacados_ids FROM negocio WHERE id = ?");
+$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, direccion_tienda, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email, destacados_activo, destacados_ids FROM negocio WHERE id = ?");
 $stmt->bind_param("i", $bss_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -1565,6 +1566,11 @@ if ($destacados_ids) {
                                                 <input type="text" name="comunidad" id="comunidad" class="dash-input" placeholder="Escribe tu comunidad..." autocomplete="off" value="<?= htmlspecialchars($tienda['comunidad'] ?? '') ?>">
                                                 <div id="community-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:1100;"></div>
                                             </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="field-label">Dirección de la tienda</label>
+                                            <textarea name="direccion_tienda" class="dash-input" rows="2" maxlength="255" placeholder="Ej: Calle 5, casa 42, frente a la plaza"><?= htmlspecialchars($tienda['direccion_tienda'] ?? '') ?></textarea>
+                                            <p class="field-hint">Calle, local y puntos de referencia. Aparece en el perfil de la tienda y cuando el cliente elige retirar en tienda.</p>
                                         </div>
                                         <div id="map-picker" style="width:100%;height:280px;border-radius:8px;border:1px solid var(--dash-border);margin-bottom:14px;"></div>
                                         <div class="row mb-0">

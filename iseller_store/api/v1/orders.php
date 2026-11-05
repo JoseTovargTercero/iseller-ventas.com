@@ -236,6 +236,11 @@ foreach ($itemsIn as $item) {
     $pid = (int)($item['product_id'] ?? 0);
     $sid = (int)($item['branch_id'] ?? 0);
     $qty = (float)($item['quantity'] ?? 0);
+    // Nombre que vio el usuario: sirve para nombrar el producto aunque ya no
+    // exista en la base.
+    $nombreCliente = is_string($item['name'] ?? null)
+        ? mb_substr(trim($item['name']), 0, 150, 'UTF-8')
+        : '';
     $clave = $pid . '-' . $sid;
     if ($pid <= 0 || $sid <= 0 || !is_finite($qty) || $qty <= 0 || $qty > 999) {
         api_error(400, 'Producto o cantidad inválida', 'invalid_item');
@@ -249,13 +254,15 @@ foreach ($itemsIn as $item) {
     $prod = $stmtProd->get_result()->fetch_assoc();
     if (!$prod) {
         // El producto pudo despublicarse o eliminarse después de agregarlo.
-        $nombreProd = '';
-        $stmtNombre = $conexion->prepare("SELECT nombre FROM productos WHERE id = ? LIMIT 1");
-        if ($stmtNombre) {
-            $stmtNombre->bind_param('i', $pid);
-            $stmtNombre->execute();
-            $nombreProd = (string)($stmtNombre->get_result()->fetch_assoc()['nombre'] ?? '');
-            $stmtNombre->close();
+        $nombreProd = $nombreCliente;
+        if ($nombreProd === '') {
+            $stmtNombre = $conexion->prepare("SELECT nombre FROM productos WHERE id = ? LIMIT 1");
+            if ($stmtNombre) {
+                $stmtNombre->bind_param('i', $pid);
+                $stmtNombre->execute();
+                $nombreProd = (string)($stmtNombre->get_result()->fetch_assoc()['nombre'] ?? '');
+                $stmtNombre->close();
+            }
         }
         $etiqueta = $nombreProd !== '' ? '«' . $nombreProd . '»' : 'Uno de los productos';
         api_error(409, $etiqueta . ' ya no está disponible. Quítalo del carrito para continuar.', 'product_unavailable');

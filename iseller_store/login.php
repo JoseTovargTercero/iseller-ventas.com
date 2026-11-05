@@ -211,6 +211,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-decoration: underline;
         }
 
+        .btn-register {
+            display: block;
+            padding: 0.7rem;
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-register:hover,
+        .btn-register:focus {
+            background: var(--primary-color);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px -10px rgba(26, 127, 75, 0.55);
+        }
+
         @media (max-width: 480px) {
             .login-main {
                 /* navbar becomes two rows on very small screens */
@@ -289,8 +308,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="text-center border-top pt-3">
                             <p class="small text-muted mb-2">¿No tienes una cuenta?</p>
-                            <a href="registro.php" class="login-link">
-                                Crear cuenta nueva <i class="bi bi-arrow-right ms-1"></i>
+                            <a href="registro.php" class="btn-register">
+                                <i class="bi bi-person-plus me-1"></i> Crear cuenta nueva <i class="bi bi-arrow-right ms-1"></i>
                             </a>
                         </div>
                     </form>

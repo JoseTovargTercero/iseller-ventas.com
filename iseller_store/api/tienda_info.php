@@ -38,7 +38,9 @@ if ($negocio_id > 0) {
             'config_delivery' => $config_delivery,
             'datos_bancarios' => $datos_bancarios,
             'geo_estado' => $row['geo_estado'] ?? null,
-            'geo_municipio' => $row['geo_municipio'] ?? null
+            'geo_municipio' => $row['geo_municipio'] ?? null,
+            'comunidad' => $row['comunidad'] ?? null,
+            'direccion_tienda' => $row['direccion_tienda'] ?? null
         ]);
         exit;
     }

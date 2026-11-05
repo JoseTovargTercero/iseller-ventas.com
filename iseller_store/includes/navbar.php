@@ -54,6 +54,11 @@ if (isLoggedIn()) {
 
         <!-- Right: Actions -->
         <div class="header-actions d-flex align-items-center gap-3">
+            <?php if (!empty($es_tienda_individual) && !empty($negocio_data['id'])): ?>
+                <button type="button" class="btn-icon btn-favorito-nav <?= !empty($es_favorito) ? 'is-fav' : '' ?>" id="btn-favorito-nav" data-favorito data-negocio="<?= (int)$negocio_data['id'] ?>" aria-pressed="<?= !empty($es_favorito) ? 'true' : 'false' ?>" title="<?= !empty($es_favorito) ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                    <i class="bi <?= !empty($es_favorito) ? 'bi-heart-fill' : 'bi-heart' ?>"></i>
+                </button>
+            <?php endif; ?>
             <?php if (isLoggedIn() && $enable_rewards): ?>
                 <div class="reward-container position-relative hide" id="reward-dropdown">
                     <button class="btn-icon btn-reward" data-bs-toggle="modal" data-bs-target="#modalRecompensas" title="Tienes recompensas">
@@ -132,6 +137,12 @@ if (isLoggedIn()) {
                     </a>
                 <?php endif; ?>
             </div>
+
+            <?php if (!empty($es_tienda_individual) && !empty($negocio_data['id'])): ?>
+                <button type="button" class="btn-icon" data-bs-toggle="modal" data-bs-target="#modalUbicacion" title="Consultar ubicación" aria-label="Consultar ubicación">
+                    <i class="bi bi-geo-alt"></i>
+                </button>
+            <?php endif; ?>
 
             <!-- Search Toggle Button (Mobile Only) -->
             <?php if (basename($_SERVER['PHP_SELF']) === 'index.php'): ?>

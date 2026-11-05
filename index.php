@@ -39,7 +39,7 @@ if (empty($tienda_slug) && $path !== '' && !in_array(strtolower($path), $reserva
 
 if ($tienda_slug) {
     // Buscar el negocio en la base de datos unificada
-    $stmtNegocio = $conexion->prepare("SELECT id, nombre, logo_url, portada_url, config_delivery, lat, lng, nombre_visible, eslogan, categoria, reputacion_total, reputacion_recomiendan, reputacion_pct, geo_estado, geo_municipio FROM negocio WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'");
+    $stmtNegocio = $conexion->prepare("SELECT id, nombre, logo_url, portada_url, config_delivery, lat, lng, nombre_visible, eslogan, categoria, reputacion_total, reputacion_recomiendan, reputacion_pct, geo_estado, geo_municipio, direccion_tienda FROM negocio WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'");
     if ($stmtNegocio) {
         $stmtNegocio->bind_param("s", $tienda_slug);
         $stmtNegocio->execute();
@@ -233,12 +233,14 @@ $store_config = [
     'direccion' => 'YolaMarket'
 ];
 
+if ($es_tienda_individual) {
+    $store_config['direccion'] = trim((string)($negocio_data['direccion_tienda'] ?? ''));
+}
 if ($es_tienda_individual && !empty($negocio_data['config_delivery'])) {
     $deliveryConf = json_decode($negocio_data['config_delivery'], true);
     if (isset($deliveryConf['tipo'])) {
         $store_config['horario_delivery'] = "Delivery: " . ucfirst($deliveryConf['tipo']) . " - Zonas: " . ucfirst($deliveryConf['zonas'] ?? 'municipio');
     }
-    $store_config['direccion'] = $negocio_data['nombre_visible'] ?: $negocio_data['nombre'];
 }
 
 // Eslogan bajo el nombre: el que configuró la tienda o el de su categoría
@@ -2691,6 +2693,61 @@ $zona_tienda = $es_tienda_individual
             .logo-linea {
                 fill: #00a83b;
             }
+
+            /* Móvil pequeño: el segundo topbar desaparece y todo queda en el
+               topbar superior (favorito y ubicación). */
+            .header-actions .btn-icon.btn-favorito-nav {
+                display: none;
+            }
+
+            @media (max-width: 480px) {
+                .store-subnav {
+                    display: none;
+                }
+
+                /* El subnav era quien separaba la portada del navbar fijo. */
+                .store-profile-header {
+                    margin-top: var(--navbar-h, 133px);
+                }
+
+                .category-sort-zone {
+                    display: none;
+                }
+
+                .category-nav-wrapper {
+                    margin-bottom: 0;
+                }
+
+                .products-container {
+                    padding-top: 0 !important;
+                }
+
+                /* Con sesión hay 8 iconos en el topbar: se compactan para que
+                   no se salgan de la pantalla. */
+                body[data-user-logged-in="true"] .header-actions {
+                    gap: 0.375rem !important;
+                }
+
+                body[data-user-logged-in="true"] .header-actions .btn-icon {
+                    width: 36px;
+                    height: 36px;
+                }
+
+                .header-actions .btn-icon.btn-favorito-nav {
+                    display: flex;
+                }
+            }
+
+            @media (max-width: 360px) {
+                body[data-user-logged-in="true"] .header-actions {
+                    gap: 0.25rem !important;
+                }
+
+                body[data-user-logged-in="true"] .header-actions .btn-icon {
+                    width: 32px;
+                    height: 32px;
+                }
+            }
         </style>
         <?php
         $portada = !empty($negocio_data['portada_url']) ? $base_url . htmlspecialchars($negocio_data['portada_url']) : 'assets/img/bg-hero-0.png';
@@ -2732,12 +2789,9 @@ $zona_tienda = $es_tienda_individual
                     </div>
                 </div>
                 <div class="store-subnav-actions">
-                    <button type="button" class="store-subnav-fav <?= $es_favorito ? 'is-fav' : '' ?>" id="btn-favorito" data-negocio="<?= (int)$negocio_data['id'] ?>" aria-pressed="<?= $es_favorito ? 'true' : 'false' ?>" title="<?= $es_favorito ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
+                    <button type="button" class="store-subnav-fav <?= $es_favorito ? 'is-fav' : '' ?>" id="btn-favorito" data-favorito data-negocio="<?= (int)$negocio_data['id'] ?>" aria-pressed="<?= $es_favorito ? 'true' : 'false' ?>" title="<?= $es_favorito ? 'Quitar de favoritos' : 'Agregar a favoritos' ?>">
                         <i class="bi <?= $es_favorito ? 'bi-heart-fill' : 'bi-heart' ?>"></i>
                         <span><?= $es_favorito ? 'En favoritos' : 'Agregar a favoritos' ?></span>
-                    </button>
-                    <button type="button" class="store-subnav-btn" data-bs-toggle="modal" data-bs-target="#modalUbicacion" title="Consultar ubicación" aria-label="Consultar ubicación">
-                        <i class="bi bi-geo-alt"></i> <span>Ubicación</span>
                     </button>
                     <?php if (!empty($negocio_data['config_delivery'])): ?>
                         <span class="store-subnav-delivery">
@@ -3166,6 +3220,14 @@ $zona_tienda = $es_tienda_individual
 
                 .mkt-hero-text {
                     padding-bottom: 0;
+                }
+            }
+
+            /* En <=480px el topbar ocupa dos filas: el hero debe empezar
+               debajo de su altura real para que el título no quede pegado. */
+            @media (max-width: 480px) {
+                .mkt-hero {
+                    padding-top: var(--navbar-h, 133px);
                 }
             }
         </style>
@@ -3771,9 +3833,7 @@ $zona_tienda = $es_tienda_individual
     <div class="modal fade" id="modalProductoDetalle" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered product-modal-dialog">
             <div class="modal-content product-modal-content">
-                <button type="button" class="btn-close btn-close-white product-modal-close" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                <button type="button" class="btn-close product-modal-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 <div class="row g-0">
                     <!-- Image Side (Protruding) -->
                     <div class="col-md-5">
@@ -6834,54 +6894,65 @@ $zona_tienda = $es_tienda_individual
     </script>
     <script>
         (function() {
-            var btn = document.getElementById('btn-favorito');
-            if (!btn) return;
+            // Dos botones (topbar móvil y topbar de la tienda) comparten estado.
+            var btns = document.querySelectorAll('[data-favorito]');
+            if (!btns.length) return;
 
-            btn.addEventListener('click', function() {
-                if (document.body.dataset.userLoggedIn !== 'true') {
-                    window.location.href = 'login.php';
-                    return;
-                }
+            function pintarFavorito(fav) {
+                btns.forEach(function(btn) {
+                    btn.classList.toggle('is-fav', fav);
+                    btn.setAttribute('aria-pressed', fav ? 'true' : 'false');
+                    btn.title = fav ? 'Quitar de favoritos' : 'Agregar a favoritos';
 
-                var negocioId = btn.dataset.negocio;
-                btn.disabled = true;
+                    var icon = btn.querySelector('i');
+                    if (icon) icon.className = 'bi ' + (fav ? 'bi-heart-fill' : 'bi-heart');
 
-                var fd = new FormData();
-                fd.append('negocio_id', negocioId);
+                    var text = btn.querySelector('span');
+                    if (text) text.textContent = fav ? 'En favoritos' : 'Agregar a favoritos';
+                });
+            }
 
-                fetch('api/favorito.php', {
-                        method: 'POST',
-                        body: fd,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(function(res) {
-                        return res.json();
-                    })
-                    .then(function(data) {
-                        btn.disabled = false;
-                        if (!data.ok) {
-                            if (data.login) {
-                                window.location.href = 'login.php';
+            btns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    if (document.body.dataset.userLoggedIn !== 'true') {
+                        window.location.href = 'login.php';
+                        return;
+                    }
+
+                    btn.disabled = true;
+
+                    var fd = new FormData();
+                    fd.append('negocio_id', btn.dataset.negocio);
+
+                    fetch('api/favorito.php', {
+                            method: 'POST',
+                            body: fd,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
                             }
-                            return;
-                        }
+                        })
+                        .then(function(res) {
+                            return res.json();
+                        })
+                        .then(function(data) {
+                            btns.forEach(function(b) {
+                                b.disabled = false;
+                            });
+                            if (!data.ok) {
+                                if (data.login) {
+                                    window.location.href = 'login.php';
+                                }
+                                return;
+                            }
 
-                        var fav = !!data.favorito;
-                        btn.classList.toggle('is-fav', fav);
-                        btn.setAttribute('aria-pressed', fav ? 'true' : 'false');
-                        btn.title = fav ? 'Quitar de favoritos' : 'Agregar a favoritos';
-
-                        var icon = btn.querySelector('i');
-                        if (icon) icon.className = 'bi ' + (fav ? 'bi-heart-fill' : 'bi-heart');
-
-                        var text = btn.querySelector('span');
-                        if (text) text.textContent = fav ? 'En favoritos' : 'Agregar a favoritos';
-                    })
-                    .catch(function() {
-                        btn.disabled = false;
-                    });
+                            pintarFavorito(!!data.favorito);
+                        })
+                        .catch(function() {
+                            btns.forEach(function(b) {
+                                b.disabled = false;
+                            });
+                        });
+                });
             });
         })();
     </script>
