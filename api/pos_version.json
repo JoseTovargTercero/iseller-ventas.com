@@ -1,6 +1,6 @@
 {
-    "sha256":  "e8f0153e40ff163619a60c93081fa1c1c61ffbe13a956da78ceaf1fe9d7fca02",
+    "sha256":  "06cb1b8a9cdcd153eb578af4130a360c18cda5eb87a15f734955524f5c887183",
     "archivo":  "pos_update.zip",
-    "version":  "1.0.5",
+    "version":  "1.0.6",
     "notas":  "cambios de seguridad."
 }
