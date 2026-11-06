@@ -245,6 +245,36 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         letter-spacing: -0.5px;
                     }
 
+                    /* Skeleton mientras index_back.php responde: evita el "$0" falso */
+                    .kpi-row.kpi-loading .kpi-value,
+                    .kpi-row.kpi-loading .kpi-metrics>span>span {
+                        color: transparent;
+                        border-radius: 6px;
+                        background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0.16) 37%, rgba(255, 255, 255, 0.06) 63%);
+                        background-size: 400% 100%;
+                        animation: kpiShimmer 1.4s ease infinite;
+                    }
+
+                    .kpi-row.kpi-loading .kpi-value {
+                        width: 150px;
+                        max-width: 70%;
+                    }
+
+                    .kpi-row.kpi-loading .kpi-metrics>span>span {
+                        display: inline-block;
+                        min-width: 36px;
+                    }
+
+                    @keyframes kpiShimmer {
+                        0% {
+                            background-position: 100% 0;
+                        }
+
+                        100% {
+                            background-position: 0 0;
+                        }
+                    }
+
                     .kpi-metrics {
                         display: flex;
                         gap: 18px;
@@ -591,7 +621,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
-                    <div class='kpi-row'>
+                    <div class='kpi-row kpi-loading'>
                         <div class="kpi-card">
                             <div class="kpi-top">
                                 <div class="kpi-info">
@@ -620,7 +650,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="kpi-top">
                                 <div class="kpi-info">
                                     <h6>Ventas de la semana</h6>
-                                    <small>Ventas de los últimos 7 días</small>
+                                    <small>Ventas de la semana actual</small>
                                 </div>
                                 <div class="kpi-icon-circle">
                                     <ion-icon name="calendar-outline"></ion-icon>
@@ -758,7 +788,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <div class="chart-controls">
                                         <span class="date-badge">
                                             <ion-icon name="calendar-outline" style="font-size:12px;margin-right:4px;"></ion-icon>
-                                            Last 7 Days
+                                            Semana actual
                                         </span>
                                         <button class="btn-refresh" onclick="refreshChart()" title="Actualizar">
                                             <ion-icon name="refresh-outline"></ion-icon>
@@ -1523,6 +1553,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             let sparklineMes = null;
 
             function cargar_tabla(sucursal = null, usuario = null, periodo = 'mes', periodoPie = 'mes', periodoProductos = 'mes') {
+                document.querySelector('.kpi-row')?.classList.add('kpi-loading');
                 // La carga inicial ya viene en curso desde el inicio del <body> (en paralelo con ApexCharts)
                 let peticion;
                 if (!sucursal && !usuario && window.__dashboardInicial) {
@@ -1640,7 +1671,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
                     })
-                    .catch(error => console.error("Error en la solicitud:", error));
+                    .catch(error => console.error("Error en la solicitud:", error))
+                    .finally(() => document.querySelector('.kpi-row')?.classList.remove('kpi-loading'));
             }
 
             function refreshChart() {

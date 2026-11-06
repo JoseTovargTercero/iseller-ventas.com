@@ -50,6 +50,16 @@ $stmt->bind_param("diss", $precio, $cantidadPP, $proveedor, $id);
 $stmt->execute();
 $stmt->close();
 
+// Si el usuario confirmó, el producto al mayor asociado hereda solo el precio de compra
+if (!empty($_POST['actualizar_mayor'])) {
+    $stmt = $conexion->prepare("UPDATE productos SET precio_compra=? WHERE id_producto_relacionado=? AND mayor=1 AND bss_id=?");
+    if ($stmt) {
+        $stmt->bind_param("dii", $precio, $id, $bss_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 // Actualizar el stock
 $stmt = $conexion->prepare("UPDATE stock SET stock=?, porcentaje=? WHERE id_producto=? AND id_sucursal=? AND bss_id=?");
 $stmt->bind_param("idiii", $cantidadTotal, $porcentaje, $id, $sucursal, $bss_id);

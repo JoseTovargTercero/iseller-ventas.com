@@ -625,8 +625,47 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 let productos_editar
                 let metodo_editar
 
+                // Pregunta si el producto al mayor asociado debe heredar el nuevo precio de compra
+                async function confirmarActualizarMayor(productoId, precioAnterior, precioNuevo) {
+                    const anterior = parseFloat(String(precioAnterior ?? '').replace(/,/g, ''));
+                    const nuevo = parseFloat(String(precioNuevo ?? '').replace(/,/g, ''));
+                    if (!productoId || isNaN(anterior) || isNaN(nuevo) || anterior === nuevo) return false;
+
+                    try {
+                        const res = await fetch('../../configurar/verificar_producto_mayor.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: new URLSearchParams({
+                                id: productoId
+                            })
+                        });
+                        const data = await res.json();
+                        if (!data.mayores || data.mayores.length === 0) return false;
+
+                        const lista = data.mayores.map(function(m) {
+                            const div = document.createElement('div');
+                            div.textContent = m.nombre;
+                            return '<li>' + div.innerHTML + '</li>';
+                        }).join('');
+                        const resultado = await Swal.fire({
+                            title: '¿Actualizar también el precio al mayor?',
+                            html: '<p>Este producto tiene al mayor asociado:</p><ul style="text-align:left;margin:10px 0 0 18px;">' + lista + '</ul><p style="margin-top:10px;">¿Deseas actualizar su precio de compra?</p>',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, actualizar',
+                            cancelButtonText: 'No'
+                        });
+                        return resultado.isConfirmed;
+                    } catch (error) {
+                        console.error('No se pudo verificar el producto al mayor:', error);
+                        return false;
+                    }
+                }
+
                 // Actualizar el producto
-                document.getElementById('form-data').addEventListener('submit', function(e) {
+                document.getElementById('form-data').addEventListener('submit', async function(e) {
                     e.preventDefault(); // Evitar envío tradicional
 
                     const form = e.target;
@@ -677,6 +716,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             }
                             break;
                     }
+
+
+                    let actualizarMayor = false;
+                    if (metodo_editar === 'precio') {
+                        actualizarMayor = await confirmarActualizarMayor(productos_editar, (productos[productos_editar] || {}).precio_compra, form.precio.value);
+                    }
+                    if (actualizarMayor) formData.append('actualizar_mayor', '1');
 
 
                     fetch('../../configurar/productos_gestor.php', {

@@ -23,7 +23,7 @@ function api_categorias(?int $bssId): array
     $filtro = $bssId !== null ? 'AND np.negocio_id = ?' : '';
     $sql = "SELECT DISTINCT c.id, c.nombre
             FROM categorias_producto c
-            INNER JOIN productos p ON p.categoria = c.id AND p.activo = 0 AND p.origen != 'c'
+            INNER JOIN productos p ON p.categoria = c.id AND p.activo = 0
             INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
                  AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
@@ -55,7 +55,7 @@ function api_filtros(?int $bssId): array
     $filtro = $bssId !== null ? 'AND np.negocio_id = ?' : '';
     $sql = "SELECT DISTINCT c.grupo
             FROM categorias_producto c
-            INNER JOIN productos p ON p.categoria = c.id AND p.activo = 0 AND p.origen != 'c'
+            INNER JOIN productos p ON p.categoria = c.id AND p.activo = 0
             INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
                  AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'

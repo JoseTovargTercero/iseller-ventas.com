@@ -77,6 +77,16 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
             $stmt->execute();
             $stmt->close();
 
+            // Si el usuario confirmó, el producto al mayor asociado hereda solo el precio de compra
+            if (!empty($_POST['actualizar_mayor'])) {
+                $stmtM = $conexion->prepare("UPDATE productos SET precio_compra = ? WHERE id_producto_relacionado = ? AND mayor = 1 AND bss_id = ?");
+                if ($stmtM) {
+                    $stmtM->bind_param("dii", $precio_compra, $id, $bss_id);
+                    $stmtM->execute();
+                    $stmtM->close();
+                }
+            }
+
             // Actualizar porcentaje en stock para todos los registros del producto (solo del mismo bss_id)
             $stmt2 = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND bss_id = ?");
             $stmt2->bind_param("sii", $porcentaje, $id, $bss_id);
