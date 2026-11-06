@@ -233,6 +233,12 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             text-decoration: none;
         }
 
+        .d-icon-btn.danger:hover {
+            color: #ef5a6f;
+            border-color: rgba(239, 90, 111, .5);
+            background: rgba(239, 90, 111, .06);
+        }
+
         .d-icon-btn ion-icon {
             font-size: 16px;
         }
@@ -645,6 +651,9 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 </div>
                 <div class="modal-body" id="deuda-body"></div>
                 <div class="modal-footer">
+                    <button type="button" class="d-btn" id="btn-eliminar-deuda" style="display:none;background:rgba(239,90,111,.1);border-color:rgba(239,90,111,.3);color:#ef5a6f;">
+                        <ion-icon name="trash-outline"></ion-icon> Eliminar asignación
+                    </button>
                     <button type="button" class="d-btn d-btn-ghost" data-dismiss="modal">Cerrar</button>
                 </div>
             </div>
@@ -782,9 +791,12 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             }
             document.getElementById('deudas-vacias').classList.add('d-none');
             $tbody.innerHTML = items.map((item) => {
-                const accion = item.puede_abonar
+                let acciones = item.puede_abonar
                     ? '<button type="button" class="d-icon-btn" data-ver="' + item.id + '" title="Ver y abonar"><ion-icon name="cash-outline"></ion-icon></button>'
                     : '<button type="button" class="d-icon-btn" data-ver="' + item.id + '" title="Ver detalle"><ion-icon name="eye-outline"></ion-icon></button>';
+                if (item.puede_eliminar) {
+                    acciones += ' <button type="button" class="d-icon-btn danger" data-eliminar="' + item.asignacion_id + '" title="Eliminar asignación"><ion-icon name="trash-outline"></ion-icon></button>';
+                }
                 return `<tr>
                     <td data-label="Documento"><strong>${esc(item.numero_documento)}</strong></td>
                     <td data-label="Fecha">${esc(item.fecha)}</td>
@@ -795,7 +807,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                     <td data-label="Saldo" class="d-right d-money">${money(item.saldo)}</td>
                     <td data-label="Excedente" class="d-right d-money">${money(item.excedente)}</td>
                     <td data-label="Estado" class="d-center">${estadoBadge(item.estado_deuda)}</td>
-                    <td data-label="Acciones" class="d-center">${accion}</td>
+                    <td data-label="Acciones" class="d-center" style="white-space:nowrap;">${acciones}</td>
                 </tr>`;
             }).join('');
         }
@@ -917,15 +929,57 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 </form>` : (CFG.esAdmin ? '<div class="d-muted" style="font-size:12px;margin-top:14px;">Solo el administrador que creó la asignación puede registrar abonos sobre esta obligación.</div>' : '')}
             `;
 
+            const btnEliminarDeuda = document.getElementById('btn-eliminar-deuda');
+            btnEliminarDeuda.dataset.asignacion = Number(c.asignacion_id);
+            btnEliminarDeuda.dataset.numero = c.numero_documento || '';
+            btnEliminarDeuda.style.display = (CFG.esAdmin && d.es_creador) ? 'inline-flex' : 'none';
+
             $('#modalDeuda').modal('show');
+        }
+
+        async function eliminarAsignacion(asignacionId, numeroDocumento = '') {
+            const confirmacion = await Swal.fire({
+                title: '¿Eliminar la asignación aplicada?',
+                html: 'Se eliminará la asignación <strong>' + esc(numeroDocumento || ('#' + asignacionId)) + '</strong>, su obligación económica, los abonos registrados, los movimientos y la bitácora. Se revertirá el inventario. <strong>Esta acción no se puede deshacer.</strong>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar todo',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef5a6f'
+            });
+            if (!confirmacion.isConfirmed) return;
+
+            const data = await post('eliminar', {
+                id: asignacionId
+            });
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
+            }
+
+            $('#modalDeuda').modal('hide');
+            Alerta.toast('success', data.msg);
+            cargarTodo();
         }
 
         document.getElementById('btn-filtrar').addEventListener('click', cargarTodo);
 
         document.getElementById('tabla-deudas').addEventListener('click', (e) => {
+            const eliminar = e.target.closest('[data-eliminar]');
+            if (eliminar) {
+                const cuenta = Object.values(cuentas).find((item) => Number(item.asignacion_id) === Number(eliminar.dataset.eliminar));
+                eliminarAsignacion(Number(eliminar.dataset.eliminar), cuenta ? cuenta.numero_documento : '');
+                return;
+            }
+
             const boton = e.target.closest('[data-ver]');
             if (!boton) return;
             verDetalle(Number(boton.dataset.ver));
+        });
+
+        document.getElementById('btn-eliminar-deuda').addEventListener('click', () => {
+            const boton = document.getElementById('btn-eliminar-deuda');
+            eliminarAsignacion(Number(boton.dataset.asignacion || 0), boton.dataset.numero || '');
         });
 
         document.getElementById('deuda-body').addEventListener('submit', async (e) => {

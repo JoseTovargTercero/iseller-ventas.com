@@ -216,7 +216,7 @@ $stmtProd = $conexion->prepare(
      LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
      LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
      WHERE p.id = ? AND n.id = ? AND s.id_sucursal = ?
-       AND p.activo = 0 AND p.origen != 'c'
+       AND p.activo = 0
        AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
      LIMIT 1"
 );

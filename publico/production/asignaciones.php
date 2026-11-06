@@ -1441,12 +1441,17 @@ $hoy = date('Y-m-d');
         async function eliminarItem(id) {
             const item = asignaciones[id];
             if (!item) return;
+            const esAplicada = item.estado === 'APLICADO';
             const confirmacion = await Swal.fire({
-                title: '¿Eliminar el borrador?',
-                text: 'No se puede deshacer.',
+                title: esAplicada ? '¿Eliminar la asignación aplicada?' : '¿Eliminar el borrador?',
+                html: esAplicada
+                    ? 'Se eliminará la asignación <strong>' + esc(item.numero_documento) + '</strong>, su obligación económica, los movimientos y la bitácora. Se revertirá el inventario.'
+                        + (Number(item.pagos_count) > 0 ? ' También se borrarán <strong>' + Number(item.pagos_count) + '</strong> abono(s) registrado(s).' : '')
+                        + ' <strong>Esta acción no se puede deshacer.</strong>'
+                    : 'No se puede deshacer.',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Sí, eliminar',
+                confirmButtonText: 'Sí, eliminar todo',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#ef5a6f'
             });

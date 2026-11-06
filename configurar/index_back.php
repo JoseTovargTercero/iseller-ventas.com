@@ -423,7 +423,16 @@ ORDER BY total DESC
   // Variables faltantes
   $gastosSemana = obtenerImportes('gastos', 'semana', $semana);
   $gastosMes = obtenerImportes('gastos', 'fecha', $mes);
-  $totalVentasMesDejado = $totalVentasMes;
+  // Descontado = dinero de órdenes con status 3 (descuento de stock, no son ventas)
+  $resDejado = $conexion->query("
+    SELECT COALESCE(SUM(o.total_price), 0) AS total
+    FROM orden o
+    WHERE o.bss_id = $bss_id
+      AND o.status = '3'
+      AND DATE_FORMAT(o.created, '%Y-%m') = '$mes'
+      $extraCond $userCondO
+  ");
+  $totalVentasMesDejado = $resDejado ? (float)$resDejado->fetch_assoc()['total'] : 0;
 
   // Salida JSON
   echo json_encode([

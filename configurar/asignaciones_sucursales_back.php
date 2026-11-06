@@ -125,7 +125,7 @@ switch ($accion) {
     case 'eliminar':
         asig_exigir_admin($esAdmin);
         $id = (int) ($_POST['id'] ?? 0);
-        echo json_encode(asig_eliminar_borrador($conexion, $bss_id, $usuario_id, $id));
+        echo json_encode(asig_eliminar_asignacion($conexion, $bss_id, $usuario_id, $id));
         break;
 
     case 'deudas_listar':

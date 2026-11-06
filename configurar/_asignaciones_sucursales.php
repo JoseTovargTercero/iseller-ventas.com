@@ -837,7 +837,7 @@ function asig_reversar_stock($conexion, int $bssId, int $asignacionId, array $as
         if ($sumaDestino) {
             $stock = asig_get_stock($conexion, $bssId, $stockProductoId, $sucursalDestino, true);
             if (!$stock || (float) $stock['stock'] + 0.0001 < $cantidadStock) {
-                throw new Exception('No se puede rectificar: en la sucursal destino ya no está disponible la cantidad de "' . $detalle['producto_nombre'] . '".');
+                throw new Exception('No se puede revertir: en la sucursal destino ya no está disponible la cantidad de "' . $detalle['producto_nombre'] . '".');
             }
             $stockAntes = (float) $stock['stock'];
             $stockDespues = $stockAntes - $cantidadStock;
@@ -1002,31 +1002,81 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
     }
 }
 
-function asig_eliminar_borrador($conexion, int $bssId, int $usuarioId, int $asignacionId): array
+function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $asignacionId): array
 {
     try {
         $conexion->begin_transaction();
+
         $asignacion = asig_get_asignacion($conexion, $asignacionId, $bssId, true);
         if (!$asignacion) {
             throw new Exception('La asignación no existe.');
         }
         if ((int) $asignacion['usuario_id'] !== $usuarioId) {
-            throw new Exception('Solo el usuario que creó la asignación puede eliminarla.');
+            throw new Exception('Solo el usuario que creó y aplicó la asignación puede eliminarla.');
         }
-        if ($asignacion['estado'] !== 'BORRADOR') {
-            throw new Exception('No se puede eliminar una asignación aplicada.');
+        if (!in_array($asignacion['estado'], ['BORRADOR', 'APLICADO'], true)) {
+            throw new Exception('El estado de la asignación no permite eliminarla.');
         }
 
-        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales WHERE id = ? AND bss_id = ? AND estado = 'BORRADOR'");
+        $cuenta = null;
+        if ($asignacion['estado'] === 'APLICADO') {
+            // Mismo orden de bloqueo que la rectificación: cuenta, productos y stock.
+            $cuenta = asig_get_cuenta_por_asignacion($conexion, $asignacionId, $bssId, true);
+
+            $detalles = asig_get_detalles($conexion, $asignacionId);
+            $productos = [];
+            foreach ($detalles as $detalle) {
+                $productos[] = (int) $detalle['producto_id'];
+            }
+            asig_bloquear_productos($conexion, $bssId, $productos);
+
+            // Revierte el inventario antes de borrar los movimientos.
+            asig_reversar_stock($conexion, $bssId, $asignacionId, $asignacion);
+
+            if ($cuenta) {
+                $cuentaId = (int) $cuenta['id'];
+
+                $stmt = $conexion->prepare("DELETE FROM pagos_sucursales WHERE cuenta_sucursal_id = ?");
+                $stmt->bind_param('i', $cuentaId);
+                $stmt->execute();
+                $stmt->close();
+
+                $stmt = $conexion->prepare("DELETE FROM cuentas_sucursales WHERE id = ? AND bss_id = ?");
+                $stmt->bind_param('ii', $cuentaId, $bssId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales_movimientos WHERE asignacion_id = ? AND bss_id = ?");
+        $stmt->bind_param('ii', $asignacionId, $bssId);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales_bitacora WHERE asignacion_id = ?");
+        $stmt->bind_param('i', $asignacionId);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales_detalles WHERE asignacion_id = ?");
+        $stmt->bind_param('i', $asignacionId);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales WHERE id = ? AND bss_id = ?");
         $stmt->bind_param('ii', $asignacionId, $bssId);
         if (!$stmt->execute() || $stmt->affected_rows !== 1) {
             $stmt->close();
-            throw new Exception('No se pudo eliminar el borrador.');
+            throw new Exception('No se pudo eliminar la asignación.');
         }
         $stmt->close();
 
         $conexion->commit();
-        return asig_result_ok('Borrador eliminado.');
+        return asig_result_ok(
+            $asignacion['estado'] === 'APLICADO'
+                ? 'Asignación eliminada. Se revirtió el inventario y se borraron la deuda, los abonos y la bitácora.'
+                : 'Borrador eliminado.'
+        );
     } catch (Throwable $e) {
         $conexion->rollback();
         return asig_result_error($e->getMessage());
@@ -1121,7 +1171,7 @@ function asig_listar_asignaciones($conexion, int $bssId, int $usuarioId, bool $e
             'puede_editar' => $esAdmin && $esCreador && $row['estado'] === 'BORRADOR',
             'puede_aplicar' => $esAdmin && $esCreador && $row['estado'] === 'BORRADOR',
             'puede_rectificar' => $esAdmin && $esCreador && $row['estado'] === 'APLICADO' && $pagosCount === 0,
-            'puede_eliminar' => $esAdmin && $esCreador && $row['estado'] === 'BORRADOR',
+            'puede_eliminar' => $esAdmin && $esCreador && in_array($row['estado'], ['BORRADOR', 'APLICADO'], true),
         ];
     }
     $stmt->close();
@@ -1321,6 +1371,7 @@ function asig_listar_cuentas($conexion, int $bssId, int $usuarioId, bool $esAdmi
             'estado_deuda' => $row['estado_deuda'],
             'estado_asignacion' => $row['estado_asignacion'],
             'puede_abonar' => $esAdmin && $esCreador,
+            'puede_eliminar' => $esAdmin && $esCreador,
         ];
     }
     $stmt->close();

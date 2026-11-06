@@ -154,6 +154,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             JOIN orden_articulos oa ON oa.order_id = o.id
                             JOIN productos p ON p.id = oa.product_id
                             WHERE o.status = '3'
+                              AND o.bss_id = " . (int)$bss_id . "
+                              " . ($_SESSION['nivel'] == 2 ? 'AND o.id_sucursal = ' . (int)$_SESSION['sucursal'] : '') . "
                             ORDER BY o.id DESC
                             LIMIT 150
                           ";
