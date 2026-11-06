@@ -83,6 +83,106 @@ function vs_cantidad($valor)
 {
     return rtrim(rtrim(number_format((float) $valor, 2, '.', ','), '0'), '.');
 }
+
+function vs_exportar_xlsx(array $productos, float $total, int $sucursalSel)
+{
+    $esc = static fn($valor) => htmlspecialchars((string) $valor, ENT_QUOTES | ENT_XML1 | ENT_SUBSTITUTE, 'UTF-8');
+
+    $sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        . '<cols><col min="1" max="1" width="45" customWidth="1"/><col min="2" max="4" width="20" customWidth="1"/></cols>'
+        . '<sheetData>'
+        . '<row r="1">'
+        . '<c r="A1" t="inlineStr"><is><t>Nombre</t></is></c>'
+        . '<c r="B1" t="inlineStr"><is><t>Costo unitario</t></is></c>'
+        . '<c r="C1" t="inlineStr"><is><t>Cantidad en stock</t></is></c>'
+        . '<c r="D1" t="inlineStr"><is><t>Sub total</t></is></c>'
+        . '</row>';
+
+    $fila = 1;
+    foreach ($productos as $producto) {
+        $fila++;
+        $sheet .= '<row r="' . $fila . '">'
+            . '<c r="A' . $fila . '" t="inlineStr"><is><t>' . $esc($producto['nombre']) . '</t></is></c>'
+            . '<c r="B' . $fila . '" s="1"><v>' . number_format((float) $producto['costo_unitario'], 2, '.', '') . '</v></c>'
+            . '<c r="C' . $fila . '" s="1"><v>' . number_format((float) $producto['cantidad'], 2, '.', '') . '</v></c>'
+            . '<c r="D' . $fila . '" s="1"><v>' . number_format((float) $producto['subtotal'], 2, '.', '') . '</v></c>'
+            . '</row>';
+    }
+
+    $fila++;
+    $sheet .= '<row r="' . $fila . '">'
+        . '<c r="A' . $fila . '" t="inlineStr"><is><t>Total</t></is></c>'
+        . '<c r="B' . $fila . '"/>'
+        . '<c r="C' . $fila . '"/>'
+        . '<c r="D' . $fila . '" s="1"><v>' . number_format($total, 2, '.', '') . '</v></c>'
+        . '</row>'
+        . '</sheetData></worksheet>';
+
+    $partes = [
+        '[Content_Types].xml' =>
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            . '</Types>',
+        '_rels/.rels' =>
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            . '</Relationships>',
+        'xl/workbook.xml' =>
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<sheets><sheet name="Valor del stock" sheetId="1" r:id="rId1"/></sheets>'
+            . '</workbook>',
+        'xl/_rels/workbook.xml.rels' =>
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            . '</Relationships>',
+        'xl/styles.xml' =>
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts>'
+            . '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>'
+            . '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+            . '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+            . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            . '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+            . '</styleSheet>',
+        'xl/worksheets/sheet1.xml' => $sheet,
+    ];
+
+    $tmp = tempnam(sys_get_temp_dir(), 'vs_xlsx_');
+    $zip = new ZipArchive();
+    if ($tmp === false || $zip->open($tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        return false;
+    }
+    foreach ($partes as $ruta => $contenido) {
+        $zip->addFromString($ruta, $contenido);
+    }
+    $zip->close();
+
+    $nombre = 'valor_stock_' . ($sucursalSel > 0 ? 'sucursal_' . $sucursalSel . '_' : '') . date('Y-m-d') . '.xlsx';
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $nombre . '"');
+    header('Content-Length: ' . filesize($tmp));
+    header('Cache-Control: max-age=0');
+    readfile($tmp);
+    unlink($tmp);
+    exit;
+}
+
+if (($_GET['export'] ?? '') === 'xlsx') {
+    vs_exportar_xlsx($productos, $totalLista, $sucursalSel);
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -119,6 +219,44 @@ function vs_cantidad($valor)
             color: var(--dash-text-muted);
             margin: 3px 0 0;
             font-size: 13px;
+        }
+
+        .vs-actions {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .vs-export {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            height: 38px;
+            padding: 0 16px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #2dd4a0, #25b88a);
+            color: #07130f;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 3px 12px rgba(45, 212, 160, .25);
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+
+        .vs-export:hover {
+            color: #07130f;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 212, 160, .35);
+        }
+
+        .vs-export ion-icon {
+            font-size: 16px;
         }
 
         .vs-filter {
@@ -251,6 +389,16 @@ function vs_cantidad($valor)
             .vs-filter {
                 width: 100%;
             }
+
+            .vs-actions {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .vs-export {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -268,19 +416,24 @@ function vs_cantidad($valor)
                         <p>Inventario valorizado al costo (sin ganancia) y ganancia esperada.</p>
                     </div>
 
-                    <form method="get" class="vs-filter">
-                        <label for="sucursal">Sucursal</label>
-                        <select name="sucursal" id="sucursal" onchange="this.form.submit()">
-                            <?php if ($esAdmin && count($sucursales) > 1): ?>
-                                <option value="0" <?= $sucursalSel === 0 ? 'selected' : '' ?>>Todas las sucursales</option>
-                            <?php endif; ?>
-                            <?php foreach ($sucursales as $sucursal): ?>
-                                <?php if (!$esAdmin && (int) $sucursal['id'] !== $sucursalSel) continue; ?>
-                                <option value="<?= (int) $sucursal['id'] ?>" <?= $sucursalSel === (int) $sucursal['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars((string) $sucursal['nombre']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <form method="get" class="vs-actions">
+                        <div class="vs-filter">
+                            <label for="sucursal">Sucursal</label>
+                            <select name="sucursal" id="sucursal" onchange="this.form.submit()">
+                                <?php if ($esAdmin && count($sucursales) > 1): ?>
+                                    <option value="0" <?= $sucursalSel === 0 ? 'selected' : '' ?>>Todas las sucursales</option>
+                                <?php endif; ?>
+                                <?php foreach ($sucursales as $sucursal): ?>
+                                    <?php if (!$esAdmin && (int) $sucursal['id'] !== $sucursalSel) continue; ?>
+                                    <option value="<?= (int) $sucursal['id'] ?>" <?= $sucursalSel === (int) $sucursal['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars((string) $sucursal['nombre']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <button type="submit" name="export" value="xlsx" class="vs-export">
+                            <ion-icon name="download-outline"></ion-icon> Exportar XLSX
+                        </button>
                     </form>
                 </div>
 
