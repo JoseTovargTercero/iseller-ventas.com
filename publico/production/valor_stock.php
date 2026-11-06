@@ -84,9 +84,36 @@ function vs_cantidad($valor)
     return rtrim(rtrim(number_format((float) $valor, 2, '.', ','), '0'), '.');
 }
 
+function vs_zip(array $archivos): string
+{
+    $local = '';
+    $central = '';
+    $offset = 0;
+    $hora = 0;
+    $fecha = 33; // 1980-01-01
+
+    foreach ($archivos as $nombre => $contenido) {
+        $nombre = (string) $nombre;
+        $contenido = (string) $contenido;
+        $tam = strlen($contenido);
+        $crc = crc32($contenido);
+
+        $cabecera = pack('VvvvvvVVVvv', 0x04034b50, 20, 0, 0, $hora, $fecha, $crc, $tam, $tam, strlen($nombre), 0);
+        $local .= $cabecera . $nombre . $contenido;
+
+        $central .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0, 0, $hora, $fecha, $crc, $tam, $tam, strlen($nombre), 0, 0, 0, 0, 0, $offset) . $nombre;
+
+        $offset += strlen($cabecera) + strlen($nombre) + $tam;
+    }
+
+    return $local . $central . pack('VvvvvVVv', 0x06054b50, 0, 0, count($archivos), count($archivos), strlen($central), $offset, 0);
+}
+
 function vs_exportar_xlsx(array $productos, float $total, int $sucursalSel)
 {
-    $esc = static fn($valor) => htmlspecialchars((string) $valor, ENT_QUOTES | ENT_XML1 | ENT_SUBSTITUTE, 'UTF-8');
+    $esc = function ($valor) {
+        return htmlspecialchars((string) $valor, ENT_QUOTES | ENT_XML1 | ENT_SUBSTITUTE, 'UTF-8');
+    };
 
     $sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
@@ -158,29 +185,29 @@ function vs_exportar_xlsx(array $productos, float $total, int $sucursalSel)
         'xl/worksheets/sheet1.xml' => $sheet,
     ];
 
-    $tmp = tempnam(sys_get_temp_dir(), 'vs_xlsx_');
-    $zip = new ZipArchive();
-    if ($tmp === false || $zip->open($tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-        return false;
-    }
-    foreach ($partes as $ruta => $contenido) {
-        $zip->addFromString($ruta, $contenido);
-    }
-    $zip->close();
-
+    $binario = vs_zip($partes);
     $nombre = 'valor_stock_' . ($sucursalSel > 0 ? 'sucursal_' . $sucursalSel . '_' : '') . date('Y-m-d') . '.xlsx';
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
 
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment; filename="' . $nombre . '"');
-    header('Content-Length: ' . filesize($tmp));
+    header('Content-Length: ' . strlen($binario));
     header('Cache-Control: max-age=0');
-    readfile($tmp);
-    unlink($tmp);
+    echo $binario;
     exit;
 }
 
 if (($_GET['export'] ?? '') === 'xlsx') {
-    vs_exportar_xlsx($productos, $totalLista, $sucursalSel);
+    try {
+        vs_exportar_xlsx($productos, $totalLista, $sucursalSel);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'No se pudo generar el XLSX: ' . $e->getMessage();
+    }
     exit;
 }
 ?>
