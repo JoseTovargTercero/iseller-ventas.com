@@ -81,6 +81,7 @@ switch ($accion) {
     case 'guardar':
         asig_exigir_admin($esAdmin);
         $detalles = json_decode((string) ($_POST['detalles'] ?? '[]'), true);
+        $conceptos = json_decode((string) ($_POST['conceptos'] ?? '[]'), true);
         $resultado = asig_guardar_asignacion($conexion, $bss_id, $usuario_id, [
             'id' => (int) ($_POST['id'] ?? 0),
             'sucursal_origen' => (int) ($_POST['sucursal_origen'] ?? 0),
@@ -90,6 +91,7 @@ switch ($accion) {
             'descuenta_origen' => $_POST['descuenta_origen'] ?? 1,
             'suma_destino' => $_POST['suma_destino'] ?? 1,
             'detalles' => is_array($detalles) ? $detalles : [],
+            'conceptos' => is_array($conceptos) ? $conceptos : [],
         ]);
         echo json_encode($resultado);
         break;
@@ -103,6 +105,7 @@ switch ($accion) {
     case 'rectificar':
         asig_exigir_admin($esAdmin);
         $detalles = json_decode((string) ($_POST['detalles'] ?? '[]'), true);
+        $conceptos = json_decode((string) ($_POST['conceptos'] ?? '[]'), true);
         $resultado = asig_rectificar_asignacion(
             $conexion,
             $bss_id,
@@ -116,6 +119,7 @@ switch ($accion) {
                 'descuenta_origen' => $_POST['descuenta_origen'] ?? 1,
                 'suma_destino' => $_POST['suma_destino'] ?? 1,
                 'detalles' => is_array($detalles) ? $detalles : [],
+                'conceptos' => is_array($conceptos) ? $conceptos : [],
             ],
             (string) ($_POST['motivo'] ?? '')
         );
@@ -156,6 +160,14 @@ switch ($accion) {
 
     case 'registrar_pago':
         asig_exigir_admin($esAdmin);
+
+        $subida = asig_guardar_comprobante($_FILES['comprobante'] ?? null, $bss_id);
+        if ($subida['status'] !== 'ok') {
+            echo json_encode($subida);
+            break;
+        }
+        $comprobante = $subida['data']['path'] ?? null;
+
         $resultado = asig_registrar_pago($conexion, $bss_id, $usuario_id, [
             'cuenta_id' => (int) ($_POST['cuenta_id'] ?? 0),
             'monto_usd' => $_POST['monto_usd'] ?? 0,
@@ -165,7 +177,12 @@ switch ($accion) {
             'metodo_pago' => $_POST['metodo_pago'] ?? '',
             'referencia' => $_POST['referencia'] ?? '',
             'observaciones' => $_POST['observaciones'] ?? '',
+            'comprobante' => $comprobante,
         ]);
+
+        if ($resultado['status'] !== 'ok' && $comprobante) {
+            asig_eliminar_archivos_comprobantes([$comprobante]);
+        }
         echo json_encode($resultado);
         break;
 

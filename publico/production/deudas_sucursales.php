@@ -726,6 +726,24 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             }
         }
 
+        async function postForm(accion, formData) {
+            formData.set('accion', accion);
+            const res = await fetch(CFG.endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            const texto = await res.text();
+            try {
+                return JSON.parse(texto);
+            } catch (error) {
+                console.error('Respuesta no válida:', texto);
+                return {
+                    status: 'error',
+                    msg: 'El servidor devolvió una respuesta no válida.'
+                };
+            }
+        }
+
         function filtros() {
             return {
                 sucursal_deudora: document.getElementById('filtro-deudora').value,
@@ -828,7 +846,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             const original = Number(c.monto_original);
             const saldo = Math.max(0, original - abonado);
             const excedente = Math.max(0, abonado - original);
-            const puedeAbonar = CFG.esAdmin && d.es_creador;
+            const puedeAbonar = CFG.esAdmin;
 
             const filasProductos = (d.detalles || []).map((detalle) => `<tr>
                 <td>${esc(detalle.producto_nombre)}</td>
@@ -836,6 +854,21 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 <td class="d-right d-money">${money(detalle.costo_unitario)}</td>
                 <td class="d-right d-money">${money(detalle.subtotal)}</td>
             </tr>`).join('');
+
+            const conceptosDetalle = d.conceptos || [];
+            const filasConceptos = conceptosDetalle.map((concepto) => `<tr>
+                <td>${esc(concepto.concepto)}</td>
+                <td class="d-right d-money">${money(concepto.monto)}</td>
+            </tr>`).join('');
+            const conceptosHtml = conceptosDetalle.length
+                ? `<div class="d-section-title">Conceptos y servicios sin inventario</div>
+                   <div class="d-table-wrap">
+                       <table class="d-table">
+                           <thead><tr><th>Concepto</th><th class="d-right">Monto USD</th></tr></thead>
+                           <tbody>${filasConceptos}</tbody>
+                       </table>
+                   </div>`
+                : '';
 
             const filasPagos = pagos.length
                 ? pagos.map((pago) => `<tr>
@@ -845,9 +878,10 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                     <td class="d-right">${pago.tasa_peso_dolar !== null ? Number(pago.tasa_peso_dolar) : '—'}</td>
                     <td>${esc(pago.metodo_pago || '—')}</td>
                     <td>${esc(pago.referencia || '—')}</td>
+                    <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
                     <td>${esc(pago.usuario_nombre || '—')}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="7" class="d-muted d-center">Sin abonos registrados.</td></tr>';
+                : '<tr><td colspan="8" class="d-muted d-center">Sin abonos registrados.</td></tr>';
 
             document.getElementById('deuda-titulo').textContent = 'Obligación ' + (c.numero_documento || '');
             document.getElementById('deuda-body').innerHTML = `
@@ -872,10 +906,12 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                     </table>
                 </div>
 
+                ${conceptosHtml}
+
                 <div class="d-section-title">Historial de abonos</div>
                 <div class="d-table-wrap">
                     <table class="d-table">
-                        <thead><tr><th>Fecha</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Usuario</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Comprobante</th><th>Usuario</th></tr></thead>
                         <tbody>${filasPagos}</tbody>
                     </table>
                 </div>
@@ -920,13 +956,18 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                             <label class="d-label" for="pago-observaciones">Observaciones</label>
                             <textarea id="pago-observaciones" class="d-textarea" placeholder="Opcional"></textarea>
                         </div>
+                        <div class="d-field" style="grid-column:1/-1;">
+                            <label class="d-label" for="pago-comprobante">Comprobante (imagen o PDF)</label>
+                            <input type="file" id="pago-comprobante" class="d-input" accept="image/jpeg,image/png,image/webp,application/pdf">
+                            <small class="d-muted" style="font-size:11px;">Máximo 5 MB. Formatos: JPG, PNG, WEBP o PDF.</small>
+                        </div>
                     </div>
                     <div style="display:flex;justify-content:flex-end;margin-top:12px;">
                         <button type="submit" class="d-btn d-btn-primary" id="btn-registrar-pago">
                             <ion-icon name="save-outline"></ion-icon> Registrar abono
                         </button>
                     </div>
-                </form>` : (CFG.esAdmin ? '<div class="d-muted" style="font-size:12px;margin-top:14px;">Solo el administrador que creó la asignación puede registrar abonos sobre esta obligación.</div>' : '')}
+                </form>` : ''}
             `;
 
             const btnEliminarDeuda = document.getElementById('btn-eliminar-deuda');
@@ -992,19 +1033,29 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 return;
             }
 
+            const archivo = document.getElementById('pago-comprobante').files[0];
+            if (archivo && archivo.size > 5 * 1024 * 1024) {
+                Alerta.toast('error', 'El comprobante supera los 5 MB.');
+                return;
+            }
+
             const boton = document.getElementById('btn-registrar-pago');
             boton.disabled = true;
 
-            const data = await post('registrar_pago', {
-                cuenta_id: document.getElementById('pago-cuenta').value,
-                monto_usd: monto,
-                fecha: document.getElementById('pago-fecha').value,
-                tasa_bcv: document.getElementById('pago-bcv').value,
-                tasa_peso_dolar: document.getElementById('pago-peso').value,
-                metodo_pago: document.getElementById('pago-metodo').value,
-                referencia: document.getElementById('pago-referencia').value,
-                observaciones: document.getElementById('pago-observaciones').value
-            });
+            const formData = new FormData();
+            formData.set('cuenta_id', document.getElementById('pago-cuenta').value);
+            formData.set('monto_usd', monto);
+            formData.set('fecha', document.getElementById('pago-fecha').value);
+            formData.set('tasa_bcv', document.getElementById('pago-bcv').value);
+            formData.set('tasa_peso_dolar', document.getElementById('pago-peso').value);
+            formData.set('metodo_pago', document.getElementById('pago-metodo').value);
+            formData.set('referencia', document.getElementById('pago-referencia').value);
+            formData.set('observaciones', document.getElementById('pago-observaciones').value);
+            if (archivo) {
+                formData.set('comprobante', archivo);
+            }
+
+            const data = await postForm('registrar_pago', formData);
 
             boton.disabled = false;
 

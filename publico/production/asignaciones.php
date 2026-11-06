@@ -862,7 +862,35 @@ $hoy = date('Y-m-d');
                             <div class="a-empty d-none" id="lineas-vacias">
                                 <ion-icon name="cube-outline"></ion-icon>
                                 <h5>Sin productos agregados</h5>
-                                <p>Use el buscador para agregar uno o varios productos.</p>
+                                <p>Use el buscador o agregue un concepto sin inventario más abajo.</p>
+                            </div>
+
+                            <div class="a-section-title" style="margin-top:18px;">Conceptos y servicios sin inventario</div>
+                            <div class="a-note">
+                                <ion-icon name="receipt-outline"></ion-icon>
+                                <span>Agregue deudas especiales o de logística, por ejemplo “costo de transporte”. No modifican inventario y se suman al total de la obligación.</span>
+                            </div>
+                            <div class="a-search" style="grid-template-columns:1fr 160px auto;">
+                                <input type="text" id="concepto-descripcion" class="a-input" placeholder="Ej: Costo de transporte">
+                                <input type="number" id="concepto-monto" class="a-input" placeholder="Monto USD" min="0.01" step="0.01">
+                                <button type="button" class="a-btn a-btn-ghost" id="btn-agregar-concepto">
+                                    <ion-icon name="add-outline"></ion-icon> Agregar
+                                </button>
+                            </div>
+                            <div class="a-table-wrap">
+                                <table class="a-table" id="tabla-conceptos">
+                                    <thead>
+                                        <tr>
+                                            <th>Concepto</th>
+                                            <th class="a-right">Monto USD</th>
+                                            <th class="a-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="a-empty d-none" id="conceptos-vacios" style="padding:18px;">
+                                <p>Sin conceptos agregados.</p>
                             </div>
 
                             <div class="a-total-row">Total asignado <strong id="total-asignacion">$0.00</strong></div>
@@ -935,6 +963,7 @@ $hoy = date('Y-m-d');
 
         let asignaciones = {};
         let lineas = [];
+        let conceptos = [];
         let editando = null;
         let rectificando = false;
         let resultadosProductos = [];
@@ -1060,6 +1089,7 @@ $hoy = date('Y-m-d');
             editando = null;
             rectificando = false;
             lineas = [];
+            conceptos = [];
             resultadosProductos = [];
             document.getElementById('sucursal-origen').value = '';
             document.getElementById('sucursal-destino').value = '';
@@ -1069,6 +1099,8 @@ $hoy = date('Y-m-d');
             document.getElementById('suma-destino').checked = true;
             document.getElementById('buscar-producto').value = '';
             document.getElementById('filtro-tipo').value = '';
+            document.getElementById('concepto-descripcion').value = '';
+            document.getElementById('concepto-monto').value = '';
             document.getElementById('motivo-rectificacion').value = '';
             $resultados.classList.remove('show');
             $resultados.innerHTML = '';
@@ -1078,6 +1110,7 @@ $hoy = date('Y-m-d');
             document.getElementById('btn-guardar-aplicar').classList.remove('d-none');
             document.getElementById('btn-rectificar').classList.add('d-none');
             document.getElementById('form-titulo').innerHTML = '<ion-icon name="add-circle-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Nueva asignación';
+            renderConceptos();
             renderLineas();
         }
 
@@ -1109,6 +1142,10 @@ $hoy = date('Y-m-d');
                 cantidad: Number(d.cantidad),
                 mayor: !!d.es_mayor
             }));
+            conceptos = (detalle.conceptos || []).map((c) => ({
+                concepto: c.concepto,
+                monto: Number(c.monto)
+            }));
 
             document.getElementById('sucursal-origen').value = String(asignacion.sucursal_origen);
             document.getElementById('sucursal-destino').value = String(asignacion.sucursal_destino);
@@ -1136,8 +1173,53 @@ $hoy = date('Y-m-d');
                 document.getElementById('btn-rectificar').classList.add('d-none');
             }
 
+            renderConceptos();
             renderLineas();
             mostrarFormulario();
+        }
+
+        function totalAsignacion() {
+            const totalLineas = lineas.reduce((suma, linea) => suma + (Number(linea.cantidad || 0) * Number(linea.costo_unitario || 0)), 0);
+            const totalConceptos = conceptos.reduce((suma, concepto) => suma + Number(concepto.monto || 0), 0);
+            return totalLineas + totalConceptos;
+        }
+
+        function actualizarTotal() {
+            $total.textContent = money(totalAsignacion());
+        }
+
+        function actualizarBotonera() {
+            const origen = document.getElementById('sucursal-origen').value;
+            const destino = document.getElementById('sucursal-destino').value;
+            const mismo = origen && destino && origen === destino;
+            const sinDocumento = lineas.length === 0 && conceptos.length === 0;
+
+            ['btn-guardar-aplicar', 'btn-guardar-borrador', 'btn-rectificar'].forEach((id) => {
+                const boton = document.getElementById(id);
+                if (boton) boton.disabled = sinDocumento || mismo;
+            });
+        }
+
+        function renderConceptos() {
+            const tbody = document.querySelector('#tabla-conceptos tbody');
+            if (!tbody) return;
+
+            if (conceptos.length === 0) {
+                tbody.innerHTML = '';
+                document.getElementById('conceptos-vacios').classList.remove('d-none');
+            } else {
+                document.getElementById('conceptos-vacios').classList.add('d-none');
+                tbody.innerHTML = conceptos.map((concepto, indice) => `<tr>
+                    <td data-label="Concepto"><strong>${esc(concepto.concepto)}</strong> <span class="a-badge a-badge-borrador" style="text-transform:none;">Sin inventario</span></td>
+                    <td data-label="Monto" class="a-right a-money">${money(concepto.monto)}</td>
+                    <td data-label="" class="a-center">
+                        <button type="button" class="a-icon-btn danger" data-quitar-concepto="${indice}" title="Quitar concepto"><ion-icon name="trash-outline"></ion-icon></button>
+                    </td>
+                </tr>`).join('');
+            }
+
+            actualizarTotal();
+            actualizarBotonera();
         }
 
         function renderLineas() {
@@ -1175,15 +1257,8 @@ $hoy = date('Y-m-d');
                 $lineasBody.innerHTML = filas;
             }
 
-            const total = lineas.reduce((suma, linea) => suma + (Number(linea.cantidad || 0) * Number(linea.costo_unitario || 0)), 0);
-            $total.textContent = money(total);
-
-            const btnAplicar = document.getElementById('btn-guardar-aplicar');
-            btnAplicar.disabled = lineas.length === 0 || mismo;
-            const btnGuardar = document.getElementById('btn-guardar-borrador');
-            btnGuardar.disabled = lineas.length === 0 || mismo;
-            const btnRectificar = document.getElementById('btn-rectificar');
-            btnRectificar.disabled = lineas.length === 0 || mismo;
+            actualizarTotal();
+            actualizarBotonera();
         }
 
         function actualizarCantidadLinea(input) {
@@ -1205,8 +1280,7 @@ $hoy = date('Y-m-d');
                 && Number(linea.cantidad) > Number(linea.stock) + 0.0001;
             input.classList.toggle('invalid', invalido);
 
-            const total = lineas.reduce((suma, item) => suma + (Number(item.cantidad || 0) * Number(item.costo_unitario || 0)), 0);
-            $total.textContent = money(total);
+            actualizarTotal();
         }
 
         async function buscarProductos() {
@@ -1282,6 +1356,28 @@ $hoy = date('Y-m-d');
             renderLineas();
         }
 
+        function agregarConcepto() {
+            const descripcion = document.getElementById('concepto-descripcion').value.trim();
+            const monto = Number(document.getElementById('concepto-monto').value || 0);
+
+            if (descripcion === '') {
+                Alerta.toast('error', 'Escriba el nombre del concepto.');
+                return;
+            }
+            if (!monto || monto <= 0) {
+                Alerta.toast('error', 'El monto del concepto debe ser mayor que cero.');
+                return;
+            }
+
+            conceptos.push({
+                concepto: descripcion,
+                monto: Math.round(monto * 100) / 100
+            });
+            document.getElementById('concepto-descripcion').value = '';
+            document.getElementById('concepto-monto').value = '';
+            renderConceptos();
+        }
+
         function datosFormulario() {
             return {
                 id: editando ? editando.id : 0,
@@ -1294,6 +1390,10 @@ $hoy = date('Y-m-d');
                 detalles: JSON.stringify(lineas.map((linea) => ({
                     producto_id: linea.producto_id,
                     cantidad: linea.cantidad
+                }))),
+                conceptos: JSON.stringify(conceptos.map((concepto) => ({
+                    concepto: concepto.concepto,
+                    monto: concepto.monto
                 })))
             };
         }
@@ -1312,9 +1412,15 @@ $hoy = date('Y-m-d');
                 Alerta.toast('error', 'Seleccione la fecha de la asignación.');
                 return false;
             }
-            if (lineas.length === 0) {
-                Alerta.toast('error', 'Agregue al menos un producto.');
+            if (lineas.length === 0 && conceptos.length === 0) {
+                Alerta.toast('error', 'Agregue al menos un producto o un concepto.');
                 return false;
+            }
+            for (const concepto of conceptos) {
+                if (!concepto.concepto || Number(concepto.monto) <= 0) {
+                    Alerta.toast('error', 'Todos los conceptos deben tener descripción y monto mayor que cero.');
+                    return false;
+                }
             }
             for (const linea of lineas) {
                 if (!linea.cantidad || Number(linea.cantidad) <= 0) {
@@ -1350,7 +1456,7 @@ $hoy = date('Y-m-d');
 
             const confirmacion = await Swal.fire({
                 title: '¿Aplicar la asignación?',
-                html: 'Se descontará el inventario de origen (si está activado), se sumará en destino y se generará la deuda por <strong>' + money(lineas.reduce((s, l) => s + (Number(l.cantidad) * Number(l.costo_unitario)), 0)) + '</strong>.',
+                html: 'Se descontará el inventario de origen (si está activado), se sumará en destino y se generará la deuda por <strong>' + money(totalAsignacion()) + '</strong>.',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, aplicar',
@@ -1493,6 +1599,21 @@ $hoy = date('Y-m-d');
                 <td class="a-right a-money">${money(detalle.subtotal)}</td>
             </tr>`).join('');
 
+            const conceptosDetalle = d.conceptos || [];
+            const filasConceptos = conceptosDetalle.map((concepto) => `<tr>
+                <td>${esc(concepto.concepto)}</td>
+                <td class="a-right a-money">${money(concepto.monto)}</td>
+            </tr>`).join('');
+            const conceptosHtml = conceptosDetalle.length
+                ? `<div class="a-section-title">Conceptos y servicios sin inventario</div>
+                   <div class="a-table-wrap">
+                       <table class="a-table">
+                           <thead><tr><th>Concepto</th><th class="a-right">Monto USD</th></tr></thead>
+                           <tbody>${filasConceptos}</tbody>
+                       </table>
+                   </div>`
+                : '';
+
             const filasPagos = pagos.length
                 ? pagos.map((pago) => `<tr>
                     <td>${esc(pago.fecha)}</td>
@@ -1500,9 +1621,10 @@ $hoy = date('Y-m-d');
                     <td class="a-right">${pago.tasa_bcv !== null ? Number(pago.tasa_bcv) : '—'}</td>
                     <td class="a-right">${pago.tasa_peso_dolar !== null ? Number(pago.tasa_peso_dolar) : '—'}</td>
                     <td>${esc(pago.metodo_pago || '—')}</td>
+                    <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
                     <td>${esc(pago.usuario_nombre || '—')}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="6" class="a-muted a-center">Sin abonos registrados.</td></tr>';
+                : '<tr><td colspan="7" class="a-muted a-center">Sin abonos registrados.</td></tr>';
 
             const productosPorId = {};
             (d.detalles || []).forEach((detalle) => {
@@ -1541,7 +1663,7 @@ $hoy = date('Y-m-d');
                 ? `<div class="a-section-title">Abonos</div>
                    <div class="a-table-wrap">
                        <table class="a-table">
-                           <thead><tr><th>Fecha</th><th class="a-right">Monto</th><th class="a-right">BCV</th><th class="a-right">Dólar/peso</th><th>Método</th><th>Usuario</th></tr></thead>
+                           <thead><tr><th>Fecha</th><th class="a-right">Monto</th><th class="a-right">BCV</th><th class="a-right">Dólar/peso</th><th>Método</th><th>Comprobante</th><th>Usuario</th></tr></thead>
                            <tbody>${filasPagos}</tbody>
                        </table>
                    </div>`
@@ -1568,6 +1690,7 @@ $hoy = date('Y-m-d');
                         <tbody>${filas || '<tr><td colspan="4" class="a-muted a-center">Sin productos.</td></tr>'}</tbody>
                     </table>
                 </div>
+                ${conceptosHtml}
                 <div class="a-summary-line total"><span>Total asignado</span><b>${money(a.total)}</b></div>
 
                 ${deudaHtml}
@@ -1613,6 +1736,20 @@ $hoy = date('Y-m-d');
         document.getElementById('btn-guardar-borrador').addEventListener('click', guardarBorrador);
         document.getElementById('btn-guardar-aplicar').addEventListener('click', guardarYAplicar);
         document.getElementById('btn-rectificar').addEventListener('click', rectificar);
+        document.getElementById('btn-agregar-concepto').addEventListener('click', agregarConcepto);
+        document.getElementById('concepto-monto').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                agregarConcepto();
+            }
+        });
+
+        document.getElementById('tabla-conceptos').addEventListener('click', (e) => {
+            const boton = e.target.closest('[data-quitar-concepto]');
+            if (!boton) return;
+            conceptos.splice(Number(boton.dataset.quitarConcepto), 1);
+            renderConceptos();
+        });
 
         document.getElementById('resultados-productos').addEventListener('click', (e) => {
             const boton = e.target.closest('[data-resultado]');
@@ -1672,6 +1809,7 @@ $hoy = date('Y-m-d');
             if (accion === 'eliminar') eliminarItem(id);
         });
 
+        renderConceptos();
         renderLineas();
         cargarLista();
     </script>

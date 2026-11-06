@@ -111,6 +111,107 @@ function asig_lineas_input($raw): array
     return array_values($lineas);
 }
 
+function asig_lineas_conceptos($raw): array
+{
+    if (!is_array($raw)) {
+        return [];
+    }
+
+    $conceptos = [];
+    foreach ($raw as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $concepto = trim((string) ($item['concepto'] ?? ''));
+        $monto = asig_dinero($item['monto'] ?? 0);
+        if ($concepto === '' || $monto <= 0) {
+            continue;
+        }
+        $conceptos[] = [
+            'concepto' => mb_substr($concepto, 0, 255, 'UTF-8'),
+            'monto' => $monto,
+        ];
+    }
+
+    if (count($conceptos) > 100) {
+        $conceptos = array_slice($conceptos, 0, 100);
+    }
+
+    return $conceptos;
+}
+
+function asig_total_conceptos(array $conceptos): float
+{
+    $total = 0.0;
+    foreach ($conceptos as $concepto) {
+        $total += (float) ($concepto['monto'] ?? 0);
+    }
+    return asig_dinero($total);
+}
+
+function asig_guardar_comprobante($archivo, int $bssId): array
+{
+    if (!is_array($archivo) || ($archivo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return asig_result_ok('', ['path' => null]);
+    }
+    if (($archivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return asig_result_error('No se pudo subir el comprobante.');
+    }
+    if (($archivo['size'] ?? 0) <= 0 || ($archivo['size'] ?? 0) > 5 * 1024 * 1024) {
+        return asig_result_error('El comprobante debe pesar como máximo 5 MB.');
+    }
+
+    $extension = strtolower(pathinfo((string) ($archivo['name'] ?? ''), PATHINFO_EXTENSION));
+    $permitidas = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+    if (!in_array($extension, $permitidas, true)) {
+        return asig_result_error('El comprobante debe ser una imagen JPG, PNG, WEBP o un archivo PDF.');
+    }
+
+    $mime = '';
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $mime = (string) finfo_file($finfo, $archivo['tmp_name']);
+            finfo_close($finfo);
+        }
+    }
+    $mimesPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if ($mime !== '' && !in_array($mime, $mimesPermitidos, true)) {
+        return asig_result_error('El archivo del comprobante no es una imagen o PDF válido.');
+    }
+
+    $directorio = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'comprobantes_pagos';
+    if (!is_dir($directorio) && !mkdir($directorio, 0777, true) && !is_dir($directorio)) {
+        return asig_result_error('No se pudo crear la carpeta de comprobantes.');
+    }
+
+    $nombre = 'pago_' . $bssId . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+    $destino = $directorio . DIRECTORY_SEPARATOR . $nombre;
+    if (!move_uploaded_file($archivo['tmp_name'], $destino)) {
+        return asig_result_error('No se pudo guardar el comprobante.');
+    }
+
+    return asig_result_ok('', ['path' => 'uploads/comprobantes_pagos/' . $nombre]);
+}
+
+function asig_eliminar_archivos_comprobantes(array $paths): void
+{
+    $base = realpath(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'comprobantes_pagos');
+    if ($base === false) {
+        return;
+    }
+
+    foreach ($paths as $path) {
+        if (!is_string($path) || $path === '') {
+            continue;
+        }
+        $completo = realpath(dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path));
+        if ($completo !== false && str_starts_with($completo, $base . DIRECTORY_SEPARATOR) && is_file($completo)) {
+            @unlink($completo);
+        }
+    }
+}
+
 function asig_sucursal_existe($conexion, int $bssId, int $sucursalId): bool
 {
     $stmt = $conexion->prepare("SELECT id FROM sucursales WHERE id = ? AND bss_id = ? LIMIT 1");
@@ -442,6 +543,48 @@ function asig_insertar_detalles($conexion, int $asignacionId, array $lineas): vo
     $stmt->close();
 }
 
+function asig_get_conceptos($conexion, int $asignacionId): array
+{
+    $stmt = $conexion->prepare(
+        "SELECT id, asignacion_id, concepto, monto, created_at
+         FROM asignaciones_sucursales_conceptos
+         WHERE asignacion_id = ?
+         ORDER BY id ASC"
+    );
+    $stmt->bind_param('i', $asignacionId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $conceptos = [];
+    while ($row = $result->fetch_assoc()) {
+        $conceptos[] = $row;
+    }
+    $stmt->close();
+    return $conceptos;
+}
+
+function asig_insertar_conceptos($conexion, int $asignacionId, array $conceptos): void
+{
+    if (count($conceptos) === 0) {
+        return;
+    }
+
+    $stmt = $conexion->prepare(
+        "INSERT INTO asignaciones_sucursales_conceptos
+         (asignacion_id, concepto, monto)
+         VALUES (?, ?, ?)"
+    );
+    foreach ($conceptos as $concepto) {
+        $texto = (string) $concepto['concepto'];
+        $monto = (float) $concepto['monto'];
+        $stmt->bind_param('isd', $asignacionId, $texto, $monto);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            throw new Exception('No se pudo guardar el concepto de la asignación.');
+        }
+    }
+    $stmt->close();
+}
+
 function asig_movimiento($conexion, int $bssId, int $asignacionId, int $productoId, int $sucursalId, string $tipo, float $cantidad, float $antes, float $despues): void
 {
     $stmt = $conexion->prepare(
@@ -569,6 +712,7 @@ function asig_guardar_asignacion($conexion, int $bssId, int $usuarioId, array $i
     $descuentaOrigen = asig_bool($input['descuenta_origen'] ?? true);
     $sumaDestino = asig_bool($input['suma_destino'] ?? true);
     $detalles = $input['detalles'] ?? [];
+    $conceptos = asig_lineas_conceptos($input['conceptos'] ?? []);
 
     if (!asig_sucursal_existe($conexion, $bssId, $sucursalOrigen) || !asig_sucursal_existe($conexion, $bssId, $sucursalDestino)) {
         return asig_result_error('La sucursal de origen o destino no pertenece a este negocio.');
@@ -579,13 +723,19 @@ function asig_guardar_asignacion($conexion, int $bssId, int $usuarioId, array $i
     if (!asig_fecha_valida($fecha)) {
         return asig_result_error('La fecha de la asignación no es válida.');
     }
-
-    $validacion = asig_validar_lineas($conexion, $bssId, $sucursalOrigen, $detalles, $descuentaOrigen, false);
-    if ($validacion['status'] !== 'ok') {
-        return $validacion;
+    if (count(asig_lineas_input($detalles)) === 0 && count($conceptos) === 0) {
+        return asig_result_error('Agregue al menos un producto o un concepto a la asignación.');
     }
-    $lineas = $validacion['data']['lineas'];
-    $total = asig_dinero(array_sum(array_column($lineas, 'subtotal')));
+
+    $lineas = [];
+    if (count(asig_lineas_input($detalles)) > 0) {
+        $validacion = asig_validar_lineas($conexion, $bssId, $sucursalOrigen, $detalles, $descuentaOrigen, false);
+        if ($validacion['status'] !== 'ok') {
+            return $validacion;
+        }
+        $lineas = $validacion['data']['lineas'];
+    }
+    $total = asig_dinero(array_sum(array_column($lineas, 'subtotal')) + asig_total_conceptos($conceptos));
 
     try {
         $conexion->begin_transaction();
@@ -621,8 +771,14 @@ function asig_guardar_asignacion($conexion, int $bssId, int $usuarioId, array $i
             $stmt->execute();
             $stmt->close();
 
+            $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales_conceptos WHERE asignacion_id = ?");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $stmt->close();
+
             asig_insertar_detalles($conexion, $id, $lineas);
-            asig_bitacora($conexion, $id, $usuarioId, 'EDITADA', '', null, ['lineas' => $lineas, 'total' => $total]);
+            asig_insertar_conceptos($conexion, $id, $conceptos);
+            asig_bitacora($conexion, $id, $usuarioId, 'EDITADA', '', null, ['lineas' => $lineas, 'conceptos' => $conceptos, 'total' => $total]);
 
             $conexion->commit();
             return asig_result_ok('Asignación actualizada.', [
@@ -655,7 +811,8 @@ function asig_guardar_asignacion($conexion, int $bssId, int $usuarioId, array $i
         $stmt->close();
 
         asig_insertar_detalles($conexion, $nuevoId, $lineas);
-        asig_bitacora($conexion, $nuevoId, $usuarioId, 'CREADA', '', null, ['lineas' => $lineas, 'total' => $total]);
+        asig_insertar_conceptos($conexion, $nuevoId, $conceptos);
+        asig_bitacora($conexion, $nuevoId, $usuarioId, 'CREADA', '', null, ['lineas' => $lineas, 'conceptos' => $conceptos, 'total' => $total]);
 
         $conexion->commit();
         return asig_result_ok('Asignación guardada como borrador.', [
@@ -687,57 +844,64 @@ function asig_aplicar_asignacion($conexion, int $bssId, int $usuarioId, int $asi
         }
 
         $detalles = asig_get_detalles($conexion, $asignacionId);
-        if (count($detalles) === 0) {
-            throw new Exception('La asignación no tiene productos.');
+        $conceptos = asig_get_conceptos($conexion, $asignacionId);
+        if (count($detalles) === 0 && count($conceptos) === 0) {
+            throw new Exception('La asignación no tiene productos ni conceptos.');
         }
 
-        $rawDetalles = [];
-        foreach ($detalles as $detalle) {
-            $rawDetalles[] = [
-                'producto_id' => (int) $detalle['producto_id'],
-                'cantidad' => (float) $detalle['cantidad'],
-            ];
-        }
-
-        $validacion = asig_validar_lineas(
-            $conexion,
-            $bssId,
-            (int) $asignacion['sucursal_origen'],
-            $rawDetalles,
-            (bool) $asignacion['descuenta_origen'],
-            true
-        );
-        if ($validacion['status'] !== 'ok') {
-            throw new Exception($validacion['msg']);
-        }
-        $lineas = $validacion['data']['lineas'];
-        $total = asig_dinero(array_sum(array_column($lineas, 'subtotal')));
-
-        // El costo histórico se fija al momento de aplicar, no al crear el borrador.
-        $stmt = $conexion->prepare(
-            "UPDATE asignaciones_sucursales_detalles
-             SET producto_nombre = ?, costo_unitario = ?, subtotal = ?
-             WHERE asignacion_id = ? AND producto_id = ?"
-        );
-        foreach ($lineas as $linea) {
-            $productoNombre = (string) $linea['producto_nombre'];
-            $costoUnitario = (float) $linea['costo_unitario'];
-            $subtotalLinea = (float) $linea['subtotal'];
-            $productoId = (int) $linea['producto_id'];
-            $stmt->bind_param(
-                'sddii',
-                $productoNombre,
-                $costoUnitario,
-                $subtotalLinea,
-                $asignacionId,
-                $productoId
-            );
-            if (!$stmt->execute()) {
-                $stmt->close();
-                throw new Exception('No se pudo actualizar el costo histórico del detalle.');
+        $lineas = [];
+        if (count($detalles) > 0) {
+            $rawDetalles = [];
+            foreach ($detalles as $detalle) {
+                $rawDetalles[] = [
+                    'producto_id' => (int) $detalle['producto_id'],
+                    'cantidad' => (float) $detalle['cantidad'],
+                ];
             }
+
+            $validacion = asig_validar_lineas(
+                $conexion,
+                $bssId,
+                (int) $asignacion['sucursal_origen'],
+                $rawDetalles,
+                (bool) $asignacion['descuenta_origen'],
+                true
+            );
+            if ($validacion['status'] !== 'ok') {
+                throw new Exception($validacion['msg']);
+            }
+            $lineas = $validacion['data']['lineas'];
+
+            // El costo histórico se fija al momento de aplicar, no al crear el borrador.
+            $stmt = $conexion->prepare(
+                "UPDATE asignaciones_sucursales_detalles
+                 SET producto_nombre = ?, costo_unitario = ?, subtotal = ?
+                 WHERE asignacion_id = ? AND producto_id = ?"
+            );
+            foreach ($lineas as $linea) {
+                $productoNombre = (string) $linea['producto_nombre'];
+                $costoUnitario = (float) $linea['costo_unitario'];
+                $subtotalLinea = (float) $linea['subtotal'];
+                $productoId = (int) $linea['producto_id'];
+                $stmt->bind_param(
+                    'sddii',
+                    $productoNombre,
+                    $costoUnitario,
+                    $subtotalLinea,
+                    $asignacionId,
+                    $productoId
+                );
+                if (!$stmt->execute()) {
+                    $stmt->close();
+                    throw new Exception('No se pudo actualizar el costo histórico del detalle.');
+                }
+            }
+            $stmt->close();
         }
-        $stmt->close();
+
+        $total = asig_dinero(
+            array_sum(array_column($lineas, 'subtotal')) + asig_total_conceptos($conceptos)
+        );
 
         asig_aplicar_stock($conexion, $bssId, $asignacionId, $asignacion, $lineas);
 
@@ -871,6 +1035,7 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
     $descuentaOrigen = asig_bool($input['descuenta_origen'] ?? true);
     $sumaDestino = asig_bool($input['suma_destino'] ?? true);
     $detalles = $input['detalles'] ?? [];
+    $conceptos = asig_lineas_conceptos($input['conceptos'] ?? []);
 
     if (!asig_sucursal_existe($conexion, $bssId, $sucursalOrigen) || !asig_sucursal_existe($conexion, $bssId, $sucursalDestino)) {
         return asig_result_error('La sucursal de origen o destino no pertenece a este negocio.');
@@ -880,6 +1045,9 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
     }
     if (!asig_fecha_valida($fecha)) {
         return asig_result_error('La fecha de la asignación no es válida.');
+    }
+    if (count(asig_lineas_input($detalles)) === 0 && count($conceptos) === 0) {
+        return asig_result_error('Agregue al menos un producto o un concepto a la asignación.');
     }
 
     try {
@@ -919,6 +1087,7 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
             'suma_destino' => (int) $asignacion['suma_destino'],
             'total' => (float) $asignacion['total'],
             'detalles' => asig_get_detalles($conexion, $asignacionId),
+            'conceptos' => asig_get_conceptos($conexion, $asignacionId),
         ];
 
         $productosABloquear = [];
@@ -932,12 +1101,17 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
 
         asig_reversar_stock($conexion, $bssId, $asignacionId, $asignacion);
 
-        $validacion = asig_validar_lineas($conexion, $bssId, $sucursalOrigen, $detalles, $descuentaOrigen, true);
-        if ($validacion['status'] !== 'ok') {
-            throw new Exception($validacion['msg']);
+        $lineas = [];
+        if (count(asig_lineas_input($detalles)) > 0) {
+            $validacion = asig_validar_lineas($conexion, $bssId, $sucursalOrigen, $detalles, $descuentaOrigen, true);
+            if ($validacion['status'] !== 'ok') {
+                throw new Exception($validacion['msg']);
+            }
+            $lineas = $validacion['data']['lineas'];
         }
-        $lineas = $validacion['data']['lineas'];
-        $total = asig_dinero(array_sum(array_column($lineas, 'subtotal')));
+        $total = asig_dinero(
+            array_sum(array_column($lineas, 'subtotal')) + asig_total_conceptos($conceptos)
+        );
 
         $stmt = $conexion->prepare(
             "UPDATE asignaciones_sucursales
@@ -958,7 +1132,13 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
         $stmt->execute();
         $stmt->close();
 
+        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales_conceptos WHERE asignacion_id = ?");
+        $stmt->bind_param('i', $asignacionId);
+        $stmt->execute();
+        $stmt->close();
+
         asig_insertar_detalles($conexion, $asignacionId, $lineas);
+        asig_insertar_conceptos($conexion, $asignacionId, $conceptos);
 
         $nuevaAsignacion = [
             'sucursal_origen' => $sucursalOrigen,
@@ -989,6 +1169,7 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
             'suma_destino' => $sumaInt,
             'total' => $total,
             'detalles' => $lineas,
+            'conceptos' => $conceptos,
         ]);
 
         $conexion->commit();
@@ -1018,6 +1199,7 @@ function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $as
             throw new Exception('El estado de la asignación no permite eliminarla.');
         }
 
+        $comprobantesAEliminar = [];
         $cuenta = null;
         if ($asignacion['estado'] === 'APLICADO') {
             // Mismo orden de bloqueo que la rectificación: cuenta, productos y stock.
@@ -1035,6 +1217,15 @@ function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $as
 
             if ($cuenta) {
                 $cuentaId = (int) $cuenta['id'];
+
+                $stmt = $conexion->prepare("SELECT comprobante FROM pagos_sucursales WHERE cuenta_sucursal_id = ? AND comprobante IS NOT NULL AND comprobante <> ''");
+                $stmt->bind_param('i', $cuentaId);
+                $stmt->execute();
+                $resultComprobantes = $stmt->get_result();
+                while ($rowComprobante = $resultComprobantes->fetch_assoc()) {
+                    $comprobantesAEliminar[] = $rowComprobante['comprobante'];
+                }
+                $stmt->close();
 
                 $stmt = $conexion->prepare("DELETE FROM pagos_sucursales WHERE cuenta_sucursal_id = ?");
                 $stmt->bind_param('i', $cuentaId);
@@ -1063,6 +1254,11 @@ function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $as
         $stmt->execute();
         $stmt->close();
 
+        $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales_conceptos WHERE asignacion_id = ?");
+        $stmt->bind_param('i', $asignacionId);
+        $stmt->execute();
+        $stmt->close();
+
         $stmt = $conexion->prepare("DELETE FROM asignaciones_sucursales WHERE id = ? AND bss_id = ?");
         $stmt->bind_param('ii', $asignacionId, $bssId);
         if (!$stmt->execute() || $stmt->affected_rows !== 1) {
@@ -1072,9 +1268,11 @@ function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $as
         $stmt->close();
 
         $conexion->commit();
+        asig_eliminar_archivos_comprobantes($comprobantesAEliminar);
+
         return asig_result_ok(
             $asignacion['estado'] === 'APLICADO'
-                ? 'Asignación eliminada. Se revirtió el inventario y se borraron la deuda, los abonos y la bitácora.'
+                ? 'Asignación eliminada. Se revirtió el inventario y se borraron la deuda, los abonos, los comprobantes y la bitácora.'
                 : 'Borrador eliminado.'
         );
     } catch (Throwable $e) {
@@ -1274,6 +1472,7 @@ function asig_detalle_asignacion($conexion, int $bssId, int $usuarioId, bool $es
     return asig_result_ok('', [
         'asignacion' => $asignacion,
         'detalles' => $detalles,
+        'conceptos' => asig_get_conceptos($conexion, $asignacionId),
         'cuenta' => $cuenta,
         'pagos' => $pagos,
         'movimientos' => $movimientos,
@@ -1370,7 +1569,7 @@ function asig_listar_cuentas($conexion, int $bssId, int $usuarioId, bool $esAdmi
             'excedente' => (float) $row['excedente'],
             'estado_deuda' => $row['estado_deuda'],
             'estado_asignacion' => $row['estado_asignacion'],
-            'puede_abonar' => $esAdmin && $esCreador,
+            'puede_abonar' => $esAdmin,
             'puede_eliminar' => $esAdmin && $esCreador,
         ];
     }
@@ -1513,8 +1712,10 @@ function asig_detalle_cuenta($conexion, int $bssId, bool $esAdmin, int $sucursal
     return asig_result_ok('', [
         'cuenta' => $cuenta,
         'detalles' => $detalles,
+        'conceptos' => asig_get_conceptos($conexion, (int) $cuenta['asignacion_id']),
         'pagos' => $pagos,
         'es_creador' => (int) $cuenta['usuario_id'] === (int) ($_SESSION['id'] ?? 0),
+        'puede_abonar' => $esAdmin,
     ]);
 }
 
@@ -1528,6 +1729,8 @@ function asig_registrar_pago($conexion, int $bssId, int $usuarioId, array $input
     $metodo = trim((string) ($input['metodo_pago'] ?? ''));
     $referencia = trim((string) ($input['referencia'] ?? ''));
     $observaciones = trim((string) ($input['observaciones'] ?? ''));
+    $comprobante = trim((string) ($input['comprobante'] ?? ''));
+    $comprobante = $comprobante === '' ? null : $comprobante;
 
     if ($cuentaId <= 0) {
         return asig_result_error('La obligación económica no es válida.');
@@ -1561,10 +1764,6 @@ function asig_registrar_pago($conexion, int $bssId, int $usuarioId, array $input
         if (!$asignacionPago) {
             throw new Exception('La asignación asociada no existe.');
         }
-        if ((int) $asignacionPago['usuario_id'] !== $usuarioId) {
-            throw new Exception('Solo el usuario que creó la asignación puede registrar abonos sobre ella.');
-        }
-
         $stmt = $conexion->prepare("SELECT * FROM cuentas_sucursales WHERE id = ? AND bss_id = ? LIMIT 1 FOR UPDATE");
         $stmt->bind_param('ii', $cuentaId, $bssId);
         $stmt->execute();
@@ -1577,10 +1776,10 @@ function asig_registrar_pago($conexion, int $bssId, int $usuarioId, array $input
 
         $stmt = $conexion->prepare(
             "INSERT INTO pagos_sucursales
-             (bss_id, cuenta_sucursal_id, monto_usd, fecha, tasa_bcv, tasa_peso_dolar, metodo_pago, referencia, observaciones, usuario_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             (bss_id, cuenta_sucursal_id, monto_usd, fecha, tasa_bcv, tasa_peso_dolar, metodo_pago, referencia, observaciones, comprobante, usuario_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        $stmt->bind_param('iidsddsssi', $bssId, $cuentaId, $monto, $fecha, $tasaBcv, $tasaPeso, $metodo, $referencia, $observaciones, $usuarioId);
+        $stmt->bind_param('iidsddssssi', $bssId, $cuentaId, $monto, $fecha, $tasaBcv, $tasaPeso, $metodo, $referencia, $observaciones, $comprobante, $usuarioId);
         if (!$stmt->execute()) {
             $stmt->close();
             throw new Exception('No se pudo registrar el abono.');
@@ -1606,6 +1805,7 @@ function asig_registrar_pago($conexion, int $bssId, int $usuarioId, array $input
             'saldo' => $saldo,
             'excedente' => $excedente,
             'estado_deuda' => $estado,
+            'comprobante' => $comprobante,
         ]);
     } catch (Throwable $e) {
         $conexion->rollback();

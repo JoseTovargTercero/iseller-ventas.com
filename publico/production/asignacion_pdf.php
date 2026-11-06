@@ -24,8 +24,18 @@ if ($resultado['status'] !== 'ok') {
 
 $asignacion = $resultado['data']['asignacion'];
 $detalles = $resultado['data']['detalles'];
+$conceptos = $resultado['data']['conceptos'] ?? [];
 $cuenta = $resultado['data']['cuenta'];
 $pagos = $resultado['data']['pagos'];
+
+$subtotalProductos = 0.0;
+foreach ($detalles as $detalle) {
+    $subtotalProductos += (float) $detalle['subtotal'];
+}
+$subtotalConceptos = 0.0;
+foreach ($conceptos as $concepto) {
+    $subtotalConceptos += (float) $concepto['monto'];
+}
 
 $abonado = 0.0;
 foreach ($pagos as $pago) {
@@ -133,15 +143,56 @@ foreach ($detalles as $detalle) {
     $indice++;
 }
 
+$hayConceptos = count($conceptos) > 0;
+$labelSubtotal = $hayConceptos ? 'Subtotal productos' : 'Total asignado';
+$montoSubtotal = $hayConceptos ? $subtotalProductos : (float) $asignacion['total'];
+
 $html .= '
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="3" width="144mm" style="background-color:#eef2f5;text-align:right;font-weight:bold;">Total asignado</td>
-            <td width="36mm" style="background-color:#eef2f5;text-align:right;font-weight:bold;">' . pdfMoney($asignacion['total']) . '</td>
+            <td colspan="3" width="144mm" style="background-color:#eef2f5;text-align:right;font-weight:bold;">' . $labelSubtotal . '</td>
+            <td width="36mm" style="background-color:#eef2f5;text-align:right;font-weight:bold;">' . pdfMoney($montoSubtotal) . '</td>
         </tr>
     </tfoot>
 </table>';
+
+if ($hayConceptos) {
+    $filasConceptos = '';
+    $indiceConcepto = 0;
+    foreach ($conceptos as $concepto) {
+        $fondoConcepto = $indiceConcepto % 2 === 0 ? '#ffffff' : '#f8fafb';
+        $filasConceptos .= '<tr>
+            <td width="140mm" style="background-color:' . $fondoConcepto . ';text-align:left;">' . pdfEsc($concepto['concepto']) . '</td>
+            <td width="40mm" style="background-color:' . $fondoConcepto . ';text-align:right;">' . pdfMoney($concepto['monto']) . '</td>
+        </tr>';
+        $indiceConcepto++;
+    }
+
+    $html .= '
+<div style="height:14px;"></div>
+<table width="100%" border="1" cellpadding="7" cellspacing="0">
+    <thead>
+        <tr>
+            <th width="140mm" style="text-align:left;">Concepto / servicio</th>
+            <th width="40mm" style="text-align:right;">Monto USD</th>
+        </tr>
+    </thead>
+    <tbody>' . $filasConceptos . '</tbody>
+    <tfoot>
+        <tr>
+            <td width="140mm" style="background-color:#eef2f5;text-align:right;font-weight:bold;">Subtotal conceptos</td>
+            <td width="40mm" style="background-color:#eef2f5;text-align:right;font-weight:bold;">' . pdfMoney($subtotalConceptos) . '</td>
+        </tr>
+    </tfoot>
+</table>
+<table width="100%" border="0" cellpadding="4" cellspacing="0" style="margin-top:8px;">
+    <tr>
+        <td width="140mm" style="text-align:right;font-weight:bold;font-size:11px;">Total asignación</td>
+        <td width="40mm" style="text-align:right;font-weight:bold;font-size:11px;">' . pdfMoney($asignacion['total']) . '</td>
+    </tr>
+</table>';
+}
 
 if ($cuenta) {
     $html .= '
