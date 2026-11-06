@@ -31,8 +31,8 @@ $condSucursal = $sucursalSel > 0 ? ' AND s.id_sucursal = ' . $sucursalSel : '';
 $sqlResumen = "
     SELECT
         COALESCE(SUM(CAST(s.stock AS DECIMAL(12,2))), 0) AS unidades,
-        COALESCE(SUM(CAST(s.stock AS DECIMAL(12,2)) * (CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1))), 0) AS valor_costo,
-        COALESCE(SUM(CAST(s.stock AS DECIMAL(12,2)) * (CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1)) * (CAST(p.porcentaje AS DECIMAL(12,2)) / 100)), 0) AS ganancia
+        COALESCE(SUM(CAST(s.stock AS DECIMAL(12,2)) * ROUND(CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1), 2)), 0) AS valor_costo,
+        COALESCE(SUM(CAST(s.stock AS DECIMAL(12,2)) * ROUND(CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1), 2) * (CAST(p.porcentaje AS DECIMAL(12,2)) / 100)), 0) AS ganancia
     FROM productos p
     INNER JOIN stock s ON s.id_producto = p.id
     WHERE p.activo = 0
@@ -51,9 +51,9 @@ $totalUnidades = (float) ($resumen['unidades'] ?? 0);
 $sqlProductos = "
     SELECT
         p.nombre,
-        (CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1)) AS costo_unitario,
+        ROUND(CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1), 2) AS costo_unitario,
         SUM(CAST(s.stock AS DECIMAL(12,2))) AS cantidad,
-        SUM(CAST(s.stock AS DECIMAL(12,2)) * (CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1))) AS subtotal
+        SUM(CAST(s.stock AS DECIMAL(12,2)) * ROUND(CAST(p.precio_compra AS DECIMAL(12,2)) / IFNULL(NULLIF(p.cantidad_unidades, 0), 1), 2)) AS subtotal
     FROM productos p
     INNER JOIN stock s ON s.id_producto = p.id
     WHERE p.activo = 0
