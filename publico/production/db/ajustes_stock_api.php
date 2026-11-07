@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
 ini_set('display_errors', '0');
 
@@ -16,7 +16,7 @@ function aj_respuesta(array $data, int $codigo = 200): void
 }
 
 if (!isset($_SESSION['validate']) || $_SESSION['validate'] !== 'ok' || empty($_SESSION['bss_id']) || empty($_SESSION['id'])) {
-    aj_respuesta(['ok' => false, 'message' => 'Sesión no válida.'], 401);
+    aj_respuesta(['ok' => false, 'message' => 'SesiÃ³n no vÃ¡lida.'], 401);
 }
 
 $bssId        = (int) $_SESSION['bss_id'];
@@ -58,7 +58,7 @@ if ($nivel === 2) {
     }
 
     if (!$tienePermiso) {
-        aj_respuesta(['ok' => false, 'message' => 'No tienes permisos para este módulo.'], 403);
+        aj_respuesta(['ok' => false, 'message' => 'No tienes permisos para este mÃ³dulo.'], 403);
     }
 }
 
@@ -128,7 +128,8 @@ function aj_filtros(
     int $categoria,
     int $producto,
     string $tipo,
-    string $estado = 'ACTIVO'
+    string $estado = 'ACTIVO',
+    string $grupo = ''
 ): array {
     $where  = ['m.bss_id = ?'];
     $params = [$bssId];
@@ -149,6 +150,12 @@ function aj_filtros(
         $where[]  = 'm.categoria_id = ?';
         $params[] = $categoria;
         $types   .= 'i';
+    }
+    if ($grupo !== '') {
+        $where[]  = 'm.categoria_id IN (SELECT cp.id FROM categorias_producto cp WHERE cp.grupo = ? AND (cp.bss_id = 0 OR cp.bss_id = ?))';
+        $params[] = $grupo;
+        $params[] = $bssId;
+        $types   .= 'si';
     }
     if ($producto > 0) {
         $where[]  = 'm.producto_id = ?';
@@ -199,7 +206,7 @@ $hoy = date('Y-m-d');
 $sucursalParam = (int) ($_POST['sucursal'] ?? $_GET['sucursal'] ?? 0);
 [$sucursalOk, $sucursal] = aj_sucursal($conexion, $bssId, $nivel, $sucursalParam);
 if (!$sucursalOk) {
-    aj_respuesta(['ok' => false, 'message' => 'Sucursal no válida.'], 403);
+    aj_respuesta(['ok' => false, 'message' => 'Sucursal no vÃ¡lida.'], 403);
 }
 
 $desdeParam = trim((string) ($_POST['desde'] ?? ''));
@@ -220,6 +227,7 @@ $tipoFiltro = strtoupper(trim((string) ($_POST['tipo'] ?? $_GET['tipo'] ?? 'TODA
 if ($tipoFiltro !== 'MERMA' && $tipoFiltro !== 'AJUSTE') {
     $tipoFiltro = 'TODAS';
 }
+$grupoFiltro = trim((string) ($_POST['grupo'] ?? $_GET['grupo'] ?? ''));
 
 try {
     switch ($accion) {
@@ -230,7 +238,7 @@ try {
 
             if ($sucursal > 0) {
                 $sql = "SELECT p.id, p.nombre, MIN(s.stock) AS stock,
-                               COALESCE(cp.nombre, 'Sin categoría') AS categoria,
+                               COALESCE(cp.nombre, 'Sin categorÃ­a') AS categoria,
                                ROUND(p.precio_compra / IFNULL(NULLIF(p.cantidad_unidades, 0), 1), 4) AS costo_unitario
                         FROM productos p
                         INNER JOIN stock s
@@ -245,7 +253,7 @@ try {
                 $filas = aj_consulta($conexion, $sql, 'iii', [$sucursal, $bssId, $bssId]);
             } else {
                 $sql = "SELECT p.id, p.nombre, NULL AS stock,
-                               COALESCE(cp.nombre, 'Sin categoría') AS categoria,
+                               COALESCE(cp.nombre, 'Sin categorÃ­a') AS categoria,
                                ROUND(p.precio_compra / IFNULL(NULLIF(p.cantidad_unidades, 0), 1), 4) AS costo_unitario
                         FROM productos p
                         LEFT JOIN categorias_producto cp ON cp.id = p.categoria
@@ -277,7 +285,7 @@ try {
                 $estado = 'ACTIVO';
             }
 
-            [$where, $params, $types] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, $estado);
+            [$where, $params, $types] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, $estado, $grupoFiltro);
 
             $sqlTotal = 'SELECT COUNT(*) AS total FROM stock_ajustes m WHERE ' . implode(' AND ', $where);
             $filasTotal = aj_consulta($conexion, $sqlTotal, $types, $params);
@@ -332,7 +340,7 @@ try {
             break;
 
         case 'resumen':
-            [$whereBase, $paramsBase, $typesBase] = aj_filtros($bssId, $sucursal, null, null, $categoria, $producto, $tipoFiltro, 'ACTIVO');
+            [$whereBase, $paramsBase, $typesBase] = aj_filtros($bssId, $sucursal, null, null, $categoria, $producto, $tipoFiltro, 'ACTIVO', $grupoFiltro);
 
             $lunes = date('Y-m-d', strtotime('monday this week', strtotime($hoy)));
             $domingo = date('Y-m-d', strtotime($lunes . ' +6 days'));
@@ -446,11 +454,11 @@ try {
                 ];
             }
 
-            // Pérdidas por categoría en el periodo consultado.
-            [$whereCategoria, $paramsCategoria, $typesCategoria] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO');
+            // PÃ©rdidas por categorÃ­a en el periodo consultado.
+            [$whereCategoria, $paramsCategoria, $typesCategoria] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO', $grupoFiltro);
             $whereCategoria[] = "m.direccion = 'SALIDA'";
             $sqlCategoria = "SELECT m.categoria_id,
-                                    COALESCE(NULLIF(m.categoria_nombre, ''), 'Sin categoría') AS categoria,
+                                    COALESCE(NULLIF(m.categoria_nombre, ''), 'Sin categorÃ­a') AS categoria,
                                     SUM(m.monto_usd) AS monto_usd,
                                     SUM(m.cantidad) AS unidades
                              FROM stock_ajustes m
@@ -485,10 +493,10 @@ try {
                 $porCategoria = $top;
             }
 
-            // Pérdidas por sucursal (solo administradores).
+            // PÃ©rdidas por sucursal (solo administradores).
             $porSucursal = [];
             if ($nivel === 1) {
-                [$whereSucursal, $paramsSucursal, $typesSucursal] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO');
+                [$whereSucursal, $paramsSucursal, $typesSucursal] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO', $grupoFiltro);
                 $whereSucursal[] = "m.direccion = 'SALIDA'";
                 $sqlSucursal = "SELECT m.id_sucursal,
                                        COALESCE(s.nombre, 'Sucursal eliminada') AS sucursal,
@@ -510,8 +518,8 @@ try {
                 }
             }
 
-            // Top 10 productos con mayor pérdida en el periodo.
-            [$whereTop, $paramsTop, $typesTop] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO');
+            // Top 10 productos con mayor pÃ©rdida en el periodo.
+            [$whereTop, $paramsTop, $typesTop] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO', $grupoFiltro);
             $whereTop[] = "m.direccion = 'SALIDA'";
             $sqlTop = "SELECT m.producto_id, m.producto_nombre AS producto,
                               SUM(m.monto_usd) AS monto_usd,
@@ -554,7 +562,7 @@ try {
         case 'registrar':
             $tipo = strtoupper(trim((string) ($_POST['tipo'] ?? '')));
             if (!in_array($tipo, ['MERMA', 'AJUSTE'], true)) {
-                aj_respuesta(['ok' => false, 'message' => 'Tipo de registro no válido.'], 400);
+                aj_respuesta(['ok' => false, 'message' => 'Tipo de registro no vÃ¡lido.'], 400);
             }
             if ($sucursal <= 0) {
                 aj_respuesta(['ok' => false, 'message' => 'Debe seleccionar una sucursal.'], 400);
@@ -568,12 +576,12 @@ try {
             $motivo = strtoupper(trim((string) ($_POST['motivo'] ?? '')));
             $motivosValidos = $tipo === 'MERMA' ? ajustes_motivos_merma() : ajustes_motivos_ajuste();
             if (!isset($motivosValidos[$motivo])) {
-                aj_respuesta(['ok' => false, 'message' => 'Motivo no válido para este tipo de registro.'], 400);
+                aj_respuesta(['ok' => false, 'message' => 'Motivo no vÃ¡lido para este tipo de registro.'], 400);
             }
 
             $razon = trim(strip_tags((string) ($_POST['razon'] ?? '')));
             if ($razon === '') {
-                aj_respuesta(['ok' => false, 'message' => 'La razón o explicación es obligatoria.'], 400);
+                aj_respuesta(['ok' => false, 'message' => 'La razÃ³n o explicaciÃ³n es obligatoria.'], 400);
             }
             if (function_exists('mb_substr')) {
                 $razon = mb_substr($razon, 0, 500, 'UTF-8');
@@ -671,12 +679,12 @@ try {
                 }
                 $categoriaNombre = trim((string) ($producto['categoria_nombre'] ?? ''));
                 if ($categoriaNombre === '') {
-                    $categoriaNombre = 'Sin categoría';
+                    $categoriaNombre = 'Sin categorÃ­a';
                 }
 
                 $stmtUpdate = $conexion->prepare('UPDATE stock SET stock = ? WHERE id = ?');
                 if (!$stmtUpdate) {
-                    throw new Exception('No se pudo preparar la actualización de stock.');
+                    throw new Exception('No se pudo preparar la actualizaciÃ³n de stock.');
                 }
                 $stockTexto = ajustes_numero($stockDespues);
                 $stmtUpdate->bind_param('si', $stockTexto, $stockId);
@@ -744,10 +752,10 @@ try {
             $id = (int) ($_POST['id'] ?? 0);
             $motivoAnulacion = trim(strip_tags((string) ($_POST['motivo'] ?? '')));
             if ($id <= 0) {
-                aj_respuesta(['ok' => false, 'message' => 'Registro no válido.'], 400);
+                aj_respuesta(['ok' => false, 'message' => 'Registro no vÃ¡lido.'], 400);
             }
             if ($motivoAnulacion === '') {
-                aj_respuesta(['ok' => false, 'message' => 'El motivo de anulación es obligatorio.'], 400);
+                aj_respuesta(['ok' => false, 'message' => 'El motivo de anulaciÃ³n es obligatorio.'], 400);
             }
             if (function_exists('mb_substr')) {
                 $motivoAnulacion = mb_substr($motivoAnulacion, 0, 500, 'UTF-8');
@@ -818,7 +826,7 @@ try {
 
                 $stmtUpdate = $conexion->prepare('UPDATE stock SET stock = ? WHERE id = ?');
                 if (!$stmtUpdate) {
-                    throw new Exception('No se pudo preparar la actualización de stock.');
+                    throw new Exception('No se pudo preparar la actualizaciÃ³n de stock.');
                 }
                 $stockTexto = ajustes_numero($stockNuevo);
                 $stmtUpdate->bind_param('si', $stockTexto, $stockId);
@@ -837,7 +845,7 @@ try {
                      WHERE id = ? AND bss_id = ?"
                 );
                 if (!$stmtAnular) {
-                    throw new Exception('No se pudo preparar la anulación.');
+                    throw new Exception('No se pudo preparar la anulaciÃ³n.');
                 }
                 $stmtAnular->bind_param('isii', $usuarioId, $motivoAnulacion, $id, $bssId);
                 if (!$stmtAnular->execute()) {
@@ -860,8 +868,9 @@ try {
             break;
 
         default:
-            aj_respuesta(['ok' => false, 'message' => 'Acción no válida.'], 400);
+            aj_respuesta(['ok' => false, 'message' => 'AcciÃ³n no vÃ¡lida.'], 400);
     }
 } catch (Throwable $e) {
     aj_respuesta(['ok' => false, 'message' => $e->getMessage()], 500);
 }
+

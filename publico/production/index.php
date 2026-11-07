@@ -800,6 +800,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                         </div>
 
+                        <div class="col-lg-12 mb-3">
+                            <div class="dash-panel">
+                                <div class="panel-header">
+                                    <h6><ion-icon name="bar-chart-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Ganancias vs Gastos y Mermas</h6>
+                                    <div class="chart-controls">
+                                        <span class="date-badge">
+                                            <ion-icon name="calendar-outline" style="font-size:12px;margin-right:4px;"></ion-icon>
+                                            Últimos 12 meses
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="panel-body p-0 chart-box" id="graficoGananciasGastosIndex">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class='col-lg-12 hide'>
                             <div class='x_panel tile '>
                                 <div class='x_title' style="border-bottom: none">
@@ -1361,6 +1377,152 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             var apex_horas = new ApexCharts(document.querySelector("#apex_chart_horas"), horasOptions);
             apex_horas.render();
 
+            // ─── Ganancias vs Gastos (últimos 12 meses) ───
+            var chartGananciasGastos = new ApexCharts(document.querySelector("#graficoGananciasGastosIndex"), {
+                series: [{
+                        name: 'Ganancias',
+                        type: 'bar',
+                        data: []
+                    },
+                    {
+                        name: 'Gastos',
+                        type: 'bar',
+                        data: []
+                    },
+                    {
+                        name: 'Mermas',
+                        type: 'bar',
+                        data: []
+                    },
+                    {
+                        name: 'Ganancia neta',
+                        type: 'line',
+                        data: []
+                    }
+                ],
+                chart: {
+                    height: esMovil ? 260 : 320,
+                    type: 'bar',
+                    background: 'transparent',
+                    toolbar: {
+                        show: false
+                    },
+                    zoom: {
+                        enabled: false
+                    }
+                },
+                theme: {
+                    mode: 'dark'
+                },
+                colors: ['#2dd4a0', '#ef5a6f', '#f5b45b', '#5b9cf5'],
+                plotOptions: {
+                    bar: {
+                        columnWidth: '60%',
+                        borderRadius: 4
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: [0, 0, 0, 3]
+                },
+                markers: {
+                    size: 4,
+                    strokeWidth: 0
+                },
+                grid: {
+                    borderColor: 'rgba(255,255,255,.05)'
+                },
+                legend: {
+                    labels: {
+                        colors: '#8892a0'
+                    },
+                    fontSize: '12px'
+                },
+                xaxis: {
+                    categories: [],
+                    labels: {
+                        style: {
+                            colors: '#8892a0',
+                            fontSize: '11px'
+                        }
+                    },
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: '#8892a0',
+                            fontSize: '11px'
+                        },
+                        formatter: function(v) {
+                            return '$' + Math.round(v);
+                        }
+                    }
+                },
+                tooltip: {
+                    theme: 'dark',
+                    y: {
+                        formatter: function(v) {
+                            return '$ ' + Number(v).toFixed(2);
+                        }
+                    }
+                }
+            });
+            chartGananciasGastos.render();
+
+            function cargarGraficoGananciasGastos(sucursal) {
+                const idSucursal = (sucursal && sucursal !== 'todas') ? sucursal : 0;
+                fetch('consulta_gastosGrafico.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: 'id_sucursal=' + encodeURIComponent(idSucursal)
+                    })
+                    .then(function(r) {
+                        return r.json();
+                    })
+                    .then(function(r) {
+                        chartGananciasGastos.updateOptions({
+                            xaxis: {
+                                categories: r.labels
+                            }
+                        }, false, false);
+                        chartGananciasGastos.updateSeries([{
+                                name: 'Ganancias',
+                                type: 'bar',
+                                data: r.ganancias
+                            },
+                            {
+                                name: 'Gastos',
+                                type: 'bar',
+                                data: r.gastos
+                            },
+                            {
+                                name: 'Mermas',
+                                type: 'bar',
+                                data: r.mermas
+                            },
+                            {
+                                name: 'Ganancia neta',
+                                type: 'line',
+                                data: r.netos
+                            }
+                        ]);
+                    })
+                    .catch(function(err) {
+                        console.error('Error gráfico ganancias/gastos:', err);
+                    });
+            }
+
             // Al girar el teléfono cambia el alto útil: se ajustan los gráficos
             window.addEventListener('resize', function() {
                 var ahora = window.innerWidth < 640;
@@ -1370,7 +1532,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     [apex_chart, 340, 260],
                     [apex_creditos, 300, 240],
                     [apex_ventas_sucursal, 300, 260],
-                    [apex_horas, 280, 220]
+                    [apex_horas, 280, 220],
+                    [chartGananciasGastos, 320, 260]
                 ].forEach(function(par) {
                     par[0].updateOptions({
                         chart: {
@@ -1554,6 +1717,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             function cargar_tabla(sucursal = null, usuario = null, periodo = 'mes', periodoPie = 'mes', periodoProductos = 'mes') {
                 document.querySelector('.kpi-row')?.classList.add('kpi-loading');
+                cargarGraficoGananciasGastos(sucursal);
                 // La carga inicial ya viene en curso desde el inicio del <body> (en paralelo con ApexCharts)
                 let peticion;
                 if (!sucursal && !usuario && window.__dashboardInicial) {

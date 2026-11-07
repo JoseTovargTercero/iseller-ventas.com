@@ -83,11 +83,19 @@ if ($stmtCats) {
     $stmtCats->close();
 }
 
+// Grupos del catálogo para el filtro previo a categoría.
+$grupos = [];
+foreach ($categorias as $cat) {
+    $grupoNombre = trim((string) ($cat['grupo'] ?? ''));
+    if ($grupoNombre !== '') {
+        $grupos[$grupoNombre] = $grupoNombre;
+    }
+}
+
 $motivosMerma  = ajustes_motivos_merma();
 $motivosAjuste = ajustes_motivos_ajuste();
 $hoy           = date('Y-m-d');
 $mesInicio     = date('Y-m-01');
-$usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -201,6 +209,21 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             flex: 1 1 190px;
         }
 
+        .aj-product-search {
+            display: flex;
+            gap: 6px;
+        }
+
+        .aj-product-search input {
+            flex: 0 0 42%;
+            min-width: 0;
+        }
+
+        .aj-product-search select {
+            flex: 1 1 58%;
+            min-width: 0;
+        }
+
         .aj-field label {
             color: var(--dash-text-muted);
             font-size: 11px;
@@ -231,6 +254,14 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             border-color: var(--dash-mint);
             outline: none;
             box-shadow: 0 0 0 2px rgba(45, 212, 160, .12);
+        }
+
+        .aj-help {
+            color: var(--dash-text-muted);
+            display: block;
+            font-size: 10.5px;
+            line-height: 1.35;
+            margin-top: 4px;
         }
 
         .aj-actions {
@@ -617,7 +648,7 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             text-transform: uppercase;
         }
 
-        .aj-modal .row > [class*="col-"] {
+        .aj-modal .row>[class*="col-"] {
             margin-bottom: 4px;
         }
 
@@ -710,8 +741,6 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             <div class="right_col" role="main">
                 <div class="aj-header">
                     <div>
-                        <h3>Ajustes de stock y mermas</h3>
-                        <p>Pérdidas de inventario por sucursal, categoría y producto</p>
                     </div>
                     <button type="button" class="btn-mint" id="btnNuevoRegistro">
                         <ion-icon name="add-outline" style="font-size:16px;"></ion-icon>
@@ -748,6 +777,17 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                         <input type="date" id="filtroHasta" class="aj-input" value="<?= $hoy ?>" max="<?= $hoy ?>">
                     </div>
                     <div class="aj-field aj-field-wide">
+                        <label for="filtroGrupo">Grupo</label>
+                        <select id="filtroGrupo" class="aj-input">
+                            <option value="">Todos los grupos</option>
+                            <?php foreach ($grupos as $grupo): ?>
+                                <option value="<?= htmlspecialchars($grupo, ENT_QUOTES, 'UTF-8') ?>">
+                                    <?= htmlspecialchars($grupo, ENT_QUOTES, 'UTF-8') ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="aj-field aj-field-wide">
                         <label for="filtroCategoria">Categoría</label>
                         <select id="filtroCategoria" class="aj-input">
                             <option value="0">Todas las categorías</option>
@@ -760,9 +800,12 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                     </div>
                     <div class="aj-field aj-field-wide">
                         <label for="filtroProducto">Producto</label>
-                        <select id="filtroProducto" class="aj-input">
-                            <option value="0">Todos los productos</option>
-                        </select>
+                        <div class="aj-product-search">
+                            <input type="text" id="filtroProductoBuscar" class="aj-input" placeholder="Buscar...">
+                            <select id="filtroProducto" class="aj-input">
+                                <option value="0">Todos los productos</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="aj-field">
                         <label for="filtroTipo">Tipo</label>
@@ -770,14 +813,6 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                             <option value="TODAS">Todas</option>
                             <option value="MERMA">Mermas</option>
                             <option value="AJUSTE">Ajustes</option>
-                        </select>
-                    </div>
-                    <div class="aj-field">
-                        <label for="filtroEstado">Estado</label>
-                        <select id="filtroEstado" class="aj-input">
-                            <option value="ACTIVO">Activos</option>
-                            <option value="TODOS">Todos</option>
-                            <option value="ANULADO">Anulados</option>
                         </select>
                     </div>
                     <div class="aj-actions">
@@ -885,7 +920,9 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                                 </tr>
                             </thead>
                             <tbody id="tablaMovimientos">
-                                <tr><td colspan="12" class="aj-empty aj-td-empty">Cargando...</td></tr>
+                                <tr>
+                                    <td colspan="12" class="aj-empty aj-td-empty">Cargando...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -962,19 +999,17 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                         <div class="row mt-3">
                             <div class="col-md-4" id="regCampoCantidad">
                                 <label for="regCantidad">Cantidad *</label>
-                                <input type="number" id="regCantidad" class="aj-input" min="0.0001" step="any" placeholder="Unidades perdidas">
+                                <input type="number" id="regCantidad" class="aj-input" min="0.0001" step="any" placeholder="Unidades o kg perdidos">
+                                <small class="aj-help">En productos por peso, registre los kg perdidos.</small>
                             </div>
                             <div class="col-md-4" id="regCampoStockReal" style="display:none;">
                                 <label for="regStockReal">Stock real *</label>
                                 <input type="number" id="regStockReal" class="aj-input" min="0" step="any" placeholder="Resultado del conteo">
+                                <small class="aj-help">Use la misma unidad del inventario (kg o unidades).</small>
                             </div>
                             <div class="col-md-4">
                                 <label for="regMotivo">Motivo *</label>
                                 <select id="regMotivo" class="aj-input" required></select>
-                            </div>
-                            <div class="col-md-4">
-                                <label>Usuario</label>
-                                <input type="text" class="aj-input" value="<?= $usuarioSesion ?>" readonly>
                             </div>
                         </div>
 
@@ -1039,9 +1074,11 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
         const MOTIVOS = <?= json_encode(['MERMA' => $motivosMerma, 'AJUSTE' => $motivosAjuste], JSON_UNESCAPED_UNICODE) ?>;
         const MOTIVO_LABEL = Object.assign({}, MOTIVOS.MERMA, MOTIVOS.AJUSTE);
         const SUCURSALES = <?= json_encode($sucursales, JSON_UNESCAPED_UNICODE) ?>;
+        const CATEGORIAS = <?= json_encode($categorias, JSON_UNESCAPED_UNICODE) ?>;
 
         let PRODUCTOS = [];
         let PRODUCTOS_REG = [];
+        let FUSE_FILTRO = null;
         let FUSE_REG = null;
         let PRODUCTO_REG = null;
         let ULTIMO_RESUMEN = null;
@@ -1136,11 +1173,30 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                 sucursal: sucursalActual(),
                 desde: $id('filtroDesde').value,
                 hasta: $id('filtroHasta').value,
+                grupo: $id('filtroGrupo').value,
                 categoria_id: parseInt($id('filtroCategoria').value, 10) || 0,
                 producto_id: parseInt($id('filtroProducto').value, 10) || 0,
-                tipo: $id('filtroTipo').value,
-                estado: $id('filtroEstado').value
+                tipo: $id('filtroTipo').value
             };
+        }
+
+        function poblarCategorias(grupo) {
+            const select = $id('filtroCategoria');
+            const valorActual = select.value;
+            const filtradas = CATEGORIAS.filter(function(categoria) {
+                return !grupo || String(categoria.grupo || '') === grupo;
+            });
+
+            select.innerHTML = '<option value="0">Todas las categorías</option>' +
+                filtradas.map(function(categoria) {
+                    return '<option value="' + categoria.id + '">' + esc(categoria.nombre) + '</option>';
+                }).join('');
+
+            if (filtradas.some(function(categoria) {
+                    return String(categoria.id) === String(valorActual);
+                })) {
+                select.value = valorActual;
+            }
         }
 
         function formatoPeriodo(periodo) {
@@ -1425,12 +1481,12 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             const esSalida = fila.direccion === 'SALIDA';
             const badgeDireccion = '<span class="aj-badge ' + (esSalida ? 'salida' : 'entrada') + '">' +
                 (esSalida ? 'Pérdida' : 'Sobrante') + '</span>';
-            const estado = fila.estado === 'ACTIVO'
-                ? '<span class="aj-badge ok">Activo</span>'
-                : '<span class="aj-badge anulado">Anulado</span>';
-            const accion = fila.estado === 'ACTIVO'
-                ? '<button type="button" class="aj-action" data-id="' + fila.id + '" data-producto="' + esc(fila.producto) + '" data-fecha="' + fila.fecha + '" data-monto="' + fila.monto_usd + '" data-usuario="' + esc(fila.usuario) + '" data-razon="' + esc(fila.razon) + '">Anular</button>'
-                : '—';
+            const estado = fila.estado === 'ACTIVO' ?
+                '<span class="aj-badge ok">Activo</span>' :
+                '<span class="aj-badge anulado">Anulado</span>';
+            const accion = fila.estado === 'ACTIVO' ?
+                '<button type="button" class="aj-action" data-id="' + fila.id + '" data-producto="' + esc(fila.producto) + '" data-fecha="' + fila.fecha + '" data-monto="' + fila.monto_usd + '" data-usuario="' + esc(fila.usuario) + '" data-razon="' + esc(fila.razon) + '">Anular</button>' :
+                '—';
 
             return '<tr>' +
                 '<td data-label="Fecha">' + esc(fila.fecha) + '</td>' +
@@ -1493,6 +1549,20 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             }
         }
 
+        function pintarProductosFiltro(lista, valorActual) {
+            const select = $id('filtroProducto');
+            select.innerHTML = '<option value="0">Todos los productos</option>' +
+                lista.map(function(producto) {
+                    return '<option value="' + producto.id + '">' + esc(producto.nombre) + '</option>';
+                }).join('');
+
+            if (valorActual && lista.some(function(producto) {
+                    return String(producto.id) === String(valorActual);
+                })) {
+                select.value = valorActual;
+            }
+        }
+
         async function cargarProductosFiltro() {
             const sucursal = sucursalActual();
             const respuesta = await api({
@@ -1500,16 +1570,42 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
                 sucursal: sucursal
             });
             PRODUCTOS = respuesta.data || [];
-            const select = $id('filtroProducto');
-            const valorActual = select.value;
-            select.innerHTML = '<option value="0">Todos los productos</option>' +
-                PRODUCTOS.map(function(producto) {
-                    return '<option value="' + producto.id + '">' + esc(producto.nombre) + '</option>';
-                }).join('');
-            if (PRODUCTOS.some(function(producto) {
-                    return String(producto.id) === String(valorActual);
-                })) {
-                select.value = valorActual;
+            FUSE_FILTRO = new Fuse(PRODUCTOS, {
+                keys: ['nombre'],
+                threshold: 0.3,
+                ignoreLocation: true,
+                ignoreDiacritics: true,
+                useExtendedSearch: true
+            });
+
+            const buscador = $id('filtroProductoBuscar');
+            const valorActual = $id('filtroProducto').value;
+            if (buscador) buscador.value = '';
+            pintarProductosFiltro(PRODUCTOS, valorActual);
+        }
+
+        function buscarProductoFiltro(texto) {
+            const busqueda = String(texto || '').trim();
+            const teniaProducto = $id('filtroProducto').value !== '0';
+
+            let lista = PRODUCTOS;
+            if (busqueda !== '') {
+                if (FUSE_FILTRO) {
+                    lista = FUSE_FILTRO.search(busqueda).slice(0, 200).map(function(resultado) {
+                        return resultado.item;
+                    });
+                } else {
+                    lista = PRODUCTOS.filter(function(producto) {
+                        return producto.nombre.toLowerCase().indexOf(busqueda.toLowerCase()) !== -1;
+                    }).slice(0, 200);
+                }
+            }
+
+            pintarProductosFiltro(lista, '0');
+            $id('filtroProducto').value = '0';
+
+            if (teniaProducto) {
+                cargarTodo();
             }
         }
 
@@ -1632,9 +1728,9 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             }
 
             valor.textContent = money(cantidad * costo);
-            detalle.textContent = cantidad > 0
-                ? numero(cantidad, 2) + ' × ' + money(costo) + ' · ' + etiqueta
-                : 'Indique una cantidad para calcular el valor.';
+            detalle.textContent = cantidad > 0 ?
+                numero(cantidad, 2) + ' × ' + money(costo) + ' · ' + etiqueta :
+                'Indique una cantidad para calcular el valor.';
         }
 
         function abrirRegistro() {
@@ -1808,9 +1904,16 @@ $usuarioSesion = htmlspecialchars((string) ($_SESSION['nombre'] ?? ''), ENT_QUOT
             $id('btnMes').addEventListener('click', aplicarMesActual);
 
             $id('filtroTipo').addEventListener('change', cargarTodo);
-            $id('filtroEstado').addEventListener('change', cargarTodo);
+            $id('filtroGrupo').addEventListener('change', function() {
+                poblarCategorias(this.value);
+                $id('filtroCategoria').value = '0';
+                cargarTodo();
+            });
             $id('filtroCategoria').addEventListener('change', cargarTodo);
             $id('filtroProducto').addEventListener('change', cargarTodo);
+            $id('filtroProductoBuscar').addEventListener('input', function() {
+                buscarProductoFiltro(this.value);
+            });
             $id('filtroDesde').addEventListener('change', cargarTodo);
             $id('filtroHasta').addEventListener('change', cargarTodo);
 

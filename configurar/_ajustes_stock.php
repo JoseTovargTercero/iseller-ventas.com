@@ -9,14 +9,16 @@
 function ajustes_motivos_merma(): array
 {
     return [
-        'VENCIMIENTO'      => 'Vencimiento',
-        'DETERIORO'        => 'Deterioro',
-        'ROTURA'           => 'Rotura',
-        'ROBO_HURTO'       => 'Robo o hurto',
-        'CONTAMINACION'    => 'Contaminación',
-        'CONSUMO_INTERNO'  => 'Consumo interno',
-        'ERROR_INVENTARIO' => 'Error de inventario',
-        'OTRO'             => 'Otro',
+        'VENCIMIENTO'            => 'Vencimiento',
+        'DETERIORO'              => 'Deterioro',
+        'ROTURA'                 => 'Rotura',
+        'ROBO_HURTO'             => 'Robo o hurto',
+        'CONTAMINACION'          => 'Contaminación',
+        'CONSUMO_INTERNO'        => 'Consumo interno',
+        'DESCONGELACION'         => 'Descongelación (pérdida de peso)',
+        'PARTES_NO_UTILIZABLES'  => 'Partes no utilizables / recortes (hueso, pellejo, grasa)',
+        'ERROR_INVENTARIO'       => 'Error de inventario',
+        'OTRO'                   => 'Otro',
     ];
 }
 

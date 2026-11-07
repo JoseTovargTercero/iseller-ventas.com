@@ -688,7 +688,7 @@ if ($cat_stmt) {
                         </div>
                         <div>
                             <div style="font-size:12px;font-weight:600;color:var(--dash-text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Proyección gastos recurrentes (mes)</div>
-                            <div style="font-size:13px;color:var(--dash-text-muted);">Monto estimado de gastos fijos que se aplicarán este mes</div>
+                            <div style="font-size:13px;color:var(--dash-text-muted);">Monto estimado de gastos fijos del mes</div>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:24px;">
@@ -1215,10 +1215,12 @@ if ($cat_stmt) {
                     }
                 })
                 .done(function(resp) {
-                    const proyeccion = parseFloat(resp) || 0;
+                    const partes = String(resp).split('*');
+                    const proyeccion = parseFloat(partes[0]) || 0;
+                    const pendiente = parseFloat(partes[1]) || 0;
                     if (proyeccion > 0) {
                         $('#proyeccionMonto').text('$' + proyeccion.toFixed(2));
-                        const balance = netoMes - proyeccion;
+                        const balance = netoMes - pendiente;
                         const balanceEl = $('#proyeccionBalance');
                         const labelEl = $('#proyeccionBalanceLabel');
                         balanceEl.text((balance >= 0 ? '+' : '-') + '$' + Math.abs(balance).toFixed(2));

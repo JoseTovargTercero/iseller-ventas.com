@@ -45,6 +45,7 @@ while ($row_a = $res_a->fetch_assoc()) {
 $stmt_a->close();
 
 $proyeccion_usd = 0.0;
+$pendiente_usd  = 0.0;
 
 while ($regla = $result->fetch_assoc()) {
     $monto = floatval($regla['monto_estimado']);
@@ -94,7 +95,8 @@ while ($regla = $result->fetch_assoc()) {
     }
 
     $pendientes = max(0, $total_mes - $resta);
-    $proyeccion_usd += $monto_usd * $pendientes;
+    $proyeccion_usd += $monto_usd * $total_mes;
+    $pendiente_usd  += $monto_usd * $pendientes;
 }
 
-echo number_format($proyeccion_usd, 2, '.', '');
+echo number_format($proyeccion_usd, 2, '.', '') . '*' . number_format($pendiente_usd, 2, '.', '');

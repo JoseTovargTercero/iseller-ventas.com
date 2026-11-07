@@ -178,7 +178,8 @@ Notas:
 2. `cantidad > 0`, en unidades de stock.
 3. `cantidad <= stock actual`; nunca dejar stock negativo.
 4. Motivos: `VENCIMIENTO`, `DETERIORO`, `ROTURA`, `ROBO_HURTO`,
-   `CONTAMINACION`, `CONSUMO_INTERNO`, `ERROR_INVENTARIO`, `OTRO`.
+   `CONTAMINACION`, `CONSUMO_INTERNO`, `DESCONGELACION`,
+   `PARTES_NO_UTILIZABLES`, `ERROR_INVENTARIO`, `OTRO`.
 5. `razon` obligatoria: explicación del usuario (por qué se perdió, qué pasó).
    No es lo mismo que el motivo: el motivo clasifica, la razón explica. Se
    guarda tal cual, con `strip_tags` y máximo 500 caracteres.
@@ -186,6 +187,18 @@ Notas:
 7. `stock_despues = stock_antes - cantidad`.
 8. `usuario_id` y `usuario_nombre` se toman de `$_SESSION`; el POST no puede
    cambiarlos.
+
+**Mermas por peso (productos congelados):** usar `DESCONGELACION`. La cantidad
+se registra en la misma unidad del inventario, normalmente kilos. Ejemplo: se
+ingresan 1.000 kg de muslo, se venden 950 kg y quedan 50 kg en el sistema; se
+registra una merma de 50 kg con motivo "Descongelación (pérdida de peso)" y el
+stock queda en 0. El valor de la pérdida se calcula con el costo por kilo.
+
+**Partes no utilizables (carnes):** usar `PARTES_NO_UTILIZABLES` para hueso
+blanco, pellejo, grasa, recortes de chuleta y similares. Se registra el peso
+retirado antes de que el producto se venda o se deseche; si el hueso/pellejo
+forma parte del peso comprado, esa es la merma real. El motivo es solo la
+clasificación: el detalle de qué parte se retiró va en `razon`.
 
 ### 4.2 Registrar ajuste por conteo
 
@@ -238,8 +251,11 @@ Notas:
 | Archivo | Rol |
 |---|---|
 | `configurar/migrations/020_ajustes_stock_mermas.sql` | Tablas + menú |
+| `configurar/_ajustes_stock.php` | Catálogo de motivos y utilidades |
 | `publico/production/ajustes_stock.php` | Página: KPIs, filtros, gráficos, tabla, modales |
 | `publico/production/db/ajustes_stock_api.php` | JSON: `resumen`, `listar`, `productos`, `registrar`, `anular` |
+| `publico/production/consulta_gastosGrafico.php` | Serie mensual de mermas para el dashboard |
+| `publico/production/index.php` | Gráfico "Ganancias vs Gastos y Mermas" |
 
 No se agregan archivos JS ni CSS: el JS va inline como en `gastos.php` y
 `rendimiento_categoria.php`.
@@ -259,6 +275,7 @@ Parámetros comunes de filtro:
 | `accion` | `resumen`, `listar`, `productos`, `registrar`, `anular` |
 | `sucursal` | `0` = todas (solo nivel 1); nivel 2 se fuerza a la suya |
 | `desde`, `hasta` | `YYYY-MM-DD` |
+| `grupo` | nombre del grupo de categorías; vacío = todos |
 | `categoria_id` | `0` = todas |
 | `producto_id` | `0` = todos |
 | `tipo` | `TODAS`, `MERMA`, `AJUSTE` |
@@ -288,8 +305,8 @@ Devuelve todo lo de la parte superior de la pantalla en una sola llamada:
 }
 ```
 
-- KPIs de semana y mes actuales con los filtros de sucursal/categoría/producto/
-  tipo aplicados. Todos los valores monetarios son el **valor en $ de la
+- KPIs de semana y mes actuales con los filtros de sucursal/grupo/categoría/
+  producto/tipo aplicados. Todos los valores monetarios son el **valor en $ de la
   pérdida**; el desglose `merma_mes_usd` + `ajuste_negativo_mes_usd` debe sumar
   `perdida_mes_usd`.
 - `serie_semanal`: últimas 8 semanas ISO.
@@ -375,8 +392,8 @@ Lee el registro `FOR UPDATE`, verifica alcance, revierte stock y marca
 ```
 right_col
 ├── encabezado: título + botón "Registrar merma"
-├── filtros: [Sucursal] [Periodo: semana actual|mes actual|rango] [Categoría]
-│            [Producto (Fuse)] [Tipo] [Limpiar]
+├── filtros: [Sucursal] [Periodo: semana actual|mes actual|rango] [Grupo]
+│            [Categoría] [Producto (buscador + select)] [Tipo] [Limpiar]
 ├── 4 tarjetas KPI
 │   ├── Pérdida esta semana ($)
 │   ├── Pérdida este mes ($, desglose merma vs ajuste, + variación vs mes anterior)
@@ -415,8 +432,11 @@ right_col
 
 - Periodo por defecto: mes actual. Atajos "Semana actual" y "Mes actual".
 - Nivel 2: no ve el selector de sucursal ni la gráfica por sucursal.
+- El filtro **Grupo** se muestra antes de Categoría: al elegirlo, el selector de
+  categorías se reduce a las categorías de ese grupo. Si no se elige categoría,
+  se filtran todos los registros de las categorías del grupo.
 - Columnas de la tabla: Fecha, Sucursal, Producto, Categoría, Tipo, Motivo,
-  Razón (truncada con tooltip), Cantidad, Costo unitario, **Valor pérdida ($)**,
+  Razón (truncada con tooltip), Cantidad, Costo unitario, **Valor ($)**,
   Usuario, Estado, Acciones.
 - Badges de color: rojo para SALIDA, verde para ENTRADA; los ajustes de
   ENTRADA muestran su valor como "sobrante", no como pérdida.
@@ -436,7 +456,8 @@ Filtro base reutilizable:
 $where  = ["m.bss_id = ?", "m.estado = 'ACTIVO'"];
 $params = [$bss_id];
 // + m.id_sucursal = ?, m.fecha BETWEEN ? AND ?,
-//   m.categoria_id = ?, m.producto_id = ?, m.tipo = ?
+//   m.categoria_id = ?, m.producto_id = ?, m.tipo = ?,
+//   m.categoria_id IN (SELECT id FROM categorias_producto WHERE grupo = ?)
 ```
 
 KPI semana / mes (fechas calculadas en PHP para no depender de la zona horaria
@@ -555,8 +576,10 @@ La tabla no tiene `semana`/`mes` almacenados: se derivan de `fecha`, que es la
 - [ ] Anular una entrada que dejaría stock negativo se bloquea.
 - [ ] Anular conserva la razón y el usuario originales del registro.
 - [ ] Nivel 2 solo ve y registra en su sucursal aunque manipule el POST.
-- [ ] Filtros por sucursal, categoría, producto, tipo y rango coinciden con las
-      sumas de la tabla.
+- [ ] Filtros por sucursal, grupo, categoría, producto, tipo y rango coinciden
+      con las sumas de la tabla.
+- [ ] Al elegir un grupo, el selector de categorías solo muestra las categorías
+      de ese grupo y los totales se limitan a ese grupo.
 - [ ] Semana ISO correcta en domingo y en cambio de año.
 - [ ] Producto sin categoría aparece como "Sin categoría".
 - [ ] Producto desactivado conserva su historial y no aparece para registrar.
@@ -573,9 +596,11 @@ La tabla no tiene `semana`/`mes` almacenados: se derivan de `fecha`, que es la
 - Registro masivo de varios productos en un solo documento.
 - Mermas de productos "al mayor" sobre su fila puntero.
 - Alertas automáticas o envío por push.
-- Integración en el cálculo de ganancias del dashboard: este módulo es un
-  reporte independiente; si se quiere restar la merma de la ganancia neta, se
-  agrega después en `consulta_gastosCount.php`.
+- Integración de mermas en las tarjetas KPI del dashboard: el gráfico mensual
+  "Ganancias vs Gastos y Mermas" ya incluye solo los registros `tipo = MERMA`
+  y resta su monto de la ganancia neta; las tarjetas KPI de ventas/gastos aún
+  no descuentan mermas. Para llevarlo a las tarjetas habría que tocar
+  `configurar/index_back.php`.
 - Endpoints para la app Android (`api/v1`).
 
 ---
