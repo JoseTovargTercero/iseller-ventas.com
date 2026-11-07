@@ -57,6 +57,10 @@ const configPaginas = {
     titulo: "Modificar stock",
     subtitulo: "Modifique las cantidades en stock",
   },
+  "ajustes_stock.php": {
+    titulo: "Ajustes de stock y mermas",
+    subtitulo: "Perdidas de inventario por sucursal, categoria y producto",
+  },
   "nuevoProducto.php": {
     titulo: "Nuevo producto",
     subtitulo: "Agregar un producto nuevo al stock",

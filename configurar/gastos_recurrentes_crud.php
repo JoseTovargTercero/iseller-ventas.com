@@ -1,6 +1,7 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
+require_once('_resumen_mensual.php');
 
 header('Content-Type: application/json');
 
@@ -307,6 +308,7 @@ switch ($accion) {
             }
 
             if ($ins->execute()) {
+                resumen_mensual_invalidar($conexion, $bss_id, (int)$regla_sucursal, $mes);
                 $aplicados++;
             }
             $ins->close();

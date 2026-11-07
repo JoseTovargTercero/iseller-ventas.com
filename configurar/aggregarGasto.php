@@ -3,6 +3,7 @@ require_once('configuracion.php');
 require_once('session.php');
 require_once('_tasas_cambio.php');
 require_once('_gastos_reglas.php');
+require_once('_resumen_mensual.php');
 
 header('Content-Type: application/json');
 
@@ -103,6 +104,7 @@ if ($categoria_id) {
 }
 
 if ($stmt->execute()) {
+    resumen_mensual_invalidar($conexion, $bss_id, $id_sucursal, $mes);
     $salida = ['status' => 'ok', 'codigo' => $codigo];
     if ($categoria_auto !== null) {
         $salida['categoria'] = $categoria_auto;

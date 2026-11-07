@@ -8,6 +8,7 @@ $cart = new Cart;
 require_once('configuracion.php');
 require_once('session.php');
 require("_tasas_cambio.php");
+require_once("_resumen_mensual.php");
 
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
@@ -629,6 +630,7 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         }
 
         $conexion->commit(); // Éxito
+        resumen_mensual_invalidar($conexion, $bss_id, $id_sucursal, $mes);
 
         $cart->destroy();
 

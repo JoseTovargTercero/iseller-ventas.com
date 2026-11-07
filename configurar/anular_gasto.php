@@ -1,6 +1,7 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
+require_once('_resumen_mensual.php');
 
 header('Content-Type: application/json');
 
@@ -30,7 +31,7 @@ if (empty($motivo)) {
 $filtroSucursal = $nivel == 1 ? '' : ' AND id_sucursal=?';
 
 $stmt = $conexion->prepare(
-    "SELECT id, estado FROM gastos WHERE id=? AND bss_id=?$filtroSucursal"
+    "SELECT id, estado, mes, id_sucursal FROM gastos WHERE id=? AND bss_id=?$filtroSucursal"
 );
 if ($nivel == 1) {
     $stmt->bind_param('ii', $id_gasto, $bss_id);
@@ -63,6 +64,7 @@ if ($nivel == 1) {
 }
 
 if ($stmt->execute()) {
+    resumen_mensual_invalidar($conexion, $bss_id, (int)$gasto['id_sucursal'], $gasto['mes']);
     echo json_encode(['status' => 'ok', 'msg' => 'Gasto anulado correctamente']);
 } else {
     echo json_encode(['status' => 'error', 'msg' => 'Error al anular gasto']);

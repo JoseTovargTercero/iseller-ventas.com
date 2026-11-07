@@ -11,6 +11,7 @@
  */
 
 require_once __DIR__ . '/_pos_comun.php';
+require_once __DIR__ . '/../configurar/_resumen_mensual.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -195,6 +196,7 @@ function procesarVenta($conexion, $venta, int $bssId, int $sucursalId, int $usua
         }
 
         $conexion->commit();
+        resumen_mensual_invalidar($conexion, $bssId, $sucursalId, $mes);
 
         $respuesta = ['id_pedido' => $idPedido, 'ok' => true, 'orden_id' => $ordenId, 'duplicada' => false];
         if (count($faltantes) > 0) {

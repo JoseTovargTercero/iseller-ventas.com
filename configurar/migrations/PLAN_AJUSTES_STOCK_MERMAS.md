@@ -65,6 +65,12 @@ y sucursal no necesitan agrupar cabeceras. Si más adelante se quiere cargar un
 inventario completo de una vez, se agrega un documento con detalle; la tabla de
 movimientos no cambia.
 
+**Consulta de un producto específico:** como cada fila guarda `producto_id`,
+`producto_nombre` y `categoria_nombre`, el filtro "Producto" de la pantalla
+agrega `m.producto_id = ?` a todas las consultas (KPIs, series, categorías,
+top productos y tabla). Ejemplo: seleccionar "Muslo" muestra únicamente las
+mermas y ajustes de ese producto, con sus fechas, cantidades y valor en $.
+
 **"Los ajustes negativos cuentan como pérdida pero se separan de las mermas"**
 
 - **Merma** (`tipo = MERMA`): pérdida conocida y con causa (se venció, se
@@ -102,7 +108,7 @@ resolver el puntero y aplicar el factor de conversión, igual que hace
 
 ## 3. Modelo de datos
 
-Archivo: `configurar/migrations/019_ajustes_stock_mermas.sql`
+Archivo: `configurar/migrations/020_ajustes_stock_mermas.sql`
 
 ```sql
 CREATE TABLE IF NOT EXISTS `stock_ajustes` (
@@ -231,7 +237,7 @@ Notas:
 
 | Archivo | Rol |
 |---|---|
-| `configurar/migrations/019_ajustes_stock_mermas.sql` | Tablas + menú |
+| `configurar/migrations/020_ajustes_stock_mermas.sql` | Tablas + menú |
 | `publico/production/ajustes_stock.php` | Página: KPIs, filtros, gráficos, tabla, modales |
 | `publico/production/db/ajustes_stock_api.php` | JSON: `resumen`, `listar`, `productos`, `registrar`, `anular` |
 
@@ -269,6 +275,7 @@ Devuelve todo lo de la parte superior de la pantalla en una sola llamada:
     "perdida_semana_usd": 0,
     "perdida_mes_usd": 0,
     "unidades_mes": 0,
+    "registros_mes": 0,
     "variacion_mes_pct": 0,
     "merma_mes_usd": 0,
     "ajuste_negativo_mes_usd": 0
@@ -503,7 +510,7 @@ La tabla no tiene `semana`/`mes` almacenados: se derivan de `fecha`, que es la
 
 ### Fase 1 — Base de datos y API
 
-1. Crear `019_ajustes_stock_mermas.sql` y ejecutarlo.
+1. Crear `020_ajustes_stock_mermas.sql` y ejecutarlo.
 2. Crear `db/ajustes_stock_api.php` con `productos`, `registrar`, `listar`.
 3. Probar con `curl`/Postman: merma resta stock, ajuste fija stock, montos en $
    correctos, `razon` obligatoria, `usuario_nombre` tomado de la sesión y
@@ -583,5 +590,9 @@ La tabla no tiene `semana`/`mes` almacenados: se derivan de `fecha`, que es la
 - Si se elimina la fila de `stock` de un producto, anular su merma fallará; el
   registro histórico se conserva en estado ACTIVO con el stock no revertido.
   Aceptable para el alcance actual.
+- `razon` es texto libre: se escapa con `htmlspecialchars` al pintarlo en la
+  tabla y en los tooltips para evitar XSS. No se permite HTML.
+- El nombre del usuario se guarda como copia histórica; si luego se renombra o
+  elimina la cuenta, el registro sigue mostrando quién lo hizo.
 - Los motivos y la fórmula de costo deben confirmarse con el negocio antes de
   implementar si usan precios por caja/paca de forma distinta a `valor_stock.php`.

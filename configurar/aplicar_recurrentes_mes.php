@@ -2,6 +2,7 @@
 require_once('configuracion.php');
 require_once('session.php');
 require_once('_tasas_cambio.php');
+require_once('_resumen_mensual.php');
 
 header('Content-Type: application/json');
 
@@ -91,6 +92,9 @@ function insertarGasto($conexion, $codigo, $fecha, $semana, $mes, $regla, $cat_i
     }
     $ok = $ins->execute();
     $ins->close();
+    if ($ok) {
+        resumen_mensual_invalidar($conexion, $bss_id, $id_sucursal, $mes);
+    }
     return $ok;
 }
 
