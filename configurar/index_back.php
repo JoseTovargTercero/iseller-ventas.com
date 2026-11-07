@@ -402,7 +402,7 @@ ORDER BY total DESC
 
   // 4. Créditos por cliente (Optimizado: ya estaba bien, pero asegurando tipos)
   $creditosPorCliente = [];
-  $res = $conexion->query("SELECT negocio AS cliente, SUM(total_price) AS total_credito FROM creditos WHERE estado = '2' AND bss_id = $bss_id GROUP BY negocio ORDER BY total_credito DESC LIMIT 20");
+  $res = $conexion->query("SELECT negocio AS cliente, SUM(total_price) AS total_credito FROM creditos WHERE estado = '2' AND bss_id = $bss_id GROUP BY negocio ORDER BY total_credito DESC LIMIT 10");
   if ($res) {
     while ($row = $res->fetch_assoc()) {
       $creditosPorCliente[] = ['cliente' => $row['cliente'], 'total' => (float)$row['total_credito']];

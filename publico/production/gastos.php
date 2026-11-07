@@ -1081,6 +1081,8 @@ if ($cat_stmt) {
                         },
                         tooltip: {
                             theme: 'dark',
+                            shared: true,
+                            intersect: false,
                             y: {
                                 formatter: function(v) {
                                     return '$ ' + Number(v).toFixed(2);

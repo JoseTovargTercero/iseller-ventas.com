@@ -1469,6 +1469,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 },
                 tooltip: {
                     theme: 'dark',
+                    shared: true,
+                    intersect: false,
                     y: {
                         formatter: function(v) {
                             return '$ ' + Number(v).toFixed(2);
