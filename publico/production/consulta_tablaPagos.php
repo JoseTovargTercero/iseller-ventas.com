@@ -83,7 +83,36 @@ if ($result->num_rows === 0) {
 }
 
 $tipo_labels = ['FIJO' => 'Fijo', 'VARIABLE' => 'Variable'];
-$count = 0;
+
+// Agrupar los gastos de categoría "Personal" en una sola fila
+$personal = [];
+$otras    = [];
+while ($fila = $result->fetch_assoc()) {
+    if (strcasecmp(trim($fila['categoria_nombre'] ?? ''), 'Personal') === 0) {
+        $personal[] = $fila;
+    } else {
+        $otras[] = $fila;
+    }
+}
+
+$personal_total   = 0.0;
+$personal_activos = 0;
+$personal_detalle = [];
+foreach ($personal as $fila) {
+    if ($fila['estado'] === 'ACTIVO') {
+        $personal_total += (float)$fila['monto_usd'];
+        $personal_activos++;
+    }
+    $personal_detalle[] = [
+        'id' => (int)$fila['id'],
+        'codigo' => $fila['codigo'],
+        'fecha' => $fila['fecha'],
+        'concepto' => $fila['concepto'],
+        'monto' => number_format($fila['monto_usd'], 2, ',', '.'),
+        'estado' => $fila['estado'],
+        'observacion' => $fila['observacion'] ?? ''
+    ];
+}
 
 echo '<table id="datatable-responsive" class="table table-striped table-bordered" style="width:100%">
 <thead>
@@ -102,7 +131,26 @@ echo '<table id="datatable-responsive" class="table table-striped table-bordered
 </thead>
 <tbody>';
 
-while ($fila = $result->fetch_assoc()) {
+$count = 0;
+
+if (count($personal) > 0) {
+    $personal_json = htmlspecialchars(json_encode($personal_detalle, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+    echo '<tr data-personal=\'' . $personal_json . '\' style="background:rgba(91,156,245,.05);">'
+        . '<td>—</td>'
+        . '<td><span style="font-size:11px;font-weight:700;color:#5b9cf5;">GRUPO</span></td>'
+        . '<td>—</td>'
+        . '<td><strong>Pagos de Personal</strong> <span style="color:var(--dash-text-muted);font-size:12px;">(' . count($personal) . ')</span></td>'
+        . '<td>Personal</td>'
+        . '<td>—</td>'
+        . '<td>—</td>'
+        . '<td style="text-align:right;"><strong>$ ' . number_format($personal_total, 2, ',', '.') . '</strong></td>'
+        . '<td><span class="badge-activo">' . $personal_activos . ' activos</span></td>'
+        . '<td style="text-align:center;"><button type="button" class="btn-action" onclick="verDetallePersonal(this)" title="Ver detalle de Personal">'
+        . '<ion-icon name="list-outline" style="font-size:15px;"></ion-icon></button></td>'
+        . '</tr>';
+}
+
+foreach ($otras as $fila) {
     $count++;
     $monto_formateado = number_format($fila['monto'], 2, ',', '.');
 

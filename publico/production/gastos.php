@@ -54,6 +54,7 @@ if ($cat_stmt) {
     <title>Gastos</title>
     <?php require_once('includes/headers.php'); ?>
     <link rel="stylesheet" href="theme.css">
+    <script src="../vendors/apexcharts/apexcharts.min.js"></script>
     <style>
         .right_col {
             background: var(--dash-bg);
@@ -703,6 +704,16 @@ if ($cat_stmt) {
                     </div>
                 </div>
 
+                <div class="dash-panel" style="margin-bottom:24px;">
+                    <div class="panel-header">
+                        <h6><ion-icon name="bar-chart-outline"></ion-icon>Ganancias vs Gastos</h6>
+                        <span style="font-size:12px;color:var(--dash-text-muted);">Últimos 12 meses</span>
+                    </div>
+                    <div class="panel-body" style="padding:10px 12px 6px;">
+                        <div id="graficoGananciasGastos"></div>
+                    </div>
+                </div>
+
                 <div class="dash-panel">
                     <div class="panel-header">
                         <h6><ion-icon name="receipt-outline"></ion-icon>Gastos registrados</h6>
@@ -957,6 +968,128 @@ if ($cat_stmt) {
                 });
 
             actualizarCounts();
+            cargarGrafico();
+        }
+
+        var chartGananciasGastos = null;
+
+        function cargarGrafico() {
+            $.ajax({
+                    url: 'consulta_gastosGrafico.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_sucursal: getSucursalId()
+                    }
+                })
+                .done(function(r) {
+                    const series = [{
+                            name: 'Ganancias',
+                            type: 'bar',
+                            data: r.ganancias
+                        },
+                        {
+                            name: 'Gastos',
+                            type: 'bar',
+                            data: r.gastos
+                        },
+                        {
+                            name: 'Ganancia neta',
+                            type: 'line',
+                            data: r.netos
+                        }
+                    ];
+
+                    if (chartGananciasGastos) {
+                        chartGananciasGastos.updateOptions({
+                            xaxis: {
+                                categories: r.labels
+                            }
+                        }, false, false);
+                        chartGananciasGastos.updateSeries(series);
+                        return;
+                    }
+
+                    chartGananciasGastos = new ApexCharts(document.querySelector('#graficoGananciasGastos'), {
+                        series: series,
+                        chart: {
+                            type: 'bar',
+                            height: 320,
+                            background: 'transparent',
+                            toolbar: {
+                                show: false
+                            },
+                            zoom: {
+                                enabled: false
+                            }
+                        },
+                        theme: {
+                            mode: 'dark'
+                        },
+                        colors: ['#2dd4a0', '#ef5a6f', '#5b9cf5'],
+                        plotOptions: {
+                            bar: {
+                                columnWidth: '45%',
+                                borderRadius: 4
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        stroke: {
+                            curve: 'smooth',
+                            width: [0, 0, 3]
+                        },
+                        markers: {
+                            size: 4,
+                            strokeWidth: 0
+                        },
+                        grid: {
+                            borderColor: 'rgba(255,255,255,.05)'
+                        },
+                        legend: {
+                            labels: {
+                                colors: '#8892a0'
+                            },
+                            fontSize: '12px'
+                        },
+                        xaxis: {
+                            categories: r.labels,
+                            labels: {
+                                style: {
+                                    colors: '#8892a0',
+                                    fontSize: '11px'
+                                }
+                            },
+                            axisBorder: {
+                                show: false
+                            },
+                            axisTicks: {
+                                show: false
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    colors: '#8892a0',
+                                    fontSize: '11px'
+                                },
+                                formatter: function(v) {
+                                    return '$' + Math.round(v);
+                                }
+                            }
+                        },
+                        tooltip: {
+                            theme: 'dark',
+                            y: {
+                                formatter: function(v) {
+                                    return '$ ' + Number(v).toFixed(2);
+                                }
+                            }
+                        }
+                    });
+                    chartGananciasGastos.render();
+                });
         }
 
         function filtroRapido(periodo, el) {
@@ -1210,6 +1343,72 @@ if ($cat_stmt) {
                     popup: 'swal-detail-popup'
                 }
             });
+        }
+
+        function verDetallePersonal(el) {
+            let items = [];
+            try {
+                items = JSON.parse(el.closest('tr').getAttribute('data-personal') || '[]');
+            } catch (e) {
+                items = [];
+            }
+
+            function esc(s) {
+                return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[c];
+                });
+            }
+
+            let total = 0;
+            let html = '<div style="text-align:left;max-height:400px;overflow-y:auto;">';
+            items.forEach(function(d) {
+                const activo = d.estado === 'ACTIVO';
+                if (activo) total += parseFloat(String(d.monto).replace(/\./g, '').replace(',', '.')) || 0;
+                const badge = activo ?
+                    '<span style="background:#32d7c0;color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;">Activo</span>' :
+                    '<span style="background:#ef5a6f;color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;">Anulado</span>';
+                const anular = activo ?
+                    '<button type="button" data-id="' + d.id + '" data-codigo="' + esc(d.codigo) + '" onclick="anularPersonal(this)" title="Anular gasto" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--dash-border);background:transparent;color:var(--dash-text-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">' +
+                    '<ion-icon name="ban-outline" style="font-size:14px;"></ion-icon></button>' : '';
+
+                html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(46,53,62,.4);">' +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<div style="font-size:13px;font-weight:600;color:var(--dash-text);">' + esc(d.concepto) + '</div>' +
+                    '<div style="font-size:11px;color:var(--dash-text-muted);">' + esc(d.codigo) + ' · ' + esc(d.fecha) + (d.observacion ? ' · ' + esc(d.observacion) : '') + '</div>' +
+                    '</div>' +
+                    '<div style="font-size:13px;font-weight:700;color:var(--dash-text);white-space:nowrap;">$ ' + d.monto + '</div>' +
+                    badge +
+                    anular +
+                    '</div>';
+            });
+            html += '</div>';
+
+            Swal.fire({
+                title: '<span style="display:flex;align-items:center;gap:10px;">' +
+                    '<span style="width:36px;height:36px;border-radius:50%;background:rgba(91,156,245,.12);display:flex;align-items:center;justify-content:center;">' +
+                    '<ion-icon name="people-outline" style="font-size:20px;color:#5b9cf5;"></ion-icon></span>' +
+                    'Gastos de Personal</span>',
+                html: '<div style="font-size:12px;color:var(--dash-text-muted);text-align:left;margin-bottom:6px;">' +
+                    items.length + ' registro(s) · Total activo: <strong style="color:var(--dash-text);">$ ' +
+                    total.toLocaleString('es-VE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }) + '</strong></div>' + html,
+                confirmButtonText: 'Cerrar',
+                confirmButtonColor: '#2dd4a0',
+                width: 560
+            });
+        }
+
+        function anularPersonal(btn) {
+            Swal.close();
+            anularGasto(btn.getAttribute('data-id'), btn.getAttribute('data-codigo'));
         }
 
         function anularGasto(id, codigo) {
