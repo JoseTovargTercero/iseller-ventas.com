@@ -17,6 +17,12 @@ if ($bss_id <= 0 || $usuario_id <= 0) {
     exit;
 }
 
+// Asegura la tabla de conceptos antes de abrir cualquier transacción:
+// crear una tabla dentro de una transacción provocaría un commit implícito.
+if (in_array($accion, ['detalle', 'guardar', 'aplicar', 'rectificar', 'eliminar'], true)) {
+    asig_asegurar_conceptos($conexion);
+}
+
 function asig_tiene_permiso(string $archivo, bool $esAdmin): bool
 {
     if ($esAdmin) {

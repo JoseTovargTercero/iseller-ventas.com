@@ -277,6 +277,9 @@ function asig_bloquear_productos($conexion, int $bssId, array $productoIds): voi
     }
 
     $stmt = $conexion->prepare("SELECT id FROM productos WHERE id = ? AND bss_id = ? FOR UPDATE");
+    if (!$stmt) {
+        throw new Exception('No se pudo preparar el bloqueo de productos para la asignación.');
+    }
     foreach ($ids as $productoId) {
         $stmt->bind_param('ii', $productoId, $bssId);
         $stmt->execute();
@@ -470,6 +473,9 @@ function asig_get_asignacion($conexion, int $asignacionId, int $bssId, bool $for
 function asig_get_detalles($conexion, int $asignacionId): array
 {
     $stmt = $conexion->prepare("SELECT * FROM asignaciones_sucursales_detalles WHERE asignacion_id = ? ORDER BY producto_id ASC");
+    if (!$stmt) {
+        return [];
+    }
     $stmt->bind_param('i', $asignacionId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -508,6 +514,9 @@ function asig_bitacora($conexion, int $asignacionId, int $usuarioId, string $acc
          (asignacion_id, usuario_id, accion, motivo, datos_anteriores, datos_nuevos)
          VALUES (?, ?, ?, ?, ?, ?)"
     );
+    if (!$stmt) {
+        throw new Exception('No se pudo registrar la bitácora. Verifique que la tabla de bitácora exista.');
+    }
     $stmt->bind_param('iissss', $asignacionId, $usuarioId, $accion, $motivo, $antesJson, $despuesJson);
     $stmt->execute();
     $stmt->close();
@@ -520,6 +529,9 @@ function asig_insertar_detalles($conexion, int $asignacionId, array $lineas): vo
          (asignacion_id, producto_id, producto_nombre, cantidad, costo_unitario, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)"
     );
+    if (!$stmt) {
+        throw new Exception('No se pudo guardar el detalle: falta la tabla de detalles de asignaciones.');
+    }
     foreach ($lineas as $linea) {
         $productoId = (int) $linea['producto_id'];
         $productoNombre = (string) $linea['producto_nombre'];
@@ -543,14 +555,55 @@ function asig_insertar_detalles($conexion, int $asignacionId, array $lineas): vo
     $stmt->close();
 }
 
+/**
+ * La tabla de conceptos se agregó después del módulo original. Si el hosting
+ * quedó con el esquema anterior, se crea una sola vez y de forma segura.
+ * No modifica ni elimina datos existentes.
+ */
+function asig_asegurar_conceptos($conexion): bool
+{
+    static $tablaLista = null;
+    if ($tablaLista !== null) {
+        return $tablaLista;
+    }
+
+    $res = $conexion->query("SHOW TABLES LIKE 'asignaciones_sucursales_conceptos'");
+    if ($res && $res->num_rows > 0) {
+        $res->free();
+        return $tablaLista = true;
+    }
+
+    $tablaLista = (bool) $conexion->query(
+        "CREATE TABLE IF NOT EXISTS `asignaciones_sucursales_conceptos` (
+            `id`             INT(11)        NOT NULL AUTO_INCREMENT,
+            `asignacion_id`  INT(11)        NOT NULL,
+            `concepto`       VARCHAR(255)   NOT NULL,
+            `monto`          DECIMAL(15,2)  NOT NULL,
+            `created_at`     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `idx_concepto_asignacion` (`asignacion_id`),
+            CONSTRAINT `fk_concepto_asignacion`
+              FOREIGN KEY (`asignacion_id`) REFERENCES `asignaciones_sucursales` (`id`)
+              ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+
+    return $tablaLista;
+}
+
 function asig_get_conceptos($conexion, int $asignacionId): array
 {
+    asig_asegurar_conceptos($conexion);
+
     $stmt = $conexion->prepare(
         "SELECT id, asignacion_id, concepto, monto, created_at
          FROM asignaciones_sucursales_conceptos
          WHERE asignacion_id = ?
          ORDER BY id ASC"
     );
+    if (!$stmt) {
+        return [];
+    }
     $stmt->bind_param('i', $asignacionId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -568,11 +621,16 @@ function asig_insertar_conceptos($conexion, int $asignacionId, array $conceptos)
         return;
     }
 
+    asig_asegurar_conceptos($conexion);
+
     $stmt = $conexion->prepare(
         "INSERT INTO asignaciones_sucursales_conceptos
          (asignacion_id, concepto, monto)
          VALUES (?, ?, ?)"
     );
+    if (!$stmt) {
+        throw new Exception('No se pudieron guardar los conceptos: falta la tabla de conceptos. Ejecute la migración 017.');
+    }
     foreach ($conceptos as $concepto) {
         $texto = (string) $concepto['concepto'];
         $monto = (float) $concepto['monto'];
@@ -592,6 +650,9 @@ function asig_movimiento($conexion, int $bssId, int $asignacionId, int $producto
          (bss_id, asignacion_id, producto_id, sucursal_id, tipo, cantidad, stock_antes, stock_despues)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
+    if (!$stmt) {
+        throw new Exception('No se pudo registrar el movimiento: falta la tabla de movimientos de asignaciones.');
+    }
     $stmt->bind_param('iiiisddd', $bssId, $asignacionId, $productoId, $sucursalId, $tipo, $cantidad, $antes, $despues);
     if (!$stmt->execute()) {
         $stmt->close();
@@ -878,6 +939,9 @@ function asig_aplicar_asignacion($conexion, int $bssId, int $usuarioId, int $asi
                  SET producto_nombre = ?, costo_unitario = ?, subtotal = ?
                  WHERE asignacion_id = ? AND producto_id = ?"
             );
+            if (!$stmt) {
+                throw new Exception('No se pudo actualizar el detalle de la asignación.');
+            }
             foreach ($lineas as $linea) {
                 $productoNombre = (string) $linea['producto_nombre'];
                 $costoUnitario = (float) $linea['costo_unitario'];
@@ -910,6 +974,9 @@ function asig_aplicar_asignacion($conexion, int $bssId, int $usuarioId, int $asi
              (bss_id, asignacion_id, sucursal_acreedora, sucursal_deudora, monto_original)
              VALUES (?, ?, ?, ?, ?)"
         );
+        if (!$stmt) {
+            throw new Exception('No se pudo generar la obligación económica: falta la tabla de cuentas entre sucursales.');
+        }
         $sucursalAcreedora = (int) $asignacion['sucursal_origen'];
         $sucursalDeudora = (int) $asignacion['sucursal_destino'];
         $stmt->bind_param(
@@ -932,6 +999,9 @@ function asig_aplicar_asignacion($conexion, int $bssId, int $usuarioId, int $asi
              SET total = ?, estado = 'APLICADO', aplicado_at = NOW()
              WHERE id = ? AND bss_id = ? AND estado = 'BORRADOR'"
         );
+        if (!$stmt) {
+            throw new Exception('No se pudo actualizar el estado de la asignación.');
+        }
         $stmt->bind_param('dii', $total, $asignacionId, $bssId);
         $stmt->execute();
         $afectadas = $stmt->affected_rows;
@@ -1386,6 +1456,9 @@ function asig_detalle_asignacion($conexion, int $bssId, int $usuarioId, bool $es
             WHERE a.id = ? AND a.bss_id = ?
             LIMIT 1";
     $stmt = $conexion->prepare($sql);
+    if (!$stmt) {
+        return asig_result_error('No se pudo consultar la asignación. Verifique que las tablas del módulo estén creadas.');
+    }
     $stmt->bind_param('ii', $asignacionId, $bssId);
     $stmt->execute();
     $asignacion = $stmt->get_result()->fetch_assoc();
@@ -1428,30 +1501,35 @@ function asig_detalle_asignacion($conexion, int $bssId, int $usuarioId, bool $es
              WHERE p.cuenta_sucursal_id = ?
              ORDER BY p.fecha ASC, p.id ASC"
         );
-        $cuentaId = (int) $cuenta['id'];
-        $stmt->bind_param('i', $cuentaId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($row = $result->fetch_assoc()) {
-            $pagos[] = $row;
+        if ($stmt) {
+            $cuentaId = (int) $cuenta['id'];
+            $stmt->bind_param('i', $cuentaId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            while ($row = $result->fetch_assoc()) {
+                $pagos[] = $row;
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 
+    $movimientos = [];
     $stmt = $conexion->prepare(
         "SELECT * FROM asignaciones_sucursales_movimientos
          WHERE asignacion_id = ?
          ORDER BY id ASC"
     );
-    $stmt->bind_param('i', $asignacionId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $movimientos = [];
-    while ($row = $result->fetch_assoc()) {
-        $movimientos[] = $row;
+    if ($stmt) {
+        $stmt->bind_param('i', $asignacionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $movimientos[] = $row;
+        }
+        $stmt->close();
     }
-    $stmt->close();
 
+    $bitacora = [];
     $stmt = $conexion->prepare(
         "SELECT b.*, u.nombre AS usuario_nombre
          FROM asignaciones_sucursales_bitacora b
@@ -1459,15 +1537,16 @@ function asig_detalle_asignacion($conexion, int $bssId, int $usuarioId, bool $es
          WHERE b.asignacion_id = ?
          ORDER BY b.id ASC"
     );
-    $stmt->bind_param('i', $asignacionId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $bitacora = [];
-    while ($row = $result->fetch_assoc()) {
-        unset($row['datos_anteriores'], $row['datos_nuevos']);
-        $bitacora[] = $row;
+    if ($stmt) {
+        $stmt->bind_param('i', $asignacionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            unset($row['datos_anteriores'], $row['datos_nuevos']);
+            $bitacora[] = $row;
+        }
+        $stmt->close();
     }
-    $stmt->close();
 
     return asig_result_ok('', [
         'asignacion' => $asignacion,

@@ -4,8 +4,24 @@
 -- Fecha: 2026-11-08
 -- ============================================================
 
-ALTER TABLE `compras`
-  ADD COLUMN IF NOT EXISTS `created_at` DATETIME NULL DEFAULT NULL AFTER `fecha`;
+-- MySQL no admite ADD COLUMN IF NOT EXISTS. Se comprueba primero.
+SET @existe := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'compras'
+    AND COLUMN_NAME = 'created_at'
+);
+
+SET @sql := IF(
+  @existe = 0,
+  'ALTER TABLE `compras` ADD COLUMN `created_at` DATETIME NULL DEFAULT NULL AFTER `fecha`',
+  'DO 0'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Rellena las compras existentes desde la fecha visible (d-m-Y h:i a).
 UPDATE `compras`

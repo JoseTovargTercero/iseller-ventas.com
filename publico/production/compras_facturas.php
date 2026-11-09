@@ -1,5 +1,6 @@
 <?php
 require_once('includes/requires.php');
+require_once('../../configurar/_factura_compra.php');
 
 $nivel = (int) $_SESSION['nivel'];
 if ($nivel !== 1 && $nivel !== 2) {
@@ -8,6 +9,12 @@ if ($nivel !== 1 && $nivel !== 2) {
 }
 
 $bss_id = (int) $_SESSION['bss_id'];
+
+if (!fc_asegurar_esquema($conexion)) {
+    http_response_code(500);
+    echo 'No se pudo preparar la tabla de facturas. Ejecute la migración 024_compras_facturas_vencimiento.sql.';
+    exit;
+}
 
 // El módulo solo existe mientras la opción esté activa.
 $stmt = $conexion->prepare("SELECT factura FROM configuracion WHERE bss_id = ? ORDER BY id DESC LIMIT 1");

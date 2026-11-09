@@ -52,6 +52,7 @@ if (!is_array($input)) {
 }
 
 $accion = $input['accion'] ?? ($_GET['accion'] ?? '');
+fc_asegurar_esquema($conexion);
 $usuario = $_SESSION['nombre'] ?? 'desconocido';
 $usuarioId = (int) ($_SESSION['id'] ?? 0);
 

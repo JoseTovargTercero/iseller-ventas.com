@@ -19,6 +19,39 @@ function fc_estado($total, $abonado)
     return ((float) $abonado + 0.005 >= (float) $total) ? 'pagada' : 'pendiente';
 }
 
+/**
+ * El hosting puede no tener aplicada la migración 024. Agrega la columna de
+ * vencimiento una sola vez y sin tocar los datos existentes.
+ */
+function fc_asegurar_esquema($conexion): bool
+{
+    static $listo = null;
+    if ($listo !== null) {
+        return $listo;
+    }
+
+    $res = $conexion->query("SHOW COLUMNS FROM compras_facturas LIKE 'fecha_vencimiento'");
+    if ($res && $res->num_rows > 0) {
+        $res->free();
+        return $listo = true;
+    }
+
+    $listo = (bool) $conexion->query(
+        "ALTER TABLE compras_facturas ADD COLUMN fecha_vencimiento DATE NULL AFTER fecha_factura"
+    );
+
+    if (!$listo) {
+        // Otra petición pudo agregarla al mismo tiempo.
+        $res = $conexion->query("SHOW COLUMNS FROM compras_facturas LIKE 'fecha_vencimiento'");
+        $listo = $res && $res->num_rows > 0;
+        if ($res) {
+            $res->free();
+        }
+    }
+
+    return $listo;
+}
+
 // Autochequeo: php configurar/_factura_compra.php
 if (PHP_SAPI === 'cli' && isset($argv[0]) && realpath($argv[0]) === __FILE__) {
     $fallos = 0;
