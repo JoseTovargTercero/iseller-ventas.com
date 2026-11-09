@@ -78,7 +78,9 @@ $catSelect = $hasCatTable && $hasCatCol
     ? ", P.categoria, C.nombre AS categoria_nombre" . ($hasGrupoCol ? ", C.grupo AS categoria_grupo" : ", NULL AS categoria_grupo")
     : ", NULL AS categoria, NULL AS categoria_nombre, NULL AS categoria_grupo";
 
-$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo, MAX(NP.foto_url) AS foto_url $catSelect
+$sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo, MAX(NP.foto_url) AS foto_url,
+MAX(S.visible_venta) AS visible_venta, MAX(P.seguimiento_estricto) AS seguimiento_estricto,
+MAX(P.modo_control) AS modo_control, MAX(P.unidad) AS unidad $catSelect
 FROM stock AS S
 LEFT JOIN productos AS P ON P.id = S.id_producto
 LEFT JOIN negocio_productos AS NP ON NP.producto_id = P.id AND NP.negocio_id = $bss_id
@@ -145,6 +147,10 @@ while ($row = $result->fetch_assoc()) {
             "categoria_grupo" =>  $row['categoria_grupo'],
             "foto_url" =>  $row['foto_url'],
             "imagen" =>  $imgRef,
+            "visible_venta" =>  (int) $row['visible_venta'],
+            "seguimiento_estricto" =>  (int) $row['seguimiento_estricto'],
+            "modo_control" =>  $row['modo_control'],
+            "unidad" =>  $row['unidad'],
 
         ];
     }

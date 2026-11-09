@@ -1,6 +1,7 @@
 <?php
 require_once 'configuracion.php';
 require_once 'session.php';
+require_once '_canal.php';
 
 header('Content-Type: application/json');
 
@@ -125,13 +126,30 @@ function devolverStockCredito($conexion, $orderId, $bssId, $esMayor)
             continue;
         }
 
+        $canal = canal_devolver($conexion, $productoId, $sucursalId, $bssId, $cantidad, (int) $orderId, 0);
+        if (!empty($canal['error'])) {
+            throw new Exception($canal['error']);
+        }
+        if (($canal['modo'] ?? 'NORMAL') === 'CANAL') {
+            continue;
+        }
+
         $esCombo = false;
         $stmtCombo->bind_param('ii', $productoId, $bssId);
         $stmtCombo->execute();
         $resCombo = $stmtCombo->get_result();
         while ($hijo = $resCombo->fetch_assoc()) {
             $esCombo = true;
-            sumarStockCredito($stmtSumar, (int) $hijo['producto_id'], $cantidad * (float) $hijo['cantidad'], $sucursalId, $bssId);
+            $idHijo = (int) $hijo['producto_id'];
+            $cantHijo = $cantidad * (float) $hijo['cantidad'];
+            $canalHijo = canal_devolver($conexion, $idHijo, $sucursalId, $bssId, $cantHijo, (int) $orderId, 0);
+            if (!empty($canalHijo['error'])) {
+                throw new Exception($canalHijo['error']);
+            }
+            if (($canalHijo['modo'] ?? 'NORMAL') === 'CANAL') {
+                continue;
+            }
+            sumarStockCredito($stmtSumar, $idHijo, $cantHijo, $sucursalId, $bssId);
         }
         if ($esCombo) {
             continue;

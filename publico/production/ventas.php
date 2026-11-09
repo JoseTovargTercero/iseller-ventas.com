@@ -177,13 +177,24 @@ $sql = "SELECT
             p.id,
             s.stock,
             p.codigo_barras,
+            p.unidad,
+            p.modo_control,
+            pp.modo_control AS padre_modo,
+            l.kg_restante AS kg_res,
+            lself.kg_restante AS kg_res_propio,
             np.foto_url
         FROM productos p
         INNER JOIN stock s ON p.id = s.id_producto
         LEFT JOIN negocio_productos np ON np.producto_id = p.id AND np.negocio_id = ?
+        LEFT JOIN productos pp ON pp.id = p.id_producto_relacionado AND pp.mayor = 0
+        LEFT JOIN lotes l ON l.padre_id = pp.id AND l.id_sucursal = s.id_sucursal
+             AND l.bss_id = s.bss_id AND l.estado = 'ABIERTO'
+        LEFT JOIN lotes lself ON lself.padre_id = p.id AND lself.id_sucursal = s.id_sucursal
+             AND lself.bss_id = s.bss_id AND lself.estado = 'ABIERTO'
         WHERE p.activo = 0
         AND s.id_sucursal = ?
-        AND s.bss_id = ?";
+        AND s.bss_id = ?
+        AND s.visible_venta = 1";
 
 if (!$puede_vender_al_mayor) {
     $sql .= " AND (p.mayor IS NULL OR p.mayor != '1')";
@@ -243,9 +254,19 @@ if ($result->num_rows > 0) {
         }
 
         $esCombo = (int)($row['es_combo'] ?? 0);
-        $stockProducto = ($esCombo === 1 && isset($combos_mapa[$row['id']]))
-            ? $combos_mapa[$row['id']]['stock_disponible']
-            : $row['stock'];
+        $padreCanal = (string)($row['padre_modo'] ?? '') === 'CANAL';
+        $selfCanal = (string)($row['modo_control'] ?? 'NORMAL') === 'CANAL';
+        $esCanal = $padreCanal || $selfCanal;
+        $kgRes = $padreCanal ? (float)($row['kg_res'] ?? 0) : (float)($row['kg_res_propio'] ?? 0);
+
+        if ($esCombo === 1 && isset($combos_mapa[$row['id']])) {
+            $stockProducto = $combos_mapa[$row['id']]['stock_disponible'];
+        } elseif ($esCanal) {
+            $empaque = max(1.0, (float)$row['cantidad_unidades']);
+            $stockProducto = $mayor == 1 ? floor($kgRes / $empaque) : $kgRes;
+        } else {
+            $stockProducto = $row['stock'];
+        }
         $comboItemsProd = ($esCombo === 1 && isset($combos_mapa[$row['id']]))
             ? $combos_mapa[$row['id']]['items']
             : [];
@@ -289,7 +310,10 @@ if ($result->num_rows > 0) {
             'price_C' => $valorUnidad, // precio de compra
             'price_C_Bs' => $valorUnidad * $dolarBolivar, // precio de compra
             'price_C_Cop' => $valorUnidad * $pesoDolar, // precio de compra
-            'cantidadPaca' => $row['cantidad_unidades']
+            'cantidadPaca' => $row['cantidad_unidades'],
+            'unidad' => $mayor == 1 ? 'UND' : ($row['unidad'] ?? 'UND'),
+            'paso' => ($mayor != 1 && ($row['unidad'] ?? 'UND') === 'KG') ? 0.01 : 1,
+            'modo_control' => $esCanal ? 'CANAL' : 'NORMAL'
         ];
         /* PRODUCTOS PARA LA BUSQUEDA */
 
@@ -313,6 +337,9 @@ if ($result->num_rows > 0) {
                 'mayor' => $row['mayor'],
                 'es_combo' => $esCombo,
                 'combo_items' => $comboItemsProd,
+                'unidad' => $mayor == 1 ? 'UND' : ($row['unidad'] ?? 'UND'),
+                'paso' => ($mayor != 1 && ($row['unidad'] ?? 'UND') === 'KG') ? 0.01 : 1,
+                'modo_control' => $esCanal ? 'CANAL' : 'NORMAL',
             ];
 
             $codigos[] = $codigo;
@@ -2939,6 +2966,12 @@ $stmt->close();
             };
 
 
+            function escVentaHtml(valor) {
+                const div = document.createElement('div');
+                div.textContent = valor == null ? '' : String(valor);
+                return div.innerHTML;
+            }
+
             // lista de ventas
             function cargarUltimasOrdenes() {
                 fetch(base_url + 'ultimas_ventas.php')
@@ -2947,16 +2980,37 @@ $stmt->close();
                         const tabla = document.getElementById('tabla_ventas');
                         tabla.innerHTML = ''; // Limpiar antes de insertar
 
-                        let contador = 1;
+                        const esAdmin = Number(nivelUsuario) === 1;
 
                         data.forEach(orden => {
+                            const pendiente = Number(orden.pendiente) === 1;
                             const row = document.createElement('tr');
+
+                            let estadoHtml = '';
+                            if (pendiente) {
+                                estadoHtml = '<br><span class="badge bg-warning" style="font-size:10px;">Pendiente por deshacer</span>';
+                                if (esAdmin && orden.usuarioNombre) {
+                                    estadoHtml += '<br><small class="text-muted">Solicitada por ' + escVentaHtml(orden.usuarioNombre) + '</small>';
+                                }
+                            }
+
+                            let accionHtml;
+                            if (pendiente) {
+                                accionHtml = esAdmin
+                                    ? `<button type="button" class="btn btn-sm btn-success" title="Completar eliminación" onclick="resolverDeshacer(${orden.id}, 'completar')"><ion-icon name="checkmark-outline"></ion-icon></button>
+                                       <button type="button" class="btn btn-sm btn-secondary" title="Rechazar solicitud" onclick="resolverDeshacer(${orden.id}, 'rechazar')"><ion-icon name="close-outline"></ion-icon></button>`
+                                    : '<span class="badge bg-warning" title="Pendiente por deshacer">En espera</span>';
+                            } else {
+                                accionHtml = `<a class="btn btn-danger btn-sm" style="cursor: pointer; color: white" title="Deshacer venta" onclick="confirm(${orden.id})"><i class="line icon-reload"></i></a>`;
+                            }
+
                             row.innerHTML = `
                                     <td> 
                                     ${orden.pagoPor} 
                                     <small>(${orden.tipoVenta})</small>
                                     <br>
-                                    <small class="text-muted">${orden.fecha}</small></td>
+                                    <small class="text-muted">${orden.fecha}</small>
+                                    ${estadoHtml}</td>
                                     <td>$${orden.total}</td>
                                     <td><a href="detallesVenta.php?id=${orden.id}">Detalles</a></td>
                                     <td style="text-align: center">
@@ -2976,7 +3030,7 @@ $stmt->close();
                                         </div>    
                                     </td>
 
-                                    <td style="text-align: center"><a class="btn btn-danger btn-sm" style="cursor: pointer; color: white" title="Deshacer compra" onclick="confirm(${orden.id})"><i class="line icon-reload"></i></a></td>
+                                    <td style="text-align: center; white-space: nowrap;">${accionHtml}</td>
                                 `;
                             tabla.appendChild(row);
                         });
@@ -4013,7 +4067,7 @@ $stmt->close();
                 <div class="scan-product">
                     <div class="scan-product-header">
                         <span><b>${datos.nombre}</b></span>
-                        <span class="scan-stock">${datos.stock} en stock</span>
+                        <span class="scan-stock">${datos.stock} ${datos.unidad === 'KG' ? 'kg' : 'und'} en stock</span>
                     </div>
 
                     <div class="scan-prices">
@@ -4024,7 +4078,7 @@ $stmt->close();
 
                     <div class="scan-controls">
                         <input type="number" id="cantidad-scan" class="scan-quantity cantidad-scan" 
-                            data-cantidad-id="${datos.id}" value="1">
+                            data-cantidad-id="${datos.id}" value="1" step="${datos.paso || 1}">
 
                         <button class="scan-btn add btn-add-to-car no-send" 
                             id="btn_${datos.id}"
@@ -4102,7 +4156,7 @@ $stmt->close();
                     // mayor llega como número desde productos_por_id; comparar como texto
                     const rest = (String(item.mayor) === '1' ?
                         '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' :
-                        (esCombo ? `<span class="badge bg-info me-1">Combo</span> ${item.stock}` : item.stock));
+                        (esCombo ? `<span class="badge bg-info me-1">Combo</span> ${item.stock}` : `${item.stock} ${item.unidad === 'KG' ? 'kg' : 'und'}`));
 
                     const btnVerCombo = esCombo ? `
                         <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="verProductosCombo('${item.id}')" title="Ver productos del combo">
@@ -4694,7 +4748,7 @@ $stmt->close();
                 const producto = productos_por_id[idPedido];
 
                 if (carritoActivo[idPedido]) {
-                    carritoActivo[idPedido].qty += cant;
+                    carritoActivo[idPedido].qty = Math.round((Number(carritoActivo[idPedido].qty) + Number(cant)) * 1000) / 1000;
                     const especial = preciosEspeciales[idPedido];
                     if (especial) {
                         carritoActivo[idPedido].price = especial.usd;
@@ -4716,6 +4770,7 @@ $stmt->close();
                         cantidadPaca: cantidad_por_mayor,
                         es_combo: producto.es_combo || 0,
                         combo_items: producto.combo_items || [],
+                        paso: Number(producto.paso) || 1,
                         origen: producto.origen || 'v'
                     };
                 }
@@ -4831,12 +4886,13 @@ $stmt->close();
             async function actualizarProductosCantidad(id, accion) {
                 if (id && accion) {
                     if (carritoActivo[id]) {
+                        const paso = Number(carritoActivo[id].paso) || 1;
                         if (accion === 'sumar') {
-                            carritoActivo[id].qty += 1;
+                            carritoActivo[id].qty = Math.round((Number(carritoActivo[id].qty) + paso) * 1000) / 1000;
                             await db.carritoActivo.put(carritoActivo[id]);
                         } else if (accion === 'restar') {
-                            carritoActivo[id].qty -= 1;
-                            if (carritoActivo[id].qty <= 0) {
+                            carritoActivo[id].qty = Math.round((Number(carritoActivo[id].qty) - paso) * 1000) / 1000;
+                            if (carritoActivo[id].qty <= 0.0001) {
                                 delete carritoActivo[id]; // también quitar de memoria
                                 await deleteFromIndexedDB('carritoActivo', id);
                             } else {
@@ -6160,34 +6216,66 @@ $stmt->close();
 
 
             function confirm(id) {
+                const esAdmin = Number(nivelUsuario) === 1;
+
                 Swal.fire({
-                    title: 'Esta seguro?',
-                    html: 'Se eliminara la venta ¿desea continuar?',
+                    title: esAdmin ? '¿Eliminar venta?' : '¿Solicitar eliminación?',
+                    html: esAdmin
+                        ? 'Se eliminará la venta y se devolverá el stock. ¿Desea continuar?'
+                        : 'La venta quedará <b>pendiente por deshacer</b> y un administrador deberá completar la operación.',
                     icon: 'question',
-                    confirmButtonText: 'Continuar',
+                    confirmButtonText: esAdmin ? 'Sí, eliminar' : 'Enviar solicitud',
                     cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#32d7c0',
+                    confirmButtonColor: esAdmin ? '#ef5a6f' : '#32d7c0',
                     showCancelButton: true,
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        eliminarVenta(id)
+                        eliminarVenta(id);
                     }
-                })
+                });
             }
 
+            function resolverDeshacer(id, accion) {
+                const completar = accion === 'completar';
 
-            function eliminarVenta(id) {
+                Swal.fire({
+                    title: completar ? '¿Completar eliminación?' : '¿Rechazar solicitud?',
+                    html: completar
+                        ? 'Se eliminará la venta y se devolverá el stock al inventario.'
+                        : 'La venta se mantendrá y se cancelará la solicitud del usuario.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: completar ? 'Sí, completar' : 'Sí, rechazar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: completar ? '#ef5a6f' : '#32d7c0'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        eliminarVenta(id, accion);
+                    }
+                });
+            }
+
+            function eliminarVenta(id, accion = '') {
                 $.ajax({
                         url: base_url + 'deleteVentaAjax.php',
                         type: 'POST',
-                        dataType: 'html',
+                        dataType: 'json',
                         data: {
-                            id: id
+                            id: id,
+                            accion: accion
                         },
                     })
-                    .done(function(resultado1) {
-                        cargarUltimasOrdenes()
+                    .done(function(res) {
+                        if (res && res.status) {
+                            Alerta.toast(res.pending ? 'warning' : 'success', res.msg || 'Operación realizada.');
+                        } else {
+                            Alerta.toast('error', (res && res.msg) || 'No se pudo procesar la solicitud.');
+                        }
+                        cargarUltimasOrdenes();
                     })
+                    .fail(function() {
+                        Alerta.toast('error', 'Error de conexión con el servidor.');
+                    });
             }
 
 

@@ -2,13 +2,26 @@
 header('Content-Type: application/json');
 require_once 'configuracion.php'; // Asegúrate de incluir la conexión
 require_once 'session.php'; // Asegúrate de incluir la conexión
-$user = $_SESSION["id"];
-$sucursal =  $_SESSION['sucursal'];
+$user = (int) $_SESSION["id"];
+$sucursal = (int) $_SESSION['sucursal'];
+$bssId = (int) ($bss_id ?? ($_SESSION['bss_id'] ?? 0));
+$nivel = (int) ($_SESSION['nivel'] ?? 0);
 
 $ordenesData = [];
-$queryOrden = "SELECT * FROM orden WHERE usuario = ? AND id_sucursal = ? ORDER BY id DESC LIMIT 6";
+// El administrador ve sus ventas recientes y todas las solicitudes pendientes
+// de su sucursal; el usuario estándar solo ve las suyas.
+$queryOrden = "SELECT o.*, u.nombre AS usuario_nombre
+    FROM orden o
+    LEFT JOIN usuarios u ON u.id = o.usuario
+    WHERE o.bss_id = ? AND o.id_sucursal = ?";
+if ($nivel === 1) {
+    $queryOrden .= " AND (o.usuario = ? OR o.deshacer_pendiente = 1)
+        ORDER BY o.deshacer_pendiente DESC, o.id DESC LIMIT 50";
+} else {
+    $queryOrden .= " AND o.usuario = ? ORDER BY o.id DESC LIMIT 6";
+}
 $stmtOrden = $conexion->prepare($queryOrden);
-$stmtOrden->bind_param('ii', $user, $sucursal);
+$stmtOrden->bind_param('iii', $bssId, $sucursal, $user);
 $stmtOrden->execute();
 $resultOrden = $stmtOrden->get_result();
 
@@ -110,6 +123,9 @@ if ($resultOrden->num_rows > 0) {
             'pagoPor' => $pagoPor,
             'fecha' => fechaEnTexto($orden['created']),
             'total' => number_format($orden['total_price'], 2, ',', '.'),
+            'pendiente' => (int) ($orden['deshacer_pendiente'] ?? 0),
+            'usuarioNombre' => $orden['usuario_nombre'] ?? '',
+            'solicitadoEn' => !empty($orden['deshacer_solicitado_en']) ? fechaEnTexto($orden['deshacer_solicitado_en']) : null,
         ];
     }
 }

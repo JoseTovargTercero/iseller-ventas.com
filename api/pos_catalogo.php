@@ -71,11 +71,18 @@ $setTienda = listarArchivos($imgRoot . '/assets/img/tiendas/' . $bssId);
 
 // ── Productos (mismo filtro que ventas.php) ────────────────────────────────────
 $sql = "SELECT p.cantidad_unidades, p.origen, p.precio_compra, s.porcentaje, p.nombre, p.mayor,
-               p.es_combo, p.id, s.stock, p.codigo_barras, np.foto_url
+               p.es_combo, p.id, s.stock, p.codigo_barras, np.foto_url,
+               p.unidad, p.modo_control, pp.modo_control AS padre_modo,
+               l.kg_restante AS kg_res, lself.kg_restante AS kg_res_propio
         FROM productos p
         INNER JOIN stock s ON p.id = s.id_producto
         LEFT JOIN negocio_productos np ON np.producto_id = p.id AND np.negocio_id = ?
-        WHERE p.activo = 0 AND s.id_sucursal = ? AND s.bss_id = ?";
+        LEFT JOIN productos pp ON pp.id = p.id_producto_relacionado AND pp.mayor = 0
+        LEFT JOIN lotes l ON l.padre_id = pp.id AND l.id_sucursal = s.id_sucursal
+             AND l.bss_id = s.bss_id AND l.estado = 'ABIERTO'
+        LEFT JOIN lotes lself ON lself.padre_id = p.id AND lself.id_sucursal = s.id_sucursal
+             AND lself.bss_id = s.bss_id AND lself.estado = 'ABIERTO'
+        WHERE p.activo = 0 AND s.id_sucursal = ? AND s.bss_id = ? AND s.visible_venta = 1";
 if (!$puedeMayor) {
     $sql .= " AND (p.mayor IS NULL OR p.mayor != '1')";
 }
@@ -91,7 +98,19 @@ $res = $stmt->get_result();
 while ($fila = $res->fetch_assoc()) {
     $esCombo = (int)($fila['es_combo'] ?? 0);
     $id = (int)$fila['id'];
-    $stock = ($esCombo === 1 && isset($combos[$id])) ? $combos[$id]['stock_disponible'] : (float)$fila['stock'];
+    $mayor = (string)($fila['mayor'] ?? '0') === '1';
+    $padreCanal = (string)($fila['padre_modo'] ?? '') === 'CANAL';
+    $selfCanal = (string)($fila['modo_control'] ?? 'NORMAL') === 'CANAL';
+    $kgRes = $padreCanal ? (float)($fila['kg_res'] ?? 0) : (float)($fila['kg_res_propio'] ?? 0);
+    $esCanal = $padreCanal || $selfCanal;
+    if ($esCombo === 1 && isset($combos[$id])) {
+        $stock = $combos[$id]['stock_disponible'];
+    } elseif ($esCanal) {
+        $empaque = max(1.0, (float)$fila['cantidad_unidades']);
+        $stock = $mayor ? floor($kgRes / $empaque) : $kgRes;
+    } else {
+        $stock = (float)$fila['stock'];
+    }
 
     $fotoUrl = trim((string)($fila['foto_url'] ?? ''));
     $foto = '';
@@ -115,6 +134,9 @@ while ($fila = $res->fetch_assoc()) {
         'es_combo' => $esCombo,
         'foto' => $foto,
         'stock' => $stock,
+        'unidad' => $mayor ? 'UND' : (string)($fila['unidad'] ?? 'UND'),
+        'paso' => (!$mayor && (string)($fila['unidad'] ?? 'UND') === 'KG') ? 0.01 : 1,
+        'modo_control' => $esCanal ? 'CANAL' : 'NORMAL',
         'combo_items' => ($esCombo === 1 && isset($combos[$id])) ? $combos[$id]['items'] : [],
     ];
 }

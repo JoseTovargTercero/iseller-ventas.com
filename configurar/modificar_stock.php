@@ -27,8 +27,8 @@ $sucursal      = $_SESSION["nivel"] == 1 ? trim($_POST['sucursal']) : $_SESSION[
 $bss_id        = $_SESSION["bss_id"];
 
 // Obtener producto actual
-$stmt = $conexion->prepare("SELECT S.stock, P.nombre FROM stock AS S 
-LEFT JOIN productos AS P ON P.id = S.id_producto 
+$stmt = $conexion->prepare("SELECT S.stock, P.nombre, P.modo_control, P.seguimiento_estricto FROM stock AS S
+LEFT JOIN productos AS P ON P.id = S.id_producto
 WHERE id_producto=? AND id_sucursal=? AND S.bss_id=?");
 $stmt->bind_param("iii", $id, $sucursal, $bss_id);
 $stmt->execute();
@@ -36,6 +36,13 @@ $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
     $response['message'] = 'Producto no encontrado.';
+    echo json_encode($response);
+    exit;
+}
+
+$productoStock = $result->fetch_assoc();
+if ((string) ($productoStock['modo_control'] ?? 'NORMAL') === 'CANAL' || (int) ($productoStock['seguimiento_estricto'] ?? 0) === 1) {
+    $response['message'] = 'Este producto usa res en canal o seguimiento estricto. Registre el cambio en Ajustes de stock y mermas.';
     echo json_encode($response);
     exit;
 }

@@ -14,6 +14,7 @@ require_once('core/venezuela_geo.php');
 require_once('core/_calculadrora_precios.php');
 require_once('core/reglas_producto.php');
 require_once('core/combos.php');
+require_once('../configurar/_canal.php');
 require_once('../publico/production/includes/notificaciones.php');
 require_once('core/notificaciones_admin.php');
 
@@ -441,7 +442,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
              LEFT JOIN producto_reglas pr ON pr.producto_id = p.id
              WHERE p.id = ? AND n.id = ? AND s.id_sucursal = ?
-               AND p.activo = 0
+               AND p.activo = 0 AND s.visible_venta = 1
                AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
              LIMIT 1"
         );
@@ -639,11 +640,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         foreach ($items as $it) {
             $nombreIt = (string)($it['nombre'] ?? '');
+            $consumo = canal_consumir(
+                $conexion_store,
+                (int)($it['id'] ?? 0),
+                (int)($it['sucursal'] ?? 0),
+                (int)$bss_id,
+                (float)($it['qty'] ?? 0),
+                null,
+                0
+            );
+            if (!empty($consumo['error'])) {
+                $stmtStock->close();
+                $stmtStockMayor->close();
+                $conexion_store->rollback();
+                echo json_encode(['success' => false, 'message' => $consumo['error']]);
+                exit;
+            }
+            if (($consumo['modo'] ?? 'NORMAL') === 'CANAL') {
+                continue;
+            }
+
             if (!empty($it['es_combo'])) {
                 $comboCompleto = !empty($it['combo_items']);
                 foreach ($it['combo_items'] as $ci) {
                     $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
                     $childId = (int)$ci['producto_id'];
+                    $consumoHijo = canal_consumir($conexion_store, $childId, (int)$it['sucursal'], (int)$bss_id, $descontar, null, 0);
+                    if (!empty($consumoHijo['error'])) {
+                        $comboCompleto = false;
+                        break;
+                    }
+                    if (($consumoHijo['modo'] ?? 'NORMAL') === 'CANAL') {
+                        continue;
+                    }
                     if (!producto_stock_descontar($conexion_store, $childId, $it['sucursal'], $bss_id, $descontar)) {
                         $comboCompleto = false;
                         break;

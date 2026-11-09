@@ -21,19 +21,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SESSION["nivel"] == 1) {
       ],
       'registro_clientes' => [
         'columna' => 'registro_clientes'
+      ],
+      'factura' => [
+        'columna' => 'factura'
       ]
     ];
 
-    $columna = $configs[$name]['columna'];
+    if ($name === 'seguimiento_estricto') {
+      $query = "UPDATE negocio SET seguimiento_estricto = ? WHERE id = ?";
+      $etiqueta = 'seguimiento_estricto';
+    } else {
+      $columna = $configs[$name]['columna'];
+      $query = "UPDATE configuracion SET $columna = ? WHERE bss_id = ?";
+      $etiqueta = $columna;
+    }
 
-    $query = "UPDATE configuracion SET $columna = ? WHERE bss_id = ?";
     $stmt = $conexion->prepare($query);
     $stmt->bind_param("ii", $status, $bss_id);
     if ($stmt->execute()) {
       http_response_code(200);
       $response = [
         'status' => 'success',
-        'message' => 'Configuración actualizada correctamente' . $columna
+        'message' => 'Configuración actualizada correctamente: ' . $etiqueta
       ];
     } else {
       http_response_code(500);

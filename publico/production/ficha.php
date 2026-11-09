@@ -593,6 +593,45 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 min-height: 280px;
             }
 
+            #stock-chart {
+                min-height: 300px;
+            }
+
+            #stock-chart-empty {
+                padding-top: 60px;
+                padding-bottom: 60px;
+            }
+
+            .stock-legend {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                flex-wrap: wrap;
+                margin-bottom: 6px;
+                font-size: 12px;
+                color: #94a3b8;
+            }
+
+            .stock-legend span {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .stock-legend i {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                display: inline-block;
+            }
+
+            .stock-current {
+                margin-left: auto;
+                font-weight: 700;
+                color: #2dd4bf;
+                font-size: 12px;
+            }
+
             /* ── Animations ──────────────────────────────────────────── */
             @keyframes fadeSlideDown {
                 from {
@@ -737,6 +776,34 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             </div>
                             <div class="ficha-panel-body" style="padding-bottom: 10px;">
                                 <div id="ficha-chart"></div>
+                            </div>
+                        </div>
+
+                        <!-- ── Stock Movement Chart ────────────────────────── -->
+                        <div class="ficha-panel">
+                            <div class="ficha-panel-header">
+                                <span class="ficha-panel-title">
+                                    <i class="fa fa-line-chart" style="color:#38bdf8;"></i>
+                                    Movimiento de stock
+                                </span>
+                                <div class="preset-chips">
+                                    <span class="preset-chip stock-chip" data-stock-days="7">7 días</span>
+                                    <span class="preset-chip stock-chip active" data-stock-days="30">30 días</span>
+                                    <span class="preset-chip stock-chip" data-stock-days="90">90 días</span>
+                                    <span class="preset-chip stock-chip" data-stock-days="365">1 año</span>
+                                </div>
+                            </div>
+                            <div class="ficha-panel-body">
+                                <div class="stock-legend">
+                                    <span><i style="background:#3b82f6;"></i> Compras</span>
+                                    <span><i style="background:#34d399;"></i> Ventas</span>
+                                    <span><i style="background:#f87171;"></i> Mermas</span>
+                                    <span id="stock-current" class="stock-current"></span>
+                                </div>
+                                <div id="stock-chart"></div>
+                                <div id="stock-chart-empty" class="state-empty" style="display:none;">
+                                    <i class="fa fa-inbox"></i>Sin movimientos en este período
+                                </div>
                             </div>
                         </div>
 
@@ -935,6 +1002,226 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 chart.render();
             })();
 
+            /* ── Stock movement chart ───────────────────────────────────────── */
+            (function() {
+                const productoId = <?= $idProducto ?>;
+                const chartEl = document.querySelector('#stock-chart');
+                const emptyEl = document.querySelector('#stock-chart-empty');
+                let stockChart = null;
+
+                // Una sola línea con el stock real: cada movimiento se ordena por su hora.
+                function fechaEtiqueta(iso) {
+                    if (!iso) return '';
+                    const partes = String(iso).split('-');
+                    return partes.length === 3 ? partes[2] + '/' + partes[1] + '/' + partes[0] : iso;
+                }
+
+                function construirLineaSegmentada(data) {
+                    const eventos = data.eventos || [];
+                    const stockInicial = Number(data.stock_inicial || 0);
+                    const desde = data.desde || '';
+
+                    const puntos = [{
+                        label: fechaEtiqueta(desde),
+                        y: stockInicial,
+                        tipo: 'neutro'
+                    }];
+                    let acumulado = stockInicial;
+                    let ultimaFecha = desde;
+
+                    eventos.forEach(function(evento) {
+                        const fechaEvento = String(evento.fecha_evento || '');
+                        const fechaDia = fechaEvento.slice(0, 10);
+                        const etiqueta = fechaDia && fechaDia !== ultimaFecha ? fechaEtiqueta(fechaDia) : '';
+                        const cantidad = Number(evento.cantidad || 0);
+
+                        acumulado += evento.tipo === 'compras' ? cantidad : -cantidad;
+                        puntos.push({
+                            label: etiqueta,
+                            y: Math.round(acumulado * 100) / 100,
+                            tipo: evento.tipo
+                        });
+                        if (fechaDia) ultimaFecha = fechaDia;
+                    });
+
+                    const total = puntos.length;
+                    const datos = {
+                        compras: Array(total).fill(null),
+                        ventas: Array(total).fill(null),
+                        mermas: Array(total).fill(null),
+                        neutro: Array(total).fill(null)
+                    };
+
+                    for (let j = 1; j < total; j++) {
+                        const tipo = puntos[j].tipo;
+                        datos[tipo][j - 1] = puntos[j - 1].y;
+                        datos[tipo][j] = puntos[j].y;
+                    }
+
+                    return {
+                        categories: puntos.map(p => p.label),
+                        series: [
+                            { name: 'Compras', data: datos.compras },
+                            { name: 'Ventas', data: datos.ventas },
+                            { name: 'Mermas', data: datos.mermas },
+                            { name: 'Sin movimiento', data: datos.neutro }
+                        ]
+                    };
+                }
+
+                function renderStockChart(data) {
+                    const unidad = data.unidad || 'UND';
+                    const stockActualEl = document.getElementById('stock-current');
+                    const stockActual = Number(data.stock_actual || 0);
+                    if (stockActualEl) {
+                        stockActualEl.textContent = 'Stock actual: ' +
+                            stockActual.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+                            ' ' + unidad;
+                    }
+
+                    if (!(data.eventos || []).length) {
+                        if (stockChart) {
+                            stockChart.destroy();
+                            stockChart = null;
+                        }
+                        chartEl.innerHTML = '';
+                        emptyEl.style.display = 'block';
+                        return;
+                    }
+
+                    emptyEl.style.display = 'none';
+                    const segmentada = construirLineaSegmentada(data);
+                    const ticks = Math.max(2, Math.min(12, segmentada.categories.length));
+
+                    if (stockChart) {
+                        stockChart.updateOptions({
+                            xaxis: {
+                                categories: segmentada.categories,
+                                labels: {
+                                    tickAmount: ticks
+                                }
+                            }
+                        });
+                        stockChart.updateSeries(segmentada.series);
+                        return;
+                    }
+
+                    stockChart = new ApexCharts(chartEl, {
+                        series: segmentada.series,
+                        chart: {
+                            type: 'line',
+                            height: 320,
+                            background: 'transparent',
+                            toolbar: {
+                                show: false
+                            },
+                            fontFamily: "'DM Sans', sans-serif",
+                        },
+                        colors: ['#3b82f6', '#34d399', '#f87171', 'rgba(148,163,184,.4)'],
+                        stroke: {
+                            curve: 'smooth',
+                            width: 3
+                        },
+                        markers: {
+                            size: 3,
+                            strokeWidth: 2,
+                            strokeColors: '#0f172a',
+                            hover: {
+                                size: 6
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        xaxis: {
+                            categories: segmentada.categories,
+                            labels: {
+                                tickAmount: ticks,
+                                rotate: -45,
+                                style: {
+                                    colors: '#64748b',
+                                    fontSize: '11px'
+                                }
+                            },
+                            axisBorder: {
+                                color: 'rgba(255,255,255,.06)'
+                            },
+                            axisTicks: {
+                                color: 'rgba(255,255,255,.06)'
+                            },
+                        },
+                        yaxis: {
+                            title: {
+                                text: 'Stock (' + unidad + ')',
+                                style: {
+                                    color: '#64748b',
+                                    fontSize: '11px'
+                                }
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#64748b'
+                                },
+                                formatter: v => Number(v).toLocaleString('es-VE', { maximumFractionDigits: 2 }) + ' ' + unidad
+                            },
+                        },
+                        grid: {
+                            borderColor: 'rgba(255,255,255,.04)',
+                            strokeDashArray: 4
+                        },
+                        legend: {
+                            show: false
+                        },
+                        tooltip: {
+                            theme: 'dark',
+                            shared: false,
+                            y: {
+                                formatter: v => Number(v).toLocaleString('es-VE', { maximumFractionDigits: 2 }) + ' ' + unidad
+                            }
+                        },
+                        annotations: {
+                            yaxis: [{
+                                y: 0,
+                                borderColor: 'rgba(255,255,255,.16)',
+                                strokeDashArray: 4
+                            }]
+                        },
+                        theme: {
+                            mode: 'dark'
+                        },
+                    });
+                    stockChart.render();
+                }
+
+                function cargarMovimientosStock(dias) {
+                    fetch('ficha_movimientos_stock.php?id=' + encodeURIComponent(productoId) + '&dias=' + encodeURIComponent(dias))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (!data.ok) throw new Error(data.error || 'No se pudieron cargar los movimientos');
+                            renderStockChart(data);
+                        })
+                        .catch(error => {
+                            if (stockChart) {
+                                stockChart.destroy();
+                                stockChart = null;
+                            }
+                            chartEl.innerHTML = '';
+                            emptyEl.style.display = 'block';
+                            emptyEl.innerHTML = '<i class="fa fa-exclamation-triangle"></i>' + (error.message || 'No se pudieron cargar los movimientos');
+                        });
+                }
+
+                document.querySelectorAll('.stock-chip').forEach(chip => {
+                    chip.addEventListener('click', function() {
+                        document.querySelectorAll('.stock-chip').forEach(c => c.classList.remove('active'));
+                        this.classList.add('active');
+                        cargarMovimientosStock(this.dataset.stockDays);
+                    });
+                });
+
+                cargarMovimientosStock(30);
+            })();
+
             /* ── Flatpickr ──────────────────────────────────────────────────── */
             flatpickr('#fp-desde', {
                 locale: 'es',
@@ -948,9 +1235,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             });
 
             /* ── Preset chips ───────────────────────────────────────────────── */
-            document.querySelectorAll('.preset-chip').forEach(chip => {
+            document.querySelectorAll('.preset-chip:not(.stock-chip)').forEach(chip => {
                 chip.addEventListener('click', function() {
-                    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.preset-chip:not(.stock-chip)').forEach(c => c.classList.remove('active'));
                     this.classList.add('active');
 
                     const today = new Date();

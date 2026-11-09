@@ -12,6 +12,7 @@
 
 require_once __DIR__ . '/_pos_comun.php';
 require_once __DIR__ . '/../configurar/_resumen_mensual.php';
+require_once __DIR__ . '/../configurar/_canal.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -176,7 +177,7 @@ function procesarVenta($conexion, $venta, int $bssId, int $sucursalId, int $usua
             guardarCliente($conexion, $bssId, $sucursalId, $cedula, $nombreCliente, $telefonoCliente);
         }
 
-        $faltantes = guardarArticulosYStock($conexion, $ordenId, $productos, $bssId, $sucursalId);
+        $faltantes = guardarArticulosYStock($conexion, $ordenId, $productos, $bssId, $sucursalId, $usuarioId);
 
         // Pago fraccionado (tipoPago 8): mismo desglose que guarda el POS web en `fracciones`.
         if ($pagoTipo === 8) {
@@ -321,7 +322,7 @@ function guardarCliente($conexion, int $bssId, int $sucursalId, string $cedula, 
  * Inserta las líneas y descuenta stock. Devuelve los productos que quedaron
  * por debajo de cero (el stock se guarda en 0, como hace el POS web).
  */
-function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $bssId, int $sucursalId): array
+function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $bssId, int $sucursalId, int $usuarioId = 0): array
 {
         $insertStmt = $conexion->prepare(
             "INSERT INTO orden_articulos (
@@ -385,6 +386,14 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
             throw new Exception('Error al insertar el artículo: ' . $insertStmt->error);
         }
 
+        $consumo = canal_consumir($conexion, $productoId, $sucursalId, $bssId, $qty, $ordenId, $usuarioId);
+        if (!empty($consumo['error'])) {
+            throw new Exception($consumo['error']);
+        }
+        if (($consumo['modo'] ?? 'NORMAL') === 'CANAL') {
+            continue;
+        }
+
         // ¿Es combo? Se descuentan los hijos y no el combo.
         $esCombo = false;
         if ($stmtComboItems) {
@@ -396,6 +405,15 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
                 while ($hijo = $resCombo->fetch_assoc()) {
                     $idHijo = (int)$hijo['producto_id'];
                     $cantHijo = (float)$hijo['cantidad'] * $qty;
+
+                    $consumoHijo = canal_consumir($conexion, $idHijo, $sucursalId, $bssId, $cantHijo, $ordenId, $usuarioId);
+                    if (!empty($consumoHijo['error'])) {
+                        throw new Exception($consumoHijo['error']);
+                    }
+                    if (($consumoHijo['modo'] ?? 'NORMAL') === 'CANAL') {
+                        continue;
+                    }
+
                     $disponible = stockActual($stmtStock, $idHijo, $sucursalId, $bssId);
                     if ($disponible - $cantHijo < 0) {
                         $faltantes[] = ['id' => $idHijo, 'faltante' => abs($disponible - $cantHijo)];

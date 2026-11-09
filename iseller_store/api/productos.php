@@ -212,7 +212,8 @@ $where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
                AND s.stock >= COALESCE(pr.minimo_cantidad, 1))
               OR
               (p.es_combo = 1)
-          )";
+          )
+          AND s.visible_venta = 1";
 $params = [];
 $types = "";
 

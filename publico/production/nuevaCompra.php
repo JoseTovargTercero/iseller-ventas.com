@@ -102,7 +102,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </div>
 
                                             <div class="mb-3 form-group">
-                                                <label class="form-label" for="comprado">Unidades compradas</label>
+                                                <label class="form-label" for="comprado" id="label-comprado">Unidades compradas</label>
                                                 <input type="text" id="comprado" name="comprado" required="required" class="form-control" placeholder="Cantidad de unidades compradas">
                                             </div>
 
@@ -125,7 +125,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                                             <div class="row mb-3">
                                                 <div class="col-lg-6">
-                                                    <label for="cantidad">Unidades por bulto</label>
+                                                    <label for="cantidad" id="label-cantidad">Unidades por bulto</label>
                                                     <input type="number" id="cantidad" placeholder="Unidades por bulto/paquete/caja/etc" name="cantidad" required="required" class="form-control">
                                                 </div>
                                                 <div class="col-lg-6">
@@ -369,6 +369,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             precio_consultado = res.data.precio_compra;
                             producto_consultado = res.data.nombre
 
+                            const esKg = String(res.data.unidad || '').toUpperCase() === 'KG';
+                            document.getElementById('label-comprado').textContent = esKg ? 'Kilos comprados' : 'Unidades compradas';
+                            document.getElementById('comprado').placeholder = esKg ? 'Cantidad de kilos comprados' : 'Cantidad de unidades compradas';
+                            document.getElementById('label-cantidad').textContent = esKg ? 'Unidades por bulto (1 para kg)' : 'Unidades por bulto';
+
                             document.getElementById('comprado').value = '';
                             document.getElementById('precio').value = res.data.precio_compra;
                             document.getElementById('cantidad').value = res.data.cantidad_unidades;
@@ -396,6 +401,60 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             }
 
 
+            function textoContexto(ctx) {
+                const n = (v) => Number(v || 0).toLocaleString('es-VE', {maximumFractionDigits: 3});
+                return `<div style="text-align:left;font-size:13px">
+                    <p><b>${ctx.nombre || ''}</b></p>
+                    <p>Stock anterior en sistema: <b>${n(ctx.stock_actual)} ${ctx.unidad || ''}</b></p>
+                    <p>Última compra: ${ctx.ultima_compra_at ? ctx.ultima_compra_at + ' (' + n(ctx.ultima_compra_kg) + ')' : 'sin registro'}</p>
+                    <p>Vendido desde la última compra: <b>${n(ctx.vendido_desde)}</b></p>
+                    <p style="color:#888">Confirme el monto actual si el stock es correcto, o vaya al módulo de ajuste de stock para registrar la diferencia.</p>
+                </div>`;
+            }
+
+            async function mostrarConciliacion(ctx) {
+                if (!ctx) {
+                    Alerta.toast('error', 'No se pudo obtener la cantidad anterior.');
+                    return false;
+                }
+                const r = await Swal.fire({
+                    title: 'Confirmar cantidad anterior',
+                    html: textoContexto(ctx),
+                    showDenyButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: 'Confirmar monto actual',
+                    denyButtonText: 'Ir a ajuste de stock',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (r.isConfirmed) return true;
+                if (r.isDenied) window.open('ajustes_stock.php', '_blank');
+                return false;
+            }
+
+            async function enviarCompra(formData) {
+                const res = await fetch('../../configurar/nuevaCompra.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const text = await res.text();
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    console.error('Error al parsear JSON:', e, text);
+                    Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
+                    return null;
+                }
+                if (json.requiere_conciliacion) {
+                    const confirmado = await mostrarConciliacion(json.contexto);
+                    if (!confirmado) return null;
+                    formData.set('conciliacion_confirmada', '1');
+                    formData.set('stock_visto', String(json.contexto.stock_actual));
+                    return enviarCompra(formData);
+                }
+                return json;
+            }
+
             // ENVIAR LA NUEVA COMPRA AL BACK
             document.getElementById('demo-form2').addEventListener('submit', async function(e) {
                 e.preventDefault(); // Evitar envío tradicional
@@ -418,35 +477,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
                 if (actualizarMayor) formData.append('actualizar_mayor', '1');
 
-                fetch('../../configurar/nuevaCompra.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(res => res.text())
-                    .then(text => {
-                        console.log("Respuesta cruda del servidor:", text);
-                        let json;
-                        try {
-                            json = JSON.parse(text);
-                        } catch (e) {
-                            console.error("Error al parsear JSON:", e);
-
-                            Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
-                            return;
-                        }
-
-                        if (json.success) {
-                            Alerta.mostrar('success', json.message);
-                            form.reset(); // Opcional: limpia el formulario
-                            cargarTabla()
-                        } else {
-                            Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Error en la solicitud:", err);
-                        Alerta.mostrar('error', 'No se pudo contactar con el servidor');
-                    });
+                const json = await enviarCompra(formData);
+                if (!json) return;
+                if (json.success) {
+                    Alerta.mostrar('success', json.message);
+                    form.reset(); // Opcional: limpia el formulario
+                    cargarTabla()
+                } else {
+                    Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
+                }
             });
 
 

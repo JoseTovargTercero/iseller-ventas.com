@@ -7,6 +7,7 @@ require_once('db.php');
 require_once('session.php');
 require("_tasas_cambio.php");
 require("_calculadrora_precios.php");
+require_once(__DIR__ . '/../../configurar/_canal.php');
 
 $desscontado = '';
 
@@ -400,7 +401,21 @@ function guardarArticulosOrden($conexion_store, $cart, $orderID)
         );
         $insertStmt->execute();
 
-
+        $consumo = canal_consumir(
+            $conexion,
+            (int) $item['id'],
+            (int) $item['id_sucursal'],
+            (int) $item['bss_id'],
+            (float) $item['qty'],
+            null,
+            (int) ($_SESSION['id_user'] ?? 0)
+        );
+        if (!empty($consumo['error'])) {
+            throw new Exception($consumo['error']);
+        }
+        if (($consumo['modo'] ?? 'NORMAL') === 'CANAL') {
+            continue;
+        }
 
         if ($item['mayor'] == '1') {
 

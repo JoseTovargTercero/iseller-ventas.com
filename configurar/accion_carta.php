@@ -9,6 +9,7 @@ require_once('configuracion.php');
 require_once('session.php');
 require("_tasas_cambio.php");
 require_once("_resumen_mensual.php");
+require_once("_canal.php");
 
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
@@ -490,6 +491,22 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                 throw new Exception("Error al insertar artículo de la orden: " . $insertStmt->error);
             }
 
+            $consumo = canal_consumir(
+                $conexion,
+                (int) $item['id'],
+                (int) $id_sucursal,
+                (int) $bss_id,
+                (float) $item['qty'],
+                (int) $orderID,
+                (int) ($_SESSION['id'] ?? 0)
+            );
+            if (!empty($consumo['error'])) {
+                throw new Exception($consumo['error']);
+            }
+            if (($consumo['modo'] ?? 'NORMAL') === 'CANAL') {
+                continue;
+            }
+
             // Verificar si el producto vendido es un combo
             $esCombo = false;
             if ($stmtComboItems) {
@@ -502,6 +519,22 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                     while ($hijo = $resCombo->fetch_assoc()) {
                         $idHijo = (int)$hijo['producto_id'];
                         $cantHijo = (float)$hijo['cantidad'] * (float)$item['qty'];
+
+                        $consumoHijo = canal_consumir(
+                            $conexion,
+                            $idHijo,
+                            (int) $id_sucursal,
+                            (int) $bss_id,
+                            $cantHijo,
+                            (int) $orderID,
+                            (int) ($_SESSION['id'] ?? 0)
+                        );
+                        if (!empty($consumoHijo['error'])) {
+                            throw new Exception($consumoHijo['error']);
+                        }
+                        if (($consumoHijo['modo'] ?? 'NORMAL') === 'CANAL') {
+                            continue;
+                        }
 
                         $stmtStock->bind_param("iii", $idHijo, $id_sucursal, $bss_id);
                         if (!$stmtStock->execute()) {

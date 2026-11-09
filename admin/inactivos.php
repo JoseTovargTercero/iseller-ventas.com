@@ -158,6 +158,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Catálogo, inventario y gastos (empleados antes que sus gastos recurrentes: hay FK)
         borrar_por_bss($conexion, 'combo_items', $bss_id);
+        $conexion->query("DELETE ld FROM lotes_detalle ld INNER JOIN lotes l ON l.id = ld.lote_id WHERE l.bss_id = " . (int) $bss_id);
+        borrar_por_bss($conexion, 'lotes', $bss_id);
+        borrar_por_bss($conexion, 'stock_ajustes', $bss_id);
+        borrar_por_bss($conexion, 'producto_reglas', $bss_id);
         borrar_por_bss($conexion, 'stock', $bss_id);
         borrar_ids($conexion, 'negocio_productos', 'negocio_id', [$bss_id]);
         borrar_por_bss($conexion, 'productos', $bss_id);

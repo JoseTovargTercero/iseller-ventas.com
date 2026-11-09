@@ -13,6 +13,7 @@
  */
 
 require_once __DIR__ . '/_pos_comun.php';
+require_once __DIR__ . '/../configurar/_canal.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -143,6 +144,14 @@ function devolverStock($conexion, int $ordenId, int $bssId, int $sucursalId): vo
             continue;
         }
 
+        $canal = canal_devolver($conexion, $productoId, $sucursalId, $bssId, $cantidad, $ordenId, 0);
+        if (!empty($canal['error'])) {
+            throw new Exception($canal['error']);
+        }
+        if (($canal['modo'] ?? 'NORMAL') === 'CANAL') {
+            continue;
+        }
+
         // ¿Combo? Se devuelve a cada producto hijo.
         $esCombo = false;
         if ($stmtCombo) {
@@ -152,8 +161,16 @@ function devolverStock($conexion, int $ordenId, int $bssId, int $sucursalId): vo
             if ($resCombo && $resCombo->num_rows > 0) {
                 $esCombo = true;
                 while ($hijo = $resCombo->fetch_assoc()) {
-                    sumarStock($stmtSumar, (int)$hijo['producto_id'],
-                        $cantidad * (float)$hijo['cantidad'], $sucursalId, $bssId);
+                    $idHijo = (int)$hijo['producto_id'];
+                    $cantHijo = $cantidad * (float)$hijo['cantidad'];
+                    $canalHijo = canal_devolver($conexion, $idHijo, $sucursalId, $bssId, $cantHijo, $ordenId, 0);
+                    if (!empty($canalHijo['error'])) {
+                        throw new Exception($canalHijo['error']);
+                    }
+                    if (($canalHijo['modo'] ?? 'NORMAL') === 'CANAL') {
+                        continue;
+                    }
+                    sumarStock($stmtSumar, $idHijo, $cantHijo, $sucursalId, $bssId);
                 }
             }
         }

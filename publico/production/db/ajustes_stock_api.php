@@ -604,7 +604,7 @@ try {
             try {
                 $stmtProducto = $conexion->prepare(
                     "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.categoria,
-                            cp.nombre AS categoria_nombre
+                            p.modo_control, cp.nombre AS categoria_nombre
                      FROM productos p
                      LEFT JOIN categorias_producto cp ON cp.id = p.categoria
                      WHERE p.id = ? AND p.bss_id = ? AND p.activo = 0
@@ -693,6 +693,44 @@ try {
                     throw new Exception('No se pudo actualizar el stock.');
                 }
                 $stmtUpdate->close();
+
+                // Si la diferencia se registra sobre una res CANAL, el lote debe
+                // quedar sincronizado: el stock y kg_restante son la misma bolsa.
+                if ((string) ($producto['modo_control'] ?? 'NORMAL') === 'CANAL') {
+                    $stmtLote = $conexion->prepare(
+                        "SELECT id FROM lotes
+                         WHERE bss_id = ? AND id_sucursal = ? AND padre_id = ? AND estado = 'ABIERTO'
+                         ORDER BY id ASC LIMIT 1 FOR UPDATE"
+                    );
+                    if ($stmtLote) {
+                        $stmtLote->bind_param('iii', $bssId, $sucursal, $productoId);
+                        $stmtLote->execute();
+                        $loteFila = $stmtLote->get_result()->fetch_assoc();
+                        $stmtLote->close();
+
+                        if ($loteFila) {
+                            $loteId = (int) $loteFila['id'];
+                            $delta = $stockDespues - $stockAntes;
+                            $stmtLoteUpd = $conexion->prepare('UPDATE lotes SET kg_restante = GREATEST(0, kg_restante + ?) WHERE id = ?');
+                            if ($stmtLoteUpd) {
+                                $stmtLoteUpd->bind_param('di', $delta, $loteId);
+                                $stmtLoteUpd->execute();
+                                $stmtLoteUpd->close();
+                            }
+                            $stmtDet = $conexion->prepare(
+                                "INSERT INTO lotes_detalle (lote_id, producto_id, cantidad, origen, usuario_id)
+                                 VALUES (?, ?, ?, ?, ?)"
+                            );
+                            if ($stmtDet) {
+                                $origenDet = $tipo === 'MERMA' ? 'MERMA' : 'AJUSTE';
+                                $cantidadDet = abs($delta);
+                                $stmtDet->bind_param('iidsi', $loteId, $productoId, $cantidadDet, $origenDet, $usuarioId);
+                                $stmtDet->execute();
+                                $stmtDet->close();
+                            }
+                        }
+                    }
+                }
 
                 $stmtInsert = $conexion->prepare(
                     "INSERT INTO stock_ajustes

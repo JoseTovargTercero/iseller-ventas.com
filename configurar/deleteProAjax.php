@@ -18,9 +18,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
     if (isset($_POST['id']) && $_POST['id']) {
-        $id = $_POST['id'];
+        $id = (int) $_POST['id'];
         $modo = $_POST['modo'];
         $stock_id = $_POST['stock_id'];
+
+        // No borrar una res con cortes o lotes: dejaría datos huérfanos.
+        $stmtGuard = $conexion->prepare(
+            "SELECT
+                (SELECT COUNT(*) FROM productos WHERE bss_id = ? AND id_producto_relacionado = ? AND (mayor IS NULL OR mayor = 0)) AS cortes,
+                (SELECT COUNT(*) FROM lotes WHERE bss_id = ? AND padre_id = ?) AS lotes"
+        );
+        if ($stmtGuard) {
+            $stmtGuard->bind_param('iiii', $bss_id, $id, $bss_id, $id);
+            $stmtGuard->execute();
+            $guard = $stmtGuard->get_result()->fetch_assoc();
+            $stmtGuard->close();
+            if ($guard && ((int) $guard['cortes'] > 0 || (int) $guard['lotes'] > 0)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'La res tiene cortes o lotes registrados. Desvincule los cortes antes de eliminarla.'
+                ]);
+                exit;
+            }
+        }
 
         try {
             // Iniciar transacción

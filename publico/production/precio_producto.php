@@ -1,6 +1,7 @@
 <?php
 require_once('../../configurar/configuracion.php');
 require_once('../../configurar/session.php');
+require_once('../../configurar/_canal.php');
 $response = [
     'success' => false,
     'data' => [],
@@ -28,6 +29,7 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
                 p.nombre,
                 p.precio_compra,
                 p.cantidad_unidades,
+                p.unidad,
                 p.proveedor,
                 s.porcentaje,
                 s.stock
@@ -43,13 +45,27 @@ if (isset($_POST['producto']) && !empty(trim($_POST['producto']))) {
     if ($result->num_rows > 0) {
         $producto = $result->fetch_assoc();
         $response['success'] = true;
+        $bssId = (int) ($_SESSION['bss_id'] ?? 0);
+        $estricto = $bssId > 0 ? canal_producto_estricto($conexion, (int) $codigo, $bssId) : false;
+        $contexto = null;
+        if ($estricto) {
+            try {
+                $contexto = canal_contexto_estricto($conexion, (int) $codigo, (int) $sucursal, $bssId);
+            } catch (Throwable $e) {
+                $contexto = null;
+            }
+        }
+
         $response['data'] = [
             'nombre' => $producto['nombre'],
             'precio_compra' => $producto['precio_compra'],
             'cantidad_unidades' => $producto['cantidad_unidades'],
             'porcentaje' => $producto['porcentaje'], // desde stock
             'proveedor' => $producto['proveedor'],
-            'stock' => $producto['stock']
+            'unidad' => $producto['unidad'] ?? 'UND',
+            'stock' => $producto['stock'],
+            'seguimiento_estricto' => $estricto ? 1 : 0,
+            'contexto_estricto' => $contexto
         ];
     }
 

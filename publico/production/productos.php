@@ -5,6 +5,7 @@ require_once('includes/requires.php');
 
 if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $topnav = topnav();
+    $esAdmin = (int) $_SESSION['nivel'] === 1;
 
     $stmt = mysqli_prepare($conexion, "SELECT * FROM `sucursales` WHERE bss_id = ? ORDER BY principal DESC");
     $stmt->bind_param('i', $bss_id);
@@ -18,6 +19,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
     $stmt->close();
+
+    $seguimientoEstrictoNegocio = false;
+    $stmtEstricto = $conexion->prepare("SELECT seguimiento_estricto FROM negocio WHERE id = ? LIMIT 1");
+    if ($stmtEstricto) {
+        $stmtEstricto->bind_param('i', $bss_id);
+        $stmtEstricto->execute();
+        $negocioEstricto = $stmtEstricto->get_result()->fetch_assoc();
+        $stmtEstricto->close();
+        $seguimientoEstrictoNegocio = (int) ($negocioEstricto['seguimiento_estricto'] ?? 0) === 1;
+    }
 
 
 
@@ -343,18 +354,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <select class="form-control" style="max-width: 200px;" id="grupo-selector" name="grupo-selector" title="Filtrar por grupo" aria-label="Filtrar por grupo">
                                         <option value="">Todos los grupos</option>
                                     </select>
-                                    <select class="form-control" style="max-width: 200px;" id="categoria-selector" name="categoria-selector" title="Filtrar por categoría" aria-label="Filtrar por categoría">
-                                        <option value="">Todas las categorías</option>
-                                    </select>
-                                    <div class="productos-search">
-                                        <ion-icon name="search-outline"></ion-icon>
-                                        <input type="search" id="productos-buscar" placeholder="Buscar producto…" autocomplete="off">
+                                    <div class="productos-toolbar-cat-search">
+                                        <select class="form-control" style="max-width: 200px;" id="categoria-selector" name="categoria-selector" title="Filtrar por categoría" aria-label="Filtrar por categoría">
+                                            <option value="">Todas las categorías</option>
+                                        </select>
+                                        <div class="productos-search">
+                                            <ion-icon name="search-outline"></ion-icon>
+                                            <input type="search" id="productos-buscar" placeholder="Buscar producto…" autocomplete="off">
+                                        </div>
                                     </div>
                                 </div>
 
                             </div>
                             <div class="clearfix"></div>
                             <div class="x_content">
+                                <?php if ($esAdmin && !$seguimientoEstrictoNegocio): ?>
+                                    <div class="alerta-estricto">
+                                        <ion-icon name="warning-outline"></ion-icon>
+                                        <span>El seguimiento estricto está desactivado en Configuración. Los productos marcados no pedirán confirmación de stock en las compras.</span>
+                                        <a href="configuracion.php">Activar ahora</a>
+                                    </div>
+                                <?php endif; ?>
                                 <div class="row">
 
                                     <div class="col-lg-12">
@@ -372,6 +392,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <th>USD</th>
                                                         <th>COP</th>
                                                         <th>BS</th>
+                                                        <th>Venta</th>
+                                                        <th class="th-estricto">
+                                                            <label class="estricto-all" title="Marcar o desmarcar todos los productos filtrados">
+                                                                <input type="checkbox" id="chk-estricto-todos" <?= $esAdmin ? '' : 'disabled' ?>>
+                                                                <span class="estricto-box"><ion-icon name="checkmark-outline"></ion-icon></span>
+                                                                <span>Estricto</span>
+                                                            </label>
+                                                        </th>
                                                         <th></th>
                                                         <th></th>
                                                         <th></th>
@@ -558,10 +586,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
             <script>
+                const seguimientoEstrictoActivo = <?= $seguimientoEstrictoNegocio ? 'true' : 'false' ?>;
+
                 const tabla = $('#datatable-responsive').DataTable({
                     // El buscador y el largo de página salen del encabezado de DataTables:
                     // arriba solo queda la tabla; largo, información y paginación al pie.
                     dom: 't<"dt-bottom"lip>',
+                    columnDefs: [
+                        { targets: 10, visible: seguimientoEstrictoActivo }
+                    ],
                     language: {
                         lengthMenu: 'Mostrar _MENU_ registros',
                         info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
@@ -621,6 +654,98 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 $('#categoria-selector').on('change', function() {
                     tabla.draw(false);
                 });
+
+                // ── Seguimiento estricto: master de la columna + estado del encabezado ──
+                const esAdminEstricto = <?= $esAdmin ? 'true' : 'false' ?>;
+                const masterEstricto = document.getElementById('chk-estricto-todos');
+                let actualizandoEstrictoTodos = false;
+
+                function checksEstrictoFiltrados() {
+                    return tabla.rows({search: 'applied'}).nodes().toArray().reduce(function(acumulado, tr) {
+                        return acumulado.concat(Array.from(tr.querySelectorAll('.chk-estricto:not(:disabled)')));
+                    }, []);
+                }
+
+                function actualizarEstadoTodos() {
+                    if (!masterEstricto) return;
+                    const checks = checksEstrictoFiltrados();
+                    const total = checks.length;
+                    const marcados = checks.filter(function(c) {
+                        return c.checked;
+                    }).length;
+
+                    masterEstricto.disabled = !esAdminEstricto || total === 0 || actualizandoEstrictoTodos;
+                    masterEstricto.checked = total > 0 && marcados === total;
+                    masterEstricto.indeterminate = marcados > 0 && marcados < total;
+
+                    const label = masterEstricto.closest('.estricto-all');
+                    if (label) {
+                        label.title = total > 0
+                            ? 'Marcar o desmarcar los ' + total + ' productos filtrados'
+                            : 'No hay productos para marcar';
+                    }
+                }
+
+                tabla.on('draw', actualizarEstadoTodos);
+
+                if (masterEstricto) {
+                    const masterLabel = masterEstricto.closest('.estricto-all') || masterEstricto;
+                    ['click', 'mousedown'].forEach(function(evento) {
+                        masterLabel.addEventListener(evento, function(event) {
+                            event.stopPropagation();
+                        });
+                    });
+
+                    masterEstricto.addEventListener('change', async function() {
+                        if (!esAdminEstricto || actualizandoEstrictoTodos) return;
+
+                        const estricto = this.checked ? 1 : 0;
+                        const checks = checksEstrictoFiltrados();
+                        if (checks.length === 0) {
+                            actualizarEstadoTodos();
+                            return;
+                        }
+
+                        const ids = checks.map(function(c) {
+                            return c.dataset.id;
+                        }).filter(Boolean);
+                        const anteriores = checks.map(function(c) {
+                            return c.checked;
+                        });
+
+                        actualizandoEstrictoTodos = true;
+                        checks.forEach(function(c) {
+                            c.checked = estricto === 1;
+                            c.disabled = true;
+                        });
+                        actualizarEstadoTodos();
+
+                        try {
+                            const respuesta = await fetch('../../configurar/producto_estricto.php', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                                body: new URLSearchParams({
+                                    producto_ids: JSON.stringify(ids),
+                                    estricto: String(estricto)
+                                })
+                            });
+                            const data = await respuesta.json();
+                            if (!data.success) throw new Error(data.message || 'No se pudo guardar');
+                            Alerta.toast('success', data.message || (estricto ? 'Seguimiento estricto activado.' : 'Seguimiento estricto desactivado.'));
+                        } catch (error) {
+                            checks.forEach(function(c, indice) {
+                                c.checked = anteriores[indice];
+                            });
+                            Swal.fire('Error', error.message, 'error');
+                        } finally {
+                            checks.forEach(function(c) {
+                                c.disabled = false;
+                            });
+                            actualizandoEstrictoTodos = false;
+                            actualizarEstadoTodos();
+                        }
+                    });
+                }
 
                 let productos_editar
                 let metodo_editar
@@ -867,6 +992,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             formatNumber(row.precio_venta_dolar),
                                             formatNumber(formatPeso(row.precio_venta_peso)),
                                             formatNumber(recortarADosDecimales(row.precio_venta_bs)),
+                                            `<button type="button" class="btn-mini btn-visible" data-id="${row.id}" data-visible="${Number(row.visible_venta) === 1 ? 0 : 1}" style="border:1px solid #2e353e;background:#12151a;color:#e8edf2;border-radius:7px;padding:3px 8px;font-size:11px;">${Number(row.visible_venta) === 1 ? 'En venta' : 'Pausado'}</button>`,
+                                            `<label class="estricto-check" title="${nv == 1 ? 'Seguimiento estricto en compras' : 'Solo el administrador puede cambiar el seguimiento estricto'}">
+                                                <input type="checkbox" class="chk-estricto" data-id="${row.id}" ${Number(row.seguimiento_estricto) === 1 ? 'checked' : ''} ${nv == 1 ? '' : 'disabled'}>
+                                                <span class="estricto-box"><ion-icon name="checkmark-outline"></ion-icon></span>
+                                            </label>`,
                                             `<a data-id="${row.id}" class="btn-edit"><i class="icon-gray line icon-pencil"></i></a>`,
                                             `<a href="ficha.php?id=${row.id}"><i style="color: #41c1af" class="icon-gray line icon-chart"></i></a>`,
                                             `<a class="c-pointer btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
@@ -890,11 +1020,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     // En teléfono la tabla de 12 columnas no cabe: se queda con
                                     // la foto, el nombre, el precio en dólares y las acciones.
                                     if (window.innerWidth <= 768) {
-                                        const aOcultar = [2, 3, 4, 5, 7, 8];
+                                        const aOcultar = [2, 3, 4, 5, 7, 8, 9, 10];
                                         if (window.innerWidth <= 400) aOcultar.push(0); // ni la miniatura cabe
                                         aOcultar.forEach(i => tabla.column(i).visible(false));
                                     } else {
-                                        [0, 2, 3, 5, 7, 8].forEach(i => tabla.column(i).visible(true));
+                                        [0, 2, 3, 5, 7, 8, 9, 10].forEach(i => tabla.column(i).visible(true));
+                                    }
+
+                                    // El seguimiento estricto apagado en Configuración
+                                    // oculta por completo la columna "Estricto".
+                                    if (!seguimientoEstrictoActivo) {
+                                        tabla.column(10).visible(false);
                                     }
 
                                 } else {
@@ -1007,6 +1143,31 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         return;
                     }
 
+                    const btnVisible = event.target.closest('.btn-visible');
+                    if (btnVisible) {
+                        const id = btnVisible.getAttribute('data-id');
+                        const nuevo = btnVisible.getAttribute('data-visible');
+                        const sucursalVisible = document.querySelector('#sucursal-selector')?.value || '';
+                        try {
+                            const respuesta = await fetch('../../configurar/producto_visible.php', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                                body: new URLSearchParams({
+                                    producto_id: id,
+                                    sucursal: sucursalVisible,
+                                    visible: nuevo
+                                })
+                            });
+                            const data = await respuesta.json();
+                            if (!data.success) throw new Error(data.message || 'No se pudo cambiar la visibilidad');
+                            btnVisible.setAttribute('data-visible', nuevo === '1' ? '0' : '1');
+                            btnVisible.textContent = nuevo === '1' ? 'En venta' : 'Pausado';
+                        } catch (error) {
+                            Swal.fire('Error', error.message, 'error');
+                        }
+                        return;
+                    }
+
                     if (event.target.closest('.btn-edit')) {
                         const id = event.target.closest('.btn-edit').getAttribute('data-id');
 
@@ -1068,6 +1229,30 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         const id = event.target.closest('.btn-delete').getAttribute('data-id')
                         const stock_id = event.target.closest('.btn-delete').getAttribute('data-stock_id')
                         confirmarDelete(id, stock_id)
+                    }
+                });
+
+                document.addEventListener('change', async (event) => {
+                    const chk = event.target.closest('.chk-estricto');
+                    if (!chk) return;
+                    const productoId = chk.getAttribute('data-id');
+                    const estricto = chk.checked ? 1 : 0;
+
+                    chk.disabled = true;
+                    try {
+                        const respuesta = await fetch('../../configurar/producto_estricto.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: new URLSearchParams({producto_id: productoId, estricto: estricto})
+                        });
+                        const data = await respuesta.json();
+                        if (!data.success) throw new Error(data.message || 'No se pudo guardar');
+                    } catch (error) {
+                        chk.checked = !chk.checked;
+                        Swal.fire('Error', error.message, 'error');
+                    } finally {
+                        chk.disabled = false;
+                        actualizarEstadoTodos();
                     }
                 });
 
@@ -1298,6 +1483,103 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     border: 1px dashed var(--dash-border);
                 }
 
+                /* Check de seguimiento estricto */
+                .estricto-check,
+                .estricto-all {
+                    display: inline-flex;
+                    align-items: center;
+                    margin: 0;
+                    cursor: pointer;
+                    vertical-align: middle;
+                }
+
+                .estricto-check {
+                    justify-content: center;
+                }
+
+                .estricto-all {
+                    gap: 6px;
+                    font-size: 10px;
+                    font-weight: 700;
+                    letter-spacing: .4px;
+                    text-transform: uppercase;
+                    color: var(--dash-text-muted);
+                    white-space: nowrap;
+                }
+
+                .estricto-check input,
+                .estricto-all input {
+                    position: absolute;
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                    pointer-events: none;
+                }
+
+                .estricto-box {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 7px;
+                    border: 1.5px solid var(--dash-border);
+                    background: var(--dash-bg);
+                    color: transparent;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 14px;
+                    line-height: 1;
+                    transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+                }
+
+                .estricto-box ion-icon {
+                    color: inherit;
+                }
+
+                .estricto-check:hover .estricto-box,
+                .estricto-all:hover .estricto-box {
+                    border-color: var(--dash-mint);
+                }
+
+                .estricto-check input:checked + .estricto-box,
+                .estricto-all input:checked + .estricto-box {
+                    background: var(--dash-mint);
+                    border-color: var(--dash-mint);
+                    color: #0b1310;
+                }
+
+                .estricto-all input:indeterminate + .estricto-box {
+                    background: rgba(45, 212, 160, .16);
+                    border-color: var(--dash-mint);
+                    color: var(--dash-mint);
+                }
+
+                .estricto-all input:indeterminate + .estricto-box::after {
+                    content: '';
+                    width: 9px;
+                    height: 2px;
+                    border-radius: 2px;
+                    background: currentColor;
+                }
+
+                .estricto-all input:indeterminate + .estricto-box ion-icon {
+                    display: none;
+                }
+
+                .estricto-check input:focus-visible + .estricto-box,
+                .estricto-all input:focus-visible + .estricto-box {
+                    box-shadow: 0 0 0 3px rgba(45, 212, 160, .2);
+                }
+
+                .estricto-check input:disabled + .estricto-box,
+                .estricto-all input:disabled + .estricto-box {
+                    opacity: .4;
+                    cursor: not-allowed;
+                }
+
+                .th-estricto {
+                    white-space: nowrap;
+                }
+
                 /* Icono junto al nombre: abre el modal de foto en la zona de subida */
                 .btn-foto-google {
                     display: inline-flex;
@@ -1373,16 +1655,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    flex-wrap: wrap;
-                    gap: 12px;
+                    flex-wrap: nowrap;
+                    gap: 10px;
+                    width: 100%;
                 }
 
                 .productos-toolbar-actions {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
-                    flex-wrap: wrap;
+                    gap: 8px;
+                    flex-wrap: nowrap;
+                    flex: 1 1 auto;
+                    min-width: 0;
                     margin-left: auto;
+                    justify-content: flex-end;
+                }
+
+                .productos-toolbar-actions > select {
+                    flex: 1 1 150px;
+                    min-width: 0;
                 }
 
                 /* El tema deja el h2 flotado y con ancho fijo: en flex eso lo empuja a otra línea */
@@ -1390,10 +1681,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     float: none;
                     width: auto;
                     margin: 0;
+                    flex: 0 0 auto;
+                }
+
+                /* La categoría y el buscador forman un solo bloque: el buscador
+                   siempre queda inmediatamente a la derecha del selector. */
+                .productos-toolbar-cat-search {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    flex: 1 1 330px;
+                    min-width: 0;
+                }
+
+                .productos-toolbar-cat-search select {
+                    flex: 1 1 140px;
+                    min-width: 0;
+                }
+
+                .productos-toolbar-cat-search .productos-search {
+                    flex: 1 1 180px;
+                    min-width: 130px;
                 }
 
                 .productos-search {
                     position: relative;
+                    min-width: 0;
                 }
 
                 .productos-search ion-icon {
@@ -1407,7 +1720,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
 
                 .productos-search input {
-                    width: 240px;
+                    width: 100%;
                     max-width: 100%;
                     padding: 8px 12px 8px 32px;
                     background: var(--dash-bg);
@@ -1432,6 +1745,38 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     font-weight: 400;
                     white-space: nowrap;
                     cursor: pointer;
+                }
+
+                .alerta-estricto {
+                    display: flex;
+                    align-items: center;
+                    gap: 9px;
+                    flex-wrap: wrap;
+                    margin: 0 0 14px;
+                    padding: 10px 14px;
+                    border: 1px solid rgba(245, 180, 91, .35);
+                    border-radius: 10px;
+                    background: rgba(245, 180, 91, .08);
+                    color: #f5b45b;
+                    font-size: 12px;
+                    line-height: 1.45;
+                }
+
+                .alerta-estricto ion-icon {
+                    font-size: 17px;
+                    flex: 0 0 auto;
+                }
+
+                .alerta-estricto a {
+                    margin-left: auto;
+                    color: var(--dash-mint);
+                    font-weight: 700;
+                    text-decoration: none;
+                    white-space: nowrap;
+                }
+
+                .alerta-estricto a:hover {
+                    text-decoration: underline;
                 }
 
                 /* Controles propios de DataTables: solo al pie, alineados */
@@ -1461,14 +1806,45 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
 
                 @media (max-width: 900px) {
-                    .productos-toolbar-actions {
-                        width: 100%;
-                        margin-left: 0;
-                        flex-wrap: wrap;
+                    .productos-toolbar-actions > select {
+                        flex: 1 1 120px;
+                    }
+
+                    .productos-toolbar-cat-search {
+                        flex: 1 1 290px;
                     }
                 }
 
                 @media (max-width: 768px) {
+                    .productos-toolbar {
+                        flex-wrap: wrap;
+                    }
+
+                    .productos-toolbar-actions {
+                        width: 100%;
+                        margin-left: 0;
+                        flex-wrap: wrap;
+                        justify-content: flex-start;
+                    }
+
+                    .productos-toolbar-actions > select {
+                        flex: 1 1 150px;
+                    }
+
+                    .productos-toolbar-cat-search {
+                        flex: 1 1 100%;
+                        flex-wrap: wrap;
+                    }
+
+                    .productos-toolbar-cat-search select {
+                        flex: 1 1 100%;
+                        max-width: none !important;
+                    }
+
+                    .productos-toolbar-cat-search .productos-search {
+                        flex: 1 1 100%;
+                    }
+
                     .productos-search {
                         flex: 1 1 100%;
                     }

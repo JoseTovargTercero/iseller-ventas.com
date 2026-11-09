@@ -41,6 +41,15 @@ function getStock($sucursal)
 
 
 try {
+    $stmtProd = $conexion->prepare("SELECT nombre, modo_control, seguimiento_estricto FROM productos WHERE id = ? AND bss_id = ? LIMIT 1");
+    $stmtProd->bind_param('ii', $id, $bss_id);
+    $stmtProd->execute();
+    $prodTransferir = $stmtProd->get_result()->fetch_assoc();
+    $stmtProd->close();
+    if ($prodTransferir && ((string) ($prodTransferir['modo_control'] ?? 'NORMAL') === 'CANAL' || (int) ($prodTransferir['seguimiento_estricto'] ?? 0) === 1)) {
+        throw new Exception('Este producto usa res en canal o seguimiento estricto. Transfiera la res completa desde Ajustes de stock.');
+    }
+
     // VERIFICAR QUE NO SEAN LAS MISMAS SUCURSALES
     if ($sucursal === $sucursal_2) {
         throw new Exception('La sucursal origen y destino no pueden ser iguales.');

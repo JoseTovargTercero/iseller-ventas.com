@@ -13,6 +13,8 @@ $tickets = 0;
 $ticketsFijo = 0;
 $cortes_caja = 0;
 $registro_clientes = 0;
+$factura = 0;
+$seguimiento_estricto = 0;
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
 $search = $conexion->query($query);
@@ -22,7 +24,14 @@ if ($search->num_rows > 0) {
         $ticketsFijo = $rowT['bs_ticket'];
         $cortes_caja = $rowT['cortes_caja'];
         $registro_clientes = $rowT['registro_clientes'];
+        $factura = $rowT['factura'];
     }
+}
+
+$queryNegocio = "SELECT seguimiento_estricto FROM negocio WHERE id = $bss_id LIMIT 1";
+$resNegocio = $conexion->query($queryNegocio);
+if ($resNegocio && $rowN = $resNegocio->fetch_assoc()) {
+    $seguimiento_estricto = (int) $rowN['seguimiento_estricto'];
 }
 
 
@@ -106,6 +115,22 @@ if ($search->num_rows > 0) {
                             'bi-person-vcard',
                             'Registro de clientes al vender',
                             'Solicita los datos del cliente al momento de realizar una venta.'
+                        ); ?>
+
+                        <?= renderToggle(
+                            'factura',
+                            $factura == 1,
+                            'bi-receipt',
+                            'Registro de compras con factura',
+                            'Habilita el módulo de facturas de compra con estado de pago y abonos.'
+                        ); ?>
+
+                        <?= renderToggle(
+                            'seguimiento_estricto',
+                            $seguimiento_estricto == 1,
+                            'bi-clipboard-check',
+                            'Seguimiento estricto de inventario',
+                            'En las compras de productos marcados, exige confirmar la cantidad anterior antes de sumar la nueva mercancía.'
                         ); ?>
                     </div>
                 </div>
