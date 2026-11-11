@@ -71,15 +71,15 @@ if ($stmt) {
     $stmt->close();
 }
 
-/* Salidas por ventas: cada orden con su hora. */
+/* Salidas por ventas: todas las ventas del mismo día forman un solo evento. */
 $stmt = $conexion->prepare(
-    "SELECT o.created AS fecha_evento, SUM(oa.quantity) AS cantidad
+    "SELECT MAX(o.created) AS fecha_evento, SUM(oa.quantity) AS cantidad
      FROM orden o
      INNER JOIN orden_articulos oa ON oa.order_id = o.id
      WHERE oa.product_id = ? AND o.bss_id = ? AND oa.bss_id = ?
        AND o.status IN (1, 2, 3, 4)
        AND o.created >= ? AND o.created < DATE_ADD(?, INTERVAL 1 DAY)
-     GROUP BY o.id, o.created"
+     GROUP BY DATE(o.created)"
 );
 if ($stmt) {
     $stmt->bind_param('iiiss', $productoId, $bssId, $bssId, $desde, $hoy);
