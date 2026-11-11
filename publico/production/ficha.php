@@ -157,6 +157,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $chartCantidad[$idx]  = round(floatval($cr['cantidad']), 2);
     }
 
+    // Enero 2026 queda fuera de la evolución mensual.
+    $mesOffset = (int) $anio === 2026 ? 1 : 0;
+    if ($mesOffset) {
+        $mesesLabel     = array_slice($mesesLabel, $mesOffset);
+        $chartVentas    = array_slice($chartVentas, $mesOffset);
+        $chartGanancias = array_slice($chartGanancias, $mesOffset);
+        $chartCantidad  = array_slice($chartCantidad, $mesOffset);
+    }
+
     /* ─── Sucursales (para el filtro de período) ────────────────── */
     $stmtS = $conexion->prepare('SELECT id, nombre FROM sucursales WHERE bss_id = ?');
     $stmtS->bind_param('s', $bss_id);
@@ -893,7 +902,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 const gananciasSeries = <?= json_encode($chartGanancias) ?>;
                 const cantidadSeries = <?= json_encode($chartCantidad) ?>;
                 const meses = <?= json_encode($mesesLabel) ?>;
-                const mesActual = <?= date('n') ?> - 1; // 0-indexed
+                const mesActual = <?= (int) date('n') - 1 - $mesOffset ?>; // 0-indexed
 
                 // Highlight current month
                 const barColors = meses.map((_, i) =>
