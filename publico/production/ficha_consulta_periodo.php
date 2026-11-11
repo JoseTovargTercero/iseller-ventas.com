@@ -92,7 +92,7 @@ $resultados = [];
 while ($row = $res->fetch_assoc()) {
     $resultados[] = [
         'sucursal' => $row['sucursal'],
-        'cantidad' => intval($row['cantidad']),
+        'cantidad' => round((float) $row['cantidad'], 2),
         'total'    => round(floatval($row['total_venta']),    2),
         'ganancia' => round(floatval($row['total_ganancia']), 2),
     ];

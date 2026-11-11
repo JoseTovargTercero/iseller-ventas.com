@@ -154,7 +154,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $idx = intval($cr['mes_num']) - 1; // 0-indexed
         $chartVentas[$idx]    = round(floatval($cr['ventas']),   2);
         $chartGanancias[$idx] = round(floatval($cr['ganancia']), 2);
-        $chartCantidad[$idx]  = intval($cr['cantidad']);
+        $chartCantidad[$idx]  = round(floatval($cr['cantidad']), 2);
     }
 
     /* ─── Sucursales (para el filtro de período) ────────────────── */
