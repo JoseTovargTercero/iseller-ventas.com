@@ -21,6 +21,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $categoria = '';
     $codigo    = $rowP['codigo'] ?? '';
 
+    /* ─── Productos al mayor enlazados ─────────────────────────────
+       La ficha del producto base suma también lo vendido en sus
+       presentaciones al mayor.                                     */
+    $idsVenta = [(int) $idProducto];
+    $stmtMayor = $conexion->prepare(
+        "SELECT id FROM productos WHERE bss_id = ? AND id_producto_relacionado = ? AND mayor = '1'"
+    );
+    $stmtMayor->bind_param('ii', $bss_id, $idProducto);
+    $stmtMayor->execute();
+    $resMayor = $stmtMayor->get_result();
+    while ($m = $resMayor->fetch_assoc()) {
+        $idsVenta[] = (int) $m['id'];
+    }
+    $stmtMayor->close();
+    $idsVentaSql = implode(',', $idsVenta);
+
     $dia    = date('Y-m-d');
     $semana = date('o-W');
     $mes    = date('Y-m');
@@ -79,10 +95,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
          FROM orden o
          JOIN orden_articulos oa ON oa.order_id = o.id
-         WHERE oa.product_id = ?
+         WHERE oa.product_id IN ($idsVentaSql)
            AND o.status IN (1, 4)"
     );
-    $stmtKpi->bind_param('ssssssi', $dia, $dia, $semana, $semana, $mes, $mes, $idProducto);
+    $stmtKpi->bind_param('ssssss', $dia, $dia, $semana, $semana, $mes, $mes);
     $stmtKpi->execute();
     $kpiRow = $stmtKpi->get_result()->fetch_assoc();
     $stmtKpi->close();
@@ -110,15 +126,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     ELSE oa.precio_venta_dolar * oa.quantity
                 END - oa.precio * oa.quantity
             ) AS ganancia,
-            SUM(oa.quantity) AS cantidad
+            SUM(
+                CASE WHEN p.mayor = '1'
+                    THEN oa.quantity * COALESCE(p.cantidad_unidades, 1)
+                    ELSE oa.quantity
+                END
+            ) AS cantidad
          FROM orden o
          JOIN orden_articulos oa ON oa.order_id = o.id
-         WHERE oa.product_id = ?
+         LEFT JOIN productos p ON p.id = oa.product_id
+         WHERE oa.product_id IN ($idsVentaSql)
            AND o.ano = ?
            AND o.status IN (1, 4)
          GROUP BY mes_num"
     );
-    $stmtChart->bind_param('is', $idProducto, $anio);
+    $stmtChart->bind_param('s', $anio);
     $stmtChart->execute();
     $chartRes = $stmtChart->get_result();
     $stmtChart->close();

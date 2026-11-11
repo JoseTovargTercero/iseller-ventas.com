@@ -27,6 +27,21 @@ if ($desde === '1970-01-01' || $hasta === '1970-01-01') {
     exit;
 }
 
+/* Productos al mayor enlazados: sus ventas también cuentan para el
+   producto base. La cantidad se lleva a unidades. */
+$idsVenta = [(int) $idProducto];
+$stmtMayor = $conexion->prepare(
+    "SELECT id FROM productos WHERE bss_id = ? AND id_producto_relacionado = ? AND mayor = '1'"
+);
+$stmtMayor->bind_param('si', $bss_id, $idProducto);
+$stmtMayor->execute();
+$resMayor = $stmtMayor->get_result();
+while ($m = $resMayor->fetch_assoc()) {
+    $idsVenta[] = (int) $m['id'];
+}
+$stmtMayor->close();
+$idsVentaSql = implode(',', $idsVenta);
+
 /* ─── Una sola query ─────────────────────────────────────────────────
    JOIN entre sucursales → orden → orden_articulos.
    GROUP BY sucursal; el motor calcula ventas, ganancia y cantidad
@@ -38,7 +53,12 @@ if ($desde === '1970-01-01' || $hasta === '1970-01-01') {
 $stmt = $conexion->prepare(
     "SELECT
         s.nombre                                    AS sucursal,
-        SUM(oa.quantity)                            AS cantidad,
+        SUM(
+            CASE WHEN p.mayor = '1'
+                THEN oa.quantity * COALESCE(p.cantidad_unidades, 1)
+                ELSE oa.quantity
+            END
+        )                                           AS cantidad,
         SUM(
             CASE WHEN o.status = '4'
                 THEN oa.precio_venta_dolar * oa.quantity * (1 - o.descontado / 100)
@@ -54,15 +74,16 @@ $stmt = $conexion->prepare(
      FROM sucursales s
      JOIN orden       o  ON  o.id_sucursal = s.id
      JOIN orden_articulos oa ON oa.order_id = o.id
+     LEFT JOIN productos p ON p.id = oa.product_id
      WHERE s.bss_id       = ?
-       AND oa.product_id  = ?
+       AND oa.product_id  IN ($idsVentaSql)
        AND DATE(o.created) >= ?
        AND DATE(o.created) <= ?
        AND o.status      IN (1, 4)
      GROUP BY s.id, s.nombre
      ORDER BY s.nombre"
 );
-$stmt->bind_param('siss', $bss_id, $idProducto, $desde, $hasta);
+$stmt->bind_param('iss', $bss_id, $desde, $hasta);
 $stmt->execute();
 $res = $stmt->get_result();
 $stmt->close();
