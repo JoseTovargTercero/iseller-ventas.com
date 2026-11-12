@@ -571,6 +571,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                                         <th class="d-right">Abonado</th>
                                         <th class="d-right">Saldo</th>
                                         <th class="d-right">Excedente</th>
+                                        <th class="d-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -792,6 +793,11 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 <td data-label="Abonado" class="d-right d-money">${money(par.total_abonado)}</td>
                 <td data-label="Saldo" class="d-right d-money">${money(par.saldo)}</td>
                 <td data-label="Excedente" class="d-right d-money">${money(par.excedente)}</td>
+                <td data-label="Acciones" class="d-center">
+                    <button type="button" class="d-icon-btn" data-general="${par.sucursal_acreedora}-${par.sucursal_deudora}" title="${CFG.esAdmin ? 'Abonar a la deuda general' : 'Ver deuda general'}">
+                        <ion-icon name="${CFG.esAdmin ? 'cash-outline' : 'eye-outline'}"></ion-icon>
+                    </button>
+                </td>
             </tr>`).join('');
         }
 
@@ -809,9 +815,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             }
             document.getElementById('deudas-vacias').classList.add('d-none');
             $tbody.innerHTML = items.map((item) => {
-                let acciones = item.puede_abonar
-                    ? '<button type="button" class="d-icon-btn" data-ver="' + item.id + '" title="Ver y abonar"><ion-icon name="cash-outline"></ion-icon></button>'
-                    : '<button type="button" class="d-icon-btn" data-ver="' + item.id + '" title="Ver detalle"><ion-icon name="eye-outline"></ion-icon></button>';
+                let acciones = '<button type="button" class="d-icon-btn" data-ver="' + item.id + '" title="Ver detalle"><ion-icon name="eye-outline"></ion-icon></button>';
                 if (item.puede_eliminar) {
                     acciones += ' <button type="button" class="d-icon-btn danger" data-eliminar="' + item.asignacion_id + '" title="Eliminar asignación"><ion-icon name="trash-outline"></ion-icon></button>';
                 }
@@ -846,7 +850,6 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             const original = Number(c.monto_original);
             const saldo = Math.max(0, original - abonado);
             const excedente = Math.max(0, abonado - original);
-            const puedeAbonar = CFG.esAdmin;
 
             const filasProductos = (d.detalles || []).map((detalle) => `<tr>
                 <td>${esc(detalle.producto_nombre)}</td>
@@ -915,11 +918,91 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                         <tbody>${filasPagos}</tbody>
                     </table>
                 </div>
+                <p class="d-muted" style="font-size:11.5px;margin-top:12px;">Los abonos se registran desde la deuda general por sucursal.</p>
+            `;
 
-                ${puedeAbonar ? `
-                <div class="d-section-title">Registrar abono</div>
+            const btnEliminarDeuda = document.getElementById('btn-eliminar-deuda');
+            btnEliminarDeuda.dataset.asignacion = Number(c.asignacion_id);
+            btnEliminarDeuda.dataset.numero = c.numero_documento || '';
+            btnEliminarDeuda.style.display = (CFG.esAdmin && d.es_creador) ? 'inline-flex' : 'none';
+
+            $('#modalDeuda').modal('show');
+        }
+
+        async function verDeudaGeneral(acreedoraId, deudoraId) {
+            const data = await post('deudas_general_detalle', {
+                sucursal_acreedora: acreedoraId,
+                sucursal_deudora: deudoraId
+            });
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
+            }
+
+            const d = data.data;
+            const par = d.par;
+            const items = d.items || [];
+            const pagos = d.pagos || [];
+
+            const filasObligaciones = items.map((item) => `<tr>
+                <td><strong>${esc(item.numero_documento)}</strong></td>
+                <td>${esc(item.fecha)}</td>
+                <td class="d-right d-money">${money(item.monto_original)}</td>
+                <td class="d-right d-money">${money(item.total_abonado)}</td>
+                <td class="d-right d-money">${money(item.saldo)}</td>
+                <td class="d-center">${estadoBadge(item.estado_deuda)}</td>
+            </tr>`).join('');
+
+            const filasPagos = pagos.length
+                ? pagos.map((pago) => `<tr>
+                    <td>${esc(pago.fecha)}</td>
+                    <td>${esc(pago.numero_documento || '—')}</td>
+                    <td class="d-right d-money">${money(pago.monto_usd)}</td>
+                    <td class="d-right">${pago.tasa_bcv !== null ? Number(pago.tasa_bcv) : '—'}</td>
+                    <td class="d-right">${pago.tasa_peso_dolar !== null ? Number(pago.tasa_peso_dolar) : '—'}</td>
+                    <td>${esc(pago.metodo_pago || '—')}</td>
+                    <td>${esc(pago.referencia || '—')}</td>
+                    <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
+                    <td>${esc(pago.usuario_nombre || '—')}</td>
+                </tr>`).join('')
+                : '<tr><td colspan="9" class="d-muted d-center">Sin abonos registrados.</td></tr>';
+
+            document.getElementById('deuda-titulo').textContent = 'Deuda general: ' + (par.acreedora_nombre || '') + ' → ' + (par.deudora_nombre || '');
+            document.getElementById('deuda-body').innerHTML = `
+                <div class="d-detail-grid">
+                    <div class="d-detail-cell"><span>Acreedora</span><strong>${esc(par.acreedora_nombre)}</strong></div>
+                    <div class="d-detail-cell"><span>Deudora</span><strong>${esc(par.deudora_nombre)}</strong></div>
+                    <div class="d-detail-cell"><span>Obligaciones</span><strong>${par.obligaciones}</strong></div>
+                    <div class="d-detail-cell"><span>Saldo pendiente</span><strong>${money(par.saldo)}</strong></div>
+                </div>
+
+                <div class="d-summary-line"><span>Monto original</span><b>${money(par.total_original)}</b></div>
+                <div class="d-summary-line"><span>Total abonado</span><b>${money(par.total_abonado)}</b></div>
+                <div class="d-summary-line total"><span>Saldo pendiente</span><b>${money(par.saldo)}</b></div>
+                <div class="d-summary-line"><span>Excedente</span><b>${money(par.excedente)}</b></div>
+
+                <div class="d-section-title">Obligaciones que componen la deuda</div>
+                <div class="d-table-wrap">
+                    <table class="d-table">
+                        <thead><tr><th>Documento</th><th>Fecha</th><th class="d-right">Original</th><th class="d-right">Abonado</th><th class="d-right">Saldo</th><th class="d-center">Estado</th></tr></thead>
+                        <tbody>${filasObligaciones}</tbody>
+                    </table>
+                </div>
+
+                <div class="d-section-title">Historial de abonos</div>
+                <div class="d-table-wrap">
+                    <table class="d-table">
+                        <thead><tr><th>Fecha</th><th>Documento</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Comprobante</th><th>Usuario</th></tr></thead>
+                        <tbody>${filasPagos}</tbody>
+                    </table>
+                </div>
+
+                ${d.puede_abonar ? `
+                <div class="d-section-title">Registrar abono a la deuda general</div>
+                <p class="d-muted" style="font-size:11.5px;margin:-2px 0 10px;">El importe se distribuye automáticamente entre las obligaciones pendientes, de la más antigua a la más reciente.</p>
                 <form class="d-pay-form" id="form-pago">
-                    <input type="hidden" id="pago-cuenta" value="${Number(c.id)}">
+                    <input type="hidden" id="pago-acreedora" value="${Number(par.sucursal_acreedora)}">
+                    <input type="hidden" id="pago-deudora" value="${Number(par.sucursal_deudora)}">
                     <div class="d-pay-grid">
                         <div class="d-field">
                             <label class="d-label" for="pago-monto">Importe USD *</label>
@@ -971,10 +1054,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             `;
 
             const btnEliminarDeuda = document.getElementById('btn-eliminar-deuda');
-            btnEliminarDeuda.dataset.asignacion = Number(c.asignacion_id);
-            btnEliminarDeuda.dataset.numero = c.numero_documento || '';
-            btnEliminarDeuda.style.display = (CFG.esAdmin && d.es_creador) ? 'inline-flex' : 'none';
-
+            btnEliminarDeuda.style.display = 'none';
             $('#modalDeuda').modal('show');
         }
 
@@ -1004,6 +1084,15 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
         }
 
         document.getElementById('btn-filtrar').addEventListener('click', cargarTodo);
+
+        document.getElementById('tabla-pares').addEventListener('click', (e) => {
+            const boton = e.target.closest('[data-general]');
+            if (!boton) return;
+            const [acreedora, deudora] = String(boton.dataset.general || '').split('-').map(Number);
+            if (acreedora > 0 && deudora > 0) {
+                verDeudaGeneral(acreedora, deudora);
+            }
+        });
 
         document.getElementById('tabla-deudas').addEventListener('click', (e) => {
             const eliminar = e.target.closest('[data-eliminar]');
@@ -1042,8 +1131,12 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             const boton = document.getElementById('btn-registrar-pago');
             boton.disabled = true;
 
+            const acreedora = Number(document.getElementById('pago-acreedora').value);
+            const deudora = Number(document.getElementById('pago-deudora').value);
+
             const formData = new FormData();
-            formData.set('cuenta_id', document.getElementById('pago-cuenta').value);
+            formData.set('sucursal_acreedora', acreedora);
+            formData.set('sucursal_deudora', deudora);
             formData.set('monto_usd', monto);
             formData.set('fecha', document.getElementById('pago-fecha').value);
             formData.set('tasa_bcv', document.getElementById('pago-bcv').value);
@@ -1055,7 +1148,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 formData.set('comprobante', archivo);
             }
 
-            const data = await postForm('registrar_pago', formData);
+            const data = await postForm('registrar_pago_general', formData);
 
             boton.disabled = false;
 
@@ -1066,7 +1159,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
 
             Alerta.toast('success', data.msg);
             await cargarTodo();
-            await verDetalle(Number(document.getElementById('pago-cuenta').value));
+            await verDeudaGeneral(acreedora, deudora);
         });
 
         cargarTodo();

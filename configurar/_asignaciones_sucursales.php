@@ -1288,8 +1288,16 @@ function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $as
             if ($cuenta) {
                 $cuentaId = (int) $cuenta['id'];
 
-                $stmt = $conexion->prepare("SELECT comprobante FROM pagos_sucursales WHERE cuenta_sucursal_id = ? AND comprobante IS NOT NULL AND comprobante <> ''");
-                $stmt->bind_param('i', $cuentaId);
+                $stmt = $conexion->prepare(
+                    "SELECT DISTINCT p.comprobante
+                     FROM pagos_sucursales p
+                     WHERE p.cuenta_sucursal_id = ? AND p.comprobante IS NOT NULL AND p.comprobante <> ''
+                       AND NOT EXISTS (
+                           SELECT 1 FROM pagos_sucursales p2
+                           WHERE p2.comprobante = p.comprobante AND p2.cuenta_sucursal_id <> ?
+                       )"
+                );
+                $stmt->bind_param('ii', $cuentaId, $cuentaId);
                 $stmt->execute();
                 $resultComprobantes = $stmt->get_result();
                 while ($rowComprobante = $resultComprobantes->fetch_assoc()) {
@@ -1796,6 +1804,226 @@ function asig_detalle_cuenta($conexion, int $bssId, bool $esAdmin, int $sucursal
         'es_creador' => (int) $cuenta['usuario_id'] === (int) ($_SESSION['id'] ?? 0),
         'puede_abonar' => $esAdmin,
     ]);
+}
+
+function asig_detalle_deuda_general($conexion, int $bssId, int $usuarioId, bool $esAdmin, int $sucursalSesion, int $acreedoraId, int $deudoraId): array
+{
+    if ($acreedoraId <= 0 || $deudoraId <= 0) {
+        return asig_result_error('La deuda general no es válida.');
+    }
+    if (!asig_sucursal_existe($conexion, $bssId, $acreedoraId) || !asig_sucursal_existe($conexion, $bssId, $deudoraId)) {
+        return asig_result_error('La sucursal no pertenece a este negocio.');
+    }
+    if (!$esAdmin && $deudoraId !== $sucursalSesion) {
+        return asig_result_error('No tiene acceso a esta deuda.');
+    }
+
+    $items = asig_listar_cuentas($conexion, $bssId, $usuarioId, $esAdmin, $sucursalSesion, [
+        'sucursal_acreedora' => $acreedoraId,
+        'sucursal_deudora' => $deudoraId,
+    ]);
+    if (count($items) === 0) {
+        return asig_result_error('La deuda general no tiene obligaciones registradas.');
+    }
+
+    $totalOriginal = 0.0;
+    $totalAbonado = 0.0;
+    $saldo = 0.0;
+    $excedente = 0.0;
+    foreach ($items as $item) {
+        $totalOriginal += (float) $item['monto_original'];
+        $totalAbonado += (float) $item['total_abonado'];
+        $saldo += (float) $item['saldo'];
+        $excedente += (float) $item['excedente'];
+    }
+
+    $pagos = [];
+    $stmt = $conexion->prepare(
+        "SELECT p.*, u.nombre AS usuario_nombre, a.numero_documento
+         FROM pagos_sucursales p
+         INNER JOIN cuentas_sucursales c ON c.id = p.cuenta_sucursal_id
+         INNER JOIN asignaciones_sucursales a ON a.id = c.asignacion_id
+         LEFT JOIN usuarios u ON u.id = p.usuario_id
+         WHERE c.bss_id = ? AND c.sucursal_acreedora = ? AND c.sucursal_deudora = ?
+         ORDER BY p.fecha ASC, p.id ASC"
+    );
+    if ($stmt) {
+        $stmt->bind_param('iii', $bssId, $acreedoraId, $deudoraId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $pagos[] = $row;
+        }
+        $stmt->close();
+    }
+
+    $primera = $items[0];
+    return asig_result_ok('', [
+        'par' => [
+            'sucursal_acreedora' => $acreedoraId,
+            'sucursal_deudora' => $deudoraId,
+            'acreedora_nombre' => $primera['acreedora_nombre'],
+            'deudora_nombre' => $primera['deudora_nombre'],
+            'obligaciones' => count($items),
+            'total_original' => asig_dinero($totalOriginal),
+            'total_abonado' => asig_dinero($totalAbonado),
+            'saldo' => asig_dinero($saldo),
+            'excedente' => asig_dinero($excedente),
+        ],
+        'items' => $items,
+        'pagos' => $pagos,
+        'puede_abonar' => $esAdmin,
+    ]);
+}
+
+function asig_registrar_pago_general($conexion, int $bssId, int $usuarioId, array $input): array
+{
+    $acreedoraId = (int) ($input['sucursal_acreedora'] ?? 0);
+    $deudoraId = (int) ($input['sucursal_deudora'] ?? 0);
+    $monto = asig_dinero($input['monto_usd'] ?? 0);
+    $fecha = trim((string) ($input['fecha'] ?? ''));
+    $tasaBcv = round((float) ($input['tasa_bcv'] ?? 0), 4);
+    $tasaPeso = round((float) ($input['tasa_peso_dolar'] ?? 0), 4);
+    $metodo = trim((string) ($input['metodo_pago'] ?? ''));
+    $referencia = trim((string) ($input['referencia'] ?? ''));
+    $observaciones = trim((string) ($input['observaciones'] ?? ''));
+    $comprobante = trim((string) ($input['comprobante'] ?? ''));
+    $comprobante = $comprobante === '' ? null : $comprobante;
+
+    if ($acreedoraId <= 0 || $deudoraId <= 0) {
+        return asig_result_error('La deuda general no es válida.');
+    }
+    if ($acreedoraId === $deudoraId) {
+        return asig_result_error('La sucursal acreedora y deudora no pueden ser la misma.');
+    }
+    if (!asig_sucursal_existe($conexion, $bssId, $acreedoraId) || !asig_sucursal_existe($conexion, $bssId, $deudoraId)) {
+        return asig_result_error('La sucursal no pertenece a este negocio.');
+    }
+    if ($monto <= 0) {
+        return asig_result_error('El monto del abono debe ser mayor que cero.');
+    }
+    if (!asig_fecha_valida($fecha)) {
+        return asig_result_error('La fecha del abono no es válida.');
+    }
+    if ($tasaBcv < 0 || $tasaPeso < 0) {
+        return asig_result_error('Las tasas de cambio no pueden ser negativas.');
+    }
+
+    try {
+        $conexion->begin_transaction();
+
+        $stmt = $conexion->prepare(
+            "SELECT id, monto_original
+             FROM cuentas_sucursales
+             WHERE bss_id = ? AND sucursal_acreedora = ? AND sucursal_deudora = ?
+             ORDER BY created_at ASC, id ASC
+             FOR UPDATE"
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo preparar la consulta de la deuda general.');
+        }
+        $stmt->bind_param('iii', $bssId, $acreedoraId, $deudoraId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $cuentas = [];
+        while ($row = $result->fetch_assoc()) {
+            $cuentas[] = $row;
+        }
+        $stmt->close();
+
+        if (count($cuentas) === 0) {
+            throw new Exception('La deuda general no tiene obligaciones registradas.');
+        }
+
+        $totalOriginal = 0.0;
+        foreach ($cuentas as $cuenta) {
+            $totalOriginal += (float) $cuenta['monto_original'];
+        }
+        $totalOriginal = asig_dinero($totalOriginal);
+
+        $stmtPago = $conexion->prepare(
+            "INSERT INTO pagos_sucursales
+             (bss_id, cuenta_sucursal_id, monto_usd, fecha, tasa_bcv, tasa_peso_dolar, metodo_pago, referencia, observaciones, comprobante, usuario_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmtAbonado = $conexion->prepare(
+            "SELECT COALESCE(SUM(monto_usd), 0) AS total FROM pagos_sucursales WHERE cuenta_sucursal_id = ?"
+        );
+        if (!$stmtPago || !$stmtAbonado) {
+            throw new Exception('No se pudo preparar el registro del abono.');
+        }
+
+        $guardarPago = static function (int $cuentaId, float $importe) use ($stmtPago, $bssId, $fecha, $tasaBcv, $tasaPeso, $metodo, $referencia, $observaciones, $comprobante, $usuarioId): int {
+            $stmtPago->bind_param('iidsddssssi', $bssId, $cuentaId, $importe, $fecha, $tasaBcv, $tasaPeso, $metodo, $referencia, $observaciones, $comprobante, $usuarioId);
+            if (!$stmtPago->execute()) {
+                throw new Exception('No se pudo registrar el abono.');
+            }
+            return (int) $stmtPago->insert_id;
+        };
+
+        $restante = $monto;
+        $ultimaCuentaId = 0;
+        $pagosIds = [];
+
+        foreach ($cuentas as $cuenta) {
+            $cuentaId = (int) $cuenta['id'];
+            $ultimaCuentaId = $cuentaId;
+
+            $stmtAbonado->bind_param('i', $cuentaId);
+            $stmtAbonado->execute();
+            $abonadoCuenta = asig_dinero($stmtAbonado->get_result()->fetch_assoc()['total'] ?? 0);
+            $saldoCuenta = max(0, asig_dinero((float) $cuenta['monto_original'] - $abonadoCuenta));
+
+            if ($restante <= 0 || $saldoCuenta <= 0) {
+                continue;
+            }
+
+            $aplicar = min($restante, $saldoCuenta);
+            $pagosIds[] = $guardarPago($cuentaId, $aplicar);
+            $restante = asig_dinero($restante - $aplicar);
+        }
+
+        // Si el abono supera la deuda, el excedente queda en la última obligación.
+        if ($restante > 0) {
+            if ($ultimaCuentaId <= 0) {
+                throw new Exception('La deuda general no tiene obligaciones registradas.');
+            }
+            $pagosIds[] = $guardarPago($ultimaCuentaId, $restante);
+        }
+
+        $stmtPago->close();
+        $stmtAbonado->close();
+
+        $stmt = $conexion->prepare(
+            "SELECT COALESCE(SUM(p.monto_usd), 0) AS total
+             FROM pagos_sucursales p
+             INNER JOIN cuentas_sucursales c ON c.id = p.cuenta_sucursal_id
+             WHERE c.bss_id = ? AND c.sucursal_acreedora = ? AND c.sucursal_deudora = ?"
+        );
+        $stmt->bind_param('iii', $bssId, $acreedoraId, $deudoraId);
+        $stmt->execute();
+        $totalAbonado = asig_dinero($stmt->get_result()->fetch_assoc()['total'] ?? 0);
+        $stmt->close();
+
+        $conexion->commit();
+
+        $saldo = max(0, asig_dinero($totalOriginal - $totalAbonado));
+        $excedente = max(0, asig_dinero($totalAbonado - $totalOriginal));
+        $estado = $totalAbonado <= 0 ? 'PENDIENTE' : ($totalAbonado < $totalOriginal ? 'PARCIAL' : 'PAGADA');
+
+        return asig_result_ok('Abono general registrado correctamente.', [
+            'pago_ids' => $pagosIds,
+            'total_original' => $totalOriginal,
+            'total_abonado' => $totalAbonado,
+            'saldo' => $saldo,
+            'excedente' => $excedente,
+            'estado_deuda' => $estado,
+            'comprobante' => $comprobante,
+        ]);
+    } catch (Throwable $e) {
+        $conexion->rollback();
+        return asig_result_error($e->getMessage());
+    }
 }
 
 function asig_registrar_pago($conexion, int $bssId, int $usuarioId, array $input): array

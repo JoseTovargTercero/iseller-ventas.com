@@ -164,6 +164,48 @@ switch ($accion) {
         echo json_encode(asig_detalle_cuenta($conexion, $bss_id, $esAdmin, $sucursal_sesion, $id));
         break;
 
+    case 'deudas_general_detalle':
+        asig_exigir_lectura('deudas_sucursales.php', $esAdmin);
+        echo json_encode(asig_detalle_deuda_general(
+            $conexion,
+            $bss_id,
+            $usuario_id,
+            $esAdmin,
+            $sucursal_sesion,
+            (int) ($_POST['sucursal_acreedora'] ?? 0),
+            (int) ($_POST['sucursal_deudora'] ?? 0)
+        ));
+        break;
+
+    case 'registrar_pago_general':
+        asig_exigir_admin($esAdmin);
+
+        $subida = asig_guardar_comprobante($_FILES['comprobante'] ?? null, $bss_id);
+        if ($subida['status'] !== 'ok') {
+            echo json_encode($subida);
+            break;
+        }
+        $comprobante = $subida['data']['path'] ?? null;
+
+        $resultado = asig_registrar_pago_general($conexion, $bss_id, $usuario_id, [
+            'sucursal_acreedora' => (int) ($_POST['sucursal_acreedora'] ?? 0),
+            'sucursal_deudora' => (int) ($_POST['sucursal_deudora'] ?? 0),
+            'monto_usd' => $_POST['monto_usd'] ?? 0,
+            'fecha' => $_POST['fecha'] ?? '',
+            'tasa_bcv' => $_POST['tasa_bcv'] ?? 0,
+            'tasa_peso_dolar' => $_POST['tasa_peso_dolar'] ?? 0,
+            'metodo_pago' => $_POST['metodo_pago'] ?? '',
+            'referencia' => $_POST['referencia'] ?? '',
+            'observaciones' => $_POST['observaciones'] ?? '',
+            'comprobante' => $comprobante,
+        ]);
+
+        if ($resultado['status'] !== 'ok' && $comprobante) {
+            asig_eliminar_archivos_comprobantes([$comprobante]);
+        }
+        echo json_encode($resultado);
+        break;
+
     case 'registrar_pago':
         asig_exigir_admin($esAdmin);
 
