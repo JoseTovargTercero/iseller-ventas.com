@@ -6,9 +6,15 @@ header('Content-Type: application/json');
 
 $bss_id      = (int) $_SESSION['bss_id'];
 $usuario_id  = (int) $_SESSION['id'];
+$nivel       = (int) ($_SESSION['nivel'] ?? 0);
 
 if (!$bss_id || !$usuario_id) {
     echo json_encode(['status' => 'error', 'msg' => 'Sesión no válida']);
+    exit;
+}
+
+if ($nivel !== 1) {
+    echo json_encode(['status' => 'error', 'msg' => 'No autorizado']);
     exit;
 }
 

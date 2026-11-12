@@ -17,6 +17,11 @@ if (!$bss_id) {
     exit;
 }
 
+if ($nivel != 1 && $id_sucursal <= 0) {
+    echo json_encode(['labels' => [], 'ganancias' => [], 'gastos' => [], 'mermas' => [], 'netos' => []]);
+    exit;
+}
+
 // Últimos 12 meses, incluido el actual
 $nombres = ['01' => 'Ene', '02' => 'Feb', '03' => 'Mar', '04' => 'Abr', '05' => 'May', '06' => 'Jun',
             '07' => 'Jul', '08' => 'Ago', '09' => 'Sep', '10' => 'Oct', '11' => 'Nov', '12' => 'Dic'];

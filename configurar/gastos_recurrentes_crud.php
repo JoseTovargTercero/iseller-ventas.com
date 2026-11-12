@@ -8,9 +8,15 @@ header('Content-Type: application/json');
 $bss_id      = (int) $_SESSION['bss_id'];
 $usuario_id  = (int) $_SESSION['id'];
 $id_sucursal = (int) $_SESSION['sucursal'];
+$nivel       = (int) ($_SESSION['nivel'] ?? 0);
 
 if (!$bss_id || !$usuario_id) {
     echo json_encode(['status' => 'error', 'msg' => 'Sesión no válida']);
+    exit;
+}
+
+if ($nivel !== 1 && $id_sucursal <= 0) {
+    echo json_encode(['status' => 'error', 'msg' => 'No hay una sucursal asignada a su usuario']);
     exit;
 }
 

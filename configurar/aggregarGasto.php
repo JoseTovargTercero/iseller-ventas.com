@@ -9,11 +9,29 @@ header('Content-Type: application/json');
 
 $bss_id      = (int) $_SESSION['bss_id'];
 $usuario_id  = (int) $_SESSION['id'];
-$id_sucursal = (int) ($_POST['id_sucursal'] ?: $_SESSION['sucursal']);
+$nivel       = (int) ($_SESSION['nivel'] ?? 0);
+$id_sucursal = (int) ($_SESSION['sucursal'] ?? 0);
+
+// Solo el administrador puede registrar gastos para otra sucursal.
+if ($nivel === 1 && !empty($_POST['id_sucursal'])) {
+    $id_sucursal = (int) $_POST['id_sucursal'];
+}
 
 if (!$bss_id || !$usuario_id || !$id_sucursal) {
     echo json_encode(['status' => 'error', 'msg' => 'Sesión no válida']);
     exit;
+}
+
+if ($nivel === 1) {
+    $stmtSucursal = $conexion->prepare("SELECT id FROM sucursales WHERE id = ? AND bss_id = ? LIMIT 1");
+    $stmtSucursal->bind_param('ii', $id_sucursal, $bss_id);
+    $stmtSucursal->execute();
+    $sucursalValida = $stmtSucursal->get_result()->fetch_assoc();
+    $stmtSucursal->close();
+    if (!$sucursalValida) {
+        echo json_encode(['status' => 'error', 'msg' => 'Sucursal no válida']);
+        exit;
+    }
 }
 
 $concepto     = trim(strip_tags($_POST['concepto'] ?? ''));

@@ -15,6 +15,11 @@ if (!$bss_id) {
     exit;
 }
 
+if ($nivel != 1 && $id_sucursal <= 0) {
+    echo '<div style="text-align:center;padding:40px 0;color:var(--dash-text-muted);font-size:13px;">No hay una sucursal asignada a su usuario</div>';
+    exit;
+}
+
 $semana = trim($_POST['semana'] ?? '');
 
 $fecha_desde   = trim($_POST['fecha_desde'] ?? '');

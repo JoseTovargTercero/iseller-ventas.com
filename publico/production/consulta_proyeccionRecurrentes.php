@@ -10,8 +10,8 @@ if ($nivel == 1 && isset($_POST['id_sucursal'])) {
     $id_sucursal = (int) $_POST['id_sucursal'];
 }
 
-if (!$bss_id) {
-    echo '0';
+if (!$bss_id || ($nivel != 1 && $id_sucursal <= 0)) {
+    echo '0*0';
     exit;
 }
 
@@ -33,7 +33,7 @@ $aplicados_map = [];
 $stmt_a = $conexion->prepare(
     "SELECT recurrente_id, COUNT(*) AS total
      FROM gastos
-     WHERE bss_id=? AND mes=? AND recurrente_id IS NOT NULL
+     WHERE bss_id=? AND mes=? AND recurrente_id IS NOT NULL $filtroSucursal
      GROUP BY recurrente_id"
 );
 $stmt_a->bind_param('is', $bss_id, $mes_actual);

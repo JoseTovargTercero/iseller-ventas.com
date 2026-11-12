@@ -15,6 +15,11 @@ if (!$bss_id) {
     exit;
 }
 
+if ($nivel != 1 && $id_sucursal <= 0) {
+    echo '0*0*0*0*0*0';
+    exit;
+}
+
 $semana = trim($_POST['semana'] ?? date('Y-W'));
 $mes    = trim($_POST['mes']    ?? date('Y-m'));
 

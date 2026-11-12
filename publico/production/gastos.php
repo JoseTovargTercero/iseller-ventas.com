@@ -591,10 +591,10 @@ if ($cat_stmt) {
                         <p>Consulta y registro de gastos</p>
                     </div>
                     <div class="dash-header-actions">
-                        <select id="filterSucursal" onchange="cambiarSucursal()" style="background:var(--dash-bg);border:1px solid var(--dash-border);color:var(--dash-text);border-radius:8px;padding:8px 12px;font-size:12px;display:none;">
-                            <option value="0">Todas las sucursales</option>
-                        </select>
                         <?php if ($nivelUsuario == 1 && count($sucursales) > 0): ?>
+                            <select id="filterSucursal" onchange="cambiarSucursal()" style="background:var(--dash-bg);border:1px solid var(--dash-border);color:var(--dash-text);border-radius:8px;padding:8px 12px;font-size:12px;display:none;">
+                                <option value="0">Todas las sucursales</option>
+                            </select>
                             <script>
                                 (function() {
                                     var sel = document.getElementById('filterSucursal');
