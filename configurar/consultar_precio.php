@@ -1,5 +1,4 @@
-
- <?php
+<?php
   require_once("configuracion.php");
   require_once('session.php');
   require("_tasas_cambio.php");
@@ -42,6 +41,3 @@
   ];
 
   echo json_encode(['status' => 'ok', 'data' => $data]);
-
-
-  ?>

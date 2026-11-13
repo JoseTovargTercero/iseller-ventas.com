@@ -61,10 +61,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <div class="clearfix"></div>
                     <div class="row">
                         <script>
-                            // Ejecutar actualización cada segundo
                             $(document).ready(function() {
                                 ['precioMonedaOrigen', 'cantidad', 'porcentaje'].forEach(element => {
                                     const el = document.getElementById(element);
+                                    if (!el) return;
                                     // Solo dígitos y un punto decimal (la coma se normaliza a punto)
                                     el.addEventListener('input', () => {
                                         const partes = el.value.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.');
@@ -73,61 +73,67 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     el.addEventListener('keyup', () => realizarCalculos())
                                 });
 
-                                document.getElementById('origenProducto').addEventListener('change', () => realizarCalculos())
+                                const origenEl = document.getElementById('origenProducto');
+                                if (origenEl) origenEl.addEventListener('change', () => realizarCalculos())
                             })
 
-                            // Variables globales
-                            let cambioDolar = parseFloat(<?php echo $bsDolar ?>);
-                            const pesoDolar = parseFloat(<?php echo $pesoDolar ?>);
-                            const pesoBolivar = parseFloat(<?php echo $peso_bolivar ?>);
+                            const base_url = '../../configurar/';
+                            let precioVentaSeq = 0;
 
-
-
-                            // Realiza la conversión principal según la moneda seleccionada
-                            function realizarCalculos() {
-                                const precioInput = parseFloat(document.getElementById("precioMonedaOrigen").value) || 0;
-
-                                let resultado = precioInput;
-
-                                // Mostrar resultado convertido en input 'precio'
-                                document.getElementById("precio").value = resultado;
-
-                                // Calcular precios adicionales
-                                calcularValoresExtras(precioInput);
+                            function mostrarPreciosVacios() {
+                                document.getElementById('resultado').value = `$ 0`;
+                                document.getElementById('resultado2').value = `$ 0`;
+                                document.getElementById('resultado3').value = `${formatNumber(0)} COP`;
+                                document.getElementById('resultado4').value = `${formatNumber(0)} BS`;
                             }
 
-                            // Cálculos adicionales como precio unitario, venta y conversiones
-                            function calcularValoresExtras(precioCompra) {
+                            // La vista previa se calcula en el servidor para usar exactamente
+                            // las tasas mostradas del negocio (cambios_mostrados del bss_id en
+                            // sesión) y las mismas reglas que el listado de productos.
+                            function realizarCalculos() {
+                                const precio = parseFloat(document.getElementById("precioMonedaOrigen").value) || 0;
+                                const origen = document.getElementById("origenProducto").value || 'v';
                                 const cantidad = parseInt(document.getElementById("cantidad").value) || 1;
                                 const porcentaje = parseFloat(document.getElementById("porcentaje").value) || 0;
-                                const origenProducto = document.getElementById("origenProducto").value;
+                                const precioCompra = (precio == 0 ? 0 : precio / cantidad);
+                                const seq = ++precioVentaSeq;
 
-                                try {
-                                    // Calcular precio unitario
-                                    const precioUnitario = (precioCompra / cantidad).toFixed(2);
-                                    const precioDolarCompra = parseFloat(precioUnitario);
+                                // El precio unitario en dólares es el que se guarda en el producto
+                                document.getElementById("precio").value = precio;
 
-                                    // Precio de venta con porcentaje
-                                    const precioDolarVenta = ((precioDolarCompra * porcentaje / 100) + precioDolarCompra).toFixed(2);
+                                $.ajax({
+                                        url: base_url + 'consultar_precio.php',
+                                        type: 'POST',
+                                        data: {
+                                            precio: precio,
+                                            origen: origen,
+                                            cantidad: cantidad,
+                                            porcentaje: porcentaje
+                                        },
+                                        dataType: 'text'
+                                    })
+                                    .done(function(result) {
+                                        // Ignorar respuestas de peticiones anteriores
+                                        if (seq !== precioVentaSeq) return;
 
-                                    // Convertir a pesos
-                                    const pesoSalida = Math.round(precioDolarVenta * pesoDolar);
-
-                                    // Convertir a bolívares dependiendo del tipo de origen
-                                    let bolivarSalida;
-                                    if (origenProducto === 'c') {
-                                        bolivarSalida = ((pesoSalida / pesoBolivar) / 1000).toFixed(2);
-                                    } else {
-                                        bolivarSalida = (precioDolarVenta * cambioDolar).toFixed(2);
-                                    }
-                                    // Actualizar campos con resultados
-                                    document.getElementById("resultado").value = `$ ${precioDolarCompra}`;
-                                    document.getElementById("resultado2").value = `$ ${precioDolarVenta}`;
-                                    document.getElementById("resultado3").value = `${formatNumber(pesoSalida)} COP`;
-                                    document.getElementById("resultado4").value = `${formatNumber(bolivarSalida)} BS`;
-                                } catch (error) {
-                                    console.error("Error en los cálculos:", error);
-                                }
+                                        try {
+                                            const data = JSON.parse(result);
+                                            if (data.status === 'ok') {
+                                                document.getElementById('resultado').value = `$ ${precioCompra.toFixed(2)}`;
+                                                document.getElementById('resultado2').value = `$ ${data.data.dolar}`;
+                                                document.getElementById('resultado3').value = `${formatNumber(data.data.peso)} COP`;
+                                                document.getElementById('resultado4').value = `${formatNumber(recortarADosDecimales(data.data.bs))} BS`;
+                                            } else {
+                                                mostrarPreciosVacios();
+                                            }
+                                        } catch (e) {
+                                            console.error('Error al procesar la respuesta:', e);
+                                        }
+                                    })
+                                    .fail(function(xhr, status, error) {
+                                        if (seq !== precioVentaSeq) return;
+                                        console.error('Error al calcular la vista previa de precios:', error);
+                                    });
                             }
 
                             // Formatear número con separadores de miles
@@ -450,9 +456,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             <script>
                 // ── Modal Calcular Precio (mismo comportamiento y estilo que nuevoProducto.php) ──
+                // Tasas de cambio mostradas del negocio (bss_id en sesión)
                 const tasas = {
-                    'cop': "<?php echo $pesoDolar ?>",
-                    'bs': "<?php echo $bcv ?>"
+                    'cop': <?php echo json_encode((float) $pesoDolar); ?>,
+                    'bs': <?php echo json_encode((float) $bsDolar); ?>
                 };
 
                 $(document).ready(function() {

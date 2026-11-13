@@ -130,7 +130,10 @@ $tasas = json_decode($respuesta, true); // true = array asociativo
 
 $tasaMostradas = $cambio->tasasMostradas($bss_id);
 $tasaMostradas = json_decode($tasaMostradas, true);
-$data_monedas = $tasaMostradas['data'];
+$data_monedas = $tasaMostradas['data'] ?? [];
+if (!is_array($data_monedas)) {
+    $data_monedas = [];
+}
 
 if (!empty($_SESSION["sucursal"])) {
     $id_sucursal = $_SESSION["sucursal"];

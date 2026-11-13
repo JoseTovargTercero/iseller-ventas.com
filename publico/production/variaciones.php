@@ -726,9 +726,6 @@ if ($tipo_u === 1) {
                         <button type="button" class="var-btn primary" id="btn-nueva">
                             <ion-icon name="add-outline"></ion-icon> Nueva variación
                         </button>
-                        <a href="productos.php" class="var-btn" id="btn-ficha" target="_blank" rel="noopener">
-                            <ion-icon name="open-outline"></ion-icon> Ir a productos
-                        </a>
                     </div>
                 </div>
 
@@ -1030,9 +1027,6 @@ if ($tipo_u === 1) {
 
         if (padreActual && productos.some((p) => Number(p.id) === Number(padreActual))) {
             setPadre(padreActual);
-        } else if (!padreId && productos.length) {
-            const conVariaciones = productos.find((p) => Number(p.variaciones) > 0);
-            setPadre((conVariaciones || productos[0]).id);
         }
         padreId = Number($('padre').value) || 0;
         pintarPadre();
@@ -1240,11 +1234,18 @@ if ($tipo_u === 1) {
         }
     });
 
-    $('padre').addEventListener('change', () => {
+    function cambiarPadre() {
         padreId = Number($('padre').value) || 0;
         pintarPadre();
         recargarTodo().catch((e) => status(e.message, true));
-    });
+    }
+
+    // Select2 dispara el change mediante jQuery, por eso se enlaza ahí.
+    if (window.jQuery) {
+        jQuery('#padre').on('change', cambiarPadre);
+    } else {
+        $('padre').addEventListener('change', cambiarPadre);
+    }
 
     $('btn-refresh').addEventListener('click', async () => {
         try {
@@ -1258,13 +1259,6 @@ if ($tipo_u === 1) {
     });
 
     $('btn-nueva').addEventListener('click', prepararNueva);
-
-    $('btn-ficha').addEventListener('click', (e) => {
-        if (!padreId) {
-            e.preventDefault();
-            status('Selecciona un producto base.', true);
-        }
-    });
 
     ['var-precio', 'var-cantidad', 'var-porcentaje'].forEach((id) => {
         $(id).addEventListener('input', actualizarPreview);

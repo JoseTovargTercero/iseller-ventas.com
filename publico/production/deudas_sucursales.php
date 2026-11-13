@@ -299,6 +299,13 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             white-space: nowrap;
         }
 
+        .d-obs {
+            min-width: 160px;
+            max-width: 280px;
+            white-space: normal;
+            word-break: break-word;
+        }
+
         .d-badge {
             display: inline-flex;
             align-items: center;
@@ -888,10 +895,11 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                     <td class="d-right">${pago.tasa_peso_dolar !== null ? Number(pago.tasa_peso_dolar) : '—'}</td>
                     <td>${esc(pago.metodo_pago || '—')}</td>
                     <td>${esc(pago.referencia || '—')}</td>
+                    <td class="d-obs">${esc(pago.observaciones || '—')}</td>
                     <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
                     <td>${esc(pago.usuario_nombre || '—')}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="8" class="d-muted d-center">Sin abonos registrados.</td></tr>';
+                : '<tr><td colspan="9" class="d-muted d-center">Sin abonos registrados.</td></tr>';
 
             document.getElementById('deuda-titulo').textContent = 'Obligación ' + (c.numero_documento || '');
             document.getElementById('deuda-body').innerHTML = `
@@ -921,7 +929,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 <div class="d-section-title">Historial de abonos</div>
                 <div class="d-table-wrap">
                     <table class="d-table">
-                        <thead><tr><th>Fecha</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Comprobante</th><th>Usuario</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Observaciones</th><th>Comprobante</th><th>Usuario</th></tr></thead>
                         <tbody>${filasPagos}</tbody>
                     </table>
                 </div>
@@ -969,10 +977,11 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                     <td class="d-right">${pago.tasa_peso_dolar !== null ? Number(pago.tasa_peso_dolar) : '—'}</td>
                     <td>${esc(pago.metodo_pago || '—')}</td>
                     <td>${esc(pago.referencia || '—')}</td>
+                    <td class="d-obs">${esc(pago.observaciones || '—')}</td>
                     <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
                     <td>${esc(pago.usuario_nombre || '—')}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="9" class="d-muted d-center">Sin abonos registrados.</td></tr>';
+                : '<tr><td colspan="10" class="d-muted d-center">Sin abonos registrados.</td></tr>';
 
             document.getElementById('deuda-titulo').textContent = 'Deuda general: ' + (par.acreedora_nombre || '') + ' → ' + (par.deudora_nombre || '');
             document.getElementById('deuda-body').innerHTML = `
@@ -999,7 +1008,7 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 <div class="d-section-title">Historial de abonos</div>
                 <div class="d-table-wrap">
                     <table class="d-table">
-                        <thead><tr><th>Fecha</th><th>Documento</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Comprobante</th><th>Usuario</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Documento</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Observaciones</th><th>Comprobante</th><th>Usuario</th></tr></thead>
                         <tbody>${filasPagos}</tbody>
                     </table>
                 </div>
