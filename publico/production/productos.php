@@ -960,6 +960,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     llenarCategoriasProductos(grupoSel.value, categoriaActual);
                 }
 
+                // El stock puede llegar con varios decimales: se muestran como máximo dos
+                // (los enteros se dejan tal cual y no se pierde el valor real en data-stock).
+                function formatearStock(valor) {
+                    const numero = parseFloat(String(valor ?? '').replace(',', '.'));
+                    if (isNaN(numero)) return valor;
+                    return Number.isInteger(numero) ? String(numero) : String(Math.round(numero * 100) / 100);
+                }
+
                 // Cargar etabla de productos
                 function cargarProductos(sucursal = '') {
 
@@ -985,7 +993,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     data.data.forEach(row => {
                                         productos[row.id] = row
 
-                                        const rest = (row.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : row.stock)
+                                        const rest = (row.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : formatearStock(row.stock))
 
                                         const hasFoto = !!row.imagen;
 
