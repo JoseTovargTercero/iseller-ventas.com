@@ -353,18 +353,22 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             border: 1px solid var(--dash-border);
             border-radius: 14px;
             color: var(--dash-text);
+            max-height: calc(100vh - 80px);
         }
 
         .d-modal .modal-header,
         .d-modal .modal-footer {
             border-color: var(--dash-border);
             padding: 15px 20px;
+            flex-shrink: 0;
         }
 
         .d-modal .modal-body {
             padding: 18px 20px;
-            max-height: 74vh;
+            flex: 1 1 auto;
+            min-height: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .d-modal .modal-title {

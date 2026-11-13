@@ -170,35 +170,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         $chartCantidad  = array_slice($chartCantidad, $mesOffset);
     }
 
-    /* ─── Sucursales (para el filtro de período) ────────────────── */
-    $stmtS = $conexion->prepare('SELECT id, nombre FROM sucursales WHERE bss_id = ?');
-    $stmtS->bind_param('s', $bss_id);
-    $stmtS->execute();
-    $sucursalesRows = $stmtS->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmtS->close();
-
-    /* ─── Usuarios (para el filtro y el desglose por sucursal) ───── */
-    $stmtU = $conexion->prepare('SELECT id, nombre, id_sucursal FROM usuarios WHERE bss_id = ? ORDER BY nombre');
-    $stmtU->bind_param('s', $bss_id);
-    $stmtU->execute();
-    $usuariosRows = $stmtU->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmtU->close();
-
-    $sucursalesPorId = [];
-    foreach ($sucursalesRows as $suc) {
-        $sucursalesPorId[(int) $suc['id']] = (string) $suc['nombre'];
-    }
-
-    $usuariosSelect = [];
-    foreach ($usuariosRows as $u) {
-        $sucursalUsuario = (int) ($u['id_sucursal'] ?? 0);
-        $usuariosSelect[] = [
-            'id'          => (int) $u['id'],
-            'nombre'      => (string) ($u['nombre'] ?? ''),
-            'id_sucursal' => $sucursalUsuario,
-            'sucursal'    => $sucursalesPorId[$sucursalUsuario] ?? '',
-        ];
-    }
 ?>
     <!DOCTYPE html>
     <html lang="es">
@@ -632,25 +603,101 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 font-weight: 600;
             }
 
-            /* ── Selects del filtro ──────────────────────────────────── */
-            select.filter-input {
-                min-width: 170px;
-                appearance: none;
-                -webkit-appearance: none;
-                background-image:
-                    linear-gradient(45deg, transparent 50%, #64748b 50%),
-                    linear-gradient(135deg, #64748b 50%, transparent 50%);
-                background-position:
-                    calc(100% - 16px) 50%,
-                    calc(100% - 11px) 50%;
-                background-size: 5px 5px, 5px 5px;
-                background-repeat: no-repeat;
-                padding-right: 30px;
+            /* ── Botón de desglose ───────────────────────────────────── */
+            .btn-desglose {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: rgba(45, 212, 160, .10);
+                border: 1px solid rgba(45, 212, 160, .28);
+                border-radius: 8px;
+                color: #2dd4a0;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 6px 12px;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: background .2s ease, border-color .2s ease, color .2s ease;
             }
 
-            select.filter-input option {
-                background: #0f172a;
+            .btn-desglose:hover {
+                background: rgba(45, 212, 160, .18);
+                border-color: rgba(45, 212, 160, .45);
+                color: #5eead4;
+            }
+
+            /* ── Modal de desglose ───────────────────────────────────── */
+            .ficha-modal {
+                background: #0f172a !important;
+                border: 1px solid rgba(255, 255, 255, .1) !important;
+                border-radius: 16px !important;
                 color: #e2e8f0;
+                box-shadow: 0 24px 80px rgba(0, 0, 0, .55);
+            }
+
+            .ficha-modal .modal-header,
+            .ficha-modal .modal-footer {
+                border-color: rgba(255, 255, 255, .07);
+                padding: 16px 22px;
+            }
+
+            .ficha-modal .modal-body {
+                padding: 18px 22px 24px;
+            }
+
+            .ficha-modal .modal-title {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 17px;
+                font-weight: 700;
+                color: #f8fafc;
+            }
+
+            .ficha-modal .close {
+                color: #94a3b8;
+                opacity: .8;
+                text-shadow: none;
+            }
+
+            .ficha-modal .close:hover {
+                color: #f8fafc;
+                opacity: 1;
+            }
+
+            .desglose-section {
+                margin-top: 22px;
+            }
+
+            .desglose-section:first-child {
+                margin-top: 0;
+            }
+
+            .desglose-section-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 0 10px;
+                color: #64748b;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+            }
+
+            .desglose-section-title::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: rgba(255, 255, 255, .06);
+            }
+
+            .ficha-modal .sales-table-wrap {
+                border: 1px solid rgba(255, 255, 255, .06);
+            }
+
+            .ficha-modal .ficha-table th {
+                background: rgba(15, 23, 42, .7);
             }
 
             /* ── Resumen por sucursal ────────────────────────────────── */
@@ -692,48 +739,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 color: #94a3b8;
             }
 
-            .branch-total {
-                margin-left: auto;
-                font-size: 11px;
-                font-weight: 600;
-                letter-spacing: 0;
-                text-transform: none;
-                color: #2dd4bf;
-            }
-
             /* ── Detalle de ventas ───────────────────────────────────── */
-            .sales-details {
-                margin-top: 14px;
-                padding-top: 12px;
-                border-top: 1px dashed rgba(255, 255, 255, .08);
-            }
-
-            .sales-details summary {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                cursor: pointer;
-                list-style: none;
-                color: #2dd4bf;
-                font-size: 12px;
-                font-weight: 600;
-                user-select: none;
-            }
-
-            .sales-details summary::-webkit-details-marker {
-                display: none;
-            }
-
-            .sales-details summary::before {
-                content: '▸';
-                font-size: 10px;
-                transition: transform .2s ease;
-            }
-
-            .sales-details[open] summary::before {
-                transform: rotate(90deg);
-            }
-
             .sales-table-wrap {
                 overflow-x: auto;
                 margin-top: 10px;
@@ -918,8 +924,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     justify-content: center;
                 }
 
-                .filter-field,
-                select.filter-input {
+                .filter-field {
                     width: 100%;
                 }
 
@@ -1033,7 +1038,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="ficha-panel-header">
                                 <span class="ficha-panel-title">
                                     <i class="fa fa-filter" style="color:#14b8a6;"></i>
-                                    Análisis por Sucursal y Usuario
+                                    Ventas por Período
                                 </span>
                             </div>
                             <div class="ficha-panel-body">
@@ -1048,21 +1053,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <input id="fp-hasta" class="filter-input" type="text"
                                             placeholder="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
                                     </div>
-                                    <div class="filter-field">
-                                        <label>Sucursal</label>
-                                        <select id="fp-sucursal" class="filter-input">
-                                            <option value="0">Todas las sucursales</option>
-                                            <?php foreach ($sucursalesRows as $suc): ?>
-                                                <option value="<?= (int) $suc['id'] ?>"><?= htmlspecialchars($suc['nombre']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <div class="filter-field">
-                                        <label>Usuario</label>
-                                        <select id="fp-usuario" class="filter-input">
-                                            <option value="0">Todos los usuarios</option>
-                                        </select>
-                                    </div>
                                     <div class="preset-chips">
                                         <span class="preset-chip" data-preset="today">Hoy</span>
                                         <span class="preset-chip" data-preset="week">Esta semana</span>
@@ -1074,12 +1064,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <i class="fa fa-search"></i> Consultar
                                     </button>
                                 </div>
-                                <p class="num-sub" style="margin:12px 0 0;">
-                                    <i class="fa fa-cube" style="color:#fbbf24;"></i>
-                                    Las cajas se calculan con las unidades por caja de cada presentación.
-                                    Puedes consultar todas las sucursales o filtrar por una sucursal y un usuario.
-                                </p>
-
                                 <div id="period-results">
                                     <div class="state-loading">
                                         <i class="fa fa-circle-o-notch spin"></i>
@@ -1094,6 +1078,21 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             </div><!-- /main_container -->
         </div><!-- /container body -->
+
+        <!-- Modal: desglose por sucursal -->
+        <div class="modal fade" id="modalDesglose" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-xl" role="document">
+                <div class="modal-content ficha-modal">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="desgloseTitulo">Desglose por sucursal</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="desgloseContenido"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- Scripts -->
         <script src="../vendors/jquery/dist/jquery.min.js"></script>
@@ -1475,11 +1474,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 defaultDate: '<?= date('Y-m-d') ?>',
             });
 
-            /* ── Datos para el filtro de usuarios ───────────────────────────── */
-            const USUARIOS = <?= json_encode($usuariosSelect, JSON_UNESCAPED_UNICODE) ?>;
-            const selSucursal = document.getElementById('fp-sucursal');
-            const selUsuario  = document.getElementById('fp-usuario');
-
+            /* ── Utilidades de formato ──────────────────────────────────────── */
             const nf2 = new Intl.NumberFormat('es-VE', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -1503,107 +1498,153 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 return `${partes[2]}/${partes[1]}/${partes[0]}${hora ? ' ' + hora : ''}`;
             }
 
-            function cargarUsuariosSucursal(sucursalId, seleccionado) {
-                const anterior = seleccionado !== undefined ? String(seleccionado) : selUsuario.value;
-                const lista = sucursalId > 0
-                    ? USUARIOS.filter(u => u.id_sucursal === sucursalId || !u.id_sucursal)
-                    : USUARIOS;
+            let DATOS_SUCURSALES = {};
+            let PERIODO_ACTUAL = {
+                desde: '',
+                hasta: ''
+            };
 
-                selUsuario.innerHTML = '<option value="0">Todos los usuarios</option>' +
-                    lista.map(u => {
-                        const etiqueta = u.sucursal
-                            ? `${u.nombre || 'Sin nombre'} — ${u.sucursal}`
-                            : (u.nombre || 'Sin nombre');
-                        return `<option value="${u.id}">${esc(etiqueta)}</option>`;
-                    }).join('');
-
-                selUsuario.value = lista.some(u => String(u.id) === anterior) ? anterior : '0';
-            }
-
+            /* ── Totales por sucursal ───────────────────────────────────────── */
             function renderResumen(data) {
                 const sucursales = data.sucursales || [];
+
+                PERIODO_ACTUAL = {
+                    desde: data.desde || '',
+                    hasta: data.hasta || ''
+                };
+                DATOS_SUCURSALES = {};
+
                 if (!sucursales.length) {
                     return `<div class="state-empty"><i class="fa fa-inbox"></i>Sin ventas del producto en este período</div>`;
                 }
 
                 let html = '';
                 sucursales.forEach(suc => {
-                    const cajas = Number(suc.cajas) || 0;
-                    const promedioCaja = cajas > 0 ? (Number(suc.total) || 0) / cajas : 0;
+                    const sid = String(suc.id);
                     const gainClass = Number(suc.ganancia) >= 0 ? 'gain-pos' : 'gain-neg';
-
-                    const filasUsuarios = (suc.usuarios || []).map(u => {
-                        const uc = Number(u.cajas) || 0;
-                        const up = uc > 0 ? (Number(u.total) || 0) / uc : 0;
-                        const ug = Number(u.ganancia) >= 0 ? 'gain-pos' : 'gain-neg';
-                        return `<tr>
-                            <td><strong>${esc(u.usuario)}</strong></td>
-                            <td>${Number(u.ventas) || 0}</td>
-                            <td><span class="num-big" style="font-size:16px;">${num(uc)}</span></td>
-                            <td>${num(u.unidades)}</td>
-                            <td>${money(u.total)}</td>
-                            <td><span class="${ug}">${money(u.ganancia)}</span></td>
-                            <td>${money(up)}</td>
-                        </tr>`;
-                    }).join('');
-
-                    const filasVentas = (suc.ventas_detalle || []).map(v => {
-                        const vg = Number(v.ganancia) >= 0 ? 'gain-pos' : 'gain-neg';
-                        return `<tr>
-                            <td><strong>#${v.id}</strong></td>
-                            <td>${fechaCorta(v.fecha)}</td>
-                            <td>${esc(v.usuario)}</td>
-                            <td><span class="num-big" style="font-size:16px;">${num(v.cajas)}</span></td>
-                            <td>${num(v.unidades)}</td>
-                            <td>${money(v.total)}</td>
-                            <td><span class="${vg}">${money(v.ganancia)}</span></td>
-                            <td>
-                                <a class="sale-link" href="detallesVenta.php?id=${v.id}" target="_blank" rel="noopener">
-                                    <i class="fa fa-external-link"></i> Ver venta
-                                </a>
-                            </td>
-                        </tr>`;
-                    }).join('');
-
-                    const truncado = (Number(suc.ventas_total) || 0) > (Number(suc.ventas_mostradas) || 0)
-                        ? `<p class="truncated-note">Mostrando las ${suc.ventas_mostradas} ventas más recientes de ${suc.ventas_total}. Acota el período o filtra por sucursal/usuario para ver el resto.</p>`
-                        : '';
+                    DATOS_SUCURSALES[sid] = suc;
 
                     html += `
                     <div class="branch-block">
                         <p class="branch-title">
                             <i class="fa fa-map-marker"></i> ${esc(suc.sucursal)}
-                            <span class="branch-total">${Number(suc.ventas) || 0} venta(s) · ${money(suc.total)}</span>
                         </p>
-
-                        <div class="branch-summary">
-                            <div class="branch-stat">
-                                <span class="lbl">Cajas vendidas</span>
-                                <span class="val">${num(cajas)} <small>cajas</small></span>
-                            </div>
-                            <div class="branch-stat">
-                                <span class="lbl">Unidades</span>
-                                <span class="val">${num(suc.unidades)} <small>unid.</small></span>
-                            </div>
-                            <div class="branch-stat">
-                                <span class="lbl">Valor vendido</span>
-                                <span class="val">${money(suc.total)}</span>
-                            </div>
-                            <div class="branch-stat">
-                                <span class="lbl">Ganancia</span>
-                                <span class="val ${gainClass}">${money(suc.ganancia)}</span>
-                            </div>
-                            <div class="branch-stat">
-                                <span class="lbl">Promedio por caja</span>
-                                <span class="val">${money(promedioCaja)}</span>
-                            </div>
-                        </div>
 
                         <div class="sales-table-wrap">
                             <table class="ficha-table">
                                 <thead>
                                     <tr>
-                                        <th>Usuario de la sucursal</th>
+                                        <th>Período</th>
+                                        <th>Unidades despachadas</th>
+                                        <th>Valor Vendido</th>
+                                        <th>Ganancia</th>
+                                        <th>Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>${esc(data.desde)} <span style="color:#475569">→</span> ${esc(data.hasta)}</td>
+                                        <td><span class="num-big">${num(suc.unidades)}</span> <span class="num-sub">unid.</span></td>
+                                        <td><span class="num-big">${money(suc.total)}</span></td>
+                                        <td><span class="${gainClass}">${money(suc.ganancia)}</span></td>
+                                        <td>
+                                            <button type="button" class="btn-desglose" data-sucursal="${sid}">
+                                                <i class="fa fa-users"></i> Ver desglose
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                });
+
+                return html;
+            }
+
+            /* ── Modal de desglose ──────────────────────────────────────────── */
+            function abrirDesglose(sucursalId) {
+                const suc = DATOS_SUCURSALES[String(sucursalId)];
+                if (!suc) return;
+
+                const cajas = Number(suc.cajas) || 0;
+                const promedioCaja = cajas > 0 ? (Number(suc.total) || 0) / cajas : 0;
+                const gainClass = Number(suc.ganancia) >= 0 ? 'gain-pos' : 'gain-neg';
+
+                const filasUsuarios = (suc.usuarios || []).map(u => {
+                    const uc = Number(u.cajas) || 0;
+                    const up = uc > 0 ? (Number(u.total) || 0) / uc : 0;
+                    const ug = Number(u.ganancia) >= 0 ? 'gain-pos' : 'gain-neg';
+                    return `<tr>
+                        <td><strong>${esc(u.usuario)}</strong></td>
+                        <td>${Number(u.ventas) || 0}</td>
+                        <td><span class="num-big" style="font-size:16px;">${num(uc)}</span></td>
+                        <td>${num(u.unidades)}</td>
+                        <td>${money(u.total)}</td>
+                        <td><span class="${ug}">${money(u.ganancia)}</span></td>
+                        <td>${money(up)}</td>
+                    </tr>`;
+                }).join('');
+
+                const filasVentas = (suc.ventas_detalle || []).map(v => {
+                    const vg = Number(v.ganancia) >= 0 ? 'gain-pos' : 'gain-neg';
+                    return `<tr>
+                        <td><strong>#${v.id}</strong></td>
+                        <td>${fechaCorta(v.fecha)}</td>
+                        <td>${esc(v.usuario)}</td>
+                        <td><span class="num-big" style="font-size:16px;">${num(v.cajas)}</span></td>
+                        <td>${num(v.unidades)}</td>
+                        <td>${money(v.total)}</td>
+                        <td><span class="${vg}">${money(v.ganancia)}</span></td>
+                        <td>
+                            <a class="sale-link" href="detallesVenta.php?id=${v.id}" target="_blank" rel="noopener">
+                                <i class="fa fa-external-link"></i> Ver venta
+                            </a>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                const truncado = (Number(suc.ventas_total) || 0) > (Number(suc.ventas_mostradas) || 0)
+                    ? `<p class="truncated-note">Mostrando las ${suc.ventas_mostradas} ventas más recientes de ${suc.ventas_total}. Acota el período para ver el resto.</p>`
+                    : '';
+
+                document.getElementById('desgloseTitulo').textContent = 'Desglose — ' + suc.sucursal;
+                document.getElementById('desgloseContenido').innerHTML = `
+                    <p class="num-sub" style="margin:0 0 14px;">
+                        <i class="fa fa-calendar"></i>
+                        Período: <strong style="color:#cbd5e1;">${esc(PERIODO_ACTUAL.desde)} → ${esc(PERIODO_ACTUAL.hasta)}</strong>
+                    </p>
+
+                    <div class="branch-summary">
+                        <div class="branch-stat">
+                            <span class="lbl">Cajas vendidas</span>
+                            <span class="val">${num(cajas)} <small>cajas</small></span>
+                        </div>
+                        <div class="branch-stat">
+                            <span class="lbl">Unidades</span>
+                            <span class="val">${num(suc.unidades)} <small>unid.</small></span>
+                        </div>
+                        <div class="branch-stat">
+                            <span class="lbl">Valor vendido</span>
+                            <span class="val">${money(suc.total)}</span>
+                        </div>
+                        <div class="branch-stat">
+                            <span class="lbl">Ganancia</span>
+                            <span class="val ${gainClass}">${money(suc.ganancia)}</span>
+                        </div>
+                        <div class="branch-stat">
+                            <span class="lbl">Promedio por caja</span>
+                            <span class="val">${money(promedioCaja)}</span>
+                        </div>
+                    </div>
+
+                    <div class="desglose-section">
+                        <p class="desglose-section-title"><i class="fa fa-users"></i> Por usuario</p>
+                        <div class="sales-table-wrap">
+                            <table class="ficha-table">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
                                         <th>Ventas</th>
                                         <th>Cajas</th>
                                         <th>Unidades</th>
@@ -1612,35 +1653,34 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         <th>Prom. caja</th>
                                     </tr>
                                 </thead>
-                                <tbody>${filasUsuarios}</tbody>
+                                <tbody>${filasUsuarios || '<tr><td colspan="7" class="state-empty">Sin usuarios con ventas en el período.</td></tr>'}</tbody>
                             </table>
                         </div>
+                    </div>
 
-                        <details class="sales-details">
-                            <summary>Ver ventas que incluyeron el producto (${Number(suc.ventas_total) || 0})</summary>
-                            <div class="sales-table-wrap">
-                                <table class="ficha-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Venta</th>
-                                            <th>Fecha</th>
-                                            <th>Usuario</th>
-                                            <th>Cajas</th>
-                                            <th>Unidades</th>
-                                            <th>Vendido</th>
-                                            <th>Ganancia</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>${filasVentas}</tbody>
-                                </table>
-                            </div>
-                            ${truncado}
-                        </details>
+                    <div class="desglose-section">
+                        <p class="desglose-section-title"><i class="fa fa-shopping-cart"></i> Ventas que incluyeron el producto</p>
+                        <div class="sales-table-wrap">
+                            <table class="ficha-table">
+                                <thead>
+                                    <tr>
+                                        <th>Venta</th>
+                                        <th>Fecha</th>
+                                        <th>Usuario</th>
+                                        <th>Cajas</th>
+                                        <th>Unidades</th>
+                                        <th>Vendido</th>
+                                        <th>Ganancia</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasVentas || '<tr><td colspan="8" class="state-empty">Sin ventas registradas.</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                        ${truncado}
                     </div>`;
-                });
 
-                return html;
+                $('#modalDesglose').modal('show');
             }
 
             /* ── Preset chips ───────────────────────────────────────────────── */
@@ -1679,18 +1719,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 });
             });
 
-            selSucursal.addEventListener('change', function() {
-                cargarUsuariosSucursal(parseInt(this.value, 10) || 0, 0);
-                consultarPeriodo();
-            });
-            selUsuario.addEventListener('change', consultarPeriodo);
-
             /* ── Period query ───────────────────────────────────────────────── */
             function consultarPeriodo() {
                 const desde = document.getElementById('fp-desde').value;
                 const hasta = document.getElementById('fp-hasta').value;
-                const sucursal = parseInt(selSucursal.value, 10) || 0;
-                const usuario = parseInt(selUsuario.value, 10) || 0;
                 const pid = <?= $idProducto ?>;
                 const btn = document.getElementById('btn-filtrar');
                 const results = document.getElementById('period-results');
@@ -1707,9 +1739,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 const query = new URLSearchParams({
                     id: pid,
                     desde: desde,
-                    hasta: hasta,
-                    sucursal: sucursal,
-                    usuario: usuario
+                    hasta: hasta
                 });
 
                 fetch('ficha_consulta_periodo.php?' + query.toString())
@@ -1734,8 +1764,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             document.getElementById('btn-filtrar').addEventListener('click', consultarPeriodo);
 
+            document.getElementById('period-results').addEventListener('click', function(evento) {
+                const boton = evento.target.closest('.btn-desglose');
+                if (boton) {
+                    abrirDesglose(boton.dataset.sucursal);
+                }
+            });
+
             // Auto-load on page open
-            cargarUsuariosSucursal(0);
             consultarPeriodo();
         </script>
     </body>
