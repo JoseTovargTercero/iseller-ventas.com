@@ -418,6 +418,10 @@ try {
                     'unidades' => round((float) ($fila['unidades'] ?? 0), 2),
                 ];
             }
+            // Orden cronológico explícito: semana más antigua primero.
+            usort($serieSemanal, function ($a, $b) {
+                return strcmp((string) $a['periodo'], (string) $b['periodo']);
+            });
 
             // Serie mensual: 6 meses incluido el actual.
             $inicioMensual = date('Y-m-01', strtotime($mesDesde . ' -5 months'));
@@ -453,6 +457,10 @@ try {
                     'unidades' => round((float) ($fila['unidades'] ?? 0), 2),
                 ];
             }
+            // Orden cronológico explícito: mes más antiguo primero.
+            usort($serieMensual, function ($a, $b) {
+                return strcmp((string) $a['periodo'], (string) $b['periodo']);
+            });
 
             // PÃ©rdidas por categorÃ­a en el periodo consultado.
             [$whereCategoria, $paramsCategoria, $typesCategoria] = aj_filtros($bssId, $sucursal, $desde, $hasta, $categoria, $producto, $tipoFiltro, 'ACTIVO', $grupoFiltro);
@@ -642,18 +650,37 @@ try {
                 }
 
                 $stockId = (int) $stockFila['id'];
-                $stockAntes = (float) $stockFila['stock'];
+                $stockAntes = round((float) $stockFila['stock'], 4);
 
                 if ($tipo === 'MERMA') {
+                    $cantidad = round($cantidad, 4);
                     if ($cantidad <= 0) {
                         throw new Exception('La cantidad de la merma debe ser mayor que cero.');
                     }
-                    if ($cantidad > $stockAntes + 0.0001) {
-                        throw new Exception('No hay existencia suficiente. Stock actual: ' . ajustes_numero($stockAntes, 2) . '.');
+                    if ($stockAntes <= 0) {
+                        throw new Exception('No hay existencia suficiente. Stock actual: ' . ajustes_numero($stockAntes) . '.');
                     }
+                    if ($cantidad > $stockAntes) {
+                        $exceso = $cantidad - $stockAntes;
+                        // El stock se muestra redondeado (2 decimales en pantallas
+                        // anteriores). Si la diferencia es solo de redondeo, se
+                        // descuenta todo el stock para no dejar residuos como 0.005.
+                        if ($exceso <= 0.0051) {
+                            $cantidad = $stockAntes;
+                            $stockDespues = 0.0;
+                        } else {
+                            throw new Exception('No hay existencia suficiente. Stock actual: ' . ajustes_numero($stockAntes) . '.');
+                        }
+                    } else {
+                        $stockDespues = $stockAntes - $cantidad;
+                        if ($stockDespues < 0.00005) {
+                            $stockDespues = 0.0;
+                        }
+                    }
+                    $stockDespues = round($stockDespues, 4);
                     $direccion = 'SALIDA';
-                    $stockDespues = $stockAntes - $cantidad;
                 } else {
+                    $stockReal = round($stockReal, 4);
                     if ($stockReal < 0) {
                         throw new Exception('El stock real no puede ser negativo.');
                     }
@@ -662,7 +689,7 @@ try {
                         throw new Exception('El stock real coincide con el sistema; no hay nada que ajustar.');
                     }
                     $direccion = $diferencia > 0 ? 'ENTRADA' : 'SALIDA';
-                    $cantidad = abs($diferencia);
+                    $cantidad = round(abs($diferencia), 4);
                     $stockDespues = $stockReal;
                 }
 

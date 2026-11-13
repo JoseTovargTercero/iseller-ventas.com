@@ -218,12 +218,18 @@ UPDATE `orden_articulos` SET `quantity` = 0 WHERE `quantity` IS NULL;
 ALTER TABLE `orden_articulos`
   MODIFY `quantity` DECIMAL(15,3) NOT NULL DEFAULT 0;
 
--- Menú de Res en canal / Subproductos
+-- Menú de Variaciones de productos
+UPDATE `menu`
+SET `nombre` = 'Variaciones de productos',
+    `dir` = 'variaciones.php',
+    `icono` = 'git-branch-outline'
+WHERE `dir` = 'canal.php';
+
 INSERT INTO `menu` (`categoria`, `nombre`, `dir`, `icono`, `admin`)
-SELECT 'stock', 'Res en canal / Subproductos', 'canal.php', 'layers-outline', 0
+SELECT 'stock', 'Variaciones de productos', 'variaciones.php', 'git-branch-outline', 0
 FROM DUAL
 WHERE NOT EXISTS (
-  SELECT 1 FROM `menu` m WHERE m.dir = 'canal.php'
+  SELECT 1 FROM `menu` m WHERE m.dir = 'variaciones.php'
 );
 
 -- ------------------------------------------------------------
@@ -250,4 +256,4 @@ DROP PROCEDURE IF EXISTS `_mig_add_index`;
 -- SHOW TABLES LIKE 'compras_factura_pagos';
 -- SHOW TABLES LIKE 'lotes';
 -- SHOW TABLES LIKE 'lotes_detalle';
--- SELECT id, nombre, dir FROM menu WHERE dir = 'canal.php';
+-- SELECT id, nombre, dir FROM menu WHERE dir = 'variaciones.php';

@@ -1000,7 +1000,7 @@ $mesInicio     = date('Y-m-01');
                             <div class="col-md-4" id="regCampoCantidad">
                                 <label for="regCantidad">Cantidad *</label>
                                 <input type="number" id="regCantidad" class="aj-input" min="0.0001" step="any" placeholder="Unidades o kg perdidos">
-                                <small class="aj-help">En productos por peso, registre los kg perdidos.</small>
+                                <small class="aj-help">En productos por peso, registre los kg perdidos. Se admiten hasta 4 decimales.</small>
                             </div>
                             <div class="col-md-4" id="regCampoStockReal" style="display:none;">
                                 <label for="regStockReal">Stock real *</label>
@@ -1075,6 +1075,11 @@ $mesInicio     = date('Y-m-01');
         const MOTIVO_LABEL = Object.assign({}, MOTIVOS.MERMA, MOTIVOS.AJUSTE);
         const SUCURSALES = <?= json_encode($sucursales, JSON_UNESCAPED_UNICODE) ?>;
         const CATEGORIAS = <?= json_encode($categorias, JSON_UNESCAPED_UNICODE) ?>;
+
+        // El stock se guarda con 4 decimales, pero antes se mostraba con 2.
+        // Si el usuario escribía el valor redondeado (10.47 sobre 10.465),
+        // el sistema lo rechazaba. Este margen absorbe esa diferencia.
+        const TOLERANCIA_STOCK = 0.0051;
 
         let PRODUCTOS = [];
         let PRODUCTOS_REG = [];
@@ -1242,7 +1247,15 @@ $mesInicio     = date('Y-m-01');
         function renderPeriodo() {
             const contenedor = $id('chartPeriodo');
             if (!ULTIMO_RESUMEN) return;
-            const serie = VISTA_PERIODO === 'semanal' ? ULTIMO_RESUMEN.serie_semanal : ULTIMO_RESUMEN.serie_mensual;
+            const serieOriginal = VISTA_PERIODO === 'semanal' ? ULTIMO_RESUMEN.serie_semanal : ULTIMO_RESUMEN.serie_mensual;
+
+            // Orden cronológico ascendente: la semana/mes más antiguo a la
+            // izquierda y el más reciente a la derecha. Así no depende del
+            // orden en que el backend devuelva la serie.
+            const serie = (serieOriginal || []).slice().sort(function(a, b) {
+                return String(a.periodo).localeCompare(String(b.periodo));
+            });
+
             const categorias = serie.map(function(item) {
                 return formatoPeriodo(item.periodo);
             });
@@ -1676,7 +1689,7 @@ $mesInicio     = date('Y-m-01');
             }
             caja.innerHTML = '<strong>' + esc(PRODUCTO_REG.nombre) + '</strong>' +
                 ' · ' + esc(PRODUCTO_REG.categoria) +
-                ' · Stock actual: <strong>' + numero(PRODUCTO_REG.stock, 2) + '</strong>' +
+                ' · Stock actual: <strong>' + numero(PRODUCTO_REG.stock, 4) + '</strong>' +
                 ' · Costo unitario: <strong>' + money(PRODUCTO_REG.costo_unitario) + '</strong>';
             actualizarPreview();
         }
@@ -1713,10 +1726,15 @@ $mesInicio     = date('Y-m-01');
 
             if (tipo === 'MERMA') {
                 cantidad = Math.max(0, parseFloat($id('regCantidad').value) || 0);
-                if (cantidad > (Number(PRODUCTO_REG.stock) || 0) + 0.0001) {
-                    detalle.textContent = 'La cantidad excede el stock actual (' + numero(PRODUCTO_REG.stock, 2) + ').';
-                    valor.textContent = money(cantidad * costo);
+                const stock = Number(PRODUCTO_REG.stock) || 0;
+                if (cantidad > stock + TOLERANCIA_STOCK) {
+                    detalle.textContent = 'La cantidad excede el stock actual (' + numero(stock, 4) + ').';
+                    valor.textContent = money(stock * costo);
                     return;
+                }
+                // Si escribió el stock redondeado, se toma todo el disponible.
+                if (cantidad > stock) {
+                    cantidad = stock;
                 }
             } else {
                 const real = parseFloat($id('regStockReal').value);
@@ -1729,7 +1747,7 @@ $mesInicio     = date('Y-m-01');
 
             valor.textContent = money(cantidad * costo);
             detalle.textContent = cantidad > 0 ?
-                numero(cantidad, 2) + ' × ' + money(costo) + ' · ' + etiqueta :
+                numero(cantidad, 4) + ' × ' + money(costo) + ' · ' + etiqueta :
                 'Indique una cantidad para calcular el valor.';
         }
 
@@ -1783,13 +1801,22 @@ $mesInicio     = date('Y-m-01');
             };
 
             if (tipo === 'MERMA') {
-                const cantidad = parseFloat($id('regCantidad').value);
+                let cantidad = parseFloat($id('regCantidad').value);
+                const stock = Number(PRODUCTO_REG.stock) || 0;
                 if (!(cantidad > 0)) {
                     toast('error', 'Indique una cantidad mayor que cero.');
                     return;
                 }
-                if (cantidad > (Number(PRODUCTO_REG.stock) || 0) + 0.0001) {
-                    toast('error', 'La cantidad excede el stock actual.');
+                if (cantidad > stock + TOLERANCIA_STOCK) {
+                    toast('error', 'La cantidad excede el stock actual (' + numero(stock, 4) + ').');
+                    return;
+                }
+                // Se ajusta al stock real para no dejar residuos por redondeo.
+                if (cantidad > stock) {
+                    cantidad = stock;
+                }
+                if (!(cantidad > 0)) {
+                    toast('error', 'No hay stock disponible para registrar la merma.');
                     return;
                 }
                 datos.cantidad = cantidad;
