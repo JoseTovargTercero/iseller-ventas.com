@@ -930,11 +930,13 @@ if ($tipo_u === 1) {
         fd.append('sucursal', sucursalSeleccionada());
         Object.keys(data || {}).forEach((k) => fd.append(k, data[k]));
         const res = await fetch(API, {method: 'POST', body: fd});
+        const texto = await res.text();
         let json;
         try {
-            json = await res.json();
+            json = JSON.parse(texto);
         } catch (e) {
-            throw new Error('El servidor devolvió una respuesta no válida.');
+            const limpio = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);
+            throw new Error('Respuesta no válida del servidor (HTTP ' + res.status + ')' + (limpio ? ': ' + limpio : '.'));
         }
         if (!json.ok) throw new Error(json.message || 'No se pudo completar la operación.');
         return json;

@@ -2,15 +2,70 @@
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
 ini_set('display_errors', '0');
 
+// Cualquier salida accidental (avisos, BOM o un die() de configuración) se
+// descarta para que el endpoint siempre responda JSON.
+ob_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    $duracion = 10800;
+    $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params([
+            'lifetime' => $duracion,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $esHttps,
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ]);
+    }
+    @ini_set('session.gc_maxlifetime', $duracion);
+    @ini_set('session.cookie_lifetime', $duracion);
+    @session_start();
+}
+
+$GLOBALS['var_respondido'] = false;
+register_shutdown_function(function () {
+    if (!empty($GLOBALS['var_respondido'])) {
+        return;
+    }
+    $err = error_get_last();
+    $esFatal = $err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true);
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    if (!headers_sent()) {
+        http_response_code($esFatal ? 500 : 200);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    $flags = JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0);
+    if ($esFatal) {
+        error_log('variaciones_api: ' . $err['message']);
+        $detalle = preg_replace('/\s+/', ' ', (string) $err['message']);
+        $detalle = substr($detalle, 0, 300);
+        $mensaje = 'Error interno del servidor: ' . $detalle;
+    } else {
+        $mensaje = 'No se pudo procesar la solicitud.';
+    }
+    $json = json_encode(['ok' => false, 'message' => $mensaje], $flags);
+    echo $json === false ? '{"ok":false,"message":"Error al codificar la respuesta."}' : $json;
+});
+
 require_once(__DIR__ . '/../../../configurar/configuracion.php');
-require_once(__DIR__ . '/../../../configurar/session.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
 function var_respuesta(array $data, int $codigo = 200): void
 {
+    $GLOBALS['var_respondido'] = true;
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
     http_response_code($codigo);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    header('Content-Type: application/json; charset=utf-8');
+    $flags = JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0);
+    $json = json_encode($data, $flags);
+    echo $json === false ? '{"ok":false,"message":"Error al codificar la respuesta."}' : $json;
     exit;
 }
 
