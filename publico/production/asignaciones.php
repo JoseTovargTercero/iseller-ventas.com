@@ -943,7 +943,6 @@ $hoy = date('Y-m-d');
     <script src="../vendors/nprogress/nprogress.js"></script>
     <script src="../build/js/custom.js"></script>
     <script src="../build/js/modal.js"></script>
-    <script src="js/alerta.js"></script>
     <script src="js/nombre_pagina.js"></script>
 
     <script>

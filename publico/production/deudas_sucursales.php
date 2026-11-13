@@ -365,8 +365,12 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
 
         .d-modal .modal-body {
             padding: 18px 20px;
+            /* El CSS global del panel pone .modal-body como flex column;
+               eso comprimía las tablas y solo dejaba ver el thead. */
+            display: block;
             flex: 1 1 auto;
             min-height: 0;
+            overflow-x: hidden;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
@@ -671,7 +675,6 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
     <script src="../vendors/nprogress/nprogress.js"></script>
     <script src="../build/js/custom.js"></script>
     <script src="../build/js/modal.js"></script>
-    <script src="js/alerta.js"></script>
     <script src="js/nombre_pagina.js"></script>
 
     <script>
