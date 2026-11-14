@@ -536,6 +536,17 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                             continue;
                         }
 
+                        $faltanteHijo = canal_consumir_variacion(
+                            $conexion,
+                            $idHijo,
+                            (int) $id_sucursal,
+                            (int) $bss_id,
+                            $cantHijo
+                        );
+                        if ($faltanteHijo !== null) {
+                            continue;
+                        }
+
                         $stmtStock->bind_param("iii", $idHijo, $id_sucursal, $bss_id);
                         if (!$stmtStock->execute()) {
                             throw new Exception("Error al consultar stock de producto del combo: " . $stmtStock->error);
@@ -581,18 +592,29 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                 }
             } else {
 
-                // Actualizar stock
-                $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
-                if (!$stmtStock->execute()) {
-                    throw new Exception("Error al consultar stock detal: " . $stmtStock->error);
-                }
-                $result = $stmtStock->get_result()->fetch_assoc();
-                $stock = max(0, (float) $result['stock'] - (float) $item['qty']);
+                // Variación: descuenta propia, luego respaldo y por último el padre.
+                $faltanteVariacion = canal_consumir_variacion(
+                    $conexion,
+                    (int) $item['id'],
+                    (int) $id_sucursal,
+                    (int) $bss_id,
+                    (float) $item['qty']
+                );
+
+                if ($faltanteVariacion === null) {
+                    // Actualizar stock
+                    $stmtStock->bind_param("iii", $item['id'], $id_sucursal, $bss_id);
+                    if (!$stmtStock->execute()) {
+                        throw new Exception("Error al consultar stock detal: " . $stmtStock->error);
+                    }
+                    $result = $stmtStock->get_result()->fetch_assoc();
+                    $stock = max(0, (float) $result['stock'] - (float) $item['qty']);
 
 
-                $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);
-                if (!$updateStmt->execute()) {
-                    throw new Exception("Error al actualizar stock detal: " . $updateStmt->error);
+                    $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);
+                    if (!$updateStmt->execute()) {
+                        throw new Exception("Error al actualizar stock detal: " . $updateStmt->error);
+                    }
                 }
             }
         }

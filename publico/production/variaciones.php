@@ -471,6 +471,11 @@ if ($tipo_u === 1) {
             margin-bottom: 5px;
         }
 
+        /* Bootstrap 4 no separa columnas al pasar de línea. */
+        .modal-body .row > [class*="col-"] {
+            margin-bottom: 10px;
+        }
+
         .modal-body .var-check {
             margin-bottom: 0;
         }
@@ -810,7 +815,7 @@ if ($tipo_u === 1) {
                             <label>Proveedor</label>
                             <input type="text" name="proveedor" id="var-proveedor" class="form-control" maxlength="150" placeholder="Opcional">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label>Origen</label>
                             <select name="origen" id="var-origen" class="form-select">
                                 <option value="v">Venezolano</option>
@@ -818,7 +823,7 @@ if ($tipo_u === 1) {
                                 <option value="m">Mixto</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label>Unidad de medida</label>
                             <select name="unidad" id="var-unidad" class="form-select">
                                 <option value="UND">Unidad (UND)</option>
@@ -832,9 +837,12 @@ if ($tipo_u === 1) {
                                 <option value="BULTO">Bulto</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label>Rendimiento</label>
-                            <input type="number" step="0.0001" min="0" max="1.5" name="rendimiento" id="var-rendimiento" class="form-control" value="0">
+                        <div class="col-12">
+                            <label>Si falta stock, descontar de</label>
+                            <select name="respaldo" id="var-respaldo" class="form-select">
+                                <option value="0">Ninguno (solo el producto base)</option>
+                            </select>
+                            <p class="var-help mt-1 mb-0">Si el stock no alcanza, se descuenta del subproducto elegido y luego del producto base.</p>
                         </div>
                     </div>
 
@@ -1151,12 +1159,26 @@ if ($tipo_u === 1) {
         $('var-cantidad').value = '1';
         $('var-precio').value = '0';
         $('var-porcentaje').value = '0';
-        $('var-rendimiento').value = '0';
         $('var-estricto').checked = false;
+        poblarRespaldos(0, 0);
         if (window.jQuery && jQuery('#var-categoria').data('select2')) {
             jQuery('#var-categoria').val('').trigger('change.select2');
         }
         actualizarPreview();
+    }
+
+    function poblarRespaldos(seleccionado, excluir) {
+        const sel = $('var-respaldo');
+        const valor = String(seleccionado || 0);
+        sel.innerHTML = '<option value="0">Ninguno (solo el producto base)</option>';
+        variaciones.forEach((v) => {
+            if (Number(v.id) === Number(excluir)) return;
+            const opt = document.createElement('option');
+            opt.value = v.id;
+            opt.textContent = v.nombre;
+            sel.appendChild(opt);
+        });
+        sel.value = valor;
     }
 
     function prepararNueva() {
@@ -1178,7 +1200,6 @@ if ($tipo_u === 1) {
         $('var-proveedor').value = p.proveedor || '';
         $('var-origen').value = p.origen || 'v';
         $('var-unidad').value = p.unidad || 'UND';
-        $('var-rendimiento').value = 0;
         $('var-codigo').value = '';
         pintarStockSucursales(SUCURSALES);
         if (window.jQuery && jQuery('#var-categoria').data('select2')) {
@@ -1207,7 +1228,7 @@ if ($tipo_u === 1) {
         $('var-proveedor').value = v.proveedor || '';
         $('var-origen').value = v.origen || 'v';
         $('var-unidad').value = v.unidad || 'UND';
-        $('var-rendimiento').value = v.rendimiento || 0;
+        poblarRespaldos(v.id_producto_respaldo, v.id);
         $('var-estricto').checked = Number(v.seguimiento_estricto) === 1;
         if (window.jQuery && jQuery('#var-categoria').data('select2')) {
             jQuery('#var-categoria').val(String(v.categoria || '')).trigger('change.select2');

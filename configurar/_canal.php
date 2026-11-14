@@ -44,8 +44,8 @@ function canal_info_producto($conexion, int $productoId, int $bssId): ?array
     $filas = canal_consulta(
         $conexion,
         "SELECT id, nombre, precio_compra, cantidad_unidades, porcentaje, origen, proveedor,
-                categoria, id_producto_relacionado, mayor, unidad, rendimiento, modo_control,
-                seguimiento_estricto
+                categoria, id_producto_relacionado, id_producto_respaldo, mayor, unidad, rendimiento,
+                modo_control, seguimiento_estricto
          FROM productos
          WHERE id = ? AND bss_id = ? AND activo = 0
          LIMIT 1",
@@ -704,4 +704,100 @@ function canal_marcar_conciliado($conexion, int $loteId, int $bssId, bool $acept
     $stmt->close();
 
     return ['diferencia' => $nuevaDiferencia, 'conciliado' => 1];
+}
+
+/**
+ * Descuenta una variación con cadena propia → respaldo → producto padre.
+ * Devuelve cuánto no se pudo cubrir (0 si alcanzó) o null si el producto
+ * no es una variación, para que el llamador use su descuento normal.
+ * Nunca bloquea la venta.
+ *
+ * shortcut: al anular una venta solo se devuelve stock al producto vendido,
+ * no al respaldo ni al padre; ajustar cuando se implemente la devolución
+ * detallada por línea de venta.
+ */
+function canal_consumir_variacion(
+    $conexion,
+    int $productoId,
+    int $sucursalId,
+    int $bssId,
+    float $cantidad
+): ?float {
+    if (!is_finite($cantidad) || $cantidad <= 0) {
+        return null;
+    }
+
+    $producto = canal_info_producto($conexion, $productoId, $bssId);
+    if (!$producto || (string) ($producto['mayor'] ?? '0') === '1') {
+        return null;
+    }
+    $padreId = (int) ($producto['id_producto_relacionado'] ?? 0);
+    if ($padreId <= 0) {
+        return null;
+    }
+
+    $restante = canal_restar_stock($conexion, $productoId, $sucursalId, $bssId, $cantidad);
+
+    $respaldoId = (int) ($producto['id_producto_respaldo'] ?? 0);
+    if ($restante > 0 && $respaldoId > 0 && $respaldoId !== $productoId) {
+        $respaldo = canal_info_producto($conexion, $respaldoId, $bssId);
+        if ($respaldo && (int) ($respaldo['id_producto_relacionado'] ?? 0) === $padreId) {
+            $restante = canal_restar_stock($conexion, $respaldoId, $sucursalId, $bssId, $restante);
+        }
+    }
+
+    if ($restante > 0) {
+        $restante = canal_restar_stock($conexion, $padreId, $sucursalId, $bssId, $restante);
+    }
+
+    return $restante;
+}
+
+/**
+ * Resta hasta lo disponible y devuelve cuánto quedó sin descontar.
+ */
+function canal_restar_stock(
+    $conexion,
+    int $productoId,
+    int $sucursalId,
+    int $bssId,
+    float $cantidad
+): float {
+    if (!is_finite($cantidad) || $cantidad <= 0) {
+        return 0.0;
+    }
+
+    $filas = canal_consulta(
+        $conexion,
+        "SELECT stock FROM stock
+         WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?
+         LIMIT 1 FOR UPDATE",
+        'iii',
+        [$productoId, $sucursalId, $bssId]
+    );
+    if (!$filas) {
+        return $cantidad;
+    }
+
+    $disponible = max(0.0, (float) $filas[0]['stock']);
+    $descontar = min($disponible, $cantidad);
+    if ($descontar <= 0) {
+        return $cantidad;
+    }
+
+    $stmt = $conexion->prepare(
+        "UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?"
+    );
+    if (!$stmt) {
+        throw new Exception('No se pudo actualizar el stock de la variación.');
+    }
+    $nuevo = $disponible - $descontar;
+    $stmt->bind_param('diii', $nuevo, $productoId, $sucursalId, $bssId);
+    $ok = $stmt->execute();
+    $stmt->close();
+    if (!$ok) {
+        throw new Exception('No se pudo actualizar el stock de la variación.');
+    }
+
+    return $cantidad - $descontar;
 }

@@ -99,8 +99,8 @@ function var_info_producto($conexion, int $productoId, int $bssId): ?array
     $filas = var_consulta(
         $conexion,
         "SELECT id, nombre, unidad, precio_compra, cantidad_unidades, porcentaje, codigo_barras,
-                origen, proveedor, categoria, id_producto_relacionado, mayor, rendimiento,
-                modo_control, seguimiento_estricto
+                origen, proveedor, categoria, id_producto_relacionado, id_producto_respaldo, mayor,
+                rendimiento, modo_control, seguimiento_estricto
          FROM productos
          WHERE id = ? AND bss_id = ? AND activo = 0
          LIMIT 1",
@@ -145,6 +145,27 @@ function var_unidad(string $unidad): string
         return 'UND';
     }
     return substr($unidad, 0, 8);
+}
+
+/**
+ * Devuelve el id del respaldo si es una variación del mismo padre.
+ */
+function var_respaldo_valido($conexion, int $respaldoId, int $padreId, int $bssId, int $excluirId = 0): int
+{
+    if ($respaldoId <= 0 || $respaldoId === $excluirId) {
+        return 0;
+    }
+    $filas = var_consulta(
+        $conexion,
+        "SELECT id FROM productos
+         WHERE id = ? AND bss_id = ? AND activo = 0
+           AND (mayor IS NULL OR mayor = 0)
+           AND id_producto_relacionado = ?
+         LIMIT 1",
+        'iii',
+        [$respaldoId, $bssId, $padreId]
+    );
+    return $filas ? $respaldoId : 0;
 }
 
 if (!isset($_SESSION['validate']) || $_SESSION['validate'] !== 'ok' || empty($_SESSION['bss_id']) || empty($_SESSION['id'])) {
@@ -219,7 +240,7 @@ try {
                 $conexion,
                 "SELECT v.id, v.nombre, v.unidad, v.precio_compra, v.cantidad_unidades, v.porcentaje,
                         v.codigo_barras, v.proveedor, v.origen, v.categoria, v.rendimiento,
-                        v.modo_control, v.seguimiento_estricto,
+                        v.id_producto_respaldo, v.modo_control, v.seguimiento_estricto,
                         COALESCE(cp.nombre, 'Sin categoría') AS categoria_nombre,
                         COALESCE(s.stock, 0) AS stock,
                         COALESCE(s.visible_venta, 1) AS visible_venta,
@@ -253,6 +274,7 @@ try {
             $categoria = (int) ($_POST['categoria'] ?? 0);
             $rendimiento = var_numero($_POST['rendimiento'] ?? 0);
             $seguimiento = (int) ($_POST['seguimiento_estricto'] ?? 0) === 1 ? 1 : 0;
+            $respaldo = (int) ($_POST['respaldo'] ?? 0);
             $stocksJson = (string) ($_POST['stocks'] ?? '');
 
             $padre = var_info_producto($conexion, $padreId, $bssId);
@@ -262,6 +284,7 @@ try {
             if ($nombre === '') {
                 var_respuesta(['ok' => false, 'message' => 'Indique el nombre de la variación.'], 400);
             }
+            $respaldo = var_respaldo_valido($conexion, $respaldo, $padreId, $bssId);
             if ($precioCompra < 0) {
                 var_respuesta(['ok' => false, 'message' => 'El precio de compra no es válido.'], 400);
             }
@@ -333,8 +356,8 @@ try {
                     "INSERT INTO productos
                      (nombre, unidad, precio_compra, cantidad_unidades, porcentaje, codigo_barras,
                       origen, proveedor, categoria, bss_id, activo, mayor, id_producto_relacionado,
-                      rendimiento, modo_control, seguimiento_estricto)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'NORMAL', ?)"
+                      id_producto_respaldo, rendimiento, modo_control, seguimiento_estricto)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 'NORMAL', ?)"
                 );
                 if (!$stmt) {
                     throw new Exception('No se pudo preparar el registro de la variación.');
@@ -342,7 +365,7 @@ try {
                 $precioTexto = (string) $precioCompra;
                 $cantidadTexto = (string) $cantidadUnidades;
                 $stmt->bind_param(
-                    'ssdsdsssiiidi',
+                    'ssdsdsssiiiidi',
                     $nombre,
                     $unidad,
                     $precioTexto,
@@ -354,6 +377,7 @@ try {
                     $cat,
                     $bssId,
                     $padreId,
+                    $respaldo,
                     $rendimiento,
                     $seguimiento
                 );
@@ -421,6 +445,7 @@ try {
             $categoria = (int) ($_POST['categoria'] ?? 0);
             $rendimiento = var_numero($_POST['rendimiento'] ?? 0);
             $seguimiento = (int) ($_POST['seguimiento_estricto'] ?? 0) === 1 ? 1 : 0;
+            $respaldo = (int) ($_POST['respaldo'] ?? 0);
 
             $variacion = var_info_producto($conexion, $variacionId, $bssId);
             if (!$variacion || (int) ($variacion['id_producto_relacionado'] ?? 0) <= 0) {
@@ -429,6 +454,13 @@ try {
             if ($nombre === '') {
                 var_respuesta(['ok' => false, 'message' => 'Indique el nombre de la variación.'], 400);
             }
+            $respaldo = var_respaldo_valido(
+                $conexion,
+                $respaldo,
+                (int) $variacion['id_producto_relacionado'],
+                $bssId,
+                $variacionId
+            );
             if ($precioCompra < 0 || $cantidadUnidades <= 0) {
                 var_respuesta(['ok' => false, 'message' => 'Precio o unidades por bulto no válidos.'], 400);
             }
@@ -472,13 +504,13 @@ try {
                 $stmt = $conexion->prepare(
                     "UPDATE productos
                      SET nombre = ?, unidad = ?, cantidad_unidades = ?, porcentaje = ?,
-                         codigo_barras = ?, origen = ?, proveedor = ?, categoria = ?, rendimiento = ?,
-                         seguimiento_estricto = ?
+                         codigo_barras = ?, origen = ?, proveedor = ?, categoria = ?,
+                         id_producto_respaldo = ?, rendimiento = ?, seguimiento_estricto = ?
                      WHERE id = ? AND bss_id = ?"
                 );
                 $cantidadTexto = (string) $cantidadUnidades;
                 $stmt->bind_param(
-                    'sssdsssidiii',
+                    'sssdsssiidiii',
                     $nombre,
                     $unidad,
                     $cantidadTexto,
@@ -487,6 +519,7 @@ try {
                     $origen,
                     $proveedor,
                     $cat,
+                    $respaldo,
                     $rendimiento,
                     $seguimiento,
                     $variacionId,
@@ -551,8 +584,15 @@ try {
                 var_respuesta(['ok' => false, 'message' => 'La variación no existe o ya está desanclada.'], 400);
             }
             $stmt = $conexion->prepare(
-                "UPDATE productos SET id_producto_relacionado = NULL, rendimiento = 0
+                "UPDATE productos SET id_producto_relacionado = NULL, id_producto_respaldo = 0, rendimiento = 0
                  WHERE id = ? AND bss_id = ?"
+            );
+            $stmt->bind_param('ii', $variacionId, $bssId);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conexion->prepare(
+                "UPDATE productos SET id_producto_respaldo = 0 WHERE id_producto_respaldo = ? AND bss_id = ?"
             );
             $stmt->bind_param('ii', $variacionId, $bssId);
             $stmt->execute();
@@ -586,6 +626,11 @@ try {
             }
             $conexion->begin_transaction();
             try {
+                $stmt = $conexion->prepare("UPDATE productos SET id_producto_respaldo = 0 WHERE id_producto_respaldo = ? AND bss_id = ?");
+                $stmt->bind_param('ii', $variacionId, $bssId);
+                $stmt->execute();
+                $stmt->close();
+
                 $stmt = $conexion->prepare("DELETE FROM stock WHERE id_producto = ? AND bss_id = ?");
                 $stmt->bind_param('ii', $variacionId, $bssId);
                 $stmt->execute();

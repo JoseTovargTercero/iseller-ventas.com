@@ -414,6 +414,20 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
                         continue;
                     }
 
+                    $faltanteHijo = canal_consumir_variacion(
+                        $conexion,
+                        $idHijo,
+                        $sucursalId,
+                        $bssId,
+                        $cantHijo
+                    );
+                    if ($faltanteHijo !== null) {
+                        if ($faltanteHijo > 0) {
+                            $faltantes[] = ['id' => $idHijo, 'faltante' => $faltanteHijo];
+                        }
+                        continue;
+                    }
+
                     $disponible = stockActual($stmtStock, $idHijo, $sucursalId, $bssId);
                     if ($disponible - $cantHijo < 0) {
                         $faltantes[] = ['id' => $idHijo, 'faltante' => abs($disponible - $cantHijo)];
@@ -447,6 +461,14 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
                 if (!$updateStmtMayor->execute()) {
                     throw new Exception('Error al actualizar el stock al mayor: ' . $updateStmtMayor->error);
                 }
+            }
+            continue;
+        }
+
+        $faltanteVariacion = canal_consumir_variacion($conexion, $productoId, $sucursalId, $bssId, $qty);
+        if ($faltanteVariacion !== null) {
+            if ($faltanteVariacion > 0) {
+                $faltantes[] = ['id' => $productoId, 'faltante' => $faltanteVariacion];
             }
             continue;
         }

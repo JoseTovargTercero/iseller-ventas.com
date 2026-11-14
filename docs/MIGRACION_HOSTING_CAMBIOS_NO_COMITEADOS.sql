@@ -232,6 +232,20 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `menu` m WHERE m.dir = 'variaciones.php'
 );
 
+-- ============================================================
+-- 029. Subproducto de respaldo para variaciones
+-- ============================================================
+CALL `_mig_add_column`(
+    'productos',
+    'id_producto_respaldo',
+    'INT NOT NULL DEFAULT 0 AFTER `id_producto_relacionado`'
+);
+CALL `_mig_add_index`(
+    'productos',
+    'idx_prod_respaldo',
+    'KEY `idx_prod_respaldo` (`bss_id`, `id_producto_respaldo`)'
+);
+
 -- ------------------------------------------------------------
 -- Limpieza de utilidades temporales
 -- ------------------------------------------------------------
@@ -248,6 +262,7 @@ DROP PROCEDURE IF EXISTS `_mig_add_index`;
 -- SHOW COLUMNS FROM productos LIKE 'modo_control';
 -- SHOW COLUMNS FROM productos LIKE 'rendimiento';
 -- SHOW COLUMNS FROM productos LIKE 'seguimiento_estricto';
+-- SHOW COLUMNS FROM productos LIKE 'id_producto_respaldo';
 -- SHOW COLUMNS FROM stock LIKE 'visible_venta';
 -- SHOW COLUMNS FROM stock LIKE 'ultima_compra_at';
 -- SHOW COLUMNS FROM stock LIKE 'ultima_compra_kg';
