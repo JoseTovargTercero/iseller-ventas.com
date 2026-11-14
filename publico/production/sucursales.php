@@ -217,7 +217,8 @@ if ($_SESSION['nivel'] == 1) {
         font-size: 12.5px;
       }
 
-      .btn-edit-icon {
+      .btn-edit-icon,
+      .btn-delete-icon {
         width: 32px;
         height: 32px;
         border-radius: 8px;
@@ -238,7 +239,18 @@ if ($_SESSION['nivel'] == 1) {
         text-decoration: none;
       }
 
-      .btn-edit-icon ion-icon {
+      .btn-delete-icon {
+        margin-left: 6px;
+      }
+
+      .btn-delete-icon:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+        text-decoration: none;
+      }
+
+      .btn-edit-icon ion-icon,
+      .btn-delete-icon ion-icon {
         font-size: 16px;
       }
 
@@ -356,6 +368,42 @@ if ($_SESSION['nivel'] == 1) {
         color: #fff;
       }
 
+      .btn-dash-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        color: #fff;
+        border-radius: 8px;
+        padding: 9px 24px;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all .2s ease;
+        box-shadow: 0 3px 12px rgba(239, 68, 68, .25);
+        cursor: pointer;
+      }
+
+      .btn-dash-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, .35);
+        color: #fff;
+      }
+
+      .btn-dash-danger:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .delete-warning {
+        font-size: 13px;
+        color: var(--dash-text-muted);
+        line-height: 1.55;
+        margin-bottom: 16px;
+      }
+
+      .delete-warning strong {
+        color: var(--dash-text);
+      }
+
       .modal-sucursal .modal-content {
         background: var(--dash-card);
         border: 1px solid var(--dash-border);
@@ -431,7 +479,8 @@ if ($_SESSION['nivel'] == 1) {
           padding: 14px;
         }
 
-        .btn-edit-icon {
+        .btn-edit-icon,
+        .btn-delete-icon {
           width: 36px;
           height: 36px;
         }
@@ -587,6 +636,35 @@ if ($_SESSION['nivel'] == 1) {
           </div>
         </div>
 
+        <div class="modal fade modal-sucursal" id="deleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Eliminar sucursal</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+              </div>
+              <div class="modal-body">
+                <form id="delete-form" novalidate>
+                  <p class="delete-warning">
+                    Se eliminará <strong id="delete_nombre"></strong> junto con su stock, ventas, compras, caja, gastos
+                    y demás datos relacionados. Los clientes se conservan sin sucursal.
+                    <br><strong>Esta acción no se puede deshacer.</strong>
+                  </p>
+                  <div class="mb-3">
+                    <label class="form-label" for="delete_password">Confirma tu contraseña</label>
+                    <input type="password" id="delete_password" name="password" class="form-control"
+                      autocomplete="current-password" placeholder="Contraseña de tu usuario" required>
+                  </div>
+                  <div class="d-flex justify-content-between" style="margin-top:24px;">
+                    <button type="button" class="btn-dash-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-dash-danger">Eliminar sucursal</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -708,6 +786,7 @@ if ($_SESSION['nivel'] == 1) {
                   <span class="suc-tipo">${esc(item.tipo) || 'Sin tipo'}</span>
                 </div>
                 <a data-id="${item.id}" class="btn-edit-icon" title="Editar"><ion-icon name="create-outline"></ion-icon></a>
+                <a data-id="${item.id}" class="btn-delete-icon" title="Eliminar"><ion-icon name="trash-outline"></ion-icon></a>
               </div>
               <div class="suc-stats">
                 <div class="suc-stat"><ion-icon name="people-outline"></ion-icon><b>${item.usuarios}</b><span>Usuarios</span></div>
@@ -737,6 +816,63 @@ if ($_SESSION['nivel'] == 1) {
       document.addEventListener('click', function(e) {
         const btn = e.target.closest('.btn-edit-icon');
         if (btn) cargarDatosForm(sucursales[btn.getAttribute('data-id')]);
+      });
+
+      let sucursal_eliminar;
+      const $deleteModal = $('#deleteModal');
+
+      $(document).on('click', '.btn-delete-icon', function() {
+        const item = sucursales[this.getAttribute('data-id')];
+        if (!item) return;
+        sucursal_eliminar = item.id;
+        document.getElementById('delete_nombre').textContent = item.nombre;
+        document.getElementById('delete-form').reset();
+        $deleteModal.modal('show');
+      });
+
+      $('#delete-form').on('submit', function(e) {
+        e.preventDefault();
+        const password = document.getElementById('delete_password').value;
+        if (!password) {
+          Alerta.toast('error', 'Escribe tu contraseña para confirmar.');
+          return;
+        }
+
+        const boton = this.querySelector('button[type="submit"]');
+        const datos = new FormData();
+        datos.append('id_sucursal', sucursal_eliminar);
+        datos.append('password', password);
+
+        boton.disabled = true;
+        fetch('../../configurar/eliminar_sucursal.php', {
+            method: 'POST',
+            body: datos
+          })
+          .then(res => res.text())
+          .then(text => {
+            let json;
+            try {
+              json = JSON.parse(text);
+            } catch (err) {
+              console.error('Error al parsear JSON:', err, '\nTexto:', text);
+              Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
+              return;
+            }
+            if (json.success) {
+              $deleteModal.modal('hide');
+              Alerta.mostrar('success', json.mensaje);
+              cargar_tabla();
+            } else {
+              Alerta.mostrar('error', json.mensaje || 'No se pudo eliminar la sucursal.');
+            }
+          })
+          .catch(err => {
+            console.error('Error en la solicitud:', err);
+            Alerta.mostrar('error', 'No se pudo contactar con el servidor');
+          })
+          .finally(() => {
+            boton.disabled = false;
+          });
       });
 
       function cargarDatosForm(datos) {

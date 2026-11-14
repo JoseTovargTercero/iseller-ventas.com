@@ -2,6 +2,7 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
+require_once('_productos_precio_compra.php');
 
 header('Content-Type: application/json');
 
@@ -72,20 +73,25 @@ if (isset($_POST['accion']) && $_POST["accion"] == 'editar') {
             $porcentaje = $_POST['porcentaje'];
             $origenProducto = $_POST['origenProducto'];
 
-            $stmt = $conexion->prepare("UPDATE productos SET precio_compra = ?, cantidad_unidades = ?, porcentaje = ?, origen = ? WHERE id = ? AND bss_id = ?");
-            $stmt->bind_param("ssssii", $precio_compra, $cantidad_unidades, $porcentaje, $origenProducto, $id, $bss_id);
+            producto_asegurar_historial_precio($conexion);
+
+            $stmt = $conexion->prepare("UPDATE productos SET cantidad_unidades = ?, porcentaje = ?, origen = ? WHERE id = ? AND bss_id = ?");
+            $stmt->bind_param("sssii", $cantidad_unidades, $porcentaje, $origenProducto, $id, $bss_id);
             $stmt->execute();
             $stmt->close();
 
-            // Si el usuario confirmó, el producto al mayor asociado hereda solo el precio de compra
-            if (!empty($_POST['actualizar_mayor'])) {
-                $stmtM = $conexion->prepare("UPDATE productos SET precio_compra = ? WHERE id_producto_relacionado = ? AND mayor = 1 AND bss_id = ?");
-                if ($stmtM) {
-                    $stmtM->bind_param("dii", $precio_compra, $id, $bss_id);
-                    $stmtM->execute();
-                    $stmtM->close();
-                }
-            }
+            // El cambio de precio se centraliza: sincroniza las presentaciones
+            // al mayor y registra el historial.
+            producto_actualizar_precio_compra(
+                $conexion,
+                (int) $bss_id,
+                (int) $id,
+                $precio_compra,
+                'edicion',
+                (int) ($_SESSION['id'] ?? 0),
+                (string) ($_SESSION['nombre'] ?? ''),
+                null
+            );
 
             // Actualizar porcentaje en stock para todos los registros del producto (solo del mismo bss_id)
             $stmt2 = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND bss_id = ?");

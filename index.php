@@ -204,7 +204,7 @@ $_SESSION['return_after_auth'] = $request_uri;
 // quedaría autenticado como dueño de la tienda.
 
 require("iseller_store/core/_calculadrora_precios.php");
-$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, [], $conexion, (int) $bss_id);
 
 include 'iseller_store/core/la-carta.php';
 $cart = new Cart;

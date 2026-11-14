@@ -47,6 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conexion->begin_transaction();
 
             if ($modo == 'p' || $sucursales <= 2) {
+                // Limpiar las tasas personalizadas asignadas antes de borrar el producto.
+                $stmtTasas = $conexion->prepare("DELETE FROM producto_tasas_personalizadas WHERE producto_id = ? AND bss_id = ?");
+                if ($stmtTasas) {
+                    $stmtTasas->bind_param("ii", $id, $bss_id);
+                    $stmtTasas->execute();
+                    $stmtTasas->close();
+                }
+
                 // DELETE productos — solo del negocio del usuario
                 $stmt = $conexion->prepare("DELETE FROM productos WHERE id = ? AND bss_id = ?");
                 if (!$stmt) {

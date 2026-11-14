@@ -3,7 +3,7 @@ require_once 'configuracion.php';
 require_once 'session.php';
 require_once '_tasas_cambio.php';
 require("_calculadrora_precios.php");
-$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
 
 
 header('Content-Type: application/json; charset=utf-8');

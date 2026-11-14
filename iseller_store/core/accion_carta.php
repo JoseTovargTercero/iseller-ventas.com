@@ -49,7 +49,8 @@ function getCalculadora(int $bss_id, $recompensas = []) {
     $t = $_tasas_cache[$bss_id];
     return new CalculadoraPrecios(
         $t['pesoDolar'], $t['peso_bolivar'], $t['dolarBolivar'],
-        $t['bolivar_peso'], $t['bcv'], $t['data_monedas'], $recompensas
+        $t['bolivar_peso'], $t['bcv'], $t['data_monedas'], $recompensas,
+        $conexion, (int) $bss_id
     );
 }
 
@@ -158,7 +159,8 @@ function procesarCarritos()
              }
 
              // Recalcular Precios
-             $precios = getCalculadora($prodDB['bss_id'])->calcularPrecios($prodDB);
+             $calcProd = getCalculadora($prodDB['bss_id']);
+             $precios = $calcProd->calcularPrecios($prodDB);
              $valorUnidad = (float) $prodDB['precio_compra'] / (float) $prodDB['cantidad_unidades'];
 
              // Sobreescribir datos del frontend con los calculados
@@ -167,8 +169,8 @@ function procesarCarritos()
              $prodFrontend['priceBolivar'] = $precios['precio_venta_bs'];
              
              $prodFrontend['price_C'] = $valorUnidad;
-             $prodFrontend['price_C_Bs'] = $valorUnidad * $_tasas_cache[$prodDB['bss_id']]['dolarBolivar'];
-             $prodFrontend['price_C_Cop'] = $valorUnidad * $_tasas_cache[$prodDB['bss_id']]['pesoDolar'];
+             $prodFrontend['price_C_Bs'] = $valorUnidad * $calcProd->getTasaProducto('dolarBolivar', $prodDB);
+             $prodFrontend['price_C_Cop'] = $valorUnidad * $calcProd->getTasaProducto('pesoDolar', $prodDB);
 
              // Acumular totales reales
              $valorFinalVenta += $prodFrontend['price'] * $qty;

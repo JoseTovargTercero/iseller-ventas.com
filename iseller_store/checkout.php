@@ -60,7 +60,9 @@ function getCalculadora(int $bss_id, $recompensas = [])
         $t['bolivar_peso'],
         $t['bcv'],
         $t['data_monedas'],
-        $recompensas
+        $recompensas,
+        $conexion,
+        (int) $bss_id
     );
 }
 

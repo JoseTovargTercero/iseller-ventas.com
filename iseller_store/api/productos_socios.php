@@ -59,7 +59,7 @@ $tipo_tasa_bs_socio = $tasas_socio['data']['tipo_tasa_bs'];
 $redondeo_socio = $tasas_socio['data']['redondeo'];
 $margen_neto_socio = $tasas_socio['data']['margen_neto'];
 // Informacion de la tipo de cambio estandar
-$calculadora_socio = new CalculadoraPrecios($pesoDolar_socio, $peso_bolivar_socio, $dolarBolivar_socio, $bolivar_peso_socio, $bcv_socio, $data_monedas_socio, []);
+$calculadora_socio = new CalculadoraPrecios($pesoDolar_socio, $peso_bolivar_socio, $dolarBolivar_socio, $bolivar_peso_socio, $bcv_socio, $data_monedas_socio, [], $conexion, (int) $bss_id_socio);
 
 $respuesta = [];
 $loreamny_productos = "(4584, 4789, 5330, 4087, 4362, 4796, 4798, 4660, 4102"; // mayor

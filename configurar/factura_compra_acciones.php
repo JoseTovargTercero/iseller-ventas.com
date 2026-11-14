@@ -3,6 +3,7 @@ require_once('configuracion.php');
 require_once('session.php');
 require_once('_factura_compra.php');
 require_once('_canal.php');
+require_once('_productos_precio_compra.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -172,6 +173,8 @@ if ($accion === 'guardar') {
     $dia = date('Y-m-d');
     $hoy = date('Y-m-d');
 
+    producto_asegurar_historial_precio($conexion);
+
     $conexion->begin_transaction();
 
     try {
@@ -274,7 +277,7 @@ if ($accion === 'guardar') {
         }
 
         $stmtLinea = fcStmt($conexion, "INSERT INTO compras (proveedor, factura, fechaFactura, status, cod, producto, precio, cantidad, CporPrecio, Porcentaje, fecha, user, semana, dia, mes, id_sucursal, bss_id, factura_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmtProducto = fcStmt($conexion, "UPDATE productos SET precio_compra = ?, cantidad_unidades = ?, proveedor = ? WHERE id = ? AND bss_id = ?");
+        $stmtProducto = fcStmt($conexion, "UPDATE productos SET cantidad_unidades = ?, proveedor = ? WHERE id = ? AND bss_id = ?");
 
         foreach ($productos as $producto) {
             $productoId = $producto['id'];
@@ -311,10 +314,21 @@ if ($accion === 'guardar') {
                 throw new Exception('No se pudo registrar una línea de la factura.');
             }
 
-            $stmtProducto->bind_param("disii", $precio, $unidadesBulto, $proveedor, $productoId, $bssId);
+            $stmtProducto->bind_param("isii", $unidadesBulto, $proveedor, $productoId, $bssId);
             if (!$stmtProducto->execute()) {
                 throw new Exception('No se pudo actualizar el producto "' . $nombreProducto . '".');
             }
+
+            producto_actualizar_precio_compra(
+                $conexion,
+                $bssId,
+                $productoId,
+                $precio,
+                'factura',
+                $usuarioId,
+                $usuario,
+                $sucursal
+            );
 
             canal_sumar_compra($conexion, $productoId, $sucursal, $bssId, $cantidad, $usuarioId);
             $stmtPct = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");

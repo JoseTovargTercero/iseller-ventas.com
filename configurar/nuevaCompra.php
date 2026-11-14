@@ -3,6 +3,7 @@ require_once('configuracion.php');
 require_once('session.php');
 require_once('_validador_campos.php');
 require_once('_canal.php');
+require_once('_productos_precio_compra.php');
 
 header('Content-Type: application/json');
 
@@ -25,6 +26,10 @@ $proveedor     = trim($_POST['proveedor']);
 $sucursal      = $_SESSION["nivel"] == 1 ? (int) trim($_POST['sucursal']) : (int) $_SESSION["sucursal"];
 $bss_id        = (int) $_SESSION["bss_id"];
 $usuarioId     = (int) ($_SESSION['id'] ?? 0);
+
+// Se asegura la tabla de historial antes de abrir la transacción (el DDL
+// implícito no debe ejecutarse dentro de ella).
+producto_asegurar_historial_precio($conexion);
 
 if ($cantidadNueva <= 0) {
   echo json_encode(['success' => false, 'message' => 'La cantidad comprada debe ser mayor que cero.']);
@@ -107,21 +112,23 @@ try {
   $stmt->execute();
   $stmt->close();
 
-  // Actualizar producto
-  $stmt = $conexion->prepare("UPDATE productos SET precio_compra=?, cantidad_unidades=?, proveedor=? WHERE id=?");
-  $stmt->bind_param("diss", $precio, $cantidadPP, $proveedor, $id);
+  // Actualizar producto (el precio de compra se centraliza para sincronizar
+  // automáticamente las presentaciones al mayor y dejar historial).
+  $stmt = $conexion->prepare("UPDATE productos SET cantidad_unidades=?, proveedor=? WHERE id=? AND bss_id=?");
+  $stmt->bind_param("isii", $cantidadPP, $proveedor, $id, $bss_id);
   $stmt->execute();
   $stmt->close();
 
-  // Si el usuario confirmó, el producto al mayor asociado hereda solo el precio de compra
-  if (!empty($_POST['actualizar_mayor'])) {
-      $stmt = $conexion->prepare("UPDATE productos SET precio_compra=? WHERE id_producto_relacionado=? AND mayor=1 AND bss_id=?");
-      if ($stmt) {
-          $stmt->bind_param("dii", $precio, $id, $bss_id);
-          $stmt->execute();
-          $stmt->close();
-      }
-  }
+  producto_actualizar_precio_compra(
+    $conexion,
+    $bss_id,
+    $id,
+    $precio,
+    'compra',
+    $usuarioId,
+    (string) ($_SESSION['nombre'] ?? ''),
+    $sucursal
+  );
 
   // Registrar en historial de compras
   $fechaActual = date('d-m-Y h:i a');

@@ -43,7 +43,7 @@ if ($stmt = $conexion->prepare($sql)) {
 
 
 require("../../configurar/_calculadrora_precios.php");
-$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
 
 $topnav = topnav();
 
@@ -112,8 +112,8 @@ if ($result->num_rows > 0) {
             "precio_peso_visible" => $precios['precio_venta_peso'], // Precio de Venta
             "precio_bs_visible" => $precios['precio_venta_bs'], // Precio de Venta
             'price_C' => $valorUnidad, // precio de compra
-            'price_C_Bs' => $valorUnidad * $dolarBolivar, // precio de compra
-            'price_C_Cop' => $valorUnidad * $pesoDolar, // precio de compra
+            'price_C_Bs' => $valorUnidad * $calculadora->getTasaProducto('dolarBolivar', $row), // precio de compra
+            'price_C_Cop' => $valorUnidad * $calculadora->getTasaProducto('pesoDolar', $row), // precio de compra
             'cantidadPaca' => $row['cantidad_unidades']
         ];
         /* PRODUCTOS PARA LA BUSQUEDA */

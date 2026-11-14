@@ -2,6 +2,7 @@
 require_once('configuracion.php');
 require_once('session.php');
 require_once(__DIR__ . '/_calculadrora_precios.php');
+require_once(__DIR__ . '/_productos_precio_compra.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -90,7 +91,7 @@ function datosMonedasCombo($conexion, int $bssId): array
  * productos por separado. No se deriva el porcentaje del precio redondeado:
  * eso hacía que Galleta Noel diera $0.67 en el combo y $0.63 en el POS.
  */
-function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $ventaUnit, string $origen, array $tasas, float $porcentaje): array
+function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $ventaUnit, string $origen, array $tasas, float $porcentaje, int $productoId = 0): array
 {
     $nominal = ['costo' => round($costoUnit, 4), 'venta' => round($ventaUnit, 4)];
     if ($tasas['bcv'] <= 0) {
@@ -98,6 +99,10 @@ function preciosBcvCombo(CalculadoraPrecios $calc, float $costoUnit, float $vent
     }
 
     $base = ['cantidad_unidades' => 1, 'origen' => $origen, 'mayor' => 0];
+    if ($productoId > 0) {
+        $base['id'] = $productoId;
+        $base['producto_id'] = $productoId;
+    }
     $costo = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => 0]);
     $venta = $calc->calcularPrecios($base + ['precio_compra' => $costoUnit, 'porcentaje' => $porcentaje]);
 
@@ -119,7 +124,9 @@ $calcCombo = new CalculadoraPrecios(
     $tasasCombo['DolarBolivar'],
     $tasasCombo['bolivar_peso'],
     $tasasCombo['bcv'],
-    $datosMonedasCombo
+    $datosMonedasCombo,
+    $conexion,
+    (int) $bss_id
 );
 
 if ($accion === 'listar_productos') {
@@ -152,7 +159,7 @@ if ($accion === 'listar_productos') {
         $pct = (float)$row['porcentaje'];
         $ventaUnit = round($costoUnit * (1 + ($pct / 100)), 2);
         $origenNorm = normalizarOrigen($row['origen']);
-        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $origenNorm, $tasasCombo, $pct);
+        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $origenNorm, $tasasCombo, $pct, (int)$row['id']);
 
         $productos[] = [
             'id' => (int)$row['id'],
@@ -240,7 +247,7 @@ if ($accion === 'listar_combos') {
             $costoAct = round((float)$it['precio_compra'] / $unidades, 4);
             $pctAct   = (float)$it['porcentaje'];
             $ventaAct = round($costoAct * (1 + ($pctAct / 100)), 2);
-            $bcvAct = preciosBcvCombo($calcCombo, $costoAct, $ventaAct, normalizarOrigen($it['origen']), $tasasCombo, $pctAct);
+            $bcvAct = preciosBcvCombo($calcCombo, $costoAct, $ventaAct, normalizarOrigen($it['origen']), $tasasCombo, $pctAct, (int)$it['producto_id']);
             if ($origenNorm === 'm') {
                 $costoAct = $bcvAct['costo'];
                 $ventaAct = $bcvAct['venta'];
@@ -397,7 +404,7 @@ if ($accion === 'guardar_combo') {
         $costoUnit = round((float)$rowP['precio_compra'] / $unidades, 4);
         $pctUnit   = (float)$rowP['porcentaje'];
         $ventaUnit = round($costoUnit * (1 + ($pctUnit / 100)), 2);
-        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $orig, $tasasCombo, $pctUnit);
+        $bcv = preciosBcvCombo($calcCombo, $costoUnit, $ventaUnit, $orig, $tasasCombo, $pctUnit, $pid);
 
         $itemsParaInsertar[] = [
             'producto_id' => $pid,
@@ -437,6 +444,8 @@ if ($accion === 'guardar_combo') {
         $porcentajeCombo  = 0;
     }
 
+    producto_asegurar_historial_precio($conexion);
+
     $conexion->begin_transaction();
     try {
         if ($combo_id > 0) {
@@ -449,12 +458,22 @@ if ($accion === 'guardar_combo') {
             }
             $stmtOwn->close();
 
-            $stmtUpd = $conexion->prepare("UPDATE productos SET nombre = ?, precio_compra = ?, porcentaje = ?, origen = ? WHERE id = ? AND bss_id = ?");
-            $costoStr = (string)$costoTotalCompra;
+            $stmtUpd = $conexion->prepare("UPDATE productos SET nombre = ?, porcentaje = ?, origen = ? WHERE id = ? AND bss_id = ?");
             $pctStr   = (string)$porcentajeCombo;
-            $stmtUpd->bind_param("ssssii", $nombre, $costoStr, $pctStr, $origenDetectado, $combo_id, $bss_id);
+            $stmtUpd->bind_param("sssii", $nombre, $pctStr, $origenDetectado, $combo_id, $bss_id);
             $stmtUpd->execute();
             $stmtUpd->close();
+
+            producto_actualizar_precio_compra(
+                $conexion,
+                (int) $bss_id,
+                (int) $combo_id,
+                $costoTotalCompra,
+                'edicion',
+                (int) ($_SESSION['id'] ?? 0),
+                (string) ($_SESSION['nombre'] ?? ''),
+                null
+            );
 
             $stmtUpdS = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND bss_id = ?");
             $stmtUpdS->bind_param("sii", $pctStr, $combo_id, $bss_id);

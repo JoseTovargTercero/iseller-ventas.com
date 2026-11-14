@@ -9,6 +9,13 @@ class CalculadoraPrecios
     private array $data_monedas;
     private array $recompensas;
 
+    /** @var object|null Conexión mysqli para resolver tasas personalizadas. */
+    private $conexion;
+    private int $bssId;
+    private array $tasasProductos = [];
+    private bool $tasasProductosCargadas = false;
+    private static array $cacheTasasProductos = [];
+
     public function __construct(
         float $pesoDolar,
         float $peso_bolivar,
@@ -16,7 +23,9 @@ class CalculadoraPrecios
         float $bolivar_peso,
         float $bcv,
         array $data_monedas,
-        array $recompensas = []
+        array $recompensas = [],
+        $conexion = null,
+        int $bssId = 0
     ) {
         $this->pesoDolar = $pesoDolar;
         $this->peso_bolivar = $peso_bolivar;
@@ -25,6 +34,96 @@ class CalculadoraPrecios
         $this->bcv = $bcv;
         $this->data_monedas = $data_monedas;
         $this->recompensas = $recompensas;
+        $this->conexion = $conexion;
+        $this->bssId = $bssId;
+    }
+
+    /** Carga una sola vez las tasas personalizadas asignadas a los productos del negocio. */
+    private function cargarTasasProductos(): void
+    {
+        if ($this->tasasProductosCargadas) {
+            return;
+        }
+        $this->tasasProductosCargadas = true;
+
+        if (!$this->conexion || $this->bssId <= 0) {
+            return;
+        }
+        if (isset(self::$cacheTasasProductos[$this->bssId])) {
+            $this->tasasProductos = self::$cacheTasasProductos[$this->bssId];
+            return;
+        }
+
+        $sql = "SELECT pt.producto_id, pt.par, tp.valor
+                FROM producto_tasas_personalizadas pt
+                INNER JOIN cambio_tasas_personalizadas tp
+                    ON tp.id = pt.tasa_id
+                   AND tp.bss_id = pt.bss_id
+                   AND tp.par = pt.par
+                WHERE pt.bss_id = ?";
+        $stmt = $this->conexion->prepare($sql);
+        if (!$stmt) {
+            self::$cacheTasasProductos[$this->bssId] = [];
+            return;
+        }
+        $stmt->bind_param('i', $this->bssId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($fila = $res->fetch_assoc()) {
+            $valor = (float) $fila['valor'];
+            if ($valor > 0) {
+                $this->tasasProductos[(int) $fila['producto_id']][$fila['par']] = $valor;
+            }
+        }
+        $stmt->close();
+
+        self::$cacheTasasProductos[$this->bssId] = $this->tasasProductos;
+    }
+
+    /**
+     * Tasas efectivas de un producto: principales + overrides por par.
+     */
+    public function tasasDeProducto(array $producto): array
+    {
+        $this->cargarTasasProductos();
+
+        $tasas = [
+            'pesoDolar' => $this->pesoDolar,
+            'peso_bolivar' => $this->peso_bolivar,
+            'dolarBolivar' => $this->dolarBolivar,
+            'bolivar_peso' => $this->bolivar_peso,
+            'bcv' => $this->bcv,
+        ];
+
+        $productoId = (int) ($producto['producto_id'] ?? $producto['id'] ?? 0);
+        $overrides = $productoId > 0 ? ($this->tasasProductos[$productoId] ?? []) : [];
+
+        foreach ($overrides as $par => $valor) {
+            if ((float) $valor <= 0) {
+                continue;
+            }
+            switch ($par) {
+                case 'usd_bs':
+                    $tasas['dolarBolivar'] = (float) $valor;
+                    $tasas['bcv'] = (float) $valor;
+                    break;
+                case 'usd_cop':
+                    $tasas['pesoDolar'] = (float) $valor;
+                    break;
+                case 'cop_bs':
+                    $tasas['peso_bolivar'] = (float) $valor;
+                    break;
+                case 'bs_cop':
+                    $tasas['bolivar_peso'] = (float) $valor;
+                    break;
+            }
+        }
+
+        // Alias para el frontend del POS (tasasCalculo usa camelCase).
+        $tasas['pesoBolivar'] = $tasas['peso_bolivar'];
+        $tasas['bolivarPeso'] = $tasas['bolivar_peso'];
+
+        return $tasas;
     }
 
     public function getTasa(string $nombre): float
@@ -51,6 +150,31 @@ class CalculadoraPrecios
         }
     }
 
+    public function getTasaProducto(string $nombre, array $producto): float
+    {
+        $t = $this->tasasDeProducto($producto);
+        switch ($nombre) {
+            case 'dolarBolivar':
+            case 'dolar_bolivar':
+                return $t['dolarBolivar'];
+            case 'pesoDolar':
+            case 'dolarPeso':
+            case 'peso_dolar':
+            case 'dolar_peso':
+                return $t['pesoDolar'];
+            case 'peso_bolivar':
+            case 'pesoBolivar':
+                return $t['peso_bolivar'];
+            case 'bolivar_peso':
+            case 'bolivarPeso':
+                return $t['bolivar_peso'];
+            case 'bcv':
+                return $t['bcv'];
+            default:
+                return 0.0;
+        }
+    }
+
     public function calcularPrecios(array $producto): array
     {
         $cantidadUnidad = (float) $producto["cantidad_unidades"];
@@ -63,8 +187,10 @@ class CalculadoraPrecios
             $cantidad_por_precio = 1;
         }
 
+        $t = $this->tasasDeProducto($producto);
+
         // Sin tasas válidas no se puede calcular; evitar división por cero.
-        if ($this->peso_bolivar <= 0 || $this->bcv <= 0) {
+        if ($t['peso_bolivar'] <= 0 || $t['bcv'] <= 0) {
             return [
                 'precio_venta_dolar' => 0.0,
                 'precio_venta_bs' => 0.0,
@@ -88,26 +214,26 @@ class CalculadoraPrecios
         $precioDolarVenta = $precioDolarCompra + ($precioDolarCompra * $porcentaje / 100);
 
         // Precio en pesos (dólar → pesos)
-        $precioPesoVenta = $this->formatPeso($precioDolarVenta * $this->pesoDolar);
-        $precioPesoCompra = $this->formatPeso($precioDolarCompra * $this->pesoDolar);
+        $precioPesoVenta = $this->formatPeso($precioDolarVenta * $t['pesoDolar']);
+        $precioPesoCompra = $this->formatPeso($precioDolarCompra * $t['pesoDolar']);
         // Precio en bolívares según el origen
         if ($origen === 'c') {
-            $precioBsVenta = ($precioPesoVenta / $this->peso_bolivar) / 1000;
-            $precioBsCompra = ($precioPesoCompra / $this->peso_bolivar) / 1000;
+            $precioBsVenta = ($precioPesoVenta / $t['peso_bolivar']) / 1000;
+            $precioBsCompra = ($precioPesoCompra / $t['peso_bolivar']) / 1000;
         } elseif ($origen === 'm') {
-            $precioBsVenta = $precioDolarVenta * $this->bcv;
-            $precioBsCompra = $precioDolarCompra * $this->bcv;
+            $precioBsVenta = $precioDolarVenta * $t['bcv'];
+            $precioBsCompra = $precioDolarCompra * $t['bcv'];
         } else {
-            $precioBsVenta = $precioDolarVenta * $this->dolarBolivar;
-            $precioBsCompra = $precioDolarCompra * $this->dolarBolivar;
+            $precioBsVenta = $precioDolarVenta * $t['dolarBolivar'];
+            $precioBsCompra = $precioDolarCompra * $t['dolarBolivar'];
         }
 
 
         // Bolívares → pesos
-        $precioBolivarPeso = $this->formatPeso(($precioBsVenta * $this->bolivar_peso) * 1000);
+        $precioBolivarPeso = $this->formatPeso(($precioBsVenta * $t['bolivar_peso']) * 1000);
 
         // Bolívares → dólares
-        $precio_bolivar_dolar = $precioBsVenta / $this->bcv;
+        $precio_bolivar_dolar = $precioBsVenta / $t['bcv'];
 
         
         // Determinar precio visible en dólares.
@@ -156,7 +282,7 @@ class CalculadoraPrecios
         ];
     }
 
-    public function convertirMonto($monto, $monedaOrigen, $origen)
+    public function convertirMonto($monto, $monedaOrigen, $origen, $producto = null)
     {
         $resultado = [
             'usd' => 0,
@@ -169,6 +295,11 @@ class CalculadoraPrecios
             return $resultado;
         } // si no exta se retorna el array con valores 0
 
+        $productoArr = is_array($producto)
+            ? $producto
+            : (is_numeric($producto) ? ['id' => (int) $producto] : []);
+        $t = $this->tasasDeProducto($productoArr);
+
         // Caso 1 - Si la moneda origen es dolar y el producto es venezonlano
         if ($monedaOrigen === 'usd' && $origen != 'c') {
 
@@ -180,18 +311,18 @@ class CalculadoraPrecios
 
 
             // ** Precio en bolívares (dólar → bolívares)
-            $bolivares = $monto * $this->dolarBolivar;
+            $bolivares = $monto * $t['dolarBolivar'];
             $resultado['bs'] = round($bolivares, 2);
 
 
 
             // ** Precio en pesos (dólar → pesos)
-            $pesos = $monto * $this->pesoDolar;
+            $pesos = $monto * $t['pesoDolar'];
 
             // Para los pesos depende de la configuracion
             $valorPesos = isset($this->data_monedas['precio_peso_visible'])
                 ? $pesos
-                : ($bolivares * $this->bolivar_peso) * 1000;
+                : ($bolivares * $t['bolivar_peso']) * 1000;
 
             $resultado['cop'] = $valorPesos;
         } // REVISADO
@@ -200,11 +331,11 @@ class CalculadoraPrecios
         if ($monedaOrigen === 'usd' && $origen === 'c') {
 
             // ** Precio en pesos (dólar → pesos)
-            $pesos = $monto * $this->pesoDolar;
+            $pesos = $monto * $t['pesoDolar'];
             $resultado['cop'] = $pesos;
 
             // ** Precio en bolívares (dólar → bolívares)
-            $bolivares = ($pesos / $this->peso_bolivar) / 1000;
+            $bolivares = ($pesos / $t['peso_bolivar']) / 1000;
             $resultado['bs'] = round($bolivares, 2);
 
             // ** Precio en dólares
@@ -216,7 +347,7 @@ class CalculadoraPrecios
 
             // ** Precio en dólares
             // Para los dolares dependiendo de la configuracion
-            $valorDolares =  $monto / $this->dolarBolivar;
+            $valorDolares =  $monto / $t['dolarBolivar'];
 
             $resultado['usd'] = round($valorDolares, 2);
 
@@ -228,12 +359,12 @@ class CalculadoraPrecios
 
 
             // ** Precio en pesos (bolivar → pesos)
-            $pesos = $valorDolares * $this->pesoDolar;
+            $pesos = $valorDolares * $t['pesoDolar'];
 
             // Para los pesos depende de la configuracion
             $valorPesos = isset($this->data_monedas['precio_peso_visible'])
                 ? $pesos
-                : ($monto * $this->bolivar_peso) * 1000;
+                : ($monto * $t['bolivar_peso']) * 1000;
 
             $resultado['cop'] = $valorPesos;
         } // REVISADO
@@ -242,12 +373,12 @@ class CalculadoraPrecios
         if ($monedaOrigen === 'bs' && $origen === 'c') { // primero se debe llevar a pesos y luego a dolares
 
             // ** Precio en pesos (bolivar → pesos)
-            $pesos = ($monto * $this->peso_bolivar) * 1000;
+            $pesos = ($monto * $t['peso_bolivar']) * 1000;
             $resultado['cop'] = $pesos;
 
 
             // ** Precio en dólares
-            $valorDolares = $pesos / $this->pesoDolar;
+            $valorDolares = $pesos / $t['pesoDolar'];
             $resultado['usd'] = round($valorDolares, 2);
 
 
@@ -260,19 +391,19 @@ class CalculadoraPrecios
 
             if (isset($this->data_monedas['precio_bolivar_peso'])) { // TODO: HERE
                 // ** Precio en bolívares (peso → bolívares)
-                $bolivares = ($monto / $this->bolivar_peso) / 1000;
+                $bolivares = ($monto / $t['bolivar_peso']) / 1000;
                 $resultado['bs'] = round($bolivares, 2);
 
                 // ** Precio en dólares
-                $valorDolares = $bolivares / $this->bcv;
+                $valorDolares = $bolivares / $t['bcv'];
                 $resultado['usd'] = round($valorDolares, 2);
             } else {
                 // ** Precio en dólares
-                $dolares = $monto / $this->pesoDolar;
+                $dolares = $monto / $t['pesoDolar'];
                 $resultado['usd'] = round($dolares, 2);
 
                 // ** Precio en bolívares (dólar → bolívares)
-                $bolivares = $dolares * $this->dolarBolivar;
+                $bolivares = $dolares * $t['dolarBolivar'];
                 $resultado['bs'] = round($bolivares, 2);
             }
 
@@ -287,11 +418,11 @@ class CalculadoraPrecios
             $resultado['cop'] = round($monto, 0); // Monto en pesos ya que es la moneda de origen
 
             // ** Precio en dólares
-            $dolares = $monto / $this->pesoDolar;
+            $dolares = $monto / $t['pesoDolar'];
             $resultado['usd'] = round($dolares, 2);
 
             // ** Precio en bolívares (peso → bolívares)
-            $bolivares = ($monto / $this->peso_bolivar) / 1000;
+            $bolivares = ($monto / $t['peso_bolivar']) / 1000;
             $resultado['bs'] = round($bolivares, 2);
         }
         return $resultado;

@@ -108,7 +108,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             precio: precio,
                                             origen: origen,
                                             cantidad: cantidad,
-                                            porcentaje: porcentaje
+                                            porcentaje: porcentaje,
+                                            producto_id: productos_editar || 0
                                         },
                                         dataType: 'text'
                                     })
@@ -407,8 +408,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                             </label>
                                                         </th>
                                                         <th></th>
-                                                        <th></th>
-                                                        <th></th>
                                                     </tr>
                                                 </thead>
 
@@ -600,7 +599,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     // arriba solo queda la tabla; largo, información y paginación al pie.
                     dom: 't<"dt-bottom"lip>',
                     columnDefs: [
-                        { targets: 10, visible: seguimientoEstrictoActivo }
+                        { targets: 10, visible: seguimientoEstrictoActivo },
+                        { targets: 11, searchable: false, orderable: false }
                     ],
                     language: {
                         lengthMenu: 'Mostrar _MENU_ registros',
@@ -757,45 +757,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 let productos_editar
                 let metodo_editar
 
-                // Pregunta si el producto al mayor asociado debe heredar el nuevo precio de compra
-                async function confirmarActualizarMayor(productoId, precioAnterior, precioNuevo) {
-                    const anterior = parseFloat(String(precioAnterior ?? '').replace(/,/g, ''));
-                    const nuevo = parseFloat(String(precioNuevo ?? '').replace(/,/g, ''));
-                    if (!productoId || isNaN(anterior) || isNaN(nuevo) || anterior === nuevo) return false;
-
-                    try {
-                        const res = await fetch('../../configurar/verificar_producto_mayor.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: new URLSearchParams({
-                                id: productoId
-                            })
-                        });
-                        const data = await res.json();
-                        if (!data.mayores || data.mayores.length === 0) return false;
-
-                        const lista = data.mayores.map(function(m) {
-                            const div = document.createElement('div');
-                            div.textContent = m.nombre;
-                            return '<li>' + div.innerHTML + '</li>';
-                        }).join('');
-                        const resultado = await Swal.fire({
-                            title: '¿Actualizar también el precio al mayor?',
-                            html: '<p>Este producto tiene al mayor asociado:</p><ul style="text-align:left;margin:10px 0 0 18px;">' + lista + '</ul><p style="margin-top:10px;">¿Deseas actualizar su precio de compra?</p>',
-                            icon: 'question',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, actualizar',
-                            cancelButtonText: 'No'
-                        });
-                        return resultado.isConfirmed;
-                    } catch (error) {
-                        console.error('No se pudo verificar el producto al mayor:', error);
-                        return false;
-                    }
-                }
-
                 // Actualizar el producto
                 document.getElementById('form-data').addEventListener('submit', async function(e) {
                     e.preventDefault(); // Evitar envío tradicional
@@ -848,13 +809,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             }
                             break;
                     }
-
-
-                    let actualizarMayor = false;
-                    if (metodo_editar === 'precio') {
-                        actualizarMayor = await confirmarActualizarMayor(productos_editar, (productos[productos_editar] || {}).precio_compra, form.precio.value);
-                    }
-                    if (actualizarMayor) formData.append('actualizar_mayor', '1');
 
 
                     fetch('../../configurar/productos_gestor.php', {
@@ -996,10 +950,29 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                         const rest = (row.mayor == '1' ? '<span style="margin: 5px;" class="fw-medium text-decoration-none me-2 badge badge-subtle-success">Mayor</span>' : formatearStock(row.stock))
 
                                         const hasFoto = !!row.imagen;
+                                        const tasasBadge = Number(row.tasas_count) > 0
+                                            ? `<span class="acciones-badge">${row.tasas_count}</span>`
+                                            : '';
+                                        const fichaItem = row.mayor == '1'
+                                            ? ''
+                                            : `<a class="accion-item" href="ficha.php?id=${row.id}"><i class="icon-gray line icon-chart"></i><span>Ver ficha</span></a>`;
+                                        const acciones = `
+                                            <div class="acciones-producto">
+                                                <button type="button" class="btn-acciones" data-id="${row.id}" title="Acciones" aria-label="Acciones">
+                                                    <ion-icon name="menu-outline"></ion-icon>
+                                                </button>
+                                                <div class="acciones-menu">
+                                                    <button type="button" class="accion-item btn-edit" data-id="${row.id}"><i class="icon-gray line icon-pencil"></i><span>Editar</span></button>
+                                                    <button type="button" class="accion-item btn-tasas-producto" data-id="${row.id}"><ion-icon name="swap-horizontal-outline"></ion-icon><span>Tasas personalizadas</span>${tasasBadge}</button>
+                                                    <button type="button" class="accion-item btn-foto-google" data-id="${row.id}"><ion-icon name="logo-google"></ion-icon><span>Buscar foto</span></button>
+                                                    ${fichaItem}
+                                                    <button type="button" class="accion-item accion-danger btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i><span>Eliminar</span></button>
+                                                </div>
+                                            </div>`;
 
                                         const filaNueva = tabla.row.add([
                                             `<div class="foto-check ${hasFoto ? 'has-foto' : 'no-foto'}" data-producto-id="${row.id}" title="${hasFoto ? 'Tiene foto' : 'Sin foto'}"><ion-icon name="${hasFoto ? 'image-outline' : 'camera-outline'}"></ion-icon></div>`,
-                                            row.nombre + `<button type="button" class="btn-foto-google" data-id="${row.id}" title="Buscar foto en Google Imágenes"><ion-icon name="logo-google"></ion-icon></button><br><small class="${row.categoria_grupo ? 'text-muted' : 'text-danger'}">${row.categoria_grupo || 'Sin grupo'}</small>`,
+                                            row.nombre + `<br><small class="${row.categoria_grupo ? 'text-muted' : 'text-danger'}">${row.categoria_grupo || 'Sin grupo'}</small>`,
                                             row.precio_compra,
                                             row.cantidad_unidades,
                                             row.porcentaje,
@@ -1012,9 +985,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <input type="checkbox" class="chk-estricto" data-id="${row.id}" ${Number(row.seguimiento_estricto) === 1 ? 'checked' : ''} ${nv == 1 ? '' : 'disabled'}>
                                                 <span class="estricto-box"><ion-icon name="checkmark-outline"></ion-icon></span>
                                             </label>`,
-                                            `<a data-id="${row.id}" class="btn-edit"><i class="icon-gray line icon-pencil"></i></a>`,
-                                            row.mayor == '1' ? '' : `<a href="ficha.php?id=${row.id}"><i style="color: #41c1af" class="icon-gray line icon-chart"></i></a>`,
-                                            `<a class="c-pointer btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i></a>`
+                                            acciones
                                         ]);
                                         $(filaNueva.node()).attr({
                                             'data-stock': row.stock,
@@ -1183,6 +1154,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         return;
                     }
 
+                    const btnTasasProducto = event.target.closest('.btn-tasas-producto');
+                    if (btnTasasProducto) {
+                        abrirTasasProducto(btnTasasProducto.getAttribute('data-id'));
+                        return;
+                    }
+
                     if (event.target.closest('.btn-edit')) {
                         const id = event.target.closest('.btn-edit').getAttribute('data-id');
 
@@ -1246,6 +1223,70 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         confirmarDelete(id, stock_id)
                     }
                 });
+
+                // Menú de acciones por fila: un solo botón hamburguesa.
+                function menuDeWrap(wrap) {
+                    return wrap._accionesMenu || wrap.querySelector('.acciones-menu');
+                }
+
+                function cerrarMenusAcciones() {
+                    document.querySelectorAll('.acciones-producto.open').forEach(function(w) {
+                        const menu = menuDeWrap(w);
+                        if (menu) {
+                            menu.classList.remove('abierto');
+                            if (w.isConnected) {
+                                w.appendChild(menu);
+                            } else {
+                                menu.remove();
+                            }
+                        }
+                        w.classList.remove('open');
+                    });
+                }
+
+                function abrirMenuAcciones(wrap, toggle) {
+                    cerrarMenusAcciones();
+                    const menu = menuDeWrap(wrap);
+                    if (!menu) return;
+
+                    // El panel tiene transform (animación), así que "fixed" dentro de la
+                    // tabla se posiciona contra el panel y no contra la ventana. Se mueve
+                    // al body mientras está abierto para que la posición sea la correcta.
+                    wrap._accionesMenu = menu;
+                    document.body.appendChild(menu);
+                    wrap.classList.add('open');
+                    menu.classList.add('abierto');
+
+                    const r = toggle.getBoundingClientRect();
+                    const margen = 8;
+                    const ancho = menu.offsetWidth;
+                    const alto = menu.offsetHeight;
+                    let left = r.right - ancho;
+                    left = Math.max(margen, Math.min(left, window.innerWidth - ancho - margen));
+                    let top = r.bottom + 6;
+                    if (top + alto + margen > window.innerHeight) {
+                        top = Math.max(margen, r.top - alto - 6);
+                    }
+                    menu.style.left = left + 'px';
+                    menu.style.top = top + 'px';
+                }
+
+                document.addEventListener('click', function(event) {
+                    const toggle = event.target.closest('.btn-acciones');
+                    if (toggle) {
+                        event.preventDefault();
+                        const wrap = toggle.closest('.acciones-producto');
+                        const abierto = wrap.classList.contains('open');
+                        cerrarMenusAcciones();
+                        if (!abierto) abrirMenuAcciones(wrap, toggle);
+                        return;
+                    }
+                    cerrarMenusAcciones();
+                });
+
+                window.addEventListener('scroll', cerrarMenusAcciones, true);
+                window.addEventListener('resize', cerrarMenusAcciones);
+                tabla.on('draw', cerrarMenusAcciones);
 
                 document.addEventListener('change', async (event) => {
                     const chk = event.target.closest('.chk-estricto');
@@ -1322,6 +1363,222 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
 
 
+
+                function escaparHtml(valor) {
+                    return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(c) {
+                        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+                    });
+                }
+
+                const paresTasasProducto = [
+                    ['usd_bs', 'USD → Bs'],
+                    ['usd_cop', 'USD → COP'],
+                    ['cop_bs', 'COP → Bs'],
+                    ['bs_cop', 'Bs → COP']
+                ];
+
+                let previewTasasSeq = 0;
+
+                function formatearPreview(valor, moneda) {
+                    if (valor === null || valor === undefined || isNaN(Number(valor))) return '—';
+                    if (moneda === 'usd') return '$ ' + recortarADosDecimales(Number(valor));
+                    if (moneda === 'cop') return formatNumber(formatPeso(Number(valor))) + ' COP';
+                    return formatNumber(recortarADosDecimales(Number(valor))) + ' Bs';
+                }
+
+                function actualizarPreviewTasas(productoId) {
+                    const selects = paresTasasProducto.map(function(par) {
+                        return document.getElementById('tasa-producto-' + par[0]);
+                    });
+                    if (!selects.some(Boolean)) return;
+
+                    const seq = ++previewTasasSeq;
+                    const status = document.querySelector('[data-preview-status]');
+                    if (status) status.textContent = 'Calculando…';
+
+                    const body = new URLSearchParams();
+                    body.append('accion', 'preview');
+                    body.append('producto_id', productoId);
+                    const prod = productos[productoId] || {};
+                    body.append('precio', String(prod.precio_compra ?? '').replace(/,/g, ''));
+                    body.append('cantidad', prod.cantidad_unidades ?? '');
+                    body.append('porcentaje', String(prod.porcentaje ?? '').replace('%', '').replace(',', '.'));
+                    const origenPreview = document.getElementById('tasa-origen-preview');
+                    body.append('origen', origenPreview ? origenPreview.value : (prod.origen ?? ''));
+                    body.append('mayor', prod.mayor ?? '0');
+                    paresTasasProducto.forEach(function(par) {
+                        const select = document.getElementById('tasa-producto-' + par[0]);
+                        body.append('tasas[' + par[0] + ']', select ? select.value : '0');
+                    });
+
+                    fetch('../../configurar/producto_tasas.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: body
+                        })
+                        .then(function(r) {
+                            return r.json();
+                        })
+                        .then(function(data) {
+                            if (seq !== previewTasasSeq) return;
+                            if (!data.success) throw new Error(data.message || 'No se pudo calcular la vista previa.');
+                            const precios = data.precios || {};
+                            const set = function(key, valor) {
+                                const el = document.querySelector('[data-preview-value="' + key + '"]');
+                                if (el) el.textContent = valor;
+                            };
+                            set('dolar', formatearPreview(precios.precio_venta_dolar, 'usd'));
+                            set('cop', formatearPreview(precios.precio_venta_peso, 'cop'));
+                            set('bs', formatearPreview(precios.precio_venta_bs, 'bs'));
+                            if (status) status.textContent = 'Vista previa';
+                        })
+                        .catch(function(error) {
+                            if (seq !== previewTasasSeq) return;
+                            if (status) status.textContent = error.message || 'Error en la vista previa';
+                        });
+                }
+
+                async function abrirTasasProducto(productoId) {
+                    try {
+                        const res = await fetch('../../configurar/producto_tasas.php?accion=obtener&producto_id=' + encodeURIComponent(productoId));
+                        const data = await res.json();
+                        if (!data.success) throw new Error(data.message || 'No se pudieron cargar las tasas.');
+
+                        const asignadas = data.asignadas || {};
+                        const disponibles = data.disponibles || [];
+                        const productoActual = productos[productoId] || {};
+                        const origenGuardado = String(productoActual.origen || '');
+                        const origenActual = ['v', 'c'].includes(origenGuardado) ? origenGuardado : 'v';
+                        const etiquetasOrigen = {
+                            v: 'Venezolano',
+                            c: 'Colombiano'
+                        };
+                        let opcionesOrigen = '';
+                        if (origenGuardado === 'm') {
+                            // Los productos ya guardados como Mixto conservan su valor hasta que se elija otro.
+                            opcionesOrigen += '<option value="m" selected disabled>Mixto (actual)</option>';
+                        }
+                        opcionesOrigen += ['v', 'c'].map(function(valor) {
+                            const seleccionado = origenGuardado !== 'm' && origenActual === valor ? ' selected' : '';
+                            return '<option value="' + valor + '"' + seleccionado + '>' +
+                                etiquetasOrigen[valor] + '</option>';
+                        }).join('');
+
+                        let html = `
+                            <div class="tasas-origen">
+                                <div class="tasas-origen-info">
+                                    <span class="tasas-origen-label">Origen del producto</span>
+                                    <small>Actual: <b>${origenGuardado === 'm' ? 'Mixto' : etiquetasOrigen[origenActual]}</b></small>
+                                </div>
+                                <select id="tasa-origen-preview" aria-label="Origen para la vista previa">
+                                    ${opcionesOrigen}
+                                </select>
+                            </div>
+                            <div class="tasas-origen-nota">Al guardar, el origen y las tasas quedan aplicados al producto.</div>
+                            <div class="tasas-producto-grid">`;
+
+                        paresTasasProducto.forEach(function(par) {
+                            const lista = disponibles.filter(function(t) {
+                                return t.par === par[0];
+                            });
+                            const actual = asignadas[par[0]] ? Number(asignadas[par[0]].tasa_id) : 0;
+                            html += '<div><label for="tasa-producto-' + par[0] + '">' + par[1] + '</label>';
+                            html += '<select id="tasa-producto-' + par[0] + '">';
+                            html += '<option value="0"' + (actual === 0 ? ' selected' : '') + '>Principal (sin tasa personalizada)</option>';
+                            lista.forEach(function(t) {
+                                html += '<option value="' + t.id + '"' + (actual === Number(t.id) ? ' selected' : '') + '>' +
+                                    escaparHtml(t.nombre) + ' · ' + t.valor + '</option>';
+                            });
+                            html += '</select>';
+                            if (lista.length === 0) {
+                                html += '<div class="tasas-producto-nota">No hay tasas personalizadas para este par.</div>';
+                            }
+                            html += '</div>';
+                        });
+
+                        const actualDolar = formatearPreview(productoActual.precio_venta_dolar, 'usd');
+                        const actualCop = formatearPreview(productoActual.precio_venta_peso, 'cop');
+                        const actualBs = formatearPreview(productoActual.precio_venta_bs, 'bs');
+
+                        html += `
+                            <div class="tasas-preview">
+                                <div class="tasas-preview-head">
+                                    <span>Vista previa de precios</span>
+                                    <span class="tasas-preview-status" data-preview-status>Calculando…</span>
+                                </div>
+                                <div class="tasas-preview-grid">
+                                    <div class="tasas-preview-item">
+                                        <span>USD</span>
+                                        <strong data-preview-value="dolar">—</strong>
+                                        <small>Actual: ${actualDolar}</small>
+                                    </div>
+                                    <div class="tasas-preview-item">
+                                        <span>COP</span>
+                                        <strong data-preview-value="cop">—</strong>
+                                        <small>Actual: ${actualCop}</small>
+                                    </div>
+                                    <div class="tasas-preview-item">
+                                        <span>BS</span>
+                                        <strong data-preview-value="bs">—</strong>
+                                        <small>Actual: ${actualBs}</small>
+                                    </div>
+                                </div>
+                                <div class="tasas-preview-note">Calculado con las tasas seleccionadas. Aún no se han guardado.</div>
+                            </div>
+                            <div class="tasas-producto-nota">Solo se aplicará el par que use el cálculo según el origen del producto y el tipo de cambio mostrado. Los pares sin selección siguen con la tasa principal.</div>`;
+
+                        const resultado = await Swal.fire({
+                            title: 'Tasas personalizadas',
+                            html: html,
+                            width: 520,
+                            showCancelButton: true,
+                            confirmButtonText: 'Guardar',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#2dd4a0',
+                            focusConfirm: false,
+                            didOpen: function() {
+                                document.querySelectorAll('.tasas-producto-grid select').forEach(function(select) {
+                                    select.addEventListener('change', function() {
+                                        actualizarPreviewTasas(productoId);
+                                    });
+                                });
+                                const origenPreview = document.getElementById('tasa-origen-preview');
+                                if (origenPreview) {
+                                    origenPreview.addEventListener('change', function() {
+                                        actualizarPreviewTasas(productoId);
+                                    });
+                                }
+                                actualizarPreviewTasas(productoId);
+                            }
+                        });
+                        if (!resultado.isConfirmed) return;
+
+                        const body = new URLSearchParams();
+                        body.append('accion', 'guardar');
+                        body.append('producto_id', productoId);
+                        const origenGuardar = document.getElementById('tasa-origen-preview');
+                        if (origenGuardar) {
+                            body.append('origen', origenGuardar.value);
+                        }
+                        paresTasasProducto.forEach(function(par) {
+                            const select = document.getElementById('tasa-producto-' + par[0]);
+                            body.append('tasas[' + par[0] + ']', select ? select.value : '0');
+                        });
+
+                        const guardar = await fetch('../../configurar/producto_tasas.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: body
+                        });
+                        const guardado = await guardar.json();
+                        if (!guardado.success) throw new Error(guardado.message || 'No se pudieron guardar las tasas.');
+
+                        Alerta.toast('success', guardado.message);
+                        cargarProductos($('#sucursal-selector').val());
+                    } catch (error) {
+                        Swal.fire('Error', error.message || 'No se pudieron guardar las tasas.', 'error');
+                    }
+                }
 
                 // Mostrar el formulario con las opciones indicadas
                 function cargarDatosForm(datos, opcion) {
@@ -1619,6 +1876,313 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     color: var(--dash-mint);
                     border-color: var(--dash-mint);
                     background: rgba(45, 212, 160, .08);
+                }
+
+                /* Menú de acciones de la fila */
+                .acciones-producto {
+                    position: relative;
+                    display: inline-block;
+                }
+
+                .btn-acciones {
+                    width: 30px;
+                    height: 30px;
+                    padding: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid var(--dash-border);
+                    border-radius: 8px;
+                    background: var(--dash-bg);
+                    color: var(--dash-text-muted);
+                    font-size: 18px;
+                    line-height: 1;
+                    cursor: pointer;
+                    transition: color .2s, border-color .2s, background .2s;
+                }
+
+                .btn-acciones:hover,
+                .acciones-producto.open .btn-acciones {
+                    color: var(--dash-mint);
+                    border-color: var(--dash-mint);
+                    background: rgba(45, 212, 160, .08);
+                }
+
+                .acciones-menu {
+                    display: none;
+                    position: fixed;
+                    left: 0;
+                    top: 0;
+                    z-index: 1050;
+                    min-width: 190px;
+                    padding: 5px;
+                    background: var(--dash-card, #181b22);
+                    border: 1px solid var(--dash-border);
+                    border-radius: 10px;
+                    box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+                }
+
+                .acciones-producto.open .acciones-menu,
+                .acciones-menu.abierto {
+                    display: block;
+                }
+
+                .acciones-menu .accion-item,
+                .acciones-menu .btn-foto-google,
+                .acciones-menu .btn-tasas-producto {
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-start;
+                    gap: 8px;
+                    width: 100%;
+                    height: auto;
+                    min-width: 0;
+                    margin: 0;
+                    padding: 8px 10px;
+                    border: 0;
+                    border-radius: 6px;
+                    background: transparent;
+                    color: var(--dash-text);
+                    font-size: 12px;
+                    font-weight: 500;
+                    line-height: 1.3;
+                    text-align: left;
+                    text-decoration: none;
+                    white-space: nowrap;
+                    cursor: pointer;
+                }
+
+                .acciones-menu .accion-item:hover,
+                .acciones-menu .btn-foto-google:hover,
+                .acciones-menu .btn-tasas-producto:hover {
+                    color: var(--dash-mint);
+                    background: rgba(45, 212, 160, .1);
+                }
+
+                .acciones-menu .accion-item ion-icon,
+                .acciones-menu .accion-item i {
+                    flex: 0 0 16px;
+                    width: 16px;
+                    font-size: 14px;
+                    text-align: center;
+                }
+
+                .acciones-menu .accion-danger {
+                    color: #ef5a6f;
+                }
+
+                .acciones-menu .accion-danger:hover {
+                    color: #ef5a6f;
+                    background: rgba(239, 90, 111, .1);
+                }
+
+                .acciones-badge {
+                    margin-left: auto;
+                    min-width: 18px;
+                    padding: 1px 5px;
+                    border-radius: 100px;
+                    background: rgba(45, 212, 160, .16);
+                    color: var(--dash-mint);
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-align: center;
+                }
+
+                .btn-tasas-producto {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 3px;
+                    min-width: 26px;
+                    height: 26px;
+                    margin-left: 6px;
+                    padding: 0 6px;
+                    vertical-align: middle;
+                    font-size: 13px;
+                    line-height: 1;
+                    color: var(--dash-text-muted);
+                    background: transparent;
+                    border: 1px solid var(--dash-border);
+                    border-radius: 7px;
+                    cursor: pointer;
+                    transition: color .2s, border-color .2s, background .2s;
+                }
+
+                .btn-tasas-producto span {
+                    font-size: 10px;
+                    font-weight: 700;
+                }
+
+                .btn-tasas-producto:hover {
+                    color: var(--dash-mint);
+                    border-color: var(--dash-mint);
+                    background: rgba(45, 212, 160, .08);
+                }
+
+                .tasas-producto-grid {
+                    display: grid;
+                    gap: 10px;
+                    text-align: left;
+                    margin-top: 8px;
+                }
+
+                .tasas-producto-grid label {
+                    display: block;
+                    margin-bottom: 3px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: #8a9ab5;
+                    text-transform: uppercase;
+                    letter-spacing: .04em;
+                }
+
+                .tasas-producto-grid select {
+                    width: 100%;
+                    padding: 8px 10px;
+                    border: 1px solid #2e353e;
+                    border-radius: 8px;
+                    background: #12151a;
+                    color: #e8edf2;
+                    font-size: 13px;
+                }
+
+                .tasas-producto-nota {
+                    margin-top: 10px;
+                    font-size: 11px;
+                    line-height: 1.45;
+                    color: #8a9ab5;
+                }
+
+                .tasas-origen {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    padding: 10px 12px;
+                    border: 1px solid #2e353e;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, .03);
+                    text-align: left;
+                }
+
+                .tasas-origen-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1px;
+                    min-width: 0;
+                }
+
+                .tasas-origen-label {
+                    font-size: 11px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: .04em;
+                    color: #8a9ab5;
+                }
+
+                .tasas-origen-info small {
+                    font-size: 11px;
+                    color: #8a9ab5;
+                }
+
+                .tasas-origen-info b {
+                    color: #e8edf2;
+                }
+
+                .tasas-origen select {
+                    flex: 0 0 auto;
+                    padding: 8px 10px;
+                    border: 1px solid #2e353e;
+                    border-radius: 8px;
+                    background: #12151a;
+                    color: #e8edf2;
+                    font-size: 13px;
+                }
+
+                .tasas-origen-nota {
+                    margin: 6px 0 0;
+                    font-size: 10px;
+                    line-height: 1.4;
+                    color: #8a9ab5;
+                    text-align: left;
+                }
+
+                .tasas-preview {
+                    margin-top: 14px;
+                    padding: 12px;
+                    border: 1px solid rgba(45, 212, 160, .25);
+                    border-radius: 10px;
+                    background: rgba(45, 212, 160, .05);
+                    text-align: left;
+                }
+
+                .tasas-preview-head {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    margin-bottom: 9px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: .04em;
+                    color: #8a9ab5;
+                }
+
+                .tasas-preview-status {
+                    font-size: 10px;
+                    font-weight: 500;
+                    text-transform: none;
+                    letter-spacing: 0;
+                    color: #2dd4a0;
+                }
+
+                .tasas-preview-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 8px;
+                }
+
+                .tasas-preview-item {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                    min-width: 0;
+                    padding: 8px;
+                    border-radius: 8px;
+                    background: rgba(0, 0, 0, .18);
+                }
+
+                .tasas-preview-item > span {
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: #8a9ab5;
+                }
+
+                .tasas-preview-item strong {
+                    font-size: 14px;
+                    color: #e8edf2;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .tasas-preview-item small {
+                    font-size: 10px;
+                    color: #8a9ab5;
+                }
+
+                .tasas-preview-note {
+                    margin-top: 8px;
+                    font-size: 10px;
+                    line-height: 1.4;
+                    color: #8a9ab5;
+                }
+
+                @media (max-width: 480px) {
+                    .tasas-preview-grid {
+                        grid-template-columns: 1fr;
+                    }
                 }
 
                 /* Interruptor "solo con stock" */

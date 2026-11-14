@@ -271,10 +271,12 @@ if ($_SESSION["validate"] != "ok") {
         }
 
         .conv-card.dim {
-            opacity: .55;
             border-color: rgba(239, 90, 111, .15);
             background: rgba(239, 90, 111, .03);
-            pointer-events: none;
+        }
+
+        .conv-card.dim .rate-field {
+            opacity: .55;
         }
 
         .conv-card.dim .conv-arrow .to {
@@ -309,6 +311,155 @@ if ($_SESSION["validate"] != "ok") {
         .conv-card .bcv-source ion-icon {
             font-size: 12px;
             color: #5b9cf5;
+        }
+
+        .conv-tools {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            position: relative;
+        }
+
+        .conv-nav {
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border: 1px solid var(--dash-border);
+            border-radius: 6px;
+            background: var(--dash-bg);
+            color: var(--dash-text-muted);
+            font-size: 15px;
+            line-height: 1;
+            cursor: pointer;
+            transition: color .2s, border-color .2s;
+        }
+
+        .conv-nav:hover {
+            color: var(--dash-mint);
+            border-color: var(--dash-mint);
+        }
+
+        .conv-counter {
+            min-width: 24px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--dash-text-muted);
+        }
+
+        .conv-menu-wrap {
+            position: relative;
+        }
+
+        .conv-menu-btn {
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border: 1px solid var(--dash-border);
+            border-radius: 6px;
+            background: var(--dash-bg);
+            color: var(--dash-text-muted);
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .conv-menu-btn:hover {
+            color: var(--dash-mint);
+            border-color: var(--dash-mint);
+        }
+
+        .conv-menu-panel {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 28px;
+            z-index: 20;
+            min-width: 132px;
+            padding: 5px;
+            background: var(--dash-card, #181b22);
+            border: 1px solid var(--dash-border);
+            border-radius: 8px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+        }
+
+        .conv-menu-wrap.open .conv-menu-panel {
+            display: block;
+        }
+
+        .conv-menu-panel button {
+            display: block;
+            width: 100%;
+            padding: 7px 9px;
+            border: 0;
+            border-radius: 5px;
+            background: transparent;
+            color: var(--dash-text);
+            font-size: 12px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .conv-menu-panel button:hover {
+            background: rgba(45, 212, 160, .1);
+            color: var(--dash-mint);
+        }
+
+        .conv-menu-panel button[hidden] {
+            display: none;
+        }
+
+        .conv-editor {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid rgba(45, 212, 160, .25);
+            border-radius: 8px;
+            background: rgba(45, 212, 160, .04);
+        }
+
+        .conv-editor[hidden] {
+            display: none;
+        }
+
+        .conv-editor .form-control {
+            margin-bottom: 6px;
+            background: var(--dash-bg);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text);
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 12px;
+        }
+
+        .conv-editor-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .conv-editor-save,
+        .conv-editor-cancel {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--dash-border);
+            background: var(--dash-bg);
+            color: var(--dash-text);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .conv-editor-save {
+            border-color: var(--dash-mint);
+            color: var(--dash-mint);
+        }
+
+        .conv-editor-error {
+            min-height: 14px;
+            margin-top: 5px;
+            color: #ef5a6f;
+            font-size: 11px;
         }
     </style>
 
@@ -412,58 +563,90 @@ if ($_SESSION["validate"] != "ok") {
                                             <div class="icon-box"><ion-icon name="git-compare-outline"></ion-icon></div>
                                             <div>
                                                 <h6>Pares de conversión</h6>
-                                                <p>Tasas directas entre divisas según el país de origen del producto</p>
+                                                <p>Tasas directas entre divisas según el país de origen del producto. Las personalizadas se asignan por producto desde el listado de Productos.</p>
                                             </div>
                                         </div>
+                                        <?php
+                                        $valorUsdBs = ($tipo_tasa_bs == 1) ? $dolarBolivar : (($tipo_tasa_bs == 3) ? ($bcv + $margen_neto) : $bcv);
+                                        $badgeUsdBs = ($tipo_tasa_bs == 1) ? 'Principal · Manual' : (($tipo_tasa_bs == 3) ? 'Principal · BCV + Margen' : 'Principal · BCV');
+                                        $cardsPares = [
+                                            'usd_bs' => [
+                                                'from' => 'USD', 'to' => 'Bs', 'name' => 'bolivar',
+                                                'value' => $valorUsdBs, 'badge' => $badgeUsdBs,
+                                                'hint' => 'Aplica a productos con precio base en dólares',
+                                                'readonly' => $tipo_tasa_bs != 1,
+                                                'extra' => 'id="input-usd-bs" data-manual="' . htmlspecialchars((string) $dolarBolivar, ENT_QUOTES) . '"',
+                                                'dim' => $tipo_tasa_bs != 1,
+                                            ],
+                                            'usd_cop' => [
+                                                'from' => 'USD', 'to' => 'COP', 'name' => 'peso',
+                                                'value' => $pesoDolar, 'badge' => 'Principal',
+                                                'hint' => 'Pesos colombianos por cada dólar',
+                                                'readonly' => false, 'extra' => '', 'dim' => false,
+                                            ],
+                                            'cop_bs' => [
+                                                'from' => 'COP', 'to' => 'Bs', 'name' => 'peso_bolivar',
+                                                'value' => $peso_bolivar, 'badge' => 'Principal',
+                                                'hint' => 'Productos colombianos convertidos a bolívares',
+                                                'readonly' => false, 'extra' => '', 'dim' => false,
+                                            ],
+                                            'bs_cop' => [
+                                                'from' => 'Bs', 'to' => 'COP', 'name' => 'bolivarPeso',
+                                                'value' => $bolivar_peso, 'badge' => 'Principal',
+                                                'hint' => 'Productos venezolanos convertidos a pesos',
+                                                'readonly' => false, 'extra' => '', 'dim' => false,
+                                            ],
+                                        ];
+                                        ?>
                                         <div class="conv-grid">
-                                            <div class="conv-card<?php echo ($tipo_tasa_bs != 1) ? ' dim' : '' ?>" id="card-usd-bs">
-                                                <div class="conv-head">
-                                                    <span class="conv-arrow"><span class="from">USD</span><span class="sep"> → </span><span class="to">Bs</span></span>
-                                                    <span class="conv-badge" id="badge-usd-bs"><?php echo ($tipo_tasa_bs == 1) ? 'Manual' : (($tipo_tasa_bs == 3) ? 'BCV + Margen' : 'BCV') ?></span>
-                                                </div>
-                                                <div class="rate-field">
-                                                    <label class="rate-label">Tasa de cambio</label>
-                                                    <div class="rate-hint">Aplica a productos con precio base en dólares</div>
-                                                    <input value="<?php echo ($tipo_tasa_bs == 1) ? $dolarBolivar : (($tipo_tasa_bs == 3) ? ($bcv + $margen_neto) : $bcv) ?>" name="bolivar" class="form-control" id="input-usd-bs" data-manual="<?php echo $dolarBolivar ?>" <?php echo ($tipo_tasa_bs != 1) ? 'readonly' : '' ?>>
-                                                    <div class="bcv-source" id="bcv-source" style="display:<?php echo ($tipo_tasa_bs != 1) ? 'flex' : 'none' ?>">
-                                                        <ion-icon name="cloud-download-outline"></ion-icon>
-                                                        Tasa BCV · Actualizada automáticamente
+                                            <?php foreach ($cardsPares as $par => $card): ?>
+                                                <div class="conv-card<?php echo $card['dim'] ? ' dim' : '' ?>"
+                                                    data-par="<?php echo $par ?>"
+                                                    id="card-<?php echo str_replace('_', '-', $par) ?>">
+                                                    <div class="conv-head">
+                                                        <span class="conv-arrow"><span class="from"><?php echo $card['from'] ?></span><span class="sep"> → </span><span class="to"><?php echo $card['to'] ?></span></span>
+                                                        <span class="conv-badge" data-role="badge" id="<?php echo $par === 'usd_bs' ? 'badge-usd-bs' : '' ?>"><?php echo htmlspecialchars($card['badge']) ?></span>
+                                                        <div class="conv-tools">
+                                                            <button type="button" class="conv-nav" data-dir="-1" title="Tasa anterior" aria-label="Tasa anterior">‹</button>
+                                                            <span class="conv-counter" data-role="counter">1/1</span>
+                                                            <button type="button" class="conv-nav" data-dir="1" title="Tasa siguiente" aria-label="Tasa siguiente">›</button>
+                                                            <div class="conv-menu-wrap">
+                                                                <button type="button" class="conv-menu-btn" title="Opciones de la tasa" aria-label="Opciones de la tasa">⋮</button>
+                                                                <div class="conv-menu-panel">
+                                                                    <button type="button" data-action="add">Agregar tasa</button>
+                                                                    <button type="button" data-action="rename">Editar</button>
+                                                                    <button type="button" data-action="delete">Eliminar</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="rate-field">
+                                                        <label class="rate-label">Tasa de cambio</label>
+                                                        <div class="rate-hint" data-role="hint"><?php echo htmlspecialchars($card['hint']) ?></div>
+                                                        <input value="<?php echo htmlspecialchars((string) $card['value'], ENT_QUOTES) ?>"
+                                                            name="<?php echo $card['name'] ?>"
+                                                            class="form-control"
+                                                            data-role="input"
+                                                            <?php echo $card['extra'] ?>
+                                                            <?php echo $card['readonly'] ? 'readonly' : '' ?>>
+                                                        <?php if ($par === 'usd_bs'): ?>
+                                                            <div class="bcv-source" id="bcv-source" style="display:<?php echo ($tipo_tasa_bs != 1) ? 'flex' : 'none' ?>">
+                                                                <ion-icon name="cloud-download-outline"></ion-icon>
+                                                                Tasa BCV · Actualizada automáticamente
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="conv-editor" data-role="editor" hidden>
+                                                        <input type="text" class="form-control" data-role="editor-name" maxlength="60" placeholder="Nombre de la tasa">
+                                                        <input type="number" class="form-control" data-role="editor-value" step="any" min="0" placeholder="Valor">
+                                                        <div class="conv-editor-actions">
+                                                            <button type="button" class="conv-editor-save" data-action="save-editor">Guardar</button>
+                                                            <button type="button" class="conv-editor-cancel" data-action="cancel-editor">Cancelar</button>
+                                                        </div>
+                                                        <div class="conv-editor-error" data-role="editor-error"></div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div class="conv-card">
-                                                <div class="conv-head">
-                                                    <span class="conv-arrow"><span class="from">USD</span><span class="sep"> → </span><span class="to">COP</span></span>
-                                                    <span class="conv-badge">General</span>
-                                                </div>
-                                                <div class="rate-field">
-                                                    <label class="rate-label">Tasa de cambio</label>
-                                                    <div class="rate-hint">Pesos colombianos por cada dólar</div>
-                                                    <input value="<?php echo $pesoDolar ?>" name="peso" class="form-control">
-                                                </div>
-                                            </div>
-                                            <div class="conv-card">
-                                                <div class="conv-head">
-                                                    <span class="conv-arrow"><span class="from">COP</span><span class="sep"> → </span><span class="to">Bs</span></span>
-                                                    <span class="conv-badge">Origen Colombia</span>
-                                                </div>
-                                                <div class="rate-field">
-                                                    <label class="rate-label">Tasa de cambio</label>
-                                                    <div class="rate-hint">Productos colombianos convertidos a bolívares</div>
-                                                    <input value="<?php echo $peso_bolivar ?>" name="peso_bolivar" class="form-control">
-                                                </div>
-                                            </div>
-                                            <div class="conv-card">
-                                                <div class="conv-head">
-                                                    <span class="conv-arrow"><span class="from">Bs</span><span class="sep"> → </span><span class="to">COP</span></span>
-                                                    <span class="conv-badge">Origen Venezuela</span>
-                                                </div>
-                                                <div class="rate-field">
-                                                    <label class="rate-label">Tasa de cambio</label>
-                                                    <div class="rate-hint">Productos venezolanos convertidos a pesos</div>
-                                                    <input value="<?php echo $bolivar_peso ?>" name="bolivarPeso" class="form-control">
-                                                </div>
-                                            </div>
+                                            <?php endforeach; ?>
                                         </div>
                                     </div>
                                     <div class="rate-action">
@@ -620,6 +803,308 @@ if ($_SESSION["validate"] != "ok") {
 
                         <script>
                             const bcvRate = <?php echo $bcv ?>;
+                            const paresTasas = ['usd_bs', 'usd_cop', 'cop_bs', 'bs_cop'];
+                            const tasasPersonalizadas = {
+                                usd_bs: [],
+                                usd_cop: [],
+                                cop_bs: [],
+                                bs_cop: []
+                            };
+                            const estadoTasas = {};
+
+                            function cardDe(par) {
+                                return document.querySelector('.conv-card[data-par="' + par + '"]');
+                            }
+
+                            function inputDe(par) {
+                                return cardDe(par).querySelector('[data-role="input"]');
+                            }
+
+                            function parseValor(valor) {
+                                const n = parseFloat(String(valor).replace(/,/g, ''));
+                                return isFinite(n) ? n : 0;
+                            }
+
+                            paresTasas.forEach(function(par) {
+                                const card = cardDe(par);
+                                const input = inputDe(par);
+                                const hint = card.querySelector('[data-role="hint"]');
+                                hint.dataset.principal = hint.textContent;
+                                const manual = par === 'usd_bs'
+                                    ? parseValor(input.dataset.manual || input.value)
+                                    : parseValor(input.value);
+                                estadoTasas[par] = {
+                                    indice: 0,
+                                    principal: parseValor(input.value),
+                                    manual: manual,
+                                    modo: par === 'usd_bs'
+                                        ? String(document.querySelector('[name="tipoTasa"]').value)
+                                        : '1'
+                                };
+                            });
+
+                            function renderPar(par) {
+                                const card = cardDe(par);
+                                const input = inputDe(par);
+                                const badge = card.querySelector('[data-role="badge"]');
+                                const counter = card.querySelector('[data-role="counter"]');
+                                const hint = card.querySelector('[data-role="hint"]');
+                                const lista = tasasPersonalizadas[par];
+                                const total = lista.length + 1;
+                                let indice = estadoTasas[par].indice;
+
+                                if (indice >= total) indice = total - 1;
+                                if (indice < 0) indice = 0;
+                                estadoTasas[par].indice = indice;
+
+                                const esPrincipal = indice === 0;
+                                const custom = esPrincipal ? null : lista[indice - 1];
+                                const source = par === 'usd_bs' ? document.getElementById('bcv-source') : null;
+
+                                card.classList.remove('dim');
+                                card.querySelectorAll('.conv-menu-panel button[data-action="rename"], .conv-menu-panel button[data-action="delete"]').forEach(function(btn) {
+                                    btn.hidden = esPrincipal;
+                                });
+
+                                if (esPrincipal) {
+                                    input.readOnly = par === 'usd_bs' && estadoTasas[par].modo !== '1';
+                                    input.value = estadoTasas[par].principal;
+                                    if (par === 'usd_bs') {
+                                        const modo = estadoTasas[par].modo;
+                                        badge.textContent = 'Principal · ' + (modo === '1' ? 'Manual' : (modo === '3' ? 'BCV + Margen' : 'BCV'));
+                                        card.classList.toggle('dim', modo !== '1');
+                                        if (source) source.style.display = modo === '1' ? 'none' : 'flex';
+                                    } else {
+                                        badge.textContent = 'Principal';
+                                    }
+                                    hint.textContent = hint.dataset.principal;
+                                } else {
+                                    input.readOnly = true;
+                                    input.value = custom.valor;
+                                    badge.textContent = custom.nombre;
+                                    hint.textContent = 'Tasa personalizada · se aplica a los productos que la tengan asignada';
+                                    if (source) source.style.display = 'none';
+                                }
+
+                                counter.textContent = (indice + 1) + '/' + total;
+                            }
+
+                            function renderTodas() {
+                                paresTasas.forEach(renderPar);
+                            }
+
+                            function cerrarMenus() {
+                                document.querySelectorAll('.conv-menu-wrap.open').forEach(function(wrap) {
+                                    wrap.classList.remove('open');
+                                });
+                            }
+
+                            function abrirEditor(par, custom) {
+                                sincronizarPrincipales();
+                                const card = cardDe(par);
+                                const editor = card.querySelector('[data-role="editor"]');
+                                const nombre = editor.querySelector('[data-role="editor-name"]');
+                                const valor = editor.querySelector('[data-role="editor-value"]');
+                                const error = editor.querySelector('[data-role="editor-error"]');
+
+                                editor.dataset.id = custom ? String(custom.id) : '';
+                                nombre.value = custom ? custom.nombre : '';
+                                valor.value = custom ? custom.valor : '';
+                                error.textContent = '';
+                                editor.hidden = false;
+                                nombre.focus();
+                                cerrarMenus();
+                            }
+
+                            function cerrarEditor(par) {
+                                const editor = cardDe(par).querySelector('[data-role="editor"]');
+                                editor.hidden = true;
+                                editor.dataset.id = '';
+                            }
+
+                            function postTasa(datos) {
+                                const body = new URLSearchParams();
+                                Object.keys(datos).forEach(function(k) {
+                                    body.append(k, datos[k]);
+                                });
+                                return fetch('../../configurar/tasas_personalizadas.php', {
+                                    method: 'POST',
+                                    body: body
+                                }).then(function(r) {
+                                    return r.json();
+                                });
+                            }
+
+                            async function guardarEditor(par) {
+                                const card = cardDe(par);
+                                const editor = card.querySelector('[data-role="editor"]');
+                                const id = parseInt(editor.dataset.id || '0', 10) || 0;
+                                const nombre = editor.querySelector('[data-role="editor-name"]').value.trim();
+                                const valor = parseValor(editor.querySelector('[data-role="editor-value"]').value);
+                                const error = editor.querySelector('[data-role="editor-error"]');
+
+                                if (!nombre) {
+                                    error.textContent = 'Escribe un nombre para la tasa.';
+                                    return;
+                                }
+                                if (valor <= 0) {
+                                    error.textContent = 'El valor debe ser mayor que cero.';
+                                    return;
+                                }
+
+                                const datos = id > 0
+                                    ? { accion: 'actualizar', id: id, nombre: nombre, valor: valor }
+                                    : { accion: 'crear', par: par, nombre: nombre, valor: valor };
+
+                                try {
+                                    const res = await postTasa(datos);
+                                    if (res.status !== 'success') {
+                                        error.textContent = res.message || 'No se pudo guardar la tasa.';
+                                        return;
+                                    }
+
+                                    if (id > 0) {
+                                        const lista = tasasPersonalizadas[par];
+                                        const pos = lista.findIndex(function(t) {
+                                            return Number(t.id) === Number(id);
+                                        });
+                                        if (pos !== -1) {
+                                            lista[pos].nombre = res.data.nombre;
+                                            lista[pos].valor = res.data.valor;
+                                        }
+                                    } else {
+                                        tasasPersonalizadas[par].push(res.data);
+                                        estadoTasas[par].indice = tasasPersonalizadas[par].length;
+                                    }
+
+                                    cerrarEditor(par);
+                                    renderPar(par);
+                                    Alerta.toast('success', res.message || 'Tasa guardada.');
+                                } catch (e) {
+                                    error.textContent = 'Error al conectar con el servidor.';
+                                }
+                            }
+
+                            async function eliminarTasa(par, custom) {
+                                cerrarMenus();
+                                const confirmacion = await Swal.fire({
+                                    title: '¿Eliminar tasa personalizada?',
+                                    html: '<b>' + custom.nombre + '</b><br><small>Los productos que la usen volverán a la tasa principal de este par.</small>',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Eliminar',
+                                    cancelButtonText: 'Cancelar',
+                                    confirmButtonColor: '#ef5a6f'
+                                });
+                                if (!confirmacion.isConfirmed) return;
+
+                                try {
+                                    let res = await postTasa({ accion: 'eliminar', id: custom.id });
+                                    if (res.status !== 'success' && res.uso > 0) {
+                                        const segunda = await Swal.fire({
+                                            title: 'Tasa en uso',
+                                            text: res.message,
+                                            icon: 'warning',
+                                            showCancelButton: true,
+                                            confirmButtonText: 'Eliminar de todos modos',
+                                            cancelButtonText: 'Cancelar',
+                                            confirmButtonColor: '#ef5a6f'
+                                        });
+                                        if (!segunda.isConfirmed) return;
+                                        res = await postTasa({ accion: 'eliminar', id: custom.id, forzar: 1 });
+                                    }
+
+                                    if (res.status !== 'success') {
+                                        Alerta.toast('error', res.message || 'No se pudo eliminar la tasa.');
+                                        return;
+                                    }
+
+                                    const lista = tasasPersonalizadas[par];
+                                    const pos = lista.findIndex(function(t) {
+                                        return Number(t.id) === Number(custom.id);
+                                    });
+                                    if (pos !== -1) lista.splice(pos, 1);
+                                    if (estadoTasas[par].indice > lista.length) {
+                                        estadoTasas[par].indice = lista.length;
+                                    }
+                                    renderPar(par);
+                                    Alerta.toast('success', res.message || 'Tasa eliminada.');
+                                } catch (e) {
+                                    Alerta.toast('error', 'Error al conectar con el servidor.');
+                                }
+                            }
+
+                            document.addEventListener('click', function(e) {
+                                const card = e.target.closest('.conv-card[data-par]');
+                                if (!card) {
+                                    cerrarMenus();
+                                    return;
+                                }
+                                const par = card.dataset.par;
+
+                                const nav = e.target.closest('.conv-nav');
+                                if (nav) {
+                                    sincronizarPrincipales();
+                                    const total = tasasPersonalizadas[par].length + 1;
+                                    const dir = parseInt(nav.dataset.dir, 10) || 1;
+                                    estadoTasas[par].indice = (estadoTasas[par].indice + dir + total) % total;
+                                    renderPar(par);
+                                    return;
+                                }
+
+                                if (e.target.closest('.conv-menu-btn')) {
+                                    const wrap = e.target.closest('.conv-menu-wrap');
+                                    const abierto = wrap.classList.contains('open');
+                                    cerrarMenus();
+                                    if (!abierto) wrap.classList.add('open');
+                                    return;
+                                }
+
+                                const accion = e.target.closest('[data-action]');
+                                if (!accion) return;
+                                const tipo = accion.dataset.action;
+
+                                if (tipo === 'add') {
+                                    abrirEditor(par, null);
+                                } else if (tipo === 'rename') {
+                                    const indice = estadoTasas[par].indice;
+                                    if (indice > 0) abrirEditor(par, tasasPersonalizadas[par][indice - 1]);
+                                } else if (tipo === 'delete') {
+                                    const indice = estadoTasas[par].indice;
+                                    if (indice > 0) eliminarTasa(par, tasasPersonalizadas[par][indice - 1]);
+                                } else if (tipo === 'save-editor') {
+                                    guardarEditor(par);
+                                } else if (tipo === 'cancel-editor') {
+                                    cerrarEditor(par);
+                                }
+                            });
+
+                            document.addEventListener('click', function(e) {
+                                if (!e.target.closest('.conv-menu-wrap')) cerrarMenus();
+                            });
+
+                            async function cargarTasasPersonalizadas() {
+                                try {
+                                    const res = await fetch('../../configurar/tasas_personalizadas.php?accion=listar').then(function(r) {
+                                        return r.json();
+                                    });
+                                    if (res.status !== 'success') {
+                                        Alerta.toast('error', res.message || 'No se pudieron cargar las tasas personalizadas.');
+                                        return;
+                                    }
+                                    paresTasas.forEach(function(par) {
+                                        tasasPersonalizadas[par] = [];
+                                    });
+                                    (res.data || []).forEach(function(tasa) {
+                                        if (tasasPersonalizadas[tasa.par]) {
+                                            tasasPersonalizadas[tasa.par].push(tasa);
+                                        }
+                                    });
+                                    renderTodas();
+                                } catch (e) {
+                                    Alerta.toast('error', 'No se pudieron cargar las tasas personalizadas.');
+                                }
+                            }
 
                             function calcBcvConMargen() {
                                 const margen = parseFloat(document.querySelector('[name="margen"]').value) || 0;
@@ -627,43 +1112,37 @@ if ($_SESSION["validate"] != "ok") {
                             }
 
                             function actualizarBolivar() {
-                                const sel = document.querySelector('[name="tipoTasa"]').value;
-                                if (sel == 3) {
-                                    document.getElementById('input-usd-bs').value = calcBcvConMargen();
-                                }
+                                const est = estadoTasas.usd_bs;
+                                if (est.modo !== '3') return;
+                                est.principal = calcBcvConMargen();
+                                if (est.indice === 0) renderPar('usd_bs');
                             }
 
                             function tipoCambio(value) {
+                                const est = estadoTasas.usd_bs;
                                 const input = document.getElementById('input-usd-bs');
-                                const card = document.getElementById('card-usd-bs');
-                                const badge = document.getElementById('badge-usd-bs');
-                                const source = document.getElementById('bcv-source');
+
+                                // Si estaba en manual y el usuario editó el input, conservar ese valor.
+                                if (est.modo === '1' && est.indice === 0) {
+                                    est.manual = parseValor(input.value);
+                                }
+                                est.modo = String(value);
 
                                 if (value == 2) {
                                     $('#section_redondeo').hide(300);
                                     $('#section_margen').hide(300);
-                                    input.value = bcvRate;
-                                    input.readOnly = true;
-                                    card.classList.add('dim');
-                                    badge.textContent = 'BCV';
-                                    source.style.display = 'flex';
+                                    est.principal = bcvRate;
                                 } else if (value == 3) {
                                     $('#section_redondeo').show(300);
                                     $('#section_margen').show(300);
-                                    input.value = calcBcvConMargen();
-                                    input.readOnly = true;
-                                    card.classList.add('dim');
-                                    badge.textContent = 'BCV + Margen';
-                                    source.style.display = 'flex';
+                                    est.principal = calcBcvConMargen();
                                 } else {
-                                    input.value = input.dataset.manual;
-                                    input.readOnly = false;
-                                    card.classList.remove('dim');
-                                    badge.textContent = 'Manual';
-                                    source.style.display = 'none';
+                                    est.principal = est.manual;
                                     $('#section_margen').hide();
                                     $('#section_redondeo').hide();
                                 }
+
+                                if (est.indice === 0) renderPar('usd_bs');
                             }
 
                             document.addEventListener('input', function(e) {
@@ -672,9 +1151,32 @@ if ($_SESSION["validate"] != "ok") {
                                 }
                             });
 
+                            function sincronizarPrincipales() {
+                                paresTasas.forEach(function(par) {
+                                    const est = estadoTasas[par];
+                                    if (est.indice !== 0) return;
+                                    const input = inputDe(par);
+                                    const valor = parseValor(input.value);
+                                    est.principal = valor;
+                                    if (par === 'usd_bs' && est.modo === '1') {
+                                        est.manual = valor;
+                                    }
+                                });
+                            }
+
                             document.getElementById('form-tasas-cambio').addEventListener('submit', function(e) {
                                 e.preventDefault();
-                                const formData = new FormData(this);
+                                sincronizarPrincipales();
+
+                                const formData = new FormData();
+                                formData.append('tipoTasa', document.querySelector('[name="tipoTasa"]').value);
+                                formData.append('margen', document.querySelector('[name="margen"]').value);
+                                formData.append('redondeo', document.querySelector('[name="redondeo"]').value);
+                                formData.append('bolivar', estadoTasas.usd_bs.modo === '1' ? estadoTasas.usd_bs.manual : estadoTasas.usd_bs.principal);
+                                formData.append('peso', estadoTasas.usd_cop.principal);
+                                formData.append('peso_bolivar', estadoTasas.cop_bs.principal);
+                                formData.append('bolivarPeso', estadoTasas.bs_cop.principal);
+
                                 fetch('../../configurar/tasas.php', { method: 'POST', body: formData })
                                     .then(r => r.json())
                                     .then(res => {
@@ -689,6 +1191,9 @@ if ($_SESSION["validate"] != "ok") {
                                     })
                                     .catch(() => Alerta.toast('error', 'Error al conectar con el servidor'));
                             });
+
+                            renderTodas();
+                            cargarTasasPersonalizadas();
                         </script>
 
                     </div>

@@ -4,7 +4,7 @@
   require_once('session.php');
   require("_tasas_cambio.php");
   require("_calculadrora_precios.php");
-  $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+  $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
 
 
   // Función para eliminar caracteres no numéricos

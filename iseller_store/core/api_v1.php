@@ -480,7 +480,10 @@ function api_calc(int $bssId): CalculadoraPrecios
         $dolarBolivar,
         (float)($cambio['bolivar_peso'] ?? 0),
         $bcv,
-        json_decode($mostrados['tasas'] ?? '[]', true) ?: []
+        json_decode($mostrados['tasas'] ?? '[]', true) ?: [],
+        [],
+        $conexion,
+        $bssId
     );
     return $cache[$bssId];
 }

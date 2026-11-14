@@ -2,7 +2,7 @@
 /**
  * Ranking de los 9 productos más vendidos de una sucursal.
  * Considera las últimas 100 ventas válidas (status 1 = contado, 4 = al mayor), las mismas
- * reglas de los KPIs existentes (ficha.php, admCierre.php). Filtra por id_sucursal ANTES
+ * reglas de los KPIs existentes (ficha.php). Filtra por id_sucursal ANTES
  * de limitar a 100, de modo que nunca mezcla ventas de otras sucursales.
  *
  * @param mysqli $conexion

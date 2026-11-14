@@ -5,7 +5,7 @@ require_once 'session.php';
 require_once '_tasas_cambio.php';
 require("_calculadrora_precios.php");
 
-$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
 //header('Content-Type: application/json; charset=utf-8');
 
 // Validar cliente
@@ -191,7 +191,7 @@ function aplicarAbonos($productos, $abonos)
             } elseif ($abonoDisponible > 0) {
                 // Aplicar abono parcial
 
-                $montos = $calculadora->convertirMonto($abonoDisponible, $moneda, $producto['origen']);
+                $montos = $calculadora->convertirMonto($abonoDisponible, $moneda, $producto['origen'], $producto);
 
                 /*   echo "<pre>";
                 print_r($montos);

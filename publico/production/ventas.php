@@ -64,7 +64,7 @@ if ($stmt = $conexion->prepare($sql)) {
 
 
 require("../../configurar/_calculadrora_precios.php");
-$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
 
 $topnav = topnav();
 
@@ -308,8 +308,9 @@ if ($result->num_rows > 0) {
             "precio_peso_visible" => $precios['precio_venta_peso'], // Precio de Venta
             "precio_bs_visible" => $precios['precio_venta_bs'], // Precio de Venta
             'price_C' => $valorUnidad, // precio de compra
-            'price_C_Bs' => $valorUnidad * $dolarBolivar, // precio de compra
-            'price_C_Cop' => $valorUnidad * $pesoDolar, // precio de compra
+            'price_C_Bs' => $valorUnidad * $calculadora->getTasaProducto('dolarBolivar', $row), // precio de compra
+            'price_C_Cop' => $valorUnidad * $calculadora->getTasaProducto('pesoDolar', $row), // precio de compra
+            'tasas' => $calculadora->tasasDeProducto($row), // tasas efectivas para la vista previa
             'cantidadPaca' => $row['cantidad_unidades'],
             'unidad' => $mayor == 1 ? 'UND' : ($row['unidad'] ?? 'UND'),
             'paso' => ($mayor != 1 && ($row['unidad'] ?? 'UND') === 'KG') ? 0.01 : 1,
@@ -2896,7 +2897,7 @@ $stmt->close();
             // de venta en dólares fijado a mano.
             function calcularPreciosDesdeUsd(producto, usd) {
                 const precioUsd = Math.round(Number(usd) * 100) / 100;
-                const t = tasasCalculo;
+                const t = Object.assign({}, tasasCalculo, (producto && producto.tasas) ? producto.tasas : {});
                 if (!t || t.pesoBolivar <= 0 || t.bcv <= 0) {
                     return { usd: precioUsd, peso: 0, bs: 0 };
                 }

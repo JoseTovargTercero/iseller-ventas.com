@@ -205,12 +205,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <th class="text-center">%</th>
                                                 <th class="text-center">Sucursales</th>
                                                 <th class="text-right">Stock total</th>
+                                                <th class="text-center">Historial</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php if (empty($productosMayor)): ?>
                                                 <tr>
-                                                    <td colspan="7" class="mayor-empty">Aún no has registrado productos al mayor.</td>
+                                                    <td colspan="8" class="mayor-empty">Aún no has registrado productos al mayor.</td>
                                                 </tr>
                                             <?php else: ?>
                                                 <?php foreach ($productosMayor as $pm): ?>
@@ -222,6 +223,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                         <td class="text-center"><?= htmlspecialchars($pm['porcentaje'] ?? '') ?>%</td>
                                                         <td class="text-center"><?= (int)$pm['num_sucursales'] ?></td>
                                                         <td class="text-right"><?= (int)$pm['stock_total'] ?></td>
+                                                        <td class="text-center">
+                                                            <button type="button" class="btn btn-xs btn-info btn-historial-precio" data-id="<?= (int)$pm['id'] ?>" title="Historial de precios">
+                                                                <ion-icon name="time-outline"></ion-icon>
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
@@ -571,6 +577,75 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             tr.style.display = tr.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
                         });
                     });
+                }
+            });
+
+            // Historial de cambios de precio de compra
+            document.addEventListener('click', async function(e) {
+                const boton = e.target.closest('.btn-historial-precio');
+                if (!boton) return;
+
+                const esc = (valor) => String(valor ?? '').replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[c]));
+                const money = (valor) => '$' + Number(valor || 0).toLocaleString('es-VE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+                try {
+                    const res = await fetch('../../configurar/producto_precio_historial.php?producto_id=' + encodeURIComponent(boton.dataset.id));
+                    const data = await res.json();
+                    if (!data.ok) {
+                        Swal.fire('Historial', data.message || 'No se pudo consultar el historial.', 'warning');
+                        return;
+                    }
+
+                    const items = data.items || [];
+                    if (items.length === 0) {
+                        Swal.fire('Historial de precios', 'Todavía no hay cambios registrados para este producto.', 'info');
+                        return;
+                    }
+
+                    const filas = items.map((item) => `<tr>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;white-space:nowrap;">${esc(item.fecha)}</td>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;">${esc(item.producto)}</td>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;">${item.es_mayor ? 'Mayor' : 'Base'}</td>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;text-align:right;white-space:nowrap;">${money(item.precio_anterior)}</td>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;text-align:right;white-space:nowrap;">${money(item.precio_nuevo)}</td>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;">${esc(item.origen)}</td>
+                        <td style="padding:6px 8px;border-bottom:1px solid #2e353e;">${esc(item.usuario || '—')}</td>
+                    </tr>`).join('');
+
+                    Swal.fire({
+                        title: 'Historial de precios',
+                        html: `<div style="text-align:left;font-size:12px;">
+                            <div style="margin-bottom:10px;color:#8892a0;">${esc(data.producto)}</div>
+                            <div style="max-height:420px;overflow-y:auto;">
+                                <table style="width:100%;border-collapse:collapse;">
+                                    <thead><tr>
+                                        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #2e353e;">Fecha</th>
+                                        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #2e353e;">Producto</th>
+                                        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #2e353e;">Tipo</th>
+                                        <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #2e353e;">Antes</th>
+                                        <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #2e353e;">Después</th>
+                                        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #2e353e;">Origen</th>
+                                        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #2e353e;">Usuario</th>
+                                    </tr></thead>
+                                    <tbody>${filas}</tbody>
+                                </table>
+                            </div>
+                        </div>`,
+                        width: 780,
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#2dd4a0'
+                    });
+                } catch (error) {
+                    Swal.fire('Error', 'No se pudo consultar el historial de precios.', 'error');
                 }
             });
 

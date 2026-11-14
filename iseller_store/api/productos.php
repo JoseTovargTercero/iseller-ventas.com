@@ -141,7 +141,8 @@ function getCalculadora(int $bss_id, $recompensas = []) {
     $t = $_tasas_cache[$bss_id];
     return new CalculadoraPrecios(
         $t['pesoDolar'], $t['peso_bolivar'], $t['dolarBolivar'],
-        $t['bolivar_peso'], $t['bcv'], $t['data_monedas'], $recompensas
+        $t['bolivar_peso'], $t['bcv'], $t['data_monedas'], $recompensas,
+        $conexion, (int) $bss_id
     );
 }
 // ─────────────────────────────────────────────────────────────────────────

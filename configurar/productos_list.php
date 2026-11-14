@@ -4,7 +4,7 @@ require_once 'configuracion.php'; // Asegúrate de conectar a tu base de datos
 require_once 'session.php'; // Asegúrate de conectar a tu base de datos
 require("_tasas_cambio.php");
 require("_calculadrora_precios.php");
-$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas);
+$calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
 
 // Informacion de la tipo de cambio estandar
 $input = json_decode(file_get_contents("php://input"), true);
@@ -80,7 +80,8 @@ $catSelect = $hasCatTable && $hasCatCol
 
 $sql = "SELECT DISTINCT(S.id_producto), $select, P.codigo_barras, P.mayor, P.id as producto_id, S.id, P.nombre, P.proveedor, P.precio_compra, P.cantidad_unidades, P.origen, P.activo, MAX(NP.foto_url) AS foto_url,
 MAX(S.visible_venta) AS visible_venta, MAX(P.seguimiento_estricto) AS seguimiento_estricto,
-MAX(P.modo_control) AS modo_control, MAX(P.unidad) AS unidad $catSelect
+MAX(P.modo_control) AS modo_control, MAX(P.unidad) AS unidad,
+(SELECT COUNT(*) FROM producto_tasas_personalizadas pt WHERE pt.producto_id = P.id AND pt.bss_id = P.bss_id) AS tasas_count $catSelect
 FROM stock AS S
 LEFT JOIN productos AS P ON P.id = S.id_producto
 LEFT JOIN negocio_productos AS NP ON NP.producto_id = P.id AND NP.negocio_id = $bss_id
@@ -151,6 +152,7 @@ while ($row = $result->fetch_assoc()) {
             "seguimiento_estricto" =>  (int) $row['seguimiento_estricto'],
             "modo_control" =>  $row['modo_control'],
             "unidad" =>  $row['unidad'],
+            "tasas_count" =>  (int) ($row['tasas_count'] ?? 0),
 
         ];
     }

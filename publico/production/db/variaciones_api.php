@@ -52,6 +52,7 @@ register_shutdown_function(function () {
 });
 
 require_once(__DIR__ . '/../../../configurar/configuracion.php');
+require_once(__DIR__ . '/../../../configurar/_productos_precio_compra.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -463,23 +464,23 @@ try {
                 }
             }
 
+            producto_asegurar_historial_precio($conexion);
+
             $conexion->begin_transaction();
             try {
                 $cat = $categoria > 0 ? $categoria : null;
                 $stmt = $conexion->prepare(
                     "UPDATE productos
-                     SET nombre = ?, unidad = ?, precio_compra = ?, cantidad_unidades = ?, porcentaje = ?,
+                     SET nombre = ?, unidad = ?, cantidad_unidades = ?, porcentaje = ?,
                          codigo_barras = ?, origen = ?, proveedor = ?, categoria = ?, rendimiento = ?,
                          seguimiento_estricto = ?
                      WHERE id = ? AND bss_id = ?"
                 );
-                $precioTexto = (string) $precioCompra;
                 $cantidadTexto = (string) $cantidadUnidades;
                 $stmt->bind_param(
-                    'ssdsdsssidiii',
+                    'sssdsssidiii',
                     $nombre,
                     $unidad,
-                    $precioTexto,
                     $cantidadTexto,
                     $porcentaje,
                     $codigoBarras,
@@ -495,6 +496,17 @@ try {
                     throw new Exception('No se pudo actualizar la variación: ' . $stmt->error);
                 }
                 $stmt->close();
+
+                producto_actualizar_precio_compra(
+                    $conexion,
+                    $bssId,
+                    $variacionId,
+                    $precioCompra,
+                    'variacion',
+                    (int) ($_SESSION['id'] ?? 0),
+                    (string) ($_SESSION['nombre'] ?? ''),
+                    null
+                );
 
                 $stmtStock = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND bss_id = ?");
                 if ($stmtStock) {
