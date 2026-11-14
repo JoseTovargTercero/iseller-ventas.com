@@ -5536,8 +5536,17 @@ $stmt->close();
                                     fallos++;
                                 }
                             } else {
-                                console.error(`Error en pedido ID ${pedido.id}:`, response.data);
-                                Alerta.toast('error', `Error en pedido ${pedido.id}: ${response.data}`);
+                                // accion_carta.php devuelve los errores en un mapa
+                                // {idPedido: mensaje}; si se imprime tal cual se ve
+                                // "[object Object]" y se oculta la causa real.
+                                let detalle = response.data;
+                                if (detalle && typeof detalle === 'object') {
+                                    detalle = detalle[pedido.id]
+                                        ?? (Array.isArray(detalle) ? detalle.join(' | ') : Object.values(detalle).join(' | '));
+                                }
+                                if (!detalle) detalle = 'Error desconocido del servidor.';
+                                console.error(`Error en pedido ID ${pedido.id}:`, detalle, response);
+                                Alerta.toast('error', `Error en pedido ${pedido.id}: ${detalle}`);
                                 fallos++;
                             }
                         } catch (error) {
