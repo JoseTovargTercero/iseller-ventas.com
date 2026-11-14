@@ -1151,8 +1151,8 @@ unset($factura);
                                         </div>
                                         <div class="row">
                                             <div class="col-6 col-sm-3 fc-field">
-                                                <label for="cantidad">Cantidad (unid.)</label>
-                                                <input type="number" id="cantidad" class="form-control" min="1" step="1" placeholder="0">
+                                                <label for="cantidad">Cantidad</label>
+                                                <input type="number" id="cantidad" class="form-control" min="0.001" step="0.001" inputmode="decimal" placeholder="0.000">
                                             </div>
                                             <div class="col-6 col-sm-3 fc-field">
                                                 <label for="precio">Precio bulto ($)</label>
@@ -1420,6 +1420,20 @@ unset($factura);
                 return (Number(linea.precio) / unidadesPorBulto) * Number(linea.cantidad);
             }
 
+            // Las cantidades pueden ser fraccionarias (kg, litros, etc.).
+            // Se guardan con hasta 3 decimales, igual que el stock.
+            function redondearCantidad(valor) {
+                const numero = Number(valor);
+                if (!isFinite(numero)) return NaN;
+                return Math.round((numero + Number.EPSILON) * 1000) / 1000;
+            }
+
+            function cantidadTexto(valor) {
+                return Number(valor || 0).toLocaleString('en-US', {
+                    maximumFractionDigits: 3
+                });
+            }
+
             function mostrarPaso(paso) {
                 pasoActual = paso;
 
@@ -1525,7 +1539,7 @@ unset($factura);
                     tr.appendChild(tdNombre);
 
                     [
-                        [linea.cantidad, 'text-right'],
+                        [cantidadTexto(linea.cantidad), 'text-right'],
                         ['$' + dinero(linea.precio), 'text-right'],
                         [linea.unidades_bulto, 'text-right'],
                         ['$' + dinero(subtotal), 'text-right fc-amount']
@@ -1633,12 +1647,12 @@ unset($factura);
                     return;
                 }
 
-                const cantidadValor = parseInt(cantidad.value, 10);
+                const cantidadValor = redondearCantidad(cantidad.value);
                 const precioValor = parseFloat(precio.value);
                 const unidadesValor = parseInt(unidadesBulto.value, 10);
                 const porcentajeValor = parseFloat(porcentaje.value || 0);
 
-                if (!cantidadValor || cantidadValor <= 0 || !precioValor || precioValor <= 0 || !unidadesValor || unidadesValor <= 0) {
+                if (!cantidadValor || !isFinite(cantidadValor) || cantidadValor <= 0 || !precioValor || precioValor <= 0 || !unidadesValor || unidadesValor <= 0) {
                     Alerta.toast('error', 'Cantidad, precio y unidades por bulto deben ser mayores que cero');
                     return;
                 }

@@ -118,7 +118,7 @@ function datosProductos($producto)
 function getProductos($orderId)
 {
     global $conexion;
-    $stmt = $conexion->prepare("SELECT product_id, quantity FROM orden_articulos WHERE order_id = ?");
+    $stmt = $conexion->prepare("SELECT product_id, quantity, precio_venta_dolar, precio_venta_bs, precio_venta_cop FROM orden_articulos WHERE order_id = ?");
     $stmt->bind_param('s', $orderId);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -126,8 +126,21 @@ function getProductos($orderId)
     $productos = [];
     while ($row = $res->fetch_assoc()) {
         $datos = datosProductos($row['product_id']);
-        $datos['cantidad'] =    (float)$row['quantity']; // Agregar cantidad al array de datos 
         if (empty($datos)) continue;
+
+        // Precio realmente cobrado en la venta: conserva precios especiales y las
+        // tasas del momento. Si el artículo no tiene precio guardado, se usa el
+        // precio del catálogo como respaldo.
+        $usd = (float) $row['precio_venta_dolar'];
+        if ($usd > 0) {
+            $bs  = (float) $row['precio_venta_bs'];
+            $cop = (float) $row['precio_venta_cop'];
+            $datos['precio_dolar_visible'] = $usd;
+            if ($bs > 0)  $datos['precio_bs_visible']  = $bs;
+            if ($cop > 0) $datos['precio_peso_visible'] = $cop;
+        }
+
+        $datos['cantidad'] = (float)$row['quantity']; // Agregar cantidad al array de datos
 
         $productos[] = [
             'id' => (int)$row['product_id'],

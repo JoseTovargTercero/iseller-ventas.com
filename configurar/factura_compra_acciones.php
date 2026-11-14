@@ -85,7 +85,7 @@ if ($accion === 'detalle') {
     while ($fila = $res->fetch_assoc()) {
         $lineas[] = [
             'producto' => $fila['producto'],
-            'cantidad' => (int) $fila['cantidad'],
+            'cantidad' => round((float) $fila['cantidad'], 3),
             'unidades_bulto' => (int) $fila['CporPrecio'],
             'porcentaje' => (float) $fila['Porcentaje'],
             'subtotal' => fc_linea_total($fila['precio'], $fila['CporPrecio'], $fila['cantidad']),
@@ -185,7 +185,7 @@ if ($accion === 'guardar') {
 
         foreach ($lineas as $linea) {
             $productoId = (int) ($linea['producto_id'] ?? 0);
-            $cantidad = (float) ($linea['cantidad'] ?? 0);
+            $cantidad = round((float) ($linea['cantidad'] ?? 0), 3); // admite fracciones (kg, litros, etc.)
             $precio = round((float) ($linea['precio'] ?? 0), 2);
             $unidadesBulto = (int) ($linea['unidades_bulto'] ?? 0);
             $porcentaje = round((float) ($linea['porcentaje'] ?? 0), 2);
