@@ -14,6 +14,12 @@ ob_start();
 
     <?php
     require_once '../../configurar/configuracion.php';
+    require_once __DIR__ . '/../../../configurar/_cuentas_pagar.php';
+
+    // El módulo de cuentas por pagar se agrega solo al menú si aún no existe.
+    if (isset($conexion) && $conexion) {
+      cp_asegurar_menu($conexion);
+    }
 
     // Consultar estado de tienda virtual y órdenes pendientes
     $bss_id = $_SESSION['bss_id'] ?? 0;

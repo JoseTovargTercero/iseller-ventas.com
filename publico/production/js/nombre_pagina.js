@@ -53,6 +53,10 @@ const configPaginas = {
     titulo: "Compras con factura",
     subtitulo: "Facturas de proveedores, pagos y abonos",
   },
+  "cuentas_pagar.php": {
+    titulo: "Cuentas por pagar",
+    subtitulo: "Facturas por conceptos, abonos y compras con factura",
+  },
   "nuevo_producto_sucursal.php": {
     titulo: "Agregar producto",
     subtitulo: "Agregue un producto existente a la sucursal",
