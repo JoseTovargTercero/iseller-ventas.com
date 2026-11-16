@@ -228,79 +228,103 @@ unset($factura);
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
-                                <form id="cp-form" class="fc-form" autocomplete="off">
+                                <form id="cp-form" class="fc-form" autocomplete="off" novalidate>
                                     <div class="modal-body">
-                                        <div class="row">
-                                            <div class="col-sm-6 fc-field">
-                                                <label for="cp-proveedor">Proveedor</label>
-                                                <input type="text" id="cp-proveedor" class="form-control" maxlength="255" required placeholder="Nombre del proveedor">
+                                        <div class="fc-wizard">
+                                            <div class="fc-wizard-step active" data-step="1">
+                                                <span>1</span>
+                                                <div><strong>Factura</strong><small>Proveedor y datos</small></div>
                                             </div>
-                                            <div class="col-sm-6 fc-field">
-                                                <label for="cp-numero">N° de factura</label>
-                                                <input type="text" id="cp-numero" class="form-control" maxlength="100" required placeholder="Ej. F-000123">
-                                            </div>
-                                            <div class="col-sm-6 fc-field">
-                                                <label for="cp-fecha">Fecha de factura</label>
-                                                <input type="date" id="cp-fecha" class="form-control" value="<?= date('Y-m-d') ?>" required>
-                                            </div>
-                                            <div class="col-sm-6 fc-field">
-                                                <label for="cp-sucursal">Sucursal</label>
-                                                <select id="cp-sucursal" class="form-control" required>
-                                                    <?php if (count($sucursales) !== 1): ?>
-                                                        <option value="">-- Seleccione --</option>
-                                                    <?php endif; ?>
-                                                    <?php foreach ($sucursales as $sucursalItem): ?>
-                                                        <option value="<?= (int) $sucursalItem['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
-                                                            <?= htmlspecialchars($sucursalItem['nombre']) ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
-                                            <div class="col-sm-6 fc-field">
-                                                <label for="cp-vencimiento">Vencimiento del crédito</label>
-                                                <input type="date" id="cp-vencimiento" class="form-control" value="<?= date('Y-m-d', strtotime('+30 days')) ?>">
-                                                <small class="fc-help">Fecha límite para pagar el saldo pendiente.</small>
-                                            </div>
-                                            <div class="col-sm-6 fc-field">
-                                                <label for="cp-abono">Abono inicial ($)</label>
-                                                <input type="number" id="cp-abono" class="form-control" min="0" step="0.01" value="0">
-                                                <small class="fc-help">Déjalo en 0 para registrar la factura como pendiente.</small>
+                                            <div class="fc-wizard-line"></div>
+                                            <div class="fc-wizard-step" data-step="2">
+                                                <span>2</span>
+                                                <div><strong>Conceptos</strong><small>Detalle a pagar</small></div>
                                             </div>
                                         </div>
 
-                                        <div class="fc-section-title"><span>1</span> Conceptos de la factura</div>
-                                        <div class="cp-conceptos-wrap">
-                                            <table class="table fc-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Concepto</th>
-                                                        <th class="text-right">Monto</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="cp-conceptos-body"></tbody>
-                                            </table>
-                                        </div>
-                                        <button type="button" id="cp-agregar-concepto" class="fc-add-btn">
-                                            <i class="bi bi-plus-lg"></i> Agregar concepto
-                                        </button>
+                                        <div class="fc-step active" data-step="1">
+                                            <div class="row">
+                                                <div class="col-sm-6 fc-field">
+                                                    <label for="cp-proveedor">Proveedor</label>
+                                                    <input type="text" id="cp-proveedor" class="form-control" maxlength="255" required placeholder="Nombre del proveedor">
+                                                </div>
+                                                <div class="col-sm-6 fc-field">
+                                                    <label for="cp-numero">N° de factura</label>
+                                                    <input type="text" id="cp-numero" class="form-control" maxlength="100" required placeholder="Ej. F-000123">
+                                                </div>
+                                                <div class="col-sm-6 fc-field">
+                                                    <label for="cp-fecha">Fecha de factura</label>
+                                                    <input type="date" id="cp-fecha" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                                                </div>
+                                                <div class="col-sm-6 fc-field">
+                                                    <label for="cp-sucursal">Sucursal</label>
+                                                    <select id="cp-sucursal" class="form-control" required>
+                                                        <?php if (count($sucursales) !== 1): ?>
+                                                            <option value="">-- Seleccione --</option>
+                                                        <?php endif; ?>
+                                                        <?php foreach ($sucursales as $sucursalItem): ?>
+                                                            <option value="<?= (int) $sucursalItem['id'] ?>" <?= count($sucursales) === 1 ? 'selected' : '' ?>>
+                                                                <?= htmlspecialchars($sucursalItem['nombre']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="col-sm-6 fc-field">
+                                                    <label for="cp-vencimiento">Vencimiento del crédito</label>
+                                                    <input type="date" id="cp-vencimiento" class="form-control" value="<?= date('Y-m-d', strtotime('+30 days')) ?>">
+                                                    <small class="fc-help">Fecha límite para pagar el saldo pendiente.</small>
+                                                </div>
+                                                <div class="col-sm-6 fc-field">
+                                                    <label for="cp-abono">Abono inicial ($)</label>
+                                                    <input type="number" id="cp-abono" class="form-control" min="0" step="0.01" value="0">
+                                                    <small class="fc-help">Déjalo en 0 para registrar la factura como pendiente.</small>
+                                                </div>
+                                            </div>
+                                        </div><!-- /step 1 -->
 
-                                        <div class="fc-pay-summary" style="margin-top:14px;">
-                                            <div>
-                                                <span class="fc-summary-label">Total factura</span>
-                                                <div class="fc-total">$<span id="cp-total">0.00</span></div>
+                                        <div class="fc-step" data-step="2">
+                                            <div class="fc-section-title"><span>2</span> Conceptos de la factura</div>
+                                            <button type="button" id="cp-agregar-concepto" class="fc-add-btn" style="margin-bottom:12px;">
+                                                <i class="bi bi-plus-lg"></i> Agregar concepto
+                                            </button>
+                                            <div class="cp-conceptos-wrap">
+                                                <table class="table fc-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Concepto</th>
+                                                            <th class="text-right">Monto</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="cp-conceptos-body"></tbody>
+                                                </table>
                                             </div>
-                                            <div>
-                                                <span class="fc-summary-label">Queda pendiente</span>
-                                                <div class="fc-pending" id="cp-saldo">$0.00</div>
+
+                                            <div class="fc-pay-summary" style="margin-top:14px;">
+                                                <div>
+                                                    <span class="fc-summary-label">Total factura</span>
+                                                    <div class="fc-total">$<span id="cp-total">0.00</span></div>
+                                                </div>
+                                                <div>
+                                                    <span class="fc-summary-label">Queda pendiente</span>
+                                                    <div class="fc-pending" id="cp-saldo">$0.00</div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        </div><!-- /step 2 -->
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="fc-ghost-btn" data-dismiss="modal">Cancelar</button>
-                                        <button type="submit" id="cp-guardar" class="fc-save-btn">
-                                            <i class="bi bi-check2-circle"></i> Guardar factura
-                                        </button>
+                                        <div class="fc-wizard-nav">
+                                            <button type="button" id="cp-atras" class="fc-ghost-btn d-none">
+                                                <i class="bi bi-arrow-left"></i> Atrás
+                                            </button>
+                                            <button type="button" id="cp-siguiente" class="fc-primary-btn">
+                                                Siguiente <i class="bi bi-arrow-right"></i>
+                                            </button>
+                                            <button type="submit" id="cp-guardar" class="fc-save-btn d-none">
+                                                <i class="bi bi-check2-circle"></i> Guardar factura
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             </div>
@@ -533,6 +557,7 @@ unset($factura);
             const filtroOrigen = $('filtro-origen');
             const facturasBody = $('fc-facturas-body');
             let filtroFacturas = 'todas';
+            let cpPasoActual = 1;
 
             function dinero(valor) {
                 return Number(valor || 0).toLocaleString('en-US', {
@@ -653,6 +678,72 @@ unset($factura);
                 saldoCp.classList.toggle('zero', saldo <= 0.005);
             }
 
+            function mostrarPasoCp(paso) {
+                cpPasoActual = paso;
+
+                document.querySelectorAll('#modalNuevaFactura .fc-step').forEach((panel) => {
+                    panel.classList.toggle('active', Number(panel.dataset.step) === paso);
+                });
+                document.querySelectorAll('#modalNuevaFactura .fc-wizard-step').forEach((step) => {
+                    const numero = Number(step.dataset.step);
+                    step.classList.toggle('active', numero === paso);
+                    step.classList.toggle('done', numero < paso);
+                });
+
+                $('cp-atras').classList.toggle('d-none', paso === 1);
+                $('cp-siguiente').classList.toggle('d-none', paso === 2);
+                $('cp-guardar').classList.toggle('d-none', paso !== 2);
+
+                const cuerpoModal = document.querySelector('#modalNuevaFactura .modal-body');
+                if (cuerpoModal) {
+                    cuerpoModal.scrollTop = 0;
+                }
+
+                if (paso === 2) {
+                    actualizarTotalesCp();
+                    setTimeout(() => {
+                        const primeraDesc = conceptosBody.querySelector('.cp-concepto-desc');
+                        if (primeraDesc) primeraDesc.focus();
+                    }, 120);
+                }
+            }
+
+            function validarPaso1Cp() {
+                const proveedor = $('cp-proveedor').value.trim();
+                const numero = $('cp-numero').value.trim();
+                const fecha = $('cp-fecha').value;
+                const sucursal = $('cp-sucursal').value;
+                const vencimiento = $('cp-vencimiento').value;
+
+                if (!proveedor) {
+                    Alerta.toast('error', 'Indique el proveedor de la factura');
+                    $('cp-proveedor').focus();
+                    return false;
+                }
+                if (!numero) {
+                    Alerta.toast('error', 'Indique el número de factura');
+                    $('cp-numero').focus();
+                    return false;
+                }
+                if (!fecha) {
+                    Alerta.toast('error', 'Indique la fecha de la factura');
+                    $('cp-fecha').focus();
+                    return false;
+                }
+                if (!sucursal) {
+                    Alerta.toast('error', 'Seleccione la sucursal');
+                    $('cp-sucursal').focus();
+                    return false;
+                }
+                if (vencimiento && vencimiento < fecha) {
+                    Alerta.toast('error', 'El vencimiento no puede ser anterior a la fecha de la factura');
+                    $('cp-vencimiento').focus();
+                    return false;
+                }
+
+                return true;
+            }
+
             conceptosBody.addEventListener('input', actualizarTotalesCp);
             abonoCp.addEventListener('input', actualizarTotalesCp);
 
@@ -669,12 +760,36 @@ unset($factura);
                 fila.querySelector('.cp-concepto-desc').focus();
             });
 
+            $('cp-siguiente').addEventListener('click', function() {
+                if (validarPaso1Cp()) {
+                    mostrarPasoCp(2);
+                }
+            });
+
+            $('cp-atras').addEventListener('click', function() {
+                if (cpPasoActual > 1) {
+                    mostrarPasoCp(1);
+                }
+            });
+
+            document.querySelectorAll('#modalNuevaFactura .fc-wizard-step').forEach((step) => {
+                step.addEventListener('click', function() {
+                    const destino = Number(this.dataset.step);
+                    if (destino < cpPasoActual) {
+                        mostrarPasoCp(destino);
+                    } else if (destino > cpPasoActual && validarPaso1Cp()) {
+                        mostrarPasoCp(destino);
+                    }
+                });
+            });
+
             function limpiarFormularioCuenta() {
                 $('cp-form').reset();
                 $('cp-vencimiento').min = $('cp-fecha').value;
                 conceptosBody.innerHTML = '';
                 agregarFilaConcepto();
                 actualizarTotalesCp();
+                mostrarPasoCp(1);
             }
 
             window.jQuery('#modalNuevaFactura').on('shown.bs.modal', function() {
@@ -684,6 +799,18 @@ unset($factura);
 
             $('cp-form').addEventListener('submit', async function(evento) {
                 evento.preventDefault();
+
+                if (cpPasoActual === 1) {
+                    if (validarPaso1Cp()) {
+                        mostrarPasoCp(2);
+                    }
+                    return;
+                }
+
+                if (!validarPaso1Cp()) {
+                    mostrarPasoCp(1);
+                    return;
+                }
 
                 const proveedor = $('cp-proveedor').value.trim();
                 const numero = $('cp-numero').value.trim();

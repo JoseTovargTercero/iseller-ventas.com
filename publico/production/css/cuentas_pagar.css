@@ -967,7 +967,7 @@
 }
 
 .cp-conceptos-wrap {
-    max-height: 280px;
+    max-height: 200px;
     overflow: auto;
     border: 1px solid var(--dash-border);
     border-radius: 11px;
