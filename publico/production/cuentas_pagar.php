@@ -31,10 +31,23 @@ if ($stmtConfig) {
     $verCompras = $configFila && (int) $configFila['factura'] === 1;
 }
 
+if ($verCompras) {
+    $tablaCompras = $conexion->query("SHOW TABLES LIKE 'compras_facturas'");
+    $verCompras = $tablaCompras && $tablaCompras->num_rows > 0;
+    if ($tablaCompras) {
+        $tablaCompras->free();
+    }
+}
+
 $origenes = ['concepto'];
 if ($verCompras) {
     $origenes[] = 'compra';
 }
+
+$permisosSesion = $_SESSION['permisos'] ?? [];
+$puedeCompras = $nivel === 1
+    || in_array('nuevaCompra.php', $permisosSesion, true)
+    || in_array('compras_facturas.php', $permisosSesion, true);
 
 $topnav = topnav();
 $sucursalSesion = (int) ($_SESSION['sucursal'] ?? 0);
@@ -79,7 +92,7 @@ $stats = [
     'total_facturas' => 0,
 ];
 
-foreach (['concepto', 'compra'] as $origen) {
+foreach ($origenes as $origen) {
     $fila = cp_estadisticas($conexion, $bss_id, $nivel === 2 ? $sucursalSesion : 0, $origen);
     $stats['pendientes'] += (int) ($fila['pendientes'] ?? 0);
     $stats['pendiente_saldo'] += (float) ($fila['pendiente_saldo'] ?? 0);
@@ -165,9 +178,11 @@ unset($factura);
                         <p>Registra facturas por conceptos sin afectar el inventario y consulta las compras con factura.</p>
                     </div>
                     <div class="fc-hero-actions">
-                        <a href="compras_facturas.php" class="fc-ghost-btn">
-                            <i class="bi bi-receipt"></i> Compras con factura
-                        </a>
+                        <?php if ($verCompras && $puedeCompras): ?>
+                            <a href="compras_facturas.php" class="fc-ghost-btn">
+                                <i class="bi bi-receipt"></i> Compras con factura
+                            </a>
+                        <?php endif; ?>
                         <button type="button" class="fc-primary-btn" data-toggle="modal" data-target="#modalNuevaFactura">
                             <i class="bi bi-plus-lg"></i> Nueva factura
                         </button>
@@ -371,7 +386,7 @@ unset($factura);
                                     <span class="fc-title-icon"><i class="bi bi-wallet2"></i></span>
                                     <div>
                                         <h3>Facturas por pagar</h3>
-                                        <p><?= (int) $stats['total_facturas'] ?> factura<?= $stats['total_facturas'] === 1 ? '' : 's' ?> registrada<?= $stats['total_facturas'] === 1 ? '' : 's' ?> entre conceptos y compras</p>
+                                        <p><?= (int) $stats['total_facturas'] ?> factura<?= $stats['total_facturas'] === 1 ? '' : 's' ?> registrada<?= $stats['total_facturas'] === 1 ? '' : 's' ?><?= $verCompras ? ' entre conceptos y compras' : ' por conceptos' ?></p>
                                     </div>
                                 </div>
                                 <div class="fc-list-tools">
@@ -379,11 +394,15 @@ unset($factura);
                                         <i class="bi bi-search"></i>
                                         <input type="text" id="buscar-factura" placeholder="Buscar factura o proveedor">
                                     </div>
-                                    <select id="filtro-origen" class="fc-select" aria-label="Origen de la factura">
-                                        <option value="">Todos los orígenes</option>
-                                        <option value="concepto">Solo conceptos</option>
-                                        <option value="compra">Solo compras</option>
-                                    </select>
+                                    <?php if ($verCompras): ?>
+                                        <select id="filtro-origen" class="fc-select" aria-label="Origen de la factura">
+                                            <option value="">Todos los orígenes</option>
+                                            <option value="concepto">Solo conceptos</option>
+                                            <option value="compra">Solo compras</option>
+                                        </select>
+                                    <?php else: ?>
+                                        <input type="hidden" id="filtro-origen" value="">
+                                    <?php endif; ?>
                                     <div class="fc-chips">
                                         <button type="button" class="fc-chip active" data-filtro="todas">Todas</button>
                                         <button type="button" class="fc-chip" data-filtro="pendientes">Pendientes</button>
@@ -522,6 +541,12 @@ unset($factura);
                 });
             }
 
+            function redondearMonto(valor) {
+                const numero = Number(valor);
+                if (!isFinite(numero)) return NaN;
+                return Math.round((numero + Number.EPSILON) * 100) / 100;
+            }
+
             function fechaCorta(fechaISO) {
                 if (!fechaISO) return '';
                 const partes = String(fechaISO).split('-');
@@ -616,7 +641,7 @@ unset($factura);
 
             function actualizarTotalesCp() {
                 const total = Math.round(leerConceptos().reduce((acumulado, fila) => {
-                    const monto = parseFloat(fila.monto || 0);
+                    const monto = redondearMonto(fila.monto || 0);
                     return acumulado + (isFinite(monto) && monto > 0 ? monto : 0);
                 }, 0) * 100) / 100;
 
@@ -631,6 +656,14 @@ unset($factura);
             conceptosBody.addEventListener('input', actualizarTotalesCp);
             abonoCp.addEventListener('input', actualizarTotalesCp);
 
+            $('cp-fecha').addEventListener('change', function() {
+                const vencimiento = $('cp-vencimiento');
+                vencimiento.min = this.value;
+                if (vencimiento.value && vencimiento.value < this.value) {
+                    vencimiento.value = this.value;
+                }
+            });
+
             $('cp-agregar-concepto').addEventListener('click', function() {
                 const fila = agregarFilaConcepto();
                 fila.querySelector('.cp-concepto-desc').focus();
@@ -638,6 +671,7 @@ unset($factura);
 
             function limpiarFormularioCuenta() {
                 $('cp-form').reset();
+                $('cp-vencimiento').min = $('cp-fecha').value;
                 conceptosBody.innerHTML = '';
                 agregarFilaConcepto();
                 actualizarTotalesCp();
@@ -687,7 +721,7 @@ unset($factura);
 
                 let total = 0;
                 for (const fila of conceptos) {
-                    const monto = parseFloat(fila.monto);
+                    const monto = redondearMonto(fila.monto);
                     if (!fila.concepto) {
                         Alerta.toast('error', 'Cada concepto debe tener una descripción');
                         return;
@@ -754,7 +788,9 @@ unset($factura);
                 const origenFiltro = filtroOrigen.value;
                 let visibles = 0;
 
-                document.querySelectorAll('#fc-facturas-body tr[data-factura]').forEach((tr) => {
+                const filas = document.querySelectorAll('#fc-facturas-body tr[data-factura]');
+
+                filas.forEach((tr) => {
                     const estado = tr.dataset.estado;
                     const vencida = tr.dataset.vencida === '1';
                     const origen = tr.dataset.origen;
@@ -771,7 +807,7 @@ unset($factura);
                     if (mostrar) visibles++;
                 });
 
-                emptyFilter.style.display = visibles === 0 ? 'block' : 'none';
+                emptyFilter.style.display = filas.length > 0 && visibles === 0 ? 'block' : 'none';
             }
 
             document.querySelectorAll('.fc-chip').forEach((boton) => {

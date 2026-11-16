@@ -50,15 +50,18 @@ CREATE TABLE IF NOT EXISTS `cuentas_pagar_pagos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Entrada de menú. Se reutiliza la categoría de compras si existe.
+SET @cp_menu_nueva = (SELECT COUNT(*) FROM `menu` WHERE dir = 'nuevaCompra.php');
+SET @cp_menu_compras = (SELECT COUNT(*) FROM `menu` WHERE dir = 'compras_facturas.php');
+SET @cp_menu_categoria = CASE
+    WHEN @cp_menu_nueva > 0 THEN (SELECT categoria FROM `menu` WHERE dir = 'nuevaCompra.php' LIMIT 1)
+    WHEN @cp_menu_compras > 0 THEN (SELECT categoria FROM `menu` WHERE dir = 'compras_facturas.php' LIMIT 1)
+    ELSE 'Compras'
+END;
+
 INSERT INTO `menu` (`categoria`, `nombre`, `dir`, `icono`, `admin`)
-SELECT COALESCE(
-           (SELECT m.categoria FROM `menu` m WHERE m.dir = 'nuevaCompra.php' LIMIT 1),
-           (SELECT m2.categoria FROM `menu` m2 WHERE m2.dir = 'compras_facturas.php' LIMIT 1),
-           'Compras'
-       ),
-       'Cuentas por pagar', 'cuentas_pagar.php', 'wallet-outline', 0
+SELECT @cp_menu_categoria, 'Cuentas por pagar', 'cuentas_pagar.php', 'wallet-outline', 0
 FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM `menu` m3 WHERE m3.dir = 'cuentas_pagar.php');
+WHERE NOT EXISTS (SELECT 1 FROM `menu` WHERE dir = 'cuentas_pagar.php');
 
 -- ============================================================
 -- Verificación

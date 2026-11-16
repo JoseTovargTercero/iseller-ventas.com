@@ -9,6 +9,8 @@ if ($nivel !== 1 && $nivel !== 2) {
 }
 
 $bss_id = (int) $_SESSION['bss_id'];
+$permisosSesion = $_SESSION['permisos'] ?? [];
+$puedeCuentasPagar = $nivel === 1 || in_array('cuentas_pagar.php', $permisosSesion, true);
 
 if (!fc_asegurar_esquema($conexion)) {
     http_response_code(500);
@@ -1118,9 +1120,11 @@ unset($factura);
                         <p>Registra facturas de proveedores, controla saldos y fechas de vencimiento.</p>
                     </div>
                     <div class="fc-hero-actions">
-                        <a href="cuentas_pagar.php" class="fc-ghost-btn">
-                            <i class="bi bi-wallet2"></i> Cuentas por pagar
-                        </a>
+                        <?php if ($puedeCuentasPagar): ?>
+                            <a href="cuentas_pagar.php" class="fc-ghost-btn">
+                                <i class="bi bi-wallet2"></i> Cuentas por pagar
+                            </a>
+                        <?php endif; ?>
                         <a href="nuevaCompra.php" class="fc-ghost-btn">
                             <i class="bi bi-arrow-left"></i> Compras clásicas
                         </a>

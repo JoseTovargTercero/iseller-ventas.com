@@ -13,8 +13,8 @@ function cp_asegurar_esquema($conexion): bool
         return $listo;
     }
 
-    $sqls = [
-        "CREATE TABLE IF NOT EXISTS `cuentas_pagar_facturas` (
+    $tablas = [
+        'cuentas_pagar_facturas' => "CREATE TABLE IF NOT EXISTS `cuentas_pagar_facturas` (
             `id` INT(11) NOT NULL AUTO_INCREMENT,
             `bss_id` INT(11) NOT NULL,
             `id_sucursal` INT(11) NOT NULL,
@@ -32,7 +32,7 @@ function cp_asegurar_esquema($conexion): bool
             KEY `idx_cpf_bss_num` (`bss_id`, `numero_factura`),
             KEY `idx_cpf_sucursal` (`id_sucursal`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
-        "CREATE TABLE IF NOT EXISTS `cuentas_pagar_conceptos` (
+        'cuentas_pagar_conceptos' => "CREATE TABLE IF NOT EXISTS `cuentas_pagar_conceptos` (
             `id` INT(11) NOT NULL AUTO_INCREMENT,
             `factura_id` INT(11) NOT NULL,
             `bss_id` INT(11) NOT NULL,
@@ -44,7 +44,7 @@ function cp_asegurar_esquema($conexion): bool
             KEY `idx_cpc_bss` (`bss_id`),
             CONSTRAINT `fk_cpc_factura` FOREIGN KEY (`factura_id`) REFERENCES `cuentas_pagar_facturas` (`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
-        "CREATE TABLE IF NOT EXISTS `cuentas_pagar_pagos` (
+        'cuentas_pagar_pagos' => "CREATE TABLE IF NOT EXISTS `cuentas_pagar_pagos` (
             `id` INT(11) NOT NULL AUTO_INCREMENT,
             `factura_id` INT(11) NOT NULL,
             `bss_id` INT(11) NOT NULL,
@@ -59,7 +59,16 @@ function cp_asegurar_esquema($conexion): bool
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
 
-    foreach ($sqls as $sql) {
+    foreach ($tablas as $nombre => $sql) {
+        $res = $conexion->query("SHOW TABLES LIKE '" . $nombre . "'");
+        if ($res && $res->num_rows > 0) {
+            $res->free();
+            continue;
+        }
+        if ($res) {
+            $res->free();
+        }
+
         if (!@$conexion->query($sql)) {
             return $listo = false;
         }
@@ -80,17 +89,39 @@ function cp_asegurar_menu($conexion): void
     }
     $hecho = true;
 
-    @$conexion->query(
+    // Reutiliza la categoría del módulo de compras. Se consulta primero para
+    // no depender de subconsultas sobre la misma tabla que se inserta.
+    $categoria = null;
+    $encontrada = false;
+
+    foreach (['nuevaCompra.php', 'compras_facturas.php'] as $dir) {
+        $res = $conexion->query("SELECT categoria FROM `menu` WHERE dir = '" . $conexion->real_escape_string($dir) . "' LIMIT 1");
+        if ($res) {
+            $fila = $res->fetch_assoc();
+            $res->free();
+            if ($fila) {
+                $categoria = $fila['categoria'];
+                $encontrada = true;
+                break;
+            }
+        }
+    }
+
+    if (!$encontrada) {
+        $categoria = 'Compras';
+    }
+
+    $stmt = $conexion->prepare(
         "INSERT INTO `menu` (`categoria`, `nombre`, `dir`, `icono`, `admin`)
-         SELECT COALESCE(
-                    (SELECT m.categoria FROM `menu` m WHERE m.dir = 'nuevaCompra.php' LIMIT 1),
-                    (SELECT m2.categoria FROM `menu` m2 WHERE m2.dir = 'compras_facturas.php' LIMIT 1),
-                    'Compras'
-                ),
-                'Cuentas por pagar', 'cuentas_pagar.php', 'wallet-outline', 0
+         SELECT ?, 'Cuentas por pagar', 'cuentas_pagar.php', 'wallet-outline', 0
          FROM DUAL
-         WHERE NOT EXISTS (SELECT 1 FROM `menu` m3 WHERE m3.dir = 'cuentas_pagar.php')"
+         WHERE NOT EXISTS (SELECT 1 FROM `menu` WHERE dir = 'cuentas_pagar.php')"
     );
+    if ($stmt) {
+        $stmt->bind_param("s", $categoria);
+        @$stmt->execute();
+        $stmt->close();
+    }
 }
 
 function cp_estado($total, $abonado): string

@@ -102,10 +102,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // ── Registrar una factura por conceptos ─────────────────────────────────────
 if ($accion === 'guardar') {
-    $proveedor = trim((string) ($input['proveedor'] ?? ''));
-    $numeroFactura = trim((string) ($input['numero_factura'] ?? ''));
-    $fechaFactura = trim((string) ($input['fecha_factura'] ?? ''));
-    $fechaVencimiento = trim((string) ($input['fecha_vencimiento'] ?? ''));
+    $proveedorRaw = $input['proveedor'] ?? '';
+    $numeroFacturaRaw = $input['numero_factura'] ?? '';
+    $fechaFacturaRaw = $input['fecha_factura'] ?? '';
+    $fechaVencimientoRaw = $input['fecha_vencimiento'] ?? '';
+
+    $proveedor = is_string($proveedorRaw) ? trim($proveedorRaw) : '';
+    $numeroFactura = is_string($numeroFacturaRaw) ? trim($numeroFacturaRaw) : '';
+    $fechaFactura = is_string($fechaFacturaRaw) ? trim($fechaFacturaRaw) : '';
+    $fechaVencimiento = is_string($fechaVencimientoRaw) ? trim($fechaVencimientoRaw) : '';
     $abonoInicial = round((float) ($input['abono_inicial'] ?? 0), 2);
     $conceptosRaw = $input['conceptos'] ?? null;
 
@@ -139,7 +144,11 @@ if ($accion === 'guardar') {
             continue;
         }
 
-        $texto = trim((string) ($fila['concepto'] ?? ''));
+        $textoRaw = $fila['concepto'] ?? '';
+        if (!is_string($textoRaw)) {
+            cpResponder(false, 'Cada concepto debe tener una descripción válida.');
+        }
+        $texto = trim($textoRaw);
         $montoRaw = $fila['monto'] ?? '';
 
         // Las filas completamente vacías se ignoran (el usuario pudo dejar
