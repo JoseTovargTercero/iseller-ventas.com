@@ -18,19 +18,6 @@ ob_start();
     // Consultar estado de tienda virtual y órdenes pendientes
     $bss_id = $_SESSION['bss_id'] ?? 0;
 
-    // Si el negocio registra compras con factura, el menú abre ese módulo.
-    $facturaCompras = false;
-    if ($bss_id > 0) {
-      $stmtFacturaMenu = mysqli_prepare($conexion, "SELECT factura FROM configuracion WHERE bss_id = ? ORDER BY id DESC LIMIT 1");
-      if ($stmtFacturaMenu) {
-        $stmtFacturaMenu->bind_param("i", $bss_id);
-        $stmtFacturaMenu->execute();
-        $rowFacturaMenu = $stmtFacturaMenu->get_result()->fetch_assoc();
-        $stmtFacturaMenu->close();
-        $facturaCompras = $rowFacturaMenu && (int) $rowFacturaMenu['factura'] === 1;
-      }
-    }
-
     require_once '../../configurar/MembresiaHelper.php';
     $estadoMemMenu = MembresiaHelper::obtenerEstado($conexion, $bss_id);
 
@@ -88,14 +75,10 @@ ob_start();
           continue;
         }
 
-        $listar = ($_SESSION["nivel"] == 1 || isset($_SESSION['permisos'][$row['id']]) || ($row['dir'] === 'tienda_planes_entrega.php' && in_array('tienda_pedidos.php', $_SESSION['permisos'] ?? [], true)));
+        $listar = ($_SESSION["nivel"] == 1 || isset($_SESSION['permisos'][$row['id']]) || ($row['dir'] === 'tienda_planes_entrega.php' && in_array('tienda_pedidos.php', $_SESSION['permisos'] ?? [], true)) || ($row['dir'] === 'compras_facturas.php' && in_array('nuevaCompra.php', $_SESSION['permisos'] ?? [], true)));
         if ($listar) {
           $enlaceMenu = $row['dir'] ?? '#';
           $nombreMenu = $row['nombre'] ?? 'Sin nombre';
-          if ($facturaCompras && $enlaceMenu === 'nuevaCompra.php') {
-            $enlaceMenu = 'compras_facturas.php';
-            $nombreMenu = 'Compras con factura';
-          }
 
           $item = [
             "tipo"      => is_null($row['categoria']) ? 'item' : 'categoria',
