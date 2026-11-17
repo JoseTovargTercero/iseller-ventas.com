@@ -9,6 +9,8 @@ if ($nivel !== 1 && $nivel !== 2) {
 }
 
 $bss_id = (int) $_SESSION['bss_id'];
+$permisosSesion = $_SESSION['permisos'] ?? [];
+$puedeCuentasPagar = $nivel === 1 || in_array('cuentas_pagar.php', $permisosSesion, true);
 
 if (!fc_asegurar_esquema($conexion)) {
     http_response_code(500);
@@ -272,6 +274,73 @@ unset($factura);
         #modalNuevaFactura .modal-footer .fc-save-btn {
             width: auto;
             padding: 9px 20px;
+        }
+
+        /* Modal para cambiar el vencimiento del crédito */
+        #modalVencimiento .modal-content {
+            background: var(--dash-card);
+            border: 1px solid var(--dash-border);
+            border-radius: 16px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, .5);
+        }
+
+        #modalVencimiento .modal-header.fc-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        #modalVencimiento .modal-header .close {
+            color: var(--dash-text);
+            opacity: .7;
+            text-shadow: none;
+            font-size: 26px;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+
+        #modalVencimiento .modal-header .close:hover {
+            color: var(--dash-mint);
+            opacity: 1;
+        }
+
+        #modalVencimiento .modal-body {
+            padding: 18px 20px;
+        }
+
+        #modalVencimiento .modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 20px;
+            border-top: 1px solid var(--dash-border);
+        }
+
+        #modalVencimiento .fc-save-btn {
+            width: auto;
+            padding: 9px 20px;
+        }
+
+        #modalVencimiento .fc-help {
+            margin-top: 6px;
+        }
+
+        @media (max-width: 640px) {
+            #modalVencimiento .modal-footer {
+                flex-direction: column-reverse;
+                align-items: stretch;
+            }
+
+            #modalVencimiento .modal-footer .fc-ghost-btn,
+            #modalVencimiento .modal-footer .fc-save-btn {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
         }
 
         .fc-wizard-nav {
@@ -622,6 +691,18 @@ unset($factura);
             font-size: 10.5px;
             color: var(--dash-text-muted);
             line-height: 1.35;
+        }
+
+        .fc-form .fc-link {
+            color: var(--dash-mint);
+            font-weight: 700;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .fc-form .fc-link:hover {
+            color: var(--dash-mint);
+            opacity: .85;
         }
 
         .fc-adder {
@@ -1023,6 +1104,11 @@ unset($factura);
                         <p>Registra facturas de proveedores, controla saldos y fechas de vencimiento.</p>
                     </div>
                     <div class="fc-hero-actions">
+                        <?php if ($puedeCuentasPagar): ?>
+                            <a href="cuentas_pagar.php" class="fc-ghost-btn">
+                                <i class="bi bi-wallet2"></i> Cuentas por pagar
+                            </a>
+                        <?php endif; ?>
                         <a href="nuevaCompra.php" class="fc-ghost-btn">
                             <i class="bi bi-arrow-left"></i> Compras clásicas
                         </a>
@@ -1135,8 +1221,8 @@ unset($factura);
                                         </div>
                                         <div class="row">
                                             <div class="col-6 col-sm-3 fc-field">
-                                                <label for="cantidad">Cantidad (unid.)</label>
-                                                <input type="number" id="cantidad" class="form-control" min="1" step="1" placeholder="0">
+                                                <label for="cantidad">Cantidad</label>
+                                                <input type="number" id="cantidad" class="form-control" min="0.001" step="0.001" inputmode="decimal" placeholder="0.000">
                                             </div>
                                             <div class="col-6 col-sm-3 fc-field">
                                                 <label for="precio">Precio bulto ($)</label>
@@ -1179,12 +1265,20 @@ unset($factura);
                                     </div><!-- /step 2 -->
                                     <div class="fc-step" data-step="3">
                                     <div class="row">
-                                        <div class="col-sm-6 fc-field">
+                                        <div class="col-sm-4 fc-field">
+                                            <label for="total_final">Precio final a pagar ($)</label>
+                                            <input type="number" id="total_final" class="form-control" min="0.01" step="0.01" placeholder="0.00">
+                                            <small class="fc-help">
+                                                Puedes ajustarlo por descuentos o redondeos.
+                                                <a href="#" id="total-restablecer" class="fc-link">Usar total calculado</a>
+                                            </small>
+                                        </div>
+                                        <div class="col-sm-4 fc-field">
                                             <label for="abono_inicial">Abono inicial ($)</label>
                                             <input type="number" id="abono_inicial" class="form-control" min="0" step="0.01" value="0">
                                             <small class="fc-help">Déjalo en 0 para registrar la factura como pendiente.</small>
                                         </div>
-                                        <div class="col-sm-6 fc-field">
+                                        <div class="col-sm-4 fc-field">
                                             <label for="fecha_vencimiento">Vencimiento del crédito</label>
                                             <input type="date" id="fecha_vencimiento" class="form-control" value="<?= date('Y-m-d', strtotime('+30 days')) ?>">
                                             <small class="fc-help" id="vencimiento-help">Fecha límite para pagar el saldo pendiente.</small>
@@ -1195,6 +1289,7 @@ unset($factura);
                                         <div>
                                             <span class="fc-summary-label">Total factura</span>
                                             <div class="fc-total">$<span id="total-factura">0.00</span></div>
+                                            <div class="fc-cell-sub" id="total-calculado"></div>
                                         </div>
                                         <div>
                                             <span class="fc-summary-label">Queda pendiente</span>
@@ -1221,6 +1316,41 @@ unset($factura);
                             </div><!-- /modal-content -->
                         </div><!-- /modal-dialog -->
                     </div><!-- /modal -->
+
+                    <div class="modal fade" id="modalVencimiento" tabindex="-1" role="dialog" aria-labelledby="modalVencimientoLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header fc-modal-head">
+                                    <div class="fc-card-title">
+                                        <span class="fc-title-icon"><i class="bi bi-calendar-event"></i></span>
+                                        <div>
+                                            <h3 id="modalVencimientoLabel">Vencimiento del crédito</h3>
+                                            <p id="vencimiento-factura-sub">Fecha límite para pagar el saldo pendiente</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <form id="vencimiento-form" class="fc-form" autocomplete="off">
+                                    <div class="modal-body">
+                                        <input type="hidden" id="vencimiento_factura_id" value="">
+                                        <div class="fc-field">
+                                            <label for="vencimiento_fecha">Nueva fecha límite</label>
+                                            <input type="date" id="vencimiento_fecha" class="form-control" required>
+                                            <small class="fc-help">No puede ser anterior a la fecha de la factura.</small>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="fc-ghost-btn" data-dismiss="modal">Cancelar</button>
+                                        <button type="submit" id="vencimiento-guardar" class="fc-save-btn">
+                                            <i class="bi bi-check2-circle"></i> Guardar fecha
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div><!-- /modal vencimiento -->
 
                     <div class="col-12">
                         <div class="fc-card">
@@ -1317,7 +1447,11 @@ unset($factura);
                                                             <button type="button" class="fc-icon-btn success" title="Registrar abono" onclick="abonarFactura(<?= (int) $factura['id'] ?>, <?= number_format($saldo, 2, '.', '') ?>)">
                                                                 <i class="bi bi-cash-coin"></i>
                                                             </button>
-                                                            <button type="button" class="fc-icon-btn warn" title="Cambiar vencimiento" onclick="editarVencimiento(<?= (int) $factura['id'] ?>, '<?= $factura['fecha_vencimiento'] ?>')">
+                                                            <button type="button" class="fc-icon-btn warn" title="Cambiar vencimiento"
+                                                                data-vencimiento-id="<?= (int) $factura['id'] ?>"
+                                                                data-vencimiento-fecha="<?= htmlspecialchars((string) ($factura['fecha_vencimiento'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                                                                data-vencimiento-factura="<?= htmlspecialchars((string) $factura['fecha_factura'], ENT_QUOTES, 'UTF-8') ?>"
+                                                                data-vencimiento-numero="<?= htmlspecialchars((string) $factura['numero_factura'], ENT_QUOTES, 'UTF-8') ?>">
                                                                 <i class="bi bi-calendar-event"></i>
                                                             </button>
                                                         <?php endif; ?>
@@ -1354,6 +1488,9 @@ unset($factura);
             const unidadesBulto = $('unidades_bulto');
             const porcentaje = $('porcentaje');
             const abonoInicial = $('abono_inicial');
+            const totalFinal = $('total_final');
+            const totalCalculadoNota = $('total-calculado');
+            const restablecerTotal = $('total-restablecer');
             const fechaFactura = $('fecha_factura');
             const fechaVencimiento = $('fecha_vencimiento');
             const vencimientoHelp = $('vencimiento-help');
@@ -1370,6 +1507,7 @@ unset($factura);
             const btnWizardSiguiente = $('wizard-siguiente');
             let filtroFacturas = 'todas';
             let vencimientoManual = false;
+            let totalManual = false;
             let pasoActual = 1;
 
             fechaVencimiento.min = fechaFactura.value;
@@ -1401,7 +1539,23 @@ unset($factura);
             function totalLinea(linea) {
                 const unidadesPorBulto = parseInt(linea.unidades_bulto, 10);
                 if (!unidadesPorBulto || unidadesPorBulto <= 0) return 0;
-                return (Number(linea.precio) / unidadesPorBulto) * Number(linea.cantidad);
+                const subtotal = (Number(linea.precio) / unidadesPorBulto) * Number(linea.cantidad);
+                // Se redondea por línea igual que el backend para que el total coincida.
+                return Math.round((subtotal + Number.EPSILON) * 100) / 100;
+            }
+
+            // Las cantidades pueden ser fraccionarias (kg, litros, etc.).
+            // Se guardan con hasta 3 decimales, igual que el stock.
+            function redondearCantidad(valor) {
+                const numero = Number(valor);
+                if (!isFinite(numero)) return NaN;
+                return Math.round((numero + Number.EPSILON) * 1000) / 1000;
+            }
+
+            function cantidadTexto(valor) {
+                return Number(valor || 0).toLocaleString('en-US', {
+                    maximumFractionDigits: 3
+                });
             }
 
             function mostrarPaso(paso) {
@@ -1461,19 +1615,33 @@ unset($factura);
             }
 
             function actualizarResumenPago() {
-                const total = lineas.reduce((acumulado, linea) => acumulado + totalLinea(linea), 0);
-                const abono = parseFloat(abonoInicial.value || 0) || 0;
-                const saldo = Math.max(0, total - abono);
-                const tieneLineas = total > 0.005;
-                const pendiente = tieneLineas && saldo > 0.005;
+                const totalCalculado = lineas.reduce((acumulado, linea) => acumulado + totalLinea(linea), 0);
+                const tieneLineas = totalCalculado > 0.005;
 
-                totalFactura.textContent = dinero(total);
+                // Mientras el usuario no escriba un precio propio, se usa el total de las líneas.
+                if (!totalManual) {
+                    totalFinal.value = tieneLineas ? totalCalculado.toFixed(2) : '';
+                }
+
+                const total = parseFloat(totalFinal.value || 0);
+                const totalValido = isFinite(total) && total > 0;
+                const abono = parseFloat(abonoInicial.value || 0) || 0;
+                const saldo = Math.max(0, (totalValido ? total : 0) - abono);
+                const pendiente = totalValido && saldo > 0.005;
+
+                totalFactura.textContent = dinero(totalValido ? total : 0);
+                totalCalculadoNota.textContent = tieneLineas && totalValido && Math.abs(total - totalCalculado) > 0.005
+                    ? 'Calculado: $' + dinero(totalCalculado)
+                    : '';
+
                 saldoPreview.textContent = '$' + dinero(saldo);
-                saldoPreview.classList.toggle('zero', !pendiente || !tieneLineas);
-                fechaVencimiento.disabled = tieneLineas && !pendiente;
+                saldoPreview.classList.toggle('zero', !pendiente);
+                fechaVencimiento.disabled = totalValido && !pendiente;
 
                 if (!tieneLineas) {
                     vencimientoHelp.textContent = 'Se sugiere 30 días desde la fecha de la factura.';
+                } else if (!totalValido) {
+                    vencimientoHelp.textContent = 'Indique un precio final válido para calcular el saldo.';
                 } else if (pendiente) {
                     vencimientoHelp.textContent = 'Fecha límite para pagar el saldo pendiente.';
                 } else {
@@ -1509,7 +1677,7 @@ unset($factura);
                     tr.appendChild(tdNombre);
 
                     [
-                        [linea.cantidad, 'text-right'],
+                        [cantidadTexto(linea.cantidad), 'text-right'],
                         ['$' + dinero(linea.precio), 'text-right'],
                         [linea.unidades_bulto, 'text-right'],
                         ['$' + dinero(subtotal), 'text-right fc-amount']
@@ -1617,12 +1785,12 @@ unset($factura);
                     return;
                 }
 
-                const cantidadValor = parseInt(cantidad.value, 10);
+                const cantidadValor = redondearCantidad(cantidad.value);
                 const precioValor = parseFloat(precio.value);
                 const unidadesValor = parseInt(unidadesBulto.value, 10);
                 const porcentajeValor = parseFloat(porcentaje.value || 0);
 
-                if (!cantidadValor || cantidadValor <= 0 || !precioValor || precioValor <= 0 || !unidadesValor || unidadesValor <= 0) {
+                if (!cantidadValor || !isFinite(cantidadValor) || cantidadValor <= 0 || !precioValor || precioValor <= 0 || !unidadesValor || unidadesValor <= 0) {
                     Alerta.toast('error', 'Cantidad, precio y unidades por bulto deben ser mayores que cero');
                     return;
                 }
@@ -1735,8 +1903,14 @@ unset($factura);
                     });
                     html += '</tbody></table>';
 
+                    const ajuste = Number(data.ajuste || 0);
+                    if (Math.abs(ajuste) > 0.005) {
+                        html += '<p style="margin:-2px 0 12px;font-size:12px;color:#8a8f98;text-align:right;">Ajuste al detalle: <b>' +
+                            (ajuste > 0 ? '+' : '−') + '$' + dinero(Math.abs(ajuste)) + '</b></p>';
+                    }
+
                     html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:12px;">';
-                    html += '<div style="padding:8px;border-radius:8px;background:rgba(45,212,160,.08);"><small>Total</small><br><b>$' + dinero(data.factura.total) + '</b></div>';
+                    html += '<div style="padding:8px;border-radius:8px;background:rgba(45,212,160,.08);"><small>Total final</small><br><b>$' + dinero(data.factura.total) + '</b></div>';
                     html += '<div style="padding:8px;border-radius:8px;background:rgba(91,156,245,.08);"><small>Abonado</small><br><b>$' + dinero(data.abonado) + '</b></div>';
                     html += '<div style="padding:8px;border-radius:8px;background:rgba(245,180,91,.1);"><small>Saldo</small><br><b>$' + dinero(data.saldo) + '</b></div>';
                     html += '</div>';
@@ -1804,40 +1978,103 @@ unset($factura);
                 }
             };
 
-            window.editarVencimiento = async function(id, fechaActual) {
-                const resultado = await Swal.fire({
-                    title: 'Vencimiento del crédito',
-                    input: 'date',
-                    inputValue: fechaActual || '',
-                    text: 'Fecha límite para pagar el saldo pendiente.',
-                    showCancelButton: true,
-                    confirmButtonText: 'Guardar fecha',
-                    cancelButtonText: 'Cancelar'
-                });
+            const modalVencimiento = $('modalVencimiento');
+            const vencimientoForm = $('vencimiento-form');
+            const vencimientoFacturaId = $('vencimiento_factura_id');
+            const vencimientoFecha = $('vencimiento_fecha');
+            const vencimientoGuardar = $('vencimiento-guardar');
+            const vencimientoFacturaSub = $('vencimiento-factura-sub');
+            const facturasBody = $('fc-facturas-body');
 
-                if (!resultado.isConfirmed) return;
-                if (!resultado.value) {
-                    Alerta.toast('error', 'Seleccione una fecha de vencimiento');
+            // El build de sweetalert2 del proyecto no soporta input type="date",
+            // por eso el vencimiento se edita con un modal propio.
+            function abrirModalVencimiento(id, fechaActual, fechaFactura, numeroFactura) {
+                const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(fechaActual || '');
+
+                vencimientoFacturaId.value = id;
+                vencimientoFecha.min = fechaFactura || '';
+                vencimientoFecha.value = fechaValida
+                    ? fechaActual
+                    : (fechaFactura ? sumarDias(fechaFactura, 30) : '');
+
+                vencimientoFacturaSub.textContent = numeroFactura
+                    ? 'Factura ' + numeroFactura + ' · Fecha límite para pagar el saldo pendiente.'
+                    : 'Fecha límite para pagar el saldo pendiente.';
+
+                if (window.jQuery) {
+                    window.jQuery(modalVencimiento).modal('show');
+                }
+            }
+
+            window.editarVencimiento = function(id, fechaActual, fechaFactura, numeroFactura) {
+                abrirModalVencimiento(id, fechaActual, fechaFactura, numeroFactura);
+            };
+
+            if (facturasBody) {
+                facturasBody.addEventListener('click', function(evento) {
+                    const boton = evento.target.closest('[data-vencimiento-id]');
+                    if (!boton) return;
+
+                    abrirModalVencimiento(
+                        boton.dataset.vencimientoId,
+                        boton.dataset.vencimientoFecha,
+                        boton.dataset.vencimientoFactura,
+                        boton.dataset.vencimientoNumero
+                    );
+                });
+            }
+
+            if (modalVencimiento) {
+                modalVencimiento.addEventListener('shown.bs.modal', function() {
+                    setTimeout(() => vencimientoFecha.focus(), 120);
+                });
+            }
+
+            vencimientoForm.addEventListener('submit', async function(evento) {
+                evento.preventDefault();
+
+                const facturaId = parseInt(vencimientoFacturaId.value, 10);
+                const fecha = vencimientoFecha.value;
+
+                if (!facturaId) {
+                    Alerta.toast('error', 'Factura inválida');
                     return;
                 }
+                if (!fecha) {
+                    Alerta.toast('error', 'Seleccione la nueva fecha límite');
+                    vencimientoFecha.focus();
+                    return;
+                }
+                if (vencimientoFecha.min && fecha < vencimientoFecha.min) {
+                    Alerta.toast('error', 'La fecha límite no puede ser anterior a la fecha de la factura');
+                    vencimientoFecha.focus();
+                    return;
+                }
+
+                vencimientoGuardar.disabled = true;
 
                 try {
                     const data = await enviarJson({
                         accion: 'vencimiento',
-                        factura_id: id,
-                        fecha_vencimiento: resultado.value
+                        factura_id: facturaId,
+                        fecha_vencimiento: fecha
                     });
 
                     if (!data.success) {
                         throw new Error(data.message || 'No se pudo actualizar el vencimiento');
                     }
 
-                    Alerta.toast('success', data.message);
-                    setTimeout(() => window.location.reload(), 600);
+                    if (window.jQuery) {
+                        window.jQuery(modalVencimiento).modal('hide');
+                    }
+                    Alerta.toast('success', data.message || 'Vencimiento actualizado correctamente');
+                    setTimeout(() => window.location.reload(), 800);
                 } catch (error) {
                     Swal.fire('Error', error.message, 'error');
+                } finally {
+                    vencimientoGuardar.disabled = false;
                 }
-            };
+            });
 
             function aplicarFiltrosFacturas() {
                 const texto = (buscarFactura.value || '').toLowerCase().trim();
@@ -1899,6 +2136,21 @@ unset($factura);
             producto.addEventListener('change', cargarPrecio);
             $('agregar-linea').addEventListener('click', agregarLinea);
             abonoInicial.addEventListener('input', actualizarResumenPago);
+            totalFinal.addEventListener('input', function() {
+                totalManual = true;
+                actualizarResumenPago();
+            });
+            totalFinal.addEventListener('blur', function() {
+                if (this.value === '') {
+                    totalManual = false;
+                    actualizarResumenPago();
+                }
+            });
+            restablecerTotal.addEventListener('click', function(evento) {
+                evento.preventDefault();
+                totalManual = false;
+                actualizarResumenPago();
+            });
             fechaVencimiento.addEventListener('change', function() {
                 vencimientoManual = true;
                 actualizarResumenPago();
@@ -1936,15 +2188,20 @@ unset($factura);
                     return;
                 }
 
-                const total = lineas.reduce((acumulado, linea) => acumulado + totalLinea(linea), 0);
+                const total = parseFloat(totalFinal.value || 0);
                 const abono = parseFloat(abonoInicial.value || 0);
 
+                if (!isFinite(total) || total <= 0) {
+                    Alerta.toast('error', 'Indique el precio final a pagar');
+                    totalFinal.focus();
+                    return;
+                }
                 if (isNaN(abono) || abono < 0) {
                     Alerta.toast('error', 'El abono inicial no es válido');
                     return;
                 }
                 if (abono > total + 0.001) {
-                    Alerta.toast('error', 'El abono inicial no puede superar el total');
+                    Alerta.toast('error', 'El abono inicial no puede superar el precio final');
                     return;
                 }
                 if (total - abono > 0.005 && !fechaVencimiento.value) {
@@ -1969,6 +2226,7 @@ unset($factura);
                         fecha_vencimiento: total - abono > 0.005 ? fechaVencimiento.value : '',
                         sucursal: sucursal.value,
                         abono_inicial: abono,
+                        total_final: total,
                         lineas: lineas
                     });
 

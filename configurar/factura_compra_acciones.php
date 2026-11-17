@@ -61,17 +61,20 @@ if ($accion === 'detalle') {
     }
 
     $lineas = [];
+    $subtotalLineas = 0.0;
     $stmt = $conexion->prepare("SELECT producto, precio, cantidad, CporPrecio, Porcentaje FROM compras WHERE factura_id = ? AND bss_id = ? ORDER BY id ASC");
     $stmt->bind_param("ii", $facturaId, $bssId);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($fila = $res->fetch_assoc()) {
+        $subtotal = fc_linea_total($fila['precio'], $fila['CporPrecio'], $fila['cantidad']);
+        $subtotalLineas += $subtotal;
         $lineas[] = [
             'producto' => $fila['producto'],
-            'cantidad' => (int) $fila['cantidad'],
+            'cantidad' => round((float) $fila['cantidad'], 3),
             'unidades_bulto' => (int) $fila['CporPrecio'],
             'porcentaje' => (float) $fila['Porcentaje'],
-            'subtotal' => fc_linea_total($fila['precio'], $fila['CporPrecio'], $fila['cantidad']),
+            'subtotal' => $subtotal,
         ];
     }
     $stmt->close();
@@ -95,6 +98,7 @@ if ($accion === 'detalle') {
         'pagos' => $pagos,
         'abonado' => round($abonado, 2),
         'saldo' => round((float) $factura['total'] - $abonado, 2),
+        'ajuste' => round((float) $factura['total'] - $subtotalLineas, 2),
     ]);
 }
 
@@ -109,6 +113,7 @@ if ($accion === 'guardar') {
     $fechaFactura = trim((string) ($input['fecha_factura'] ?? ''));
     $fechaVencimiento = trim((string) ($input['fecha_vencimiento'] ?? ''));
     $abonoInicial = round((float) ($input['abono_inicial'] ?? 0), 2);
+    $totalFinal = $input['total_final'] ?? null;
     $lineas = $input['lineas'] ?? null;
 
     if ($proveedor === '' || strlen($proveedor) > 255) {
@@ -131,6 +136,20 @@ if ($accion === 'guardar') {
     }
     if ($abonoInicial < 0) {
         fcResponder(false, 'El abono inicial no puede ser negativo.');
+    }
+    if ($totalFinal !== null && $totalFinal !== '') {
+        if (!is_numeric($totalFinal)) {
+            fcResponder(false, 'Indique un precio final válido.');
+        }
+        $totalFinal = round((float) $totalFinal, 2);
+        if ($totalFinal <= 0) {
+            fcResponder(false, 'El precio final a pagar debe ser mayor que cero.');
+        }
+        if ($totalFinal > 9999999999999.99) {
+            fcResponder(false, 'El precio final a pagar es demasiado alto.');
+        }
+    } else {
+        $totalFinal = null;
     }
 
     $sucursal = $nivel === 2 ? (int) $_SESSION['sucursal'] : (int) ($input['sucursal'] ?? 0);
@@ -168,7 +187,7 @@ if ($accion === 'guardar') {
 
         foreach ($lineas as $linea) {
             $productoId = (int) ($linea['producto_id'] ?? 0);
-            $cantidad = (float) ($linea['cantidad'] ?? 0);
+            $cantidad = round((float) ($linea['cantidad'] ?? 0), 3); // admite fracciones (kg, litros, etc.)
             $precio = round((float) ($linea['precio'] ?? 0), 2);
             $unidadesBulto = (int) ($linea['unidades_bulto'] ?? 0);
             $porcentaje = round((float) ($linea['porcentaje'] ?? 0), 2);
@@ -230,7 +249,15 @@ if ($accion === 'guardar') {
             ]);
         }
 
-        $total = round($total, 2);
+        $totalCalculado = round($total, 2);
+        $total = $totalCalculado;
+
+        // El usuario puede ajustar el precio final (descuentos, redondeos, etc.).
+        // Las líneas conservan su detalle; la factura guarda el total ajustado.
+        if ($totalFinal !== null) {
+            $total = $totalFinal;
+        }
+
         if ($abonoInicial > $total + 0.001) {
             throw new Exception('El abono inicial no puede superar el total de la factura.');
         }
@@ -343,6 +370,8 @@ if ($accion === 'guardar') {
     fcResponder(true, 'Factura registrada correctamente.', [
         'factura_id' => $facturaId,
         'total' => $total,
+        'total_calculado' => $totalCalculado,
+        'ajuste' => round($total - $totalCalculado, 2),
         'abonado' => $abonoInicial,
         'saldo' => round($total - $abonoInicial, 2),
         'estado' => $estado,
@@ -446,7 +475,10 @@ if ($accion === 'vencimiento') {
         if (!$factura || ($nivel === 2 && (int) $factura['id_sucursal'] !== (int) $_SESSION['sucursal'])) {
             throw new Exception('Factura no encontrada.');
         }
-        if ($fechaVencimiento < $factura['fecha_factura']) {
+
+        // La fecha de factura puede venir como DATE o DATETIME; se compara solo el día.
+        $fechaFactura = date('Y-m-d', strtotime((string) $factura['fecha_factura']));
+        if ($fechaVencimiento < $fechaFactura) {
             throw new Exception('El vencimiento no puede ser anterior a la fecha de la factura.');
         }
 

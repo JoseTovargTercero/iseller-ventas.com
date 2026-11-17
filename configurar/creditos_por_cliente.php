@@ -61,7 +61,7 @@ function getProductos($orderId)
 {
     global $conexion;
     $stmt = $conexion->prepare(
-        "SELECT product_id, quantity
+        "SELECT product_id, quantity, precio_venta_dolar, precio_venta_bs, precio_venta_cop
            FROM orden_articulos
           WHERE order_id = ?"
     );
@@ -73,6 +73,18 @@ function getProductos($orderId)
     while ($row = $res->fetch_assoc()) {
         $datos = datosProductos($row['product_id']);
         if (empty($datos)) continue;
+
+        // Precio realmente cobrado en la venta: conserva precios especiales y las
+        // tasas de cambio del momento en que se vendió. Si el artículo es viejo y
+        // no tiene precio guardado, se usa el precio del catálogo como respaldo.
+        $usd = (float) $row['precio_venta_dolar'];
+        if ($usd > 0) {
+            $bs  = (float) $row['precio_venta_bs'];
+            $cop = (float) $row['precio_venta_cop'];
+            $datos['precio_dolar_visible'] = $usd;
+            if ($bs > 0)  $datos['precio_bs_visible']  = $bs;
+            if ($cop > 0) $datos['precio_peso_visible'] = $cop;
+        }
 
         $productos[] = [
             'id'       => (int)$row['product_id'],

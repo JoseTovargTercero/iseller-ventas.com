@@ -19,6 +19,7 @@ function canal_consulta($conexion, string $sql, string $tipos = '', array $param
 {
     $stmt = $conexion->prepare($sql);
     if (!$stmt) {
+        error_log('canal_consulta (prepare): ' . $conexion->error . ' | SQL: ' . $sql);
         throw new Exception('Error al preparar la consulta de inventario.');
     }
     if ($tipos !== '') {
