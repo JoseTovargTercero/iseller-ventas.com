@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>iSeller Store — Mockups Play Store</title>
+<link rel="stylesheet" href="../../publico/vendors/bootstrap-icons/bootstrap-icons.min.css">
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --green: #6FAF7A;
+        --green-dark: #4E8F63;
+        --green-soft: #E9F4EC;
+        --bg: #F5F7F6;
+        --card: #FFFFFF;
+        --text: #1F2933;
+        --muted: #7B8794;
+        --line: #E4ECE6;
+        --danger: #E86A6A;
+    }
+
+    html, body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+    }
+
+    body {
+        font-family: "Segoe UI", Roboto, Inter, Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(1200px 900px at 50% 0%, #F3FAF5 0%, #E6F2E9 45%, #D8EADF 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stage {
+        width: 1080px;
+        height: 1920px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .stage::before {
+        content: "";
+        position: absolute;
+        width: 920px;
+        height: 920px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(111, 175, 122, .20), transparent 68%);
+        filter: blur(24px);
+        top: 90px;
+    }
+
+    .phone {
+        position: relative;
+        width: 820px;
+        height: 1720px;
+        background: #0C1310;
+        border-radius: 76px;
+        padding: 16px;
+        box-shadow:
+            0 60px 120px rgba(24, 64, 44, .30),
+            0 16px 40px rgba(24, 64, 44, .18),
+            inset 0 0 0 2px rgba(255, 255, 255, .06);
+        z-index: 2;
+    }
+
+    .phone::after {
+        content: "";
+        position: absolute;
+        inset: 16px;
+        border-radius: 62px;
+        pointer-events: none;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+    }
+
+    .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 62px;
+        background: var(--bg);
+        overflow: hidden;
+    }
+
+    .notch {
+        position: absolute;
+        top: 26px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 160px;
+        height: 34px;
+        background: #0C1310;
+        border-radius: 20px;
+        z-index: 60;
+    }
+
+    .app-screen {
+        position: absolute;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        background: var(--bg);
+    }
+
+    .app-screen.active {
+        display: flex;
+    }
+
+    .status {
+        height: 60px;
+        flex: 0 0 60px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 0 34px 8px;
+        font-size: 21px;
+        font-weight: 600;
+        letter-spacing: .2px;
+        position: relative;
+        z-index: 20;
+    }
+
+    .status-icons {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .status-icons i {
+        font-size: 21px;
+    }
+
+    .battery {
+        width: 30px;
+        height: 15px;
+        border: 2px solid var(--text);
+        border-radius: 4px;
+        position: relative;
+        display: inline-block;
+    }
+
+    .battery::after {
+        content: "";
+        position: absolute;
+        right: -6px;
+        top: 3px;
+        width: 4px;
+        height: 6px;
+        background: var(--text);
+        border-radius: 0 2px 2px 0;
+    }
+
+    .battery span {
+        display: block;
+        height: 100%;
+        width: 72%;
+        background: var(--text);
+        border-radius: 2px;
+    }
+
+    .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 6px 30px 16px;
+    }
+
+    .app-header .title {
+        font-size: 33px;
+        font-weight: 800;
+        letter-spacing: -.7px;
+    }
+
+    .app-header .subtitle {
+        font-size: 18px;
+        color: var(--muted);
+        margin-top: 2px;
+        font-weight: 500;
+    }
+
+    .icon-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #fff;
+        border: 1px solid var(--line);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: var(--text);
+        box-shadow: 0 4px 12px rgba(31, 41, 51, .04);
+        flex: 0 0 auto;
+    }
+
+    .icon-btn.small {
+        width: 48px;
+        height: 48px;
+        font-size: 21px;
+    }
+
+    .screen-body {
+        flex: 1 1 auto;
+        overflow: hidden;
+        padding: 0 30px;
+    }
+
+    .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 24px 0 14px;
+    }
+
+    .section-head h3 {
+        font-size: 25px;
+        font-weight: 800;
+        letter-spacing: -.4px;
+    }
+
+    .section-head a {
+        font-size: 17px;
+        color: var(--green-dark);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .search {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px 18px;
+        font-size: 20px;
+        color: var(--muted);
+        box-shadow: 0 6px 18px rgba(31, 41, 51, .04);
+    }
+
+    .search i {
+        font-size: 22px;
+        color: var(--green-dark);
+    }
+
+    .chips {
+        display: flex;
+        gap: 10px;
+        overflow: hidden;
+        padding: 16px 0 4px;
+    }
+
+    .chip {
+        flex: 0 0 auto;
+        padding: 12px 20px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid var(--line);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--muted);
+    }
+
+    .chip.active {
+        background: var(--green-soft);
+        border-color: rgba(111, 175, 122, .55);
+        color: var(--green-dark);
+    }
+
+    .hero {
+        position: relative;
+        height: 232px;
+        border-radius: 22px;
+        background: linear-gradient(120deg, #4E8F63 0%, #6FAF7A 100%);
+        overflow: hidden;
+        padding: 30px;
+        color: #fff;
+        margin-top: 16px;
+        box-shadow: 0 18px 34px rgba(78, 143, 99, .24);
+    }
+
+    .hero h2 {
+        font-size: 36px;
+        line-height: 1.08;
+        font-weight: 800;
+        letter-spacing: -.8px;
+        max-width: 58%;
+    }
+
+    .hero p {
+        font-size: 18px;
+        opacity: .92;
+        margin-top: 10px;
+        max-width: 55%;
+        line-height: 1.35;
+    }
+
+    .hero .hero-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 18px;
+        padding: 11px 18px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .18);
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .hero-emoji {
+        position: absolute;
+        font-size: 74px;
+        right: 26px;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .16));
+    }
+
+    .hero-emoji.one { top: 34px; right: 42px; }
+    .hero-emoji.two { top: 108px; right: 118px; font-size: 60px; }
+    .hero-emoji.three { top: 138px; right: 30px; font-size: 54px; }
+
+    .store-row {
+        display: flex;
+        gap: 16px;
+    }
+
+    .store-card {
+        flex: 1;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 8px 22px rgba(31, 41, 51, .05);
+    }
+
+    .store-cover {
+        height: 104px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 46px;
+        background: linear-gradient(135deg, #DDF0E2, #BFE2C8);
+    }
+
+    .store-card:nth-child(2) .store-cover {
+        background: linear-gradient(135deg, #F7E7DA, #F0CDB8);
+    }
+
+    .store-info {
+        padding: 0 14px 16px;
+    }
+
+    .store-logo {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #fff;
+        margin-top: -27px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        box-shadow: 0 6px 14px rgba(31, 41, 51, .12);
+    }
+
+    .store-name {
+        font-size: 20px;
+        font-weight: 800;
+        margin-top: 6px;
+    }
+
+    .store-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    .store-meta .star {
+        color: #E8A33D;
+        font-weight: 700;
+    }
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .product-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 12px;
+        box-shadow: 0 8px 20px rgba(31, 41, 51, .04);
+        position: relative;
+    }
+
+    .product-thumb {
+        height: 132px;
+        border-radius: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        background: linear-gradient(135deg, #EEF7F0, #DCEFE1);
+    }
+
+    .product-thumb.peach { background: linear-gradient(135deg, #FFF0E5, #FFE0CB); }
+    .product-thumb.red { background: linear-gradient(135deg, #FDECEC, #F8D6D6); }
+    .product-thumb.yellow { background: linear-gradient(135deg, #FFF8E1, #F8E8B6); }
+    .product-thumb.cream { background: linear-gradient(135deg, #FFF9EE, #F3E6CE); }
+
+    .product-name {
+        font-size: 19px;
+        font-weight: 700;
+        margin-top: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .product-price {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--green-dark);
+        margin-top: 4px;
+    }
+
+    .add-btn {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: var(--green);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 8px 16px rgba(78, 143, 99, .26);
+    }
+
+    .promo-strip {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: linear-gradient(135deg, #E9F4EC, #D8EEDD);
+        border: 1px solid rgba(111, 175, 122, .35);
+        border-radius: 18px;
+        padding: 16px;
+        margin-top: 22px;
+    }
+
+    .promo-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 23px;
+        color: var(--green-dark);
+        flex: 0 0 auto;
+        box-shadow: 0 6px 14px rgba(31, 41, 51, .06);
+    }
+
+    .promo-strip strong {
+        display: block;
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .promo-strip span {
+        display: block;
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .promo-strip > i {
+        margin-left: auto;
+        color: var(--green-dark);
+        font-size: 18px;
+    }
+
+    .bottom-nav {
+        flex: 0 0 112px;
+        background: #fff;
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 10px 24px 18px;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .nav-item i {
+        font-size: 27px;
+    }
+
+    .nav-item.active {
+        color: var(--green-dark);
+    }
+
+    /* ── Tienda ─────────────────────────────────────────────── */
+    .store-hero {
+        position: relative;
+        height: 270px;
+        background: linear-gradient(135deg, #DDF0E2 0%, #BFE2C8 100%);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 36px;
+        font-size: 90px;
+        margin: 0 0 0;
+        overflow: hidden;
+    }
+
+    .store-hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 55%, rgba(12, 19, 16, .18));
+    }
+
+    .store-hero .floating {
+        position: absolute;
+        font-size: 54px;
+        opacity: .9;
+    }
+
+    .store-hero .f1 { left: 70px; top: 50px; }
+    .store-hero .f2 { right: 80px; top: 88px; font-size: 46px; }
+    .store-hero .f3 { left: 150px; bottom: 34px; font-size: 42px; }
+
+    .store-profile {
+        position: relative;
+        margin: -52px 30px 0;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 12px 30px rgba(31, 41, 51, .10);
+    }
+
+    .store-profile-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .store-avatar {
+        width: 74px;
+        height: 74px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #DDF0E2, #BFE2C8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        border: 3px solid #fff;
+        box-shadow: 0 6px 14px rgba(31, 41, 51, .12);
+        flex: 0 0 auto;
+    }
+
+    .store-profile h2 {
+        font-size: 27px;
+        font-weight: 800;
+        letter-spacing: -.4px;
+    }
+
+    .store-sub {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 16px;
+        color: var(--muted);
+        margin-top: 5px;
+    }
+
+    .badge-open {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: var(--green-soft);
+        color: var(--green-dark);
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .store-delivery {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        font-size: 17px;
+        color: var(--muted);
+    }
+
+    .store-delivery strong {
+        color: var(--text);
+    }
+
+    /* ── Producto ───────────────────────────────────────────── */
+    .product-hero {
+        height: 500px;
+        background: linear-gradient(135deg, #EEF7F0 0%, #D8EEDD 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 210px;
+        border-radius: 0 0 34px 34px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .product-hero::before {
+        content: "";
+        position: absolute;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .55);
+        filter: blur(6px);
+    }
+
+    .product-hero .emoji {
+        position: relative;
+        z-index: 2;
+        filter: drop-shadow(0 24px 30px rgba(31, 41, 51, .18));
+    }
+
+    .product-info {
+        padding: 22px 30px 0;
+    }
+
+    .product-title {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -.8px;
+    }
+
+    .product-sub {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+        font-size: 17px;
+        color: var(--muted);
+    }
+
+    .product-sub .rating {
+        color: #E8A33D;
+        font-weight: 700;
+    }
+
+    .product-price-big {
+        font-size: 42px;
+        font-weight: 800;
+        color: var(--green-dark);
+        margin-top: 16px;
+    }
+
+    .product-desc {
+        font-size: 18px;
+        line-height: 1.45;
+        color: var(--muted);
+        margin-top: 12px;
+    }
+
+    .qty-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 22px;
+        padding: 16px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+    }
+
+    .qty-row span {
+        font-size: 19px;
+        font-weight: 700;
+    }
+
+    .stepper {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 14px;
+    }
+
+    .stepper b {
+        font-size: 20px;
+        min-width: 18px;
+        text-align: center;
+    }
+
+    .stepper i {
+        font-size: 18px;
+        color: var(--green-dark);
+    }
+
+    .seller-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 18px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+    }
+
+    .seller-card .avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #DDF0E2, #BFE2C8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .seller-card .name {
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .seller-card .meta {
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .action-bar {
+        flex: 0 0 118px;
+        background: #fff;
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 30px 24px;
+    }
+
+    .btn-primary {
+        flex: 1;
+        height: 72px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #6FAF7A, #4E8F63);
+        color: #fff;
+        font-size: 22px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 10px 24px rgba(78, 143, 99, .30);
+    }
+
+    /* ── Checkout ───────────────────────────────────────────── */
+    .cart-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+
+    .cart-thumb {
+        width: 82px;
+        height: 82px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #EEF7F0, #DCEFE1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        flex: 0 0 auto;
+    }
+
+    .cart-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cart-info h4 {
+        font-size: 19px;
+        font-weight: 700;
+    }
+
+    .cart-info p {
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 3px;
+    }
+
+    .cart-item .price {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--green-dark);
+        margin-left: 6px;
+    }
+
+    .mini-stepper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .mini-stepper span {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        color: var(--green-dark);
+        background: #fff;
+    }
+
+    .mini-stepper b {
+        font-size: 16px;
+        min-width: 12px;
+        text-align: center;
+    }
+
+    .address-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        margin-top: 6px;
+    }
+
+    .map-thumb {
+        width: 92px;
+        height: 82px;
+        border-radius: 13px;
+        background:
+            linear-gradient(90deg, transparent 44%, #DDE9DF 44%, #DDE9DF 47%, transparent 47%),
+            linear-gradient(0deg, transparent 58%, #DDE9DF 58%, #DDE9DF 61%, transparent 61%),
+            #EDF5EF;
+        position: relative;
+        overflow: hidden;
+        flex: 0 0 auto;
+    }
+
+    .map-thumb::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 46%;
+        width: 16px;
+        height: 16px;
+        border-radius: 50% 50% 50% 0;
+        background: var(--green-dark);
+        transform: translate(-50%, -50%) rotate(-45deg);
+        box-shadow: 0 2px 6px rgba(31, 41, 51, .25);
+    }
+
+    .address-info h4 {
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .address-info p {
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 3px;
+    }
+
+    .pay-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .pay-option {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 8px;
+        text-align: center;
+        font-size: 14px;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .pay-option i {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 6px;
+        color: var(--text);
+    }
+
+    .pay-option.active {
+        border-color: rgba(111, 175, 122, .65);
+        background: var(--green-soft);
+        color: var(--green-dark);
+    }
+
+    .pay-option.active i {
+        color: var(--green-dark);
+    }
+
+    .summary-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px;
+        margin-top: 16px;
+    }
+
+    .summary-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 17px;
+        color: var(--muted);
+        padding: 6px 0;
+    }
+
+    .summary-row.total {
+        border-top: 1px solid var(--line);
+        margin-top: 6px;
+        padding-top: 12px;
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text);
+    }
+
+    .summary-row.total b {
+        color: var(--green-dark);
+    }
+
+    /* ── Seguimiento ────────────────────────────────────────── */
+    .track-map {
+        height: 540px;
+        border-radius: 0 0 32px 32px;
+        background: #EAF1EB;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .track-map .road {
+        position: absolute;
+        background: #FFFFFF;
+        box-shadow: 0 0 0 1px #DCE7DE;
+    }
+
+    .track-map .r1 { width: 120%; height: 26px; left: -10%; top: 30%; transform: rotate(-8deg); }
+    .track-map .r2 { width: 120%; height: 18px; left: -10%; top: 62%; transform: rotate(6deg); }
+    .track-map .r3 { width: 22px; height: 120%; left: 30%; top: -10%; transform: rotate(5deg); }
+    .track-map .r4 { width: 16px; height: 120%; left: 68%; top: -10%; transform: rotate(-4deg); }
+    .track-map .block { position: absolute; background: #DFEBE2; border-radius: 10px; }
+
+    .track-map .b1 { width: 120px; height: 90px; left: 8%; top: 12%; }
+    .track-map .b2 { width: 150px; height: 110px; right: 9%; top: 10%; }
+    .track-map .b3 { width: 130px; height: 100px; left: 13%; bottom: 12%; }
+    .track-map .b4 { width: 160px; height: 120px; right: 8%; bottom: 10%; }
+
+    .route-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .map-pin {
+        position: absolute;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 22px;
+        box-shadow: 0 8px 20px rgba(31, 41, 51, .22);
+        border: 3px solid #fff;
+    }
+
+    .map-pin.store { left: 22%; top: 25%; background: var(--green-dark); }
+    .map-pin.home { right: 18%; bottom: 23%; background: #E8A33D; }
+
+    .courier-pin {
+        position: absolute;
+        left: 49%;
+        top: 46%;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid var(--green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        box-shadow: 0 10px 24px rgba(31, 41, 51, .18);
+    }
+
+    .track-sheet {
+        margin: -38px 30px 0;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 18px;
+        position: relative;
+        z-index: 3;
+        box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
+    }
+
+    .track-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .track-top h3 {
+        font-size: 24px;
+        font-weight: 800;
+    }
+
+    .eta {
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--green-dark);
+        background: var(--green-soft);
+        padding: 7px 12px;
+        border-radius: 999px;
+    }
+
+    .timeline {
+        margin-top: 16px;
+    }
+
+    .tl-item {
+        display: flex;
+        gap: 14px;
+        position: relative;
+        padding-bottom: 18px;
+    }
+
+    .tl-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .tl-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid var(--line);
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: transparent;
+        flex: 0 0 auto;
+        position: relative;
+        z-index: 2;
+    }
+
+    .tl-item.done .tl-dot {
+        background: var(--green);
+        border-color: var(--green);
+        color: #fff;
+    }
+
+    .tl-item.current .tl-dot {
+        border-color: var(--green);
+        color: var(--green-dark);
+        background: #fff;
+    }
+
+    .tl-item::before {
+        content: "";
+        position: absolute;
+        left: 13px;
+        top: 28px;
+        bottom: 0;
+        width: 2px;
+        background: var(--line);
+    }
+
+    .tl-item:last-child::before { display: none; }
+    .tl-item.done::before { background: var(--green); }
+
+    .tl-text strong {
+        display: block;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .tl-text span {
+        display: block;
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .courier-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+    }
+
+    .courier-avatar {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #DDF0E2, #BFE2C8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--green-dark);
+        flex: 0 0 auto;
+    }
+
+    .courier-info {
+        flex: 1;
+    }
+
+    .courier-info h4 {
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .courier-info p {
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .btn-outline {
+        padding: 11px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(111, 175, 122, .6);
+        color: var(--green-dark);
+        font-size: 15px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* ── Chat ───────────────────────────────────────────────── */
+    .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 24px 14px;
+    }
+
+    .chat-header .avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #DDF0E2, #BFE2C8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex: 0 0 auto;
+    }
+
+    .chat-header .who {
+        flex: 1;
+    }
+
+    .chat-header .who h3 {
+        font-size: 21px;
+        font-weight: 800;
+    }
+
+    .chat-header .who p {
+        font-size: 14px;
+        color: var(--green-dark);
+        margin-top: 2px;
+        font-weight: 600;
+    }
+
+    .chat-body {
+        flex: 1 1 auto;
+        padding: 6px 24px 20px;
+        overflow: hidden;
+    }
+
+    .day-label {
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+        margin: 8px 0 18px;
+    }
+
+    .bubble {
+        max-width: 76%;
+        padding: 13px 16px;
+        border-radius: 18px;
+        font-size: 17px;
+        line-height: 1.35;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(31, 41, 51, .04);
+    }
+
+    .bubble.left {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-bottom-left-radius: 6px;
+        color: var(--text);
+    }
+
+    .bubble.right {
+        background: linear-gradient(135deg, #6FAF7A, #5A9E6A);
+        color: #fff;
+        margin-left: auto;
+        border-bottom-right-radius: 6px;
+    }
+
+    .bubble-time {
+        display: block;
+        font-size: 11px;
+        opacity: .6;
+        margin-top: 5px;
+        text-align: right;
+    }
+
+    .product-mini {
+        width: 76%;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        box-shadow: 0 5px 14px rgba(31, 41, 51, .05);
+    }
+
+    .product-mini .thumb {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #EEF7F0, #DCEFE1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        flex: 0 0 auto;
+    }
+
+    .product-mini h5 {
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .product-mini p {
+        font-size: 14px;
+        color: var(--green-dark);
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .product-mini .see {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .chat-input {
+        flex: 0 0 104px;
+        background: #fff;
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 22px 24px;
+    }
+
+    .chat-input .field {
+        flex: 1;
+        height: 54px;
+        border-radius: 999px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        font-size: 16px;
+        color: var(--muted);
+        gap: 10px;
+    }
+
+    .send-btn {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: var(--green);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        box-shadow: 0 8px 18px rgba(78, 143, 99, .28);
+    }
+</style>
+</head>
+<body>
+<div class="stage">
+    <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+
+            <!-- ───────────────── 1. MARKETPLACE ───────────────── -->
+            <section class="app-screen active" data-screen="1">
+                <div class="status">
+                    <span>9:41</span>
+                    <div class="status-icons">
+                        <i class="bi bi-reception-4"></i>
+                        <i class="bi bi-wifi"></i>
+                        <span class="battery"><span></span></span>
+                    </div>
+                </div>
+
+                <div class="app-header">
+                    <div>
+                        <div class="title">iSeller Store</div>
+                        <div class="subtitle"><i class="bi bi-geo-alt-fill"></i> Caracas, Venezuela</div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="icon-btn small"><i class="bi bi-bell"></i></div>
+                        <div class="icon-btn small"><i class="bi bi-bag"></i></div>
+                    </div>
+                </div>
+
+                <div class="screen-body">
+                    <div class="search"><i class="bi bi-search"></i> Buscar productos o tiendas</div>
+
+                    <div class="chips">
+                        <div class="chip active">Frutas</div>
+                        <div class="chip">Carnes</div>
+                        <div class="chip">Lácteos</div>
+                        <div class="chip">Bebidas</div>
+                        <div class="chip">Hogar</div>
+                    </div>
+
+                    <div class="hero">
+                        <h2>Compra local, recibe en casa</h2>
+                        <p>Productos frescos de tus tiendas favoritas.</p>
+                        <div class="hero-cta"><i class="bi bi-lightning-charge-fill"></i> Ver ofertas</div>
+                        <div class="hero-emoji one">🥑</div>
+                        <div class="hero-emoji two">🍅</div>
+                        <div class="hero-emoji three">🥕</div>
+                    </div>
+
+                    <div class="section-head">
+                        <h3>Tiendas cerca de ti</h3>
+                        <a href="#">Ver todas</a>
+                    </div>
+
+                    <div class="store-row">
+                        <div class="store-card">
+                            <div class="store-cover">🥬</div>
+                            <div class="store-info">
+                                <div class="store-logo">🏪</div>
+                                <div class="store-name">Mercado Yola</div>
+                                <div class="store-meta"><span class="star">★ 4.8</span><span>30-45 min</span></div>
+                            </div>
+                        </div>
+                        <div class="store-card">
+                            <div class="store-cover">🍗</div>
+                            <div class="store-info">
+                                <div class="store-logo">🥩</div>
+                                <div class="store-name">Carnes MM</div>
+                                <div class="store-meta"><span class="star">★ 4.6</span><span>25-35 min</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-head">
+                        <h3>Ofertas de hoy</h3>
+                        <a href="#">Ver todas</a>
+                    </div>
+
+                    <div class="product-grid">
+                        <div class="product-card">
+                            <div class="product-thumb">🥑</div>
+                            <div class="product-name">Aguacate Hass</div>
+                            <div class="product-price">$2.50</div>
+                            <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                        </div>
+                        <div class="product-card">
+                            <div class="product-thumb peach">🍗</div>
+                            <div class="product-name">Pollo entero</div>
+                            <div class="product-price">$6.90</div>
+                            <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="promo-strip">
+                        <div class="promo-icon"><i class="bi bi-truck"></i></div>
+                        <div>
+                            <strong>Envío gratis</strong>
+                            <span>En tu primer pedido superior a $10</span>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+
+                    <div class="section-head">
+                        <h3>Más vendidos</h3>
+                        <a href="#">Ver todos</a>
+                    </div>
+
+                    <div class="product-grid">
+                        <div class="product-card">
+                            <div class="product-thumb yellow">🍌</div>
+                            <div class="product-name">Plátano 1kg</div>
+                            <div class="product-price">$1.10</div>
+                            <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                        </div>
+                        <div class="product-card">
+                            <div class="product-thumb cream">🥛</div>
+                            <div class="product-name">Leche 1L</div>
+                            <div class="product-price">$2.20</div>
+                            <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item active"><i class="bi bi-house-door-fill"></i>Inicio</div>
+                    <div class="nav-item"><i class="bi bi-shop"></i>Tiendas</div>
+                    <div class="nav-item"><i class="bi bi-heart"></i>Favoritos</div>
+                    <div class="nav-item"><i class="bi bi-bag"></i>Pedidos</div>
+                    <div class="nav-item"><i class="bi bi-person"></i>Perfil</div>
+                </div>
+            </section>
+
+            <!-- ───────────────── 2. TIENDA ───────────────── -->
+            <section class="app-screen" data-screen="2">
+                <div class="status">
+                    <span>9:41</span>
+                    <div class="status-icons">
+                        <i class="bi bi-reception-4"></i>
+                        <i class="bi bi-wifi"></i>
+                        <span class="battery"><span></span></span>
+                    </div>
+                </div>
+
+                <div class="app-header" style="padding-bottom:14px;">
+                    <div class="icon-btn small"><i class="bi bi-arrow-left"></i></div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="icon-btn small"><i class="bi bi-search"></i></div>
+                        <div class="icon-btn small"><i class="bi bi-heart"></i></div>
+                        <div class="icon-btn small"><i class="bi bi-bag"></i></div>
+                    </div>
+                </div>
+
+                <div class="screen-body" style="padding:0; overflow:hidden;">
+                    <div class="store-hero">
+                        🥬
+                        <span class="floating f1">🍅</span>
+                        <span class="floating f2">🥕</span>
+                        <span class="floating f3">🥦</span>
+                    </div>
+
+                    <div class="store-profile">
+                        <div class="store-profile-head">
+                            <div class="store-avatar">🏪</div>
+                            <div style="flex:1;">
+                                <h2>Mercado Yola</h2>
+                                <div class="store-sub">
+                                    <span class="badge-open"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Abierto</span>
+                                    <span class="star" style="color:#E8A33D; font-weight:700;">★ 4.8</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="store-delivery">
+                            <i class="bi bi-truck"></i>
+                            <span>Entrega estimada <strong>30-45 min</strong> · Delivery <strong>$1.00</strong></span>
+                        </div>
+                    </div>
+
+                    <div style="padding: 20px 30px 0;">
+                        <div class="chips" style="padding-top:0;">
+                            <div class="chip active">Frutas</div>
+                            <div class="chip">Verduras</div>
+                            <div class="chip">Carnes</div>
+                            <div class="chip">Combos</div>
+                        </div>
+
+                        <div class="product-grid" style="margin-top:16px;">
+                            <div class="product-card">
+                                <div class="product-thumb red">🍅</div>
+                                <div class="product-name">Tomate 1kg</div>
+                                <div class="product-price">$1.20</div>
+                                <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                            </div>
+                            <div class="product-card">
+                                <div class="product-thumb cream">🧅</div>
+                                <div class="product-name">Cebolla 1kg</div>
+                                <div class="product-price">$1.50</div>
+                                <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                            </div>
+                            <div class="product-card">
+                                <div class="product-thumb yellow">🥔</div>
+                                <div class="product-name">Papa 1kg</div>
+                                <div class="product-price">$1.80</div>
+                                <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                            </div>
+                            <div class="product-card">
+                                <div class="product-thumb peach">🥕</div>
+                                <div class="product-name">Zanahoria 1kg</div>
+                                <div class="product-price">$1.30</div>
+                                <div class="add-btn"><i class="bi bi-plus-lg"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item"><i class="bi bi-house-door"></i>Inicio</div>
+                    <div class="nav-item active"><i class="bi bi-shop"></i>Tiendas</div>
+                    <div class="nav-item"><i class="bi bi-heart"></i>Favoritos</div>
+                    <div class="nav-item"><i class="bi bi-bag"></i>Pedidos</div>
+                    <div class="nav-item"><i class="bi bi-person"></i>Perfil</div>
+                </div>
+            </section>
+
+            <!-- ───────────────── 3. PRODUCTO ───────────────── -->
+            <section class="app-screen" data-screen="3">
+                <div class="status">
+                    <span>9:41</span>
+                    <div class="status-icons">
+                        <i class="bi bi-reception-4"></i>
+                        <i class="bi bi-wifi"></i>
+                        <span class="battery"><span></span></span>
+                    </div>
+                </div>
+
+                <div class="app-header" style="padding-bottom:4px;">
+                    <div class="icon-btn small"><i class="bi bi-arrow-left"></i></div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="icon-btn small"><i class="bi bi-heart"></i></div>
+                        <div class="icon-btn small"><i class="bi bi-bag"></i></div>
+                    </div>
+                </div>
+
+                <div class="screen-body" style="padding:0;">
+                    <div class="product-hero">
+                        <span class="emoji">🥑</span>
+                    </div>
+
+                    <div class="product-info">
+                        <div class="product-title">Aguacate Hass</div>
+                        <div class="product-sub">
+                            <span class="rating">★ 4.9</span>
+                            <span>·</span>
+                            <span>Mercado Yola</span>
+                            <span>·</span>
+                            <span>1 kg</span>
+                        </div>
+                        <div class="product-price-big">$2.50</div>
+                        <div class="product-desc">Aguacate fresco, listo para consumir. Seleccionado y empacado el mismo día.</div>
+
+                        <div class="qty-row">
+                            <span>Cantidad</span>
+                            <div class="stepper">
+                                <i class="bi bi-dash-lg"></i>
+                                <b>1</b>
+                                <i class="bi bi-plus-lg"></i>
+                            </div>
+                        </div>
+
+                        <div class="seller-card">
+                            <div class="avatar">🏪</div>
+                            <div style="flex:1;">
+                                <div class="name">Mercado Yola</div>
+                                <div class="meta">★ 4.8 · Entrega 30-45 min</div>
+                            </div>
+                            <div class="btn-outline">Ver tienda</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <div class="btn-primary"><i class="bi bi-bag-plus"></i> Agregar al carrito · $2.50</div>
+                </div>
+            </section>
+
+            <!-- ───────────────── 4. CHECKOUT ───────────────── -->
+            <section class="app-screen" data-screen="4">
+                <div class="status">
+                    <span>9:41</span>
+                    <div class="status-icons">
+                        <i class="bi bi-reception-4"></i>
+                        <i class="bi bi-wifi"></i>
+                        <span class="battery"><span></span></span>
+                    </div>
+                </div>
+
+                <div class="app-header">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div class="icon-btn small"><i class="bi bi-arrow-left"></i></div>
+                        <div class="title" style="font-size:29px;">Carrito</div>
+                    </div>
+                    <div class="icon-btn small"><i class="bi bi-trash3"></i></div>
+                </div>
+
+                <div class="screen-body">
+                    <div class="cart-item">
+                        <div class="cart-thumb">🥑</div>
+                        <div class="cart-info">
+                            <h4>Aguacate Hass</h4>
+                            <p>1 kg · Mercado Yola</p>
+                            <div class="mini-stepper">
+                                <span><i class="bi bi-dash"></i></span><b>1</b><span><i class="bi bi-plus"></i></span>
+                            </div>
+                        </div>
+                        <div class="price">$2.50</div>
+                    </div>
+
+                    <div class="cart-item">
+                        <div class="cart-thumb peach">🍗</div>
+                        <div class="cart-info">
+                            <h4>Pollo entero</h4>
+                            <p>1 unidad · Carnes MM</p>
+                            <div class="mini-stepper">
+                                <span><i class="bi bi-dash"></i></span><b>1</b><span><i class="bi bi-plus"></i></span>
+                            </div>
+                        </div>
+                        <div class="price">$6.90</div>
+                    </div>
+
+                    <div class="section-head" style="margin-top:18px;"><h3 style="font-size:22px;">Entrega</h3></div>
+                    <div class="address-card">
+                        <div class="map-thumb"></div>
+                        <div class="address-info">
+                            <h4>Av. Principal, Caracas</h4>
+                            <p>Edificio Los Álamos, piso 3 · Ref. frente al parque</p>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:var(--muted);"></i>
+                    </div>
+
+                    <div class="section-head" style="margin-top:18px;"><h3 style="font-size:22px;">Método de pago</h3></div>
+                    <div class="pay-options">
+                        <div class="pay-option active"><i class="bi bi-phone"></i>Pago móvil</div>
+                        <div class="pay-option"><i class="bi bi-cash-stack"></i>Efectivo</div>
+                        <div class="pay-option"><i class="bi bi-bank"></i>Transferencia</div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-row"><span>Subtotal</span><span>$9.40</span></div>
+                        <div class="summary-row"><span>Delivery</span><span>$1.00</span></div>
+                        <div class="summary-row total"><span>Total</span><b>$10.40</b></div>
+                    </div>
+                </div>
+
+                <div class="action-bar" style="flex-basis:104px; padding-top:12px;">
+                    <div class="btn-primary"><i class="bi bi-shield-check"></i> Confirmar pedido · $10.40</div>
+                </div>
+            </section>
+
+            <!-- ───────────────── 5. SEGUIMIENTO ───────────────── -->
+            <section class="app-screen" data-screen="5">
+                <div class="status">
+                    <span>9:41</span>
+                    <div class="status-icons">
+                        <i class="bi bi-reception-4"></i>
+                        <i class="bi bi-wifi"></i>
+                        <span class="battery"><span></span></span>
+                    </div>
+                </div>
+
+                <div class="app-header" style="padding-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div class="icon-btn small"><i class="bi bi-arrow-left"></i></div>
+                        <div>
+                            <div class="title" style="font-size:27px;">Pedido #1042</div>
+                            <div class="subtitle">Mercado Yola · 2 productos</div>
+                        </div>
+                    </div>
+                    <div class="icon-btn small"><i class="bi bi-three-dots"></i></div>
+                </div>
+
+                <div class="screen-body" style="padding:0;">
+                    <div class="track-map">
+                        <div class="block b1"></div>
+                        <div class="block b2"></div>
+                        <div class="block b3"></div>
+                        <div class="block b4"></div>
+                        <div class="road r1"></div>
+                        <div class="road r2"></div>
+                        <div class="road r3"></div>
+                        <div class="road r4"></div>
+
+                        <svg class="route-svg" viewBox="0 0 760 540" fill="none" preserveAspectRatio="none">
+                            <path d="M185 155 C 260 160, 300 230, 380 250 S 470 300, 535 382"
+                                  stroke="#4E8F63" stroke-width="8" stroke-linecap="round" stroke-dasharray="1 16" />
+                        </svg>
+
+                        <div class="map-pin store"><i class="bi bi-shop"></i></div>
+                        <div class="map-pin home"><i class="bi bi-house-door-fill"></i></div>
+                        <div class="courier-pin">🛵</div>
+                    </div>
+
+                    <div class="track-sheet">
+                        <div class="track-top">
+                            <div>
+                                <h3>En camino</h3>
+                                <div style="font-size:15px;color:var(--muted);margin-top:3px;">Tu pedido está cerca</div>
+                            </div>
+                            <div class="eta"><i class="bi bi-clock"></i> 12 min</div>
+                        </div>
+
+                        <div class="timeline">
+                            <div class="tl-item done">
+                                <div class="tl-dot"><i class="bi bi-check-lg"></i></div>
+                                <div class="tl-text"><strong>Pedido confirmado</strong><span>9:32 a. m.</span></div>
+                            </div>
+                            <div class="tl-item done">
+                                <div class="tl-dot"><i class="bi bi-check-lg"></i></div>
+                                <div class="tl-text"><strong>En preparación</strong><span>9:38 a. m.</span></div>
+                            </div>
+                            <div class="tl-item current">
+                                <div class="tl-dot"><i class="bi bi-truck"></i></div>
+                                <div class="tl-text"><strong>En camino</strong><span>El repartidor va hacia tu dirección</span></div>
+                            </div>
+                            <div class="tl-item">
+                                <div class="tl-dot"></div>
+                                <div class="tl-text"><strong>Entregado</strong><span>Pendiente</span></div>
+                            </div>
+                        </div>
+
+                        <div class="courier-card">
+                            <div class="courier-avatar">CM</div>
+                            <div class="courier-info">
+                                <h4>Carlos M.</h4>
+                                <p>★ 4.9 · Transportista</p>
+                            </div>
+                            <div class="btn-outline"><i class="bi bi-chat-dots"></i> Chatear</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item"><i class="bi bi-house-door"></i>Inicio</div>
+                    <div class="nav-item"><i class="bi bi-shop"></i>Tiendas</div>
+                    <div class="nav-item"><i class="bi bi-heart"></i>Favoritos</div>
+                    <div class="nav-item active"><i class="bi bi-bag-fill"></i>Pedidos</div>
+                    <div class="nav-item"><i class="bi bi-person"></i>Perfil</div>
+                </div>
+            </section>
+
+            <!-- ───────────────── 6. CHAT ───────────────── -->
+            <section class="app-screen" data-screen="6">
+                <div class="status">
+                    <span>9:41</span>
+                    <div class="status-icons">
+                        <i class="bi bi-reception-4"></i>
+                        <i class="bi bi-wifi"></i>
+                        <span class="battery"><span></span></span>
+                    </div>
+                </div>
+
+                <div class="chat-header">
+                    <div class="icon-btn small"><i class="bi bi-arrow-left"></i></div>
+                    <div class="avatar">🏪</div>
+                    <div class="who">
+                        <h3>Mercado Yola</h3>
+                        <p><i class="bi bi-circle-fill" style="font-size:8px;"></i> En línea</p>
+                    </div>
+                    <div class="icon-btn small"><i class="bi bi-telephone"></i></div>
+                    <div class="icon-btn small"><i class="bi bi-three-dots-vertical"></i></div>
+                </div>
+
+                <div class="chat-body">
+                    <div class="day-label">Hoy</div>
+
+                    <div class="bubble left">¡Hola! ¿En qué podemos ayudarte?<span class="bubble-time">9:41</span></div>
+                    <div class="bubble right">¿Tienen aguacate maduro?<span class="bubble-time">9:42</span></div>
+                    <div class="bubble left">Sí, recién llegado 🥑<span class="bubble-time">9:42</span></div>
+
+                    <div class="product-mini">
+                        <div class="thumb">🥑</div>
+                        <div style="flex:1;">
+                            <h5>Aguacate Hass</h5>
+                            <p>$2.50</p>
+                            <div class="see">1 kg · Disponible</div>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:var(--muted);"></i>
+                    </div>
+
+                    <div class="bubble right">Perfecto, quiero 2<span class="bubble-time">9:43</span></div>
+                    <div class="bubble left">Listo, te preparo el pedido.<span class="bubble-time">9:43</span></div>
+                </div>
+
+                <div class="chat-input">
+                    <div class="field"><i class="bi bi-emoji-smile"></i> Escribe un mensaje...</div>
+                    <div class="send-btn"><i class="bi bi-send-fill"></i></div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const params = new URLSearchParams(window.location.search);
+        const screen = params.get('screen') || '1';
+        document.querySelectorAll('.app-screen').forEach(function (el) {
+            el.classList.toggle('active', el.dataset.screen === screen);
+        });
+    })();
+</script>
+</body>
+</html>
