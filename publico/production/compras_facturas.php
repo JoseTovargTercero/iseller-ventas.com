@@ -18,22 +18,6 @@ if (!fc_asegurar_esquema($conexion)) {
     exit;
 }
 
-// El módulo solo existe mientras la opción esté activa.
-$stmt = $conexion->prepare("SELECT factura FROM configuracion WHERE bss_id = ? ORDER BY id DESC LIMIT 1");
-if (!$stmt) {
-    header('Location: nuevaCompra.php');
-    exit;
-}
-$stmt->bind_param("i", $bss_id);
-$stmt->execute();
-$config = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-if (!$config || (int) $config['factura'] !== 1) {
-    header('Location: nuevaCompra.php');
-    exit;
-}
-
 $topnav = topnav();
 $sucursalSesion = (int) ($_SESSION['sucursal'] ?? 0);
 

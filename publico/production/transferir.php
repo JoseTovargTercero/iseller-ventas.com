@@ -21,6 +21,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         }
     }
     $stmt->close();
+
+    // Productos del negocio para el filtro de movimientos
+    $productos_filtro = [];
+    $stmtProductos = mysqli_prepare($conexion, "SELECT id, nombre FROM productos WHERE bss_id = ? AND activo = 0 ORDER BY nombre");
+    if ($stmtProductos) {
+        $stmtProductos->bind_param('i', $bss_id);
+        $stmtProductos->execute();
+        $resultProductos = $stmtProductos->get_result();
+        while ($rowProducto = $resultProductos->fetch_assoc()) {
+            $productos_filtro[] = $rowProducto;
+        }
+        $stmtProductos->close();
+    }
 ?>
     <!DOCTYPE html>
     <html lang='es'>
@@ -50,6 +63,82 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 <div class='right_col' role='main'>
 
                     <div class="row">
+                        <div class="col-lg-12">
+                            <div class="x_panel">
+                                <div class="x_title">
+                                    <h2>Movimientos de stock</h2>
+                                    <ul class="nav navbar-right panel_toolbox">
+                                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                                        </li>
+                                    </ul>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="x_content">
+                                    <div class="row mb-3">
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="mov-filtro-producto">Producto</label>
+                                            <select class="form-control" id="mov-filtro-producto">
+                                                <option value="">-- Todos --</option>
+                                                <?php foreach ($productos_filtro as $productoFiltro): ?>
+                                                    <option value="<?= (int) $productoFiltro['id'] ?>">
+                                                        <?= htmlspecialchars($productoFiltro['nombre']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="mov-filtro-origen">Sucursal origen</label>
+                                            <select class="form-control" id="mov-filtro-origen">
+                                                <option value="">-- Todas --</option>
+                                                <?php foreach ($sucursales as $row): ?>
+                                                    <option value="<?= (int) $row['id'] ?>">
+                                                        <?= htmlspecialchars($row['nombre']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="mov-filtro-destino">Sucursal destino</label>
+                                            <select class="form-control" id="mov-filtro-destino">
+                                                <option value="">-- Todas --</option>
+                                                <?php foreach ($sucursales as $row): ?>
+                                                    <option value="<?= (int) $row['id'] ?>">
+                                                        <?= htmlspecialchars($row['nombre']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Tipo</th>
+                                                    <th>Cantidad</th>
+                                                    <th>Sucursal origen</th>
+                                                    <th>Sucursal destino</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="movimientos-body">
+                                                <tr><td colspan="5" class="text-center">Cargando movimientos...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-lg-12">
+                            <button type="button" id="btn-transferencia" class="btn btn-success">
+                                <i class="fa fa-exchange"></i> Nueva transferencia
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row" id="panel-transferencia" style="display: none;">
                         <div class="col-lg-12">
                             <form id='data-form'>
                                 <div class="x_panel">
@@ -176,6 +265,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             let precio_consultado
             let producto_consultado
+            let producto_estricto = false
 
             // Consultar productos
             function obtener_registros(producto) {
@@ -237,6 +327,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             $(document).on('change', '#sucursal', function() {
                 form_reset()
+                producto_estricto = false;
             }); // resetear form al cambiar el select
 
 
@@ -244,6 +335,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 var producto = $(this).val();
                 if (producto != "") {
                     buscarProducto(producto);
+                } else {
+                    producto_estricto = false;
                 }
             });
 
@@ -289,10 +382,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (res.success) {
                             precio_consultado = res.data.precio_compra;
                             producto_consultado = res.data.nombre
+                            producto_estricto = res.data.seguimiento_estricto == 1;
 
                             document.getElementById('disponible').value = res.data.stock;
                             //        document.querySelector('[name=nombrepor]').value = res.data.nombre;
                         } else {
+                            producto_estricto = false;
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Producto no encontrado',
@@ -312,8 +407,113 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             }
 
 
-            // ENVIAR LA NUEVA COMPRA AL BACK
-            document.getElementById('data-form').addEventListener('submit', function(e) {
+            // Movimientos de stock con filtros por producto y sucursales
+            function cargarMovimientos() {
+                const tbody = document.getElementById('movimientos-body');
+                const params = new URLSearchParams({
+                    producto: document.getElementById('mov-filtro-producto').value,
+                    origen: document.getElementById('mov-filtro-origen').value,
+                    destino: document.getElementById('mov-filtro-destino').value
+                });
+                fetch('../../configurar/movimientos_stock.php?' + params.toString())
+                    .then(res => res.json())
+                    .then(json => {
+                        if (!json.ok) {
+                            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se pudieron cargar los movimientos</td></tr>';
+                            return;
+                        }
+                        if (!json.movimientos.length) {
+                            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay movimientos con los filtros seleccionados</td></tr>';
+                            return;
+                        }
+                        tbody.innerHTML = json.movimientos.map(m => `<tr>
+                            <td>${m.fecha}</td>
+                            <td>${m.tipo}</td>
+                            <td>${m.cantidad}</td>
+                            <td>${m.origen || '—'}</td>
+                            <td>${m.destino || '—'}</td>
+                        </tr>`).join('');
+                    })
+                    .catch(err => {
+                        console.error("Error al cargar movimientos:", err);
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se pudieron cargar los movimientos</td></tr>';
+                    });
+            }
+
+            ['mov-filtro-producto', 'mov-filtro-origen', 'mov-filtro-destino'].forEach(function(id) {
+                document.getElementById(id).addEventListener('change', cargarMovimientos);
+            });
+            cargarMovimientos();
+
+            // Mostrar u ocultar el formulario de transferencia
+            document.getElementById('btn-transferencia').addEventListener('click', function() {
+                const panel = document.getElementById('panel-transferencia');
+                const oculto = panel.style.display === 'none';
+                panel.style.display = oculto ? '' : 'none';
+                this.innerHTML = oculto
+                    ? '<i class="fa fa-times"></i> Ocultar transferencia'
+                    : '<i class="fa fa-exchange"></i> Nueva transferencia';
+            });
+
+            // Confirmación de stock para productos con seguimiento estricto
+            // (mismo flujo que las nuevas compras)
+            function textoContexto(ctx) {
+                const n = (v) => Number(v || 0).toLocaleString('es-VE', {maximumFractionDigits: 3});
+                return `<div style="text-align:left;font-size:13px">
+                    <p><b>${ctx.nombre || ''}</b></p>
+                    <p>Stock actual en sistema (sucursal destino): <b>${n(ctx.stock_actual)} ${ctx.unidad || ''}</b></p>
+                    <p>Última compra: ${ctx.ultima_compra_at ? ctx.ultima_compra_at + ' (' + n(ctx.ultima_compra_kg) + ')' : 'sin registro'}</p>
+                    <p>Vendido desde la última compra: <b>${n(ctx.vendido_desde)}</b></p>
+                    <p style="color:#888">Confirme el monto actual si el stock es correcto, o vaya al módulo de ajuste de stock para registrar la diferencia.</p>
+                </div>`;
+            }
+
+            async function mostrarConciliacion(ctx) {
+                if (!ctx) {
+                    Alerta.toast('error', 'No se pudo obtener la cantidad anterior.');
+                    return false;
+                }
+                const r = await Swal.fire({
+                    title: 'Confirmar stock actual',
+                    html: textoContexto(ctx),
+                    showDenyButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: 'Confirmar monto actual',
+                    denyButtonText: 'Ir a ajuste de stock',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (r.isConfirmed) return true;
+                if (r.isDenied) window.open('ajustes_stock.php', '_blank');
+                return false;
+            }
+
+            async function enviarTransferencia(formData) {
+                const res = await fetch('../../configurar/modificar_stock_transferir.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const text = await res.text();
+                console.log("Respuesta cruda del servidor:", text);
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    console.error("Error al parsear JSON:", e);
+                    Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
+                    return null;
+                }
+                if (json.requiere_conciliacion) {
+                    const confirmado = await mostrarConciliacion(json.contexto);
+                    if (!confirmado) return null;
+                    formData.set('conciliacion_confirmada', '1');
+                    formData.set('stock_visto', String(json.contexto.stock_actual));
+                    return enviarTransferencia(formData);
+                }
+                return json;
+            }
+
+            // ENVIAR LA TRANSFERENCIA AL BACK
+            document.getElementById('data-form').addEventListener('submit', async function(e) {
                 e.preventDefault(); // Evitar envío tradicional
 
                 const form = e.target;
@@ -332,43 +532,28 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     return; // Previene el guardado o envío
                 }
 
-                const disponible = parseInt(document.getElementById('disponible').value)
-                const unidades_transferir = parseInt(document.getElementById('unidades_transferir').value)
+                // En productos estrictos la validación de stock la hace el
+                // backend después de la confirmación
+                if (!producto_estricto) {
+                    const disponible = parseInt(document.getElementById('disponible').value)
+                    const unidades_transferir = parseInt(document.getElementById('unidades_transferir').value)
 
-                if (unidades_transferir > disponible) {
-                    Alerta.toast('No hay suficientes productos en stock')
-                    return
+                    if (unidades_transferir > disponible) {
+                        Alerta.toast('error', 'No hay suficientes productos en stock')
+                        return
+                    }
                 }
 
+                const json = await enviarTransferencia(formData);
+                if (!json) return;
 
-                fetch('../../configurar/modificar_stock_transferir.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(res => res.text())
-                    .then(text => {
-                        console.log("Respuesta cruda del servidor:", text);
-                        let json;
-                        try {
-                            json = JSON.parse(text);
-                        } catch (e) {
-                            console.error("Error al parsear JSON:", e);
-
-                            Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
-                            return;
-                        }
-
-                        if (json.success) {
-                            Alerta.mostrar('success', json.message);
-                            form.reset(); // Opcional: limpia el formulario
-                        } else {
-                            Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Error en la solicitud:", err);
-                        Alerta.mostrar('error', 'No se pudo contactar con el servidor');
-                    });
+                if (json.success) {
+                    Alerta.mostrar('success', json.message);
+                    form.reset(); // Opcional: limpia el formulario
+                    cargarMovimientos();
+                } else {
+                    Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
+                }
             });
         </script>
 

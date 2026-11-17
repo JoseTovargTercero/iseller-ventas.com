@@ -13,20 +13,6 @@ function fcResponder($ok, $mensaje, array $extra = [])
     exit;
 }
 
-function fcConfigActiva($conexion, $bssId)
-{
-    $stmt = $conexion->prepare("SELECT factura FROM configuracion WHERE bss_id = ? ORDER BY id DESC LIMIT 1");
-    if (!$stmt) {
-        return false;
-    }
-    $stmt->bind_param("i", $bssId);
-    $stmt->execute();
-    $fila = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    return $fila && (int) $fila['factura'] === 1;
-}
-
 function fcStmt($conexion, $sql)
 {
     $stmt = $conexion->prepare($sql);
@@ -42,9 +28,6 @@ if ($nivel !== 1 && $nivel !== 2) {
 }
 
 $bssId = (int) $_SESSION['bss_id'];
-if (!fcConfigActiva($conexion, $bssId)) {
-    fcResponder(false, 'El registro de compras con factura no está activo.');
-}
 
 $contenido = file_get_contents('php://input');
 $input = json_decode($contenido, true);
