@@ -63,6 +63,28 @@ if ($stmtCombos) {
     $stmtCombos->close();
 }
 
+// ── Tasas personalizadas por producto (las mismas tablas que usa el POS web) ─────
+$tasasProductos = [];
+$stmtTP = $conexion->prepare(
+    "SELECT pt.producto_id, pt.par, tp.valor
+       FROM producto_tasas_personalizadas pt
+       INNER JOIN cambio_tasas_personalizadas tp
+           ON tp.id = pt.tasa_id AND tp.bss_id = pt.bss_id AND tp.par = pt.par
+      WHERE pt.bss_id = ?"
+);
+if ($stmtTP) {
+    $stmtTP->bind_param('i', $bssId);
+    $stmtTP->execute();
+    $resTP = $stmtTP->get_result();
+    while ($filaTP = $resTP->fetch_assoc()) {
+        $valorTP = (float)$filaTP['valor'];
+        if ($valorTP > 0) {
+            $tasasProductos[(int)$filaTP['producto_id']][(string)$filaTP['par']] = $valorTP;
+        }
+    }
+    $stmtTP->close();
+}
+
 // ── Imágenes: misma resolución que ventas.php (negocio, optimizada o stock) ──
 $imgRoot = __DIR__ . '/../iseller_store';
 $setOptimized = listarArchivos($imgRoot . '/assets/img/stock/optimized');
@@ -137,6 +159,7 @@ while ($fila = $res->fetch_assoc()) {
         'unidad' => $mayor ? 'UND' : (string)($fila['unidad'] ?? 'UND'),
         'paso' => (!$mayor && (string)($fila['unidad'] ?? 'UND') === 'KG') ? 0.01 : 1,
         'modo_control' => $esCanal ? 'CANAL' : 'NORMAL',
+        'tasas' => empty($tasasProductos[$id]) ? new stdClass() : $tasasProductos[$id],
         'combo_items' => ($esCombo === 1 && isset($combos[$id])) ? $combos[$id]['items'] : [],
     ];
 }
