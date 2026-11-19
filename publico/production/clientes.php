@@ -21,19 +21,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     }
     $stmt->close();
 
-    $stmt_clientes = mysqli_prepare($conexion, "SELECT * FROM `clientes` WHERE bss_id = ? ORDER BY id DESC");
-    $stmt_clientes->bind_param('i', $bss_id);
-    $stmt_clientes->execute();
-    $result_clientes = $stmt_clientes->get_result();
-
-    $clientes = [];
-    if ($result_clientes->num_rows > 0) {
-        while ($row = $result_clientes->fetch_assoc()) {
-            $clientes[] = $row;
-        }
-    }
-    $stmt_clientes->close();
-
 ?>
     <!DOCTYPE html>
     <html lang='es'>
@@ -185,22 +172,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <th>Acciones</th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="datos-tabla">
-                                                <?php
-                                                $count = 1;
-                                                foreach ($clientes as $cliente): ?>
-                                                    <tr>
-                                                        <td><?= $count++ ?></td>
-                                                        <td><?= htmlspecialchars($cliente['cedula'] ?? '') ?></td>
-                                                        <td><?= htmlspecialchars($cliente['nombre'] ?? '') ?></td>
-                                                        <td><?= htmlspecialchars($cliente['telefono'] ?? '') ?></td>
-                                                        <td>
-                                                            <button class="btn btn-sm btn-info btn-editar-cliente" data-id="<?= $cliente['id'] ?>" data-cedula="<?= htmlspecialchars($cliente['cedula'] ?? '') ?>" data-nombre="<?= htmlspecialchars($cliente['nombre'] ?? '') ?>" data-telefono="<?= htmlspecialchars($cliente['telefono'] ?? '') ?>" title="Editar"><i class="fa fa-pencil"></i></button>
-                                                            <button class="btn btn-sm btn-danger btn-eliminar-cliente" data-id="<?= $cliente['id'] ?>" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
+                                            <tbody id="datos-tabla"></tbody>
                                         </table>
 
 
@@ -213,27 +185,104 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 </div>
 
-                <!-- jQuery -->
-                <script src='../vendors/jquery/dist/jquery.min.js'></script>
                 <!-- Bootstrap -->
                 <script src='../vendors/bootstrap/dist/js/bootstrap.bundle.min.js'></script>
                 <!-- DataTables core -->
                 <link rel="stylesheet" href="../vendors/datatables/jquery.dataTables.min.css">
-                <!-- Buttons extension -->
-                <link rel="stylesheet" href="../vendors/datatables/buttons.dataTables.min.css">
                 <script src="../vendors/jquery/jquery-3.7.1.min.js"></script>
                 <script src="../vendors/datatables/jquery.dataTables.min.js"></script>
-                <script src="../vendors/datatables/dataTables.buttons.min.js"></script>
-                <!-- PDF export -->
-                <script src="../vendors/pdfmake/build/pdfmake.min.js"></script>
-                <script src="../vendors/pdfmake/build/vfs_fonts.js"></script>
-                <script src="../vendors/datatables/buttons.html5.min.js"></script>
                 <script src='../build/js/custom.js'></script>
                 <script src='../build/js/global-loader.js?v=2'></script>
                 <script src="js/nombre_pagina.js"></script>
 
                 <script>
-                    let table = new DataTable('#datatable');
+                    function escapeHtml(valor) {
+                        return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(c) {
+                            return {
+                                '&': '&amp;',
+                                '<': '&lt;',
+                                '>': '&gt;',
+                                '"': '&quot;',
+                                "'": '&#39;'
+                            } [c];
+                        });
+                    }
+
+                    let table = new DataTable('#datatable', {
+                        processing: true,
+                        serverSide: true,
+                        ajax: {
+                            url: '../../configurar/clientes_list.php',
+                            type: 'POST',
+                            error: function() {
+                                Swal.fire('Error', 'No se pudieron cargar los clientes.', 'error');
+                            }
+                        },
+                        pageLength: 25,
+                        lengthMenu: [
+                            [10, 25, 50, 100],
+                            [10, 25, 50, 100]
+                        ],
+                        order: [
+                            [0, 'desc']
+                        ],
+                        language: {
+                            processing: '<span class="text-muted">Cargando clientes...</span>',
+                            search: 'Buscar:',
+                            lengthMenu: 'Mostrar _MENU_ registros',
+                            info: 'Mostrando _START_ a _END_ de _TOTAL_ clientes',
+                            infoEmpty: 'Sin clientes para mostrar',
+                            infoFiltered: '(filtrado de _MAX_ clientes)',
+                            zeroRecords: 'No se encontraron clientes',
+                            emptyTable: 'No hay clientes registrados',
+                            paginate: {
+                                first: 'Primero',
+                                last: 'Último',
+                                next: 'Siguiente',
+                                previous: 'Anterior'
+                            }
+                        },
+                        columns: [{
+                                data: 'id',
+                                render: function(data, type, row, meta) {
+                                    if (type !== 'display') return data;
+                                    return meta.settings._iDisplayStart + meta.row + 1;
+                                }
+                            },
+                            {
+                                data: 'cedula',
+                                render: function(data) {
+                                    return escapeHtml(data);
+                                }
+                            },
+                            {
+                                data: 'nombre',
+                                render: function(data) {
+                                    return escapeHtml(data);
+                                }
+                            },
+                            {
+                                data: 'telefono',
+                                render: function(data) {
+                                    return escapeHtml(data);
+                                }
+                            },
+                            {
+                                data: null,
+                                orderable: false,
+                                searchable: false,
+                                className: 'text-nowrap',
+                                render: function(data, type, row) {
+                                    const id = Number(row.id) || 0;
+                                    const cedula = escapeHtml(row.cedula);
+                                    const nombre = escapeHtml(row.nombre);
+                                    const telefono = escapeHtml(row.telefono);
+                                    return '<button class="btn btn-sm btn-info btn-editar-cliente" data-id="' + id + '" data-cedula="' + cedula + '" data-nombre="' + nombre + '" data-telefono="' + telefono + '" title="Editar"><i class="fa fa-pencil"></i></button> ' +
+                                        '<button class="btn btn-sm btn-danger btn-eliminar-cliente" data-id="' + id + '" title="Eliminar"><i class="fa fa-trash"></i></button>';
+                                }
+                            }
+                        ]
+                    });
 
                     $(document).on('click', '.btn-editar-cliente', function() {
                         const btn = $(this);
@@ -247,15 +296,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             html: `
                                 <div class="form-group text-left">
                                     <label>Cédula</label>
-                                    <input type="text" id="swal-cedula" class="form-control" value="${cedula}">
+                                    <input type="text" id="swal-cedula" class="form-control" value="${escapeHtml(cedula)}">
                                 </div>
                                 <div class="form-group text-left">
                                     <label>Nombre</label>
-                                    <input type="text" id="swal-nombre" class="form-control" value="${nombre}">
+                                    <input type="text" id="swal-nombre" class="form-control" value="${escapeHtml(nombre)}">
                                 </div>
                                 <div class="form-group text-left">
                                     <label>Teléfono</label>
-                                    <input type="text" id="swal-telefono" class="form-control" value="${telefono}">
+                                    <input type="text" id="swal-telefono" class="form-control" value="${escapeHtml(telefono)}">
                                 </div>
                             `,
                             showCancelButton: true,
@@ -286,7 +335,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     success: function(response) {
                                         if (response.status) {
                                             Swal.fire('Éxito', response.msg, 'success').then(() => {
-                                                location.reload();
+                                                table.ajax.reload(null, false);
                                             });
                                         } else {
                                             Swal.fire('Error', response.msg, 'error');
@@ -323,7 +372,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     success: function(response) {
                                         if (response.status) {
                                             Swal.fire('Eliminado', response.msg, 'success').then(() => {
-                                                location.reload();
+                                                table.ajax.reload(null, false);
                                             });
                                         } else {
                                             Swal.fire('Error', response.msg, 'error');

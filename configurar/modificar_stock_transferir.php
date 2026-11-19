@@ -3,6 +3,7 @@ require_once('configuracion.php');
 require_once('session.php');
 require_once('_validador_campos.php');
 require_once('_canal.php');
+require_once('_stock_traslados.php');
 
 header('Content-Type: application/json');
 
@@ -45,6 +46,12 @@ function getStock($sucursal)
 
 
 try {
+    // La bitácora de traslados se crea sola si el hosting no ejecutó la
+    // migración 031. Debe hacerse antes de abrir la transacción.
+    if (!st_asegurar_tabla($conexion)) {
+        throw new Exception('No se pudo preparar la tabla de traslados. Ejecute la migración 031_stock_traslados.sql.');
+    }
+
     $stmtProd = $conexion->prepare("SELECT nombre, modo_control FROM productos WHERE id = ? AND bss_id = ? LIMIT 1");
     $stmtProd->bind_param('ii', $id, $bss_id);
     $stmtProd->execute();

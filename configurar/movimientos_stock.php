@@ -5,6 +5,7 @@
  */
 require_once(__DIR__ . '/configuracion.php');
 require_once(__DIR__ . '/session.php');
+require_once(__DIR__ . '/_stock_traslados.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -19,6 +20,11 @@ $origen = (int) ($_GET['origen'] ?? 0);
 $destino = (int) ($_GET['destino'] ?? 0);
 if ($bssId <= 0) {
     echo json_encode(['ok' => false, 'error' => 'Negocio inválido']);
+    exit;
+}
+
+if (!st_asegurar_tabla($conexion)) {
+    echo json_encode(['ok' => false, 'error' => 'No se pudo preparar la tabla de traslados.']);
     exit;
 }
 
