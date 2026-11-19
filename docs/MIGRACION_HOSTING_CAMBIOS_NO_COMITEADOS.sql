@@ -330,6 +330,32 @@ CREATE TABLE IF NOT EXISTS `stock_traslados` (
   KEY `idx_st_bss_destino`   (`bss_id`, `sucursal_destino`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================
+-- 032. Clientes sin duplicados por (bss_id, cédula)
+-- ------------------------------------------------------------
+-- clientes_claves es el candado atómico que usan accion_carta.php (POS web)
+-- y api/pos_ventas.php (POS nativo) para no registrar dos veces al cliente.
+-- ============================================================
+CALL `_mig_add_index`(
+    'clientes',
+    'idx_clientes_bss_cedula',
+    'KEY `idx_clientes_bss_cedula` (`bss_id`, `cedula`)'
+);
+
+CREATE TABLE IF NOT EXISTS `clientes_claves` (
+  `bss_id`    INT(11)  NOT NULL,
+  `cedula`    INT(11)  NOT NULL,
+  `creado_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`bss_id`, `cedula`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `clientes_claves` (`bss_id`, `cedula`)
+SELECT `bss_id`, `cedula`
+FROM `clientes`
+WHERE `bss_id` IS NOT NULL
+  AND `cedula` IS NOT NULL
+  AND `cedula` <> 0;
+
 -- ------------------------------------------------------------
 -- Limpieza de utilidades temporales
 -- ------------------------------------------------------------
@@ -355,4 +381,7 @@ DROP PROCEDURE IF EXISTS `_mig_add_index`;
 -- SHOW TABLES LIKE 'compras_factura_pagos';
 -- SHOW TABLES LIKE 'lotes';
 -- SHOW TABLES LIKE 'lotes_detalle';
+-- SHOW INDEX FROM clientes WHERE Key_name = 'idx_clientes_bss_cedula';
+-- SHOW TABLES LIKE 'clientes_claves';
+-- SELECT COUNT(*) FROM clientes_claves;
 -- SELECT id, nombre, dir FROM menu WHERE dir = 'variaciones.php';

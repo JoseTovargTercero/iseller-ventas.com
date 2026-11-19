@@ -10,6 +10,7 @@ require_once('session.php');
 require("_tasas_cambio.php");
 require_once("_resumen_mensual.php");
 require_once("_canal.php");
+require_once("_clientes.php");
 
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
@@ -27,6 +28,10 @@ $desscontado = '';
 
 $id_sucursal = $_SESSION["sucursal"];
 $bss_id = $_SESSION["bss_id"];
+
+// La tabla-candado de clientes se prepara fuera de la transacción de venta,
+// porque el DDL hace commit implícito.
+cl_asegurar_tabla($conexion);
 
 // Obtener configuración del sistema
 
@@ -353,26 +358,20 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             }
         }
 
-        $cedula = $cliente['cedula'];
+        // Datos del cliente normalizados: la cédula identifica al cliente
+        // dentro del negocio, así que se guarda sin espacios.
+        $cedula = trim((string) ($cliente['cedula'] ?? ''));
 
-        // Registra los datos del cliente si no existe
-
+        // Registra el cliente solo si no existe (misma cédula + negocio).
         if ($registro_clientes == 1 || $tipo === 'credito') {
-            $query = "SELECT * FROM clientes WHERE cedula = ? AND bss_id = ?";
-            $stmt = $conexion->prepare($query);
-            $stmt->bind_param("si", $cliente['cedula'], $bss_id); // Fix: bss_id faltaba como segundo parámetro
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $stmt->close();
-
-            if ($result->num_rows == 0) {
-                // registra el nuevo cliente
-                $query = "INSERT INTO clientes (nombre, cedula, telefono, bss_id, sucursal_id) VALUES (?, ?, ?, ?, ?)";
-                $stmt = $conexion->prepare($query);
-                $stmt->bind_param("ssssi", $cliente['nombre'], $cliente['cedula'], $cliente['telefono'], $bss_id, $id_sucursal);
-                $stmt->execute();
-                $stmt->close();
-            }
+            cl_registrar(
+                $conexion,
+                (int) $bss_id,
+                (int) $id_sucursal,
+                $cedula,
+                trim((string) ($cliente['nombre'] ?? '')),
+                trim((string) ($cliente['telefono'] ?? ''))
+            );
         }
 
         // Idempotencia de sincronización: el id_pedido es único. Si el POS reintenta

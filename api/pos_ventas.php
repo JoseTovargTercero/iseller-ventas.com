@@ -13,6 +13,7 @@
 require_once __DIR__ . '/_pos_comun.php';
 require_once __DIR__ . '/../configurar/_resumen_mensual.php';
 require_once __DIR__ . '/../configurar/_canal.php';
+require_once __DIR__ . '/../configurar/_clientes.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -26,6 +27,10 @@ $usuarioId = $sesion['id_user'];
 if ($sucursalId <= 0) {
     salir(409, ['ok' => false, 'error' => 'La sesión no tiene sucursal']);
 }
+
+// La tabla-candado de clientes se prepara fuera de la transacción de venta,
+// porque el DDL hace commit implícito.
+cl_asegurar_tabla($conexion);
 
 $entrada = entrada();
 $ventas = $entrada['ventas'] ?? null;
@@ -293,29 +298,9 @@ function calcularTotales(array $productos): array
 
 function guardarCliente($conexion, int $bssId, int $sucursalId, string $cedula, string $nombre, string $telefono): void
 {
-    if ($cedula === '') {
-        return;
-    }
-    $stmt = $conexion->prepare("SELECT id FROM clientes WHERE cedula = ? AND bss_id = ? LIMIT 1");
-    if (!$stmt) {
-        return;
-    }
-    $stmt->bind_param('si', $cedula, $bssId);
-    $stmt->execute();
-    $existe = $stmt->get_result()->num_rows > 0;
-    $stmt->close();
-    if ($existe) {
-        return;
-    }
-
-    $stmt = $conexion->prepare(
-        "INSERT INTO clientes (nombre, cedula, telefono, bss_id, sucursal_id) VALUES (?, ?, ?, ?, ?)"
-    );
-    if ($stmt) {
-        $stmt->bind_param('ssssi', $nombre, $cedula, $telefono, $bssId, $sucursalId);
-        $stmt->execute();
-        $stmt->close();
-    }
+    // Registro idempotente por (bss_id, cédula): reintentos y cajas en
+    // paralelo no crean clientes duplicados.
+    cl_registrar($conexion, $bssId, $sucursalId, $cedula, $nombre, $telefono);
 }
 
 /**
