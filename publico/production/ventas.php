@@ -3838,20 +3838,66 @@ $stmt->close();
                     });
                 }
 
-                // Auto-consulta de datos del cliente por cédula
+                // Auto-consulta de datos del cliente por cédula.
+                // Prioridad: base_nombres → clientes → vacío (lo escribe el cajero).
                 const inputCedula = document.getElementById('cedulaClienteModal');
                 const inputTelefono = document.getElementById('telefonoClienteModal');
 
                 if (inputCedula) {
-                    inputCedula.addEventListener('keyup', function() {
-                        const cedula = this.value.trim();
-                        if (cedula.length >= 6) {
+                    let consultaClienteSeq = 0;
+                    let consultaClienteTimer = null;
 
-                            if (clientes[cedula]) {
-                                nombreClienteModal.value = clientes[cedula][0];
-                                inputTelefono.value = clientes[cedula][1];
+                    const limpiarDatosCliente = () => {
+                        nombreClienteModal.value = '';
+                        inputTelefono.value = '';
+                    };
+
+                    const consultarDatosCliente = async (cedula, secuencia) => {
+                        try {
+                            const respuesta = await fetch(base_url + 'consulta_datoscliente.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                                },
+                                body: new URLSearchParams({
+                                    rep_codigo3: cedula
+                                })
+                            });
+                            if (!respuesta.ok) return;
+
+                            const resultado = await respuesta.json();
+
+                            // Si el cajero siguió escribiendo, esta respuesta ya no aplica.
+                            if (secuencia !== consultaClienteSeq || inputCedula.value.trim() !== cedula) {
+                                return;
                             }
+
+                            const datos = resultado && resultado.data ? resultado.data : null;
+                            if (resultado.status === 'success' && datos && datos.nombre) {
+                                nombreClienteModal.value = datos.nombre;
+                                inputTelefono.value = datos.telefono || '';
+                            } else if (resultado.status === 'not_found' || resultado.status === 'empty') {
+                                // Sin coincidencia: se deja vacío para que el cajero escriba.
+                                limpiarDatosCliente();
+                            }
+                        } catch (error) {
+                            console.error('No se pudo consultar el cliente:', error);
                         }
+                    };
+
+                    inputCedula.addEventListener('input', function() {
+                        const cedula = this.value.trim();
+                        const secuencia = ++consultaClienteSeq;
+
+                        if (consultaClienteTimer) {
+                            clearTimeout(consultaClienteTimer);
+                        }
+
+                        if (cedula.length < 6) {
+                            return;
+                        }
+
+                        consultaClienteTimer = setTimeout(() => consultarDatosCliente(cedula, secuencia), 300);
                     });
 
                     inputCedula.addEventListener('keydown', (e) => {

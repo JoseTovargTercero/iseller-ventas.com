@@ -127,6 +127,40 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         text-align: right;
       }
 
+      .cliente-nombre {
+        font-weight: 600;
+      }
+
+      .cliente-base-nombre {
+        display: block;
+        margin-top: 2px;
+        font-size: 11px;
+        line-height: 1.2;
+        color: var(--dash-text-muted);
+        font-weight: 400;
+      }
+
+      .badge-sin-cedula {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(245, 180, 74, .12);
+        color: #f5b44a;
+        font-size: 10.5px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .badge-sin-cedula::before {
+        content: '';
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
       .deuda-banner {
         background: var(--dash-card);
         border: 1px solid var(--dash-border);
@@ -272,6 +306,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <tr>
                       <th>#</th>
                       <th>Cliente</th>
+                      <th>Cédula</th>
                       <th>Créditos</th>
                       <th>Total USD</th>
                       <th>Sucursal</th>
@@ -301,6 +336,42 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     <script>
       const tabla = $('#datatable').DataTable();
 
+      function escapeHtml(valor) {
+        return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(c) {
+          return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+          }[c];
+        });
+      }
+
+      function normalizarNombre(valor) {
+        return String(valor == null ? '' : valor).replace(/\s+/g, ' ').trim().toLowerCase();
+      }
+
+      function celdaCliente(fila) {
+        const nombre = String(fila.cliente || '').trim();
+        const nombreBase = String(fila.nombre_base || '').trim();
+        const principal = nombre || nombreBase || '—';
+
+        let html = '<span class="cliente-nombre">' + escapeHtml(principal) + '</span>';
+        if (nombre && nombreBase && normalizarNombre(nombre) !== normalizarNombre(nombreBase)) {
+          html += '<small class="cliente-base-nombre" title="Nombre registrado en base_nombres">' + escapeHtml(nombreBase) + '</small>';
+        }
+        return html;
+      }
+
+      function celdaCedula(fila) {
+        const cedula = String(fila.cedula || '').trim();
+        if (cedula === '') {
+          return '<span class="badge-sin-cedula" title="Crédito agrupado por nombre porque no tiene cédula">Sin cédula</span>';
+        }
+        return escapeHtml(cedula);
+      }
+
       function cargarTabla(sucursal = null) {
         $.ajax({
           url: '../../configurar/creditos_list.php',
@@ -317,13 +388,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
               tabla.clear();
               let count = 1;
               for (var i = 0; i < data.length; i++) {
+                const nombreEnlace = data[i].cliente || data[i].nombre_base || '';
                 tabla.row.add([
                   count++,
-                  data[i].cliente,
+                  celdaCliente(data[i]),
+                  celdaCedula(data[i]),
                   data[i].cantidad_creditos,
                   data[i].suma_monto ? '$ ' + data[i].suma_monto : '-',
                   data[i].sucursal,
-                  `<a class="btn-detalles" href="creditos_cliente.php?cliente=${encodeURIComponent(data[i].cliente)}" title="Ver detalles">
+                  `<a class="btn-detalles" href="creditos_cliente.php?cliente=${encodeURIComponent(nombreEnlace)}" title="Ver detalles">
               <ion-icon name="eye-outline"></ion-icon>
             </a>`
                 ]);

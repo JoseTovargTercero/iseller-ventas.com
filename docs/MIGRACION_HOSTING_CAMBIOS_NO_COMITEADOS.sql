@@ -356,6 +356,31 @@ WHERE `bss_id` IS NOT NULL
   AND `cedula` IS NOT NULL
   AND `cedula` <> 0;
 
+-- ============================================================
+-- 033. Búsqueda de nombres por cédula (base_nombres)
+-- ------------------------------------------------------------
+-- La usan consulta_datoscliente.php (POS web), api/pos_cliente.php y
+-- api/pos_ventas.php (POS nativo). Sin índice recorre ~123.000 filas.
+-- ============================================================
+SET @bn_tabla = (
+    SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'base_nombres'
+);
+SET @bn_indice = (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'base_nombres'
+      AND INDEX_NAME = 'idx_base_nombres_cedula'
+);
+SET @bn_sql := IF(
+    @bn_tabla = 0 OR @bn_indice > 0,
+    'SELECT 1',
+    'ALTER TABLE `base_nombres` ADD INDEX `idx_base_nombres_cedula` (`cedula`)'
+);
+PREPARE bn_stmt FROM @bn_sql;
+EXECUTE bn_stmt;
+DEALLOCATE PREPARE bn_stmt;
+
 -- ------------------------------------------------------------
 -- Limpieza de utilidades temporales
 -- ------------------------------------------------------------
@@ -384,4 +409,5 @@ DROP PROCEDURE IF EXISTS `_mig_add_index`;
 -- SHOW INDEX FROM clientes WHERE Key_name = 'idx_clientes_bss_cedula';
 -- SHOW TABLES LIKE 'clientes_claves';
 -- SELECT COUNT(*) FROM clientes_claves;
+-- SHOW INDEX FROM base_nombres WHERE Key_name = 'idx_base_nombres_cedula';
 -- SELECT id, nombre, dir FROM menu WHERE dir = 'variaciones.php';

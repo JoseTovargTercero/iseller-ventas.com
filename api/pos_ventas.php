@@ -14,6 +14,7 @@ require_once __DIR__ . '/_pos_comun.php';
 require_once __DIR__ . '/../configurar/_resumen_mensual.php';
 require_once __DIR__ . '/../configurar/_canal.php';
 require_once __DIR__ . '/../configurar/_clientes.php';
+require_once __DIR__ . '/../configurar/_nombres.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -90,6 +91,18 @@ function procesarVenta($conexion, $venta, int $bssId, int $sucursalId, int $usua
     $cedula = trim((string)($cliente['cedula'] ?? ''));
     $nombreCliente = trim((string)($cliente['nombre'] ?? ''));
     $telefonoCliente = trim((string)($cliente['telefono'] ?? ''));
+
+    // Misma prioridad que el POS web: base_nombres, luego clientes.
+    // Solo se completa si la app no envió el nombre.
+    if ($cedula !== '' && $nombreCliente === '') {
+        $resuelto = nb_buscar($conexion, $cedula, (int)$bssId);
+        if ($resuelto['nombre'] !== '') {
+            $nombreCliente = $resuelto['nombre'];
+        }
+        if ($telefonoCliente === '' && $resuelto['telefono'] !== '') {
+            $telefonoCliente = $resuelto['telefono'];
+        }
+    }
 
     // La fecha de la venta es la de la caja, no la de sincronización.
     $fechaLocal = (string)($venta['fecha_local'] ?? '');
