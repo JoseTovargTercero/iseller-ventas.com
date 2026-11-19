@@ -1,6 +1,6 @@
 {
-    "sha256":  "f4fcf564f9cf13991d593dea880ef1b0654deaf19daa2e3d27dc1f782a13293f",
+    "sha256":  "e984a85d5058a633c24e04c5879a4e034d901ffec07a49ad11608d750a9eca51",
     "archivo":  "pos_update.zip",
-    "version":  "1.0.7",
-    "notas":  "cambios de seguridad."
+    "version":  "1.0.8",
+    "notas":  "Ticket con QR a iseller-tiendas.com y aviso de carga al iniciar."
 }
