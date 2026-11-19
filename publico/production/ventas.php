@@ -2893,33 +2893,50 @@ $stmt->close();
                 return residuo >= 50 ? Math.ceil(valor / 100) * 100 : Math.floor(valor / 100) * 100;
             }
 
+            // Relación entre el dólar visible del catálogo y el dólar base del
+            // producto. Solo difieren cuando el negocio muestra el dólar calculado
+            // por BCV (precio_dolar_visible = false) o cuando hay tasas por producto.
+            function factorDolarVisible(producto) {
+                const precioCompra = Number(producto && producto.price_C) || 0;
+                const porcentaje = Number(producto && producto.porcentaje) || 0;
+                const base = precioCompra * (1 + porcentaje / 100);
+                const visible = Number(producto && producto.precio_dolar_visible) || 0;
+                return (base > 0 && visible > 0) ? (visible / base) : 1;
+            }
+
             // Mismos cálculos de CalculadoraPrecios, pero partiendo de un precio
-            // de venta en dólares fijado a mano.
-            function calcularPreciosDesdeUsd(producto, usd) {
-                const precioUsd = Math.round(Number(usd) * 100) / 100;
+            // de venta en dólares visible fijado a mano. Ese dólar visible se
+            // convierte al dólar base antes de aplicar las tasas del producto.
+            function calcularPreciosDesdeUsd(producto, usdVisible) {
+                const visible = Number(usdVisible) || 0;
                 const t = Object.assign({}, tasasCalculo, (producto && producto.tasas) ? producto.tasas : {});
                 if (!t || t.pesoBolivar <= 0 || t.bcv <= 0) {
-                    return { usd: precioUsd, peso: 0, bs: 0 };
+                    return { usd: Math.round(visible * 100) / 100, peso: 0, bs: 0 };
                 }
 
-                const precioPesoVenta = redondearPeso(precioUsd * t.pesoDolar);
+                // En modo BCV el dólar que se muestra ya viene derivado del bolívar,
+                // por eso hay que volver al dólar base para no escalar Bs/COP dos veces.
+                const factor = factorDolarVisible(producto) || 1;
+                const usdBase = t.precioDolarVisible ? visible : (visible / factor);
+
+                const precioPesoVenta = redondearPeso(usdBase * t.pesoDolar);
                 const origen = String(producto.origen || 'v');
                 let precioBsVenta;
                 if (origen === 'c') {
                     precioBsVenta = (precioPesoVenta / t.pesoBolivar) / 1000;
                 } else if (origen === 'm') {
-                    precioBsVenta = precioUsd * t.bcv;
+                    precioBsVenta = usdBase * t.bcv;
                 } else {
-                    precioBsVenta = precioUsd * t.dolarBolivar;
+                    precioBsVenta = usdBase * t.dolarBolivar;
                 }
 
                 const precioBolivarPeso = redondearPeso((precioBsVenta * t.bolivarPeso) * 1000);
                 const peso = (t.precioPesoVisible || origen === 'c') ? precioPesoVenta : precioBolivarPeso;
 
                 return {
-                    usd: precioUsd,
+                    usd: t.precioDolarVisible ? Math.round(usdBase * 100) / 100 : Math.round(visible * 100) / 100,
                     peso: peso,
-                    bs: Math.round(precioBsVenta * 100) / 100
+                    bs: precioBsVenta
                 };
             }
 
@@ -4277,12 +4294,15 @@ $stmt->close();
             }
 
             // Precio especial solo para productos al mayor: se parte del precio de
-            // venta en dólares y se recalculan pesos y bolívares con las tasas del día.
+            // venta en dólares y se recalculan pesos y bolívares con las tasas
+            // efectivas del producto (incluidas sus tasas personalizadas).
             function abrirModificadorPrecio(id) {
                 const prod = productos_por_id[id];
                 if (!prod || String(prod.mayor) !== '1') return;
 
-                const compra = Number(prod.price_C) || 0;
+                // El campo y la validación trabajan con el dólar visible, igual que
+                // la columna del catálogo. El costo se expresa en esa misma escala.
+                const compra = (Number(prod.price_C) || 0) * (factorDolarVisible(prod) || 1);
                 const actual = preciosEspeciales[id] || {
                     usd: Number(prod.precio_dolar_visible),
                     peso: Number(prod.precio_peso_visible),
