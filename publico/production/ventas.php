@@ -3848,6 +3848,10 @@ $stmt->close();
                     let consultaClienteTimer = null;
 
                     const limpiarDatosCliente = () => {
+                        // No borrar el nombre mientras el cajero lo está escribiendo.
+                        if (document.activeElement === nombreClienteModal) {
+                            return;
+                        }
                         nombreClienteModal.value = '';
                         inputTelefono.value = '';
                     };
@@ -3877,7 +3881,7 @@ $stmt->close();
                                 nombreClienteModal.value = datos.nombre;
                                 inputTelefono.value = datos.telefono || '';
                             } else if (resultado.status === 'not_found' || resultado.status === 'empty') {
-                                // Sin coincidencia: se deja vacío para que el cajero escriba.
+                                // Sin coincidencia: se limpia solo si el cajero no está escribiendo el nombre.
                                 limpiarDatosCliente();
                             }
                         } catch (error) {
