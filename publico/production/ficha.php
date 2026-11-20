@@ -1507,21 +1507,43 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 border-left: 3px solid #60a5fa;
             }
 
-            .mov-group-user {
-                margin-top: 1px;
+            .mov-group-users {
+                margin-top: 2px;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 2px 4px;
                 max-width: 100%;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                font-size: 10px;
+                font-size: 9.5px;
+                line-height: 1.35;
                 font-weight: 600;
                 color: #94a3b8;
             }
 
-            .mov-group-user i {
-                margin-right: 4px;
+            .mov-group-users > i {
                 font-size: 9px;
                 color: #64748b;
+            }
+
+            .mov-group-user-link {
+                color: #94a3b8;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+
+            .mov-group-user-link span {
+                color: #64748b;
+                font-weight: 500;
+            }
+
+            .mov-group-user-link:hover {
+                color: #2dd4a0;
+            }
+
+            .mov-group-user-sep,
+            .mov-group-user-more {
+                color: #475569;
+                font-weight: 500;
             }
 
             .mov-group-total {
@@ -2866,9 +2888,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     return partes.join(',');
                 }
 
-                // Agrupa ventas consecutivas por usuario. Solo compras y
-                // traslados cortan el grupo; las mermas se muestran dentro del
-                // grupo sin cortarlo. Un cambio de usuario también abre un grupo.
+                // Agrupa TODAS las ventas consecutivas entre compras/traslados.
+                // El desglose por usuario se muestra dentro del grupo, sin
+                // partir el grupo principal.
                 function construirBloques(ascendentes) {
                     const bloques = [];
                     let grupo = null;
@@ -2878,26 +2900,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         bloques.push(grupo);
                         grupo = null;
                     };
-                    const usuarioClave = (ev) => {
-                        const id = Number(ev.usuario_id);
-                        return (Number.isFinite(id) && id > 0)
-                            ? 'u:' + id
-                            : 'n:' + String(ev.usuario || '');
-                    };
 
                     ascendentes.forEach((ev) => {
                         if (ev.tipo === 'venta') {
-                            const claveUsuario = usuarioClave(ev);
-                            if (grupo && grupo.usuarioClave !== claveUsuario) {
-                                cerrar();
-                            }
                             if (!grupo) {
                                 grupo = {
                                     tipo: 'grupo',
                                     ventas: [],
                                     mermas: [],
-                                    usuarioClave: claveUsuario,
-                                    usuario: ev.usuario || 'Sin usuario',
                                     fechaInicio: ev.fecha,
                                     fechaFin: ev.fecha
                                 };
@@ -2924,10 +2934,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 function resumenGrupo(grupo) {
                     const porSucursal = new Map();
+                    const porUsuario = new Map();
                     const ordenes = new Set();
                     let totalCantidad = 0;
                     let totalMonto = 0;
                     let totalVentas = 0;
+
+                    const claveUsuario = (ev) => {
+                        const id = Number(ev.usuario_id);
+                        return (Number.isFinite(id) && id > 0)
+                            ? 'u:' + id
+                            : 'n:' + String(ev.usuario || '');
+                    };
 
                     const filaVacia = () => ({
                         cantidad: 0,
@@ -2947,6 +2965,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         totalVentas++;
 
                         if (ev.orden_id) ordenes.add(Number(ev.orden_id));
+
+                        const claveU = claveUsuario(ev);
+                        if (!porUsuario.has(claveU)) {
+                            porUsuario.set(claveU, {
+                                usuario: ev.usuario || 'Sin usuario',
+                                ordenes: [],
+                                ventas: 0,
+                                cantidad: 0,
+                                monto: 0
+                            });
+                        }
+                        const filaUsuario = porUsuario.get(claveU);
+                        filaUsuario.ventas++;
+                        filaUsuario.cantidad += cantidad;
+                        filaUsuario.monto += monto;
+                        if (ev.orden_id) filaUsuario.ordenes.push(Number(ev.orden_id));
 
                         ocurrenciasVisibles(ev).forEach((o) => {
                             if (!porSucursal.has(o.id)) porSucursal.set(o.id, filaVacia());
@@ -2973,6 +3007,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     return {
                         porSucursal,
+                        porUsuario,
                         ordenes: comprimirIds(Array.from(ordenes)),
                         totalCantidad,
                         totalMonto,
@@ -3297,8 +3332,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             : `${desde.fecha} · ${desde.hora || '00:00'} – ${hasta.hora || '00:00'}`)
                         : `${desde.fecha} ${desde.hora || '00:00'} – ${hasta.fecha} ${hasta.hora || '00:00'}`;
 
-                    const usuarioGrupo = grupo.usuario || 'Sin usuario';
-                    const tituloGrupo = `${usuarioGrupo} · ${resumen.totalVentas} venta(s) · ${num(resumen.totalCantidad)} ${MG.unidad} · $${num(resumen.totalMonto)}`;
+                    const usuarios = Array.from(resumen.porUsuario.values())
+                        .sort((a, b) => (b.cantidad - a.cantidad) || a.usuario.localeCompare(b.usuario));
+                    const totalUsuarios = usuarios.length;
+                    const tituloUsuarios = usuarios.map((u) => `${u.usuario} (${u.ventas})`).join(', ');
+                    const tituloGrupo = `${totalUsuarios} usuario(s) · ${resumen.totalVentas} venta(s) · ${num(resumen.totalCantidad)} ${MG.unidad} · $${num(resumen.totalMonto)}`;
+
+                    const usuariosHtml = usuarios.slice(0, 4).map((u) => {
+                        const idsUsuario = comprimirIds(u.ordenes);
+                        const texto = `${esc(u.usuario)} <span>${u.ventas}</span>`;
+                        if (!idsUsuario) {
+                            return `<span class="mov-group-user-link">${texto}</span>`;
+                        }
+                        return `<a class="mov-group-user-link"
+                            href="listaVentas.php?ordenes=${encodeURIComponent(idsUsuario)}"
+                            title="Abrir las ${u.ventas} venta(s) de ${esc(u.usuario)}">${texto}</a>`;
+                    }).join('<span class="mov-group-user-sep"> · </span>') +
+                        (totalUsuarios > 4 ? `<span class="mov-group-user-more"> +${totalUsuarios - 4}</span>` : '');
 
                     const celdas = MG.sucursales.map((s) => {
                         const fila = resumen.porSucursal.get(String(s.id));
@@ -3341,8 +3391,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <span class="mov-time-date">${desde.fecha}</span>
                             <span class="mov-time-hour">${rango}</span>
                             <span class="mov-time-type">Grupo de ventas</span>
-                            <span class="mov-group-user" title="${esc(usuarioGrupo)}">
-                                <i class="fa fa-user"></i>${esc(usuarioGrupo)}
+                            <span class="mov-group-users" title="${esc(tituloUsuarios)}">
+                                <i class="fa fa-user"></i>${usuariosHtml}
                             </span>
                             <span class="mov-group-total">−${num(resumen.totalCantidad)} ${esc(MG.unidad)}</span>
                             <span class="mov-group-money">$${num(resumen.totalMonto)}</span>
