@@ -7,6 +7,9 @@
  * Los endpoints son los encargados de autenticar y emitir el JSON final.
  */
 
+require_once(__DIR__ . '/_stock_traslados.php');
+require_once(__DIR__ . '/_stock_auditoria.php');
+
 function asig_result_ok(string $msg = '', array $data = []): array
 {
     return ['status' => 'ok', 'msg' => $msg, 'data' => $data];
@@ -661,6 +664,126 @@ function asig_movimiento($conexion, int $bssId, int $asignacionId, int $producto
     $stmt->close();
 }
 
+/**
+ * Registra el movimiento de una asignación como traslado y en la auditoría
+ * de stock. Solo crea el traslado cuando se modificaron ambos extremos
+ * (salida y entrada); igualmente audita el extremo que haya cambiado.
+ *
+ * Los valores de stock null significan que ese extremo no fue modificado.
+ */
+function asig_registrar_traslado_auditoria(
+    $conexion,
+    int $bssId,
+    int $asignacionId,
+    int $productoId,
+    string $productoNombre,
+    float $cantidad,
+    int $sucursalSalida,
+    int $sucursalEntrada,
+    ?float $salidaAntes,
+    ?float $salidaDespues,
+    ?float $entradaAntes,
+    ?float $entradaDespues,
+    string $tipoAsignacion,
+    array $detalleExtra = []
+): void {
+    if ($salidaAntes === null && $entradaAntes === null) {
+        return;
+    }
+
+    $usuarioId = (int) ($_SESSION['id'] ?? 0);
+    $usuarioNombre = (string) ($_SESSION['nombre'] ?? '');
+    $trasladoId = null;
+
+    // Si se movió stock en ambos extremos, se registra como un traslado
+    // normal para que aparezca en el historial de movimientos de stock.
+    if ($salidaAntes !== null && $entradaAntes !== null) {
+        $stmt = $conexion->prepare(
+            "INSERT INTO stock_traslados
+                (bss_id, id_producto, producto_nombre, cantidad, sucursal_origen, sucursal_destino, usuario_id, usuario_nombre)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo preparar el registro del traslado.');
+        }
+        $stmt->bind_param(
+            'iisdiiis',
+            $bssId,
+            $productoId,
+            $productoNombre,
+            $cantidad,
+            $sucursalSalida,
+            $sucursalEntrada,
+            $usuarioId,
+            $usuarioNombre
+        );
+        if (!$stmt->execute()) {
+            $stmt->close();
+            throw new Exception('No se pudo registrar el traslado de la asignación.');
+        }
+        $trasladoId = (int) $conexion->insert_id;
+        $stmt->close();
+    }
+
+    $detalle = array_merge([
+        'asignacion_id'        => $asignacionId,
+        'tipo_asignacion'      => $tipoAsignacion,
+        'traslado_id'          => $trasladoId,
+        'sucursal_salida'      => $sucursalSalida,
+        'sucursal_entrada'     => $sucursalEntrada,
+    ], $detalleExtra);
+
+    if ($salidaAntes !== null && $salidaDespues !== null) {
+        $ok = sa_registrar($conexion, [
+            'bss_id'              => $bssId,
+            'id_sucursal'         => $sucursalSalida,
+            'id_producto'         => $productoId,
+            'producto_nombre'     => $productoNombre,
+            'tipo_movimiento'     => 'TRANSFERENCIA_SALIDA',
+            'origen'              => 'asignacion',
+            'referencia_tipo'     => 'asignacion_sucursal',
+            'referencia_id'       => $asignacionId,
+            'cantidad'            => $cantidad,
+            'stock_anterior'      => $salidaAntes,
+            'stock_nuevo'         => $salidaDespues,
+            'diferencia'          => $salidaDespues - $salidaAntes,
+            'id_sucursal_origen'  => $sucursalSalida,
+            'id_sucursal_destino' => $sucursalEntrada,
+            'detalle'             => $detalle,
+            'usuario_id'          => $usuarioId,
+            'usuario_nombre'      => $usuarioNombre,
+        ]);
+        if (!$ok) {
+            throw new Exception('No se pudo registrar la auditoría de salida del stock.');
+        }
+    }
+
+    if ($entradaAntes !== null && $entradaDespues !== null) {
+        $ok = sa_registrar($conexion, [
+            'bss_id'              => $bssId,
+            'id_sucursal'         => $sucursalEntrada,
+            'id_producto'         => $productoId,
+            'producto_nombre'     => $productoNombre,
+            'tipo_movimiento'     => 'TRANSFERENCIA_ENTRADA',
+            'origen'              => 'asignacion',
+            'referencia_tipo'     => 'asignacion_sucursal',
+            'referencia_id'       => $asignacionId,
+            'cantidad'            => $cantidad,
+            'stock_anterior'      => $entradaAntes,
+            'stock_nuevo'         => $entradaDespues,
+            'diferencia'          => $entradaDespues - $entradaAntes,
+            'id_sucursal_origen'  => $sucursalSalida,
+            'id_sucursal_destino' => $sucursalEntrada,
+            'detalle'             => $detalle,
+            'usuario_id'          => $usuarioId,
+            'usuario_nombre'      => $usuarioNombre,
+        ]);
+        if (!$ok) {
+            throw new Exception('No se pudo registrar la auditoría de entrada del stock.');
+        }
+    }
+}
+
 function asig_aplicar_stock($conexion, int $bssId, int $asignacionId, array $asignacion, array $lineas): void
 {
     $sucursalOrigen = (int) $asignacion['sucursal_origen'];
@@ -676,6 +799,10 @@ function asig_aplicar_stock($conexion, int $bssId, int $asignacionId, array $asi
             $factorStock = 1;
         }
         $cantidadStock = (float) $linea['cantidad'] * $factorStock;
+        $salidaAntes = null;
+        $salidaDespues = null;
+        $entradaAntes = null;
+        $entradaDespues = null;
 
         if ($descuentaOrigen) {
             // Se vuelve a leer la fila bloqueada: dos líneas de la misma
@@ -702,6 +829,8 @@ function asig_aplicar_stock($conexion, int $bssId, int $asignacionId, array $asi
             }
             $stmt->close();
 
+            $salidaAntes = $stockAntes;
+            $salidaDespues = $stockDespues;
             asig_movimiento($conexion, $bssId, $asignacionId, $productoId, $sucursalOrigen, 'ORIGEN_DESCUENTO', $cantidadStock, $stockAntes, $stockDespues);
         }
 
@@ -758,8 +887,40 @@ function asig_aplicar_stock($conexion, int $bssId, int $asignacionId, array $asi
                 }
             }
 
+            $entradaAntes = $stockAntes;
+            $entradaDespues = $stockDespues;
             asig_movimiento($conexion, $bssId, $asignacionId, $productoId, $sucursalDestino, 'DESTINO_INCREMENTO', $cantidadStock, $stockAntes, $stockDespues);
         }
+
+        $productoStockNombre = (string) ($linea['producto_nombre'] ?? '');
+        if ($stockProductoId !== $productoId) {
+            $productoStock = asig_get_producto($conexion, $bssId, $stockProductoId);
+            if ($productoStock) {
+                $productoStockNombre = (string) $productoStock['nombre'];
+            }
+        }
+
+        asig_registrar_traslado_auditoria(
+            $conexion,
+            $bssId,
+            $asignacionId,
+            $stockProductoId,
+            $productoStockNombre,
+            $cantidadStock,
+            $sucursalOrigen,
+            $sucursalDestino,
+            $salidaAntes,
+            $salidaDespues,
+            $entradaAntes,
+            $entradaDespues,
+            'APLICACION',
+            [
+                'producto_linea_id'     => $productoId,
+                'producto_linea_nombre' => (string) ($linea['producto_nombre'] ?? ''),
+                'es_mayor'              => !empty($linea['es_mayor']),
+                'factor_stock'          => $factorStock,
+            ]
+        );
     }
 }
 
@@ -890,6 +1051,10 @@ function asig_guardar_asignacion($conexion, int $bssId, int $usuarioId, array $i
 
 function asig_aplicar_asignacion($conexion, int $bssId, int $usuarioId, int $asignacionId): array
 {
+    if (!st_asegurar_tabla($conexion) || !sa_asegurar_tabla($conexion)) {
+        return asig_result_error('No se pudo preparar el historial de traslados y auditoría de stock.');
+    }
+
     try {
         $conexion->begin_transaction();
 
@@ -1046,6 +1211,10 @@ function asig_reversar_stock($conexion, int $bssId, int $asignacionId, array $as
             $stockProductoId = $productoId;
         }
         $cantidadStock = (float) $detalle['cantidad'] * $factorStock;
+        $salidaAntes = null;
+        $salidaDespues = null;
+        $entradaAntes = null;
+        $entradaDespues = null;
 
         if ($descuentaOrigen) {
             $stock = asig_get_stock($conexion, $bssId, $stockProductoId, $sucursalOrigen, true);
@@ -1065,6 +1234,8 @@ function asig_reversar_stock($conexion, int $bssId, int $asignacionId, array $as
             }
             $stmt->close();
 
+            $entradaAntes = $stockAntes;
+            $entradaDespues = $stockDespues;
             asig_movimiento($conexion, $bssId, $asignacionId, $productoId, $sucursalOrigen, 'REVERSION_ORIGEN', $cantidadStock, $stockAntes, $stockDespues);
         }
 
@@ -1086,8 +1257,41 @@ function asig_reversar_stock($conexion, int $bssId, int $asignacionId, array $as
             }
             $stmt->close();
 
+            $salidaAntes = $stockAntes;
+            $salidaDespues = $stockDespues;
             asig_movimiento($conexion, $bssId, $asignacionId, $productoId, $sucursalDestino, 'REVERSION_DESTINO', $cantidadStock, $stockAntes, $stockDespues);
         }
+
+        $productoStockNombre = (string) ($detalle['producto_nombre'] ?? '');
+        if ($stockProductoId !== $productoId) {
+            $productoStock = asig_get_producto($conexion, $bssId, $stockProductoId);
+            if ($productoStock) {
+                $productoStockNombre = (string) $productoStock['nombre'];
+            }
+        }
+
+        // La reversión mueve el stock de vuelta: sale del destino y entra al origen.
+        asig_registrar_traslado_auditoria(
+            $conexion,
+            $bssId,
+            $asignacionId,
+            $stockProductoId,
+            $productoStockNombre,
+            $cantidadStock,
+            $sucursalDestino,
+            $sucursalOrigen,
+            $salidaAntes,
+            $salidaDespues,
+            $entradaAntes,
+            $entradaDespues,
+            'REVERSION',
+            [
+                'producto_linea_id'     => $productoId,
+                'producto_linea_nombre' => (string) ($detalle['producto_nombre'] ?? ''),
+                'es_mayor'              => $esMayor,
+                'factor_stock'          => $factorStock,
+            ]
+        );
     }
 }
 
@@ -1118,6 +1322,10 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
     }
     if (count(asig_lineas_input($detalles)) === 0 && count($conceptos) === 0) {
         return asig_result_error('Agregue al menos un producto o un concepto a la asignación.');
+    }
+
+    if (!st_asegurar_tabla($conexion) || !sa_asegurar_tabla($conexion)) {
+        return asig_result_error('No se pudo preparar el historial de traslados y auditoría de stock.');
     }
 
     try {
@@ -1255,6 +1463,10 @@ function asig_rectificar_asignacion($conexion, int $bssId, int $usuarioId, int $
 
 function asig_eliminar_asignacion($conexion, int $bssId, int $usuarioId, int $asignacionId): array
 {
+    if (!st_asegurar_tabla($conexion) || !sa_asegurar_tabla($conexion)) {
+        return asig_result_error('No se pudo preparar el historial de traslados y auditoría de stock.');
+    }
+
     try {
         $conexion->begin_transaction();
 

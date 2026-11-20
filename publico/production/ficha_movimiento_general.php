@@ -139,21 +139,37 @@ $normalizarFecha = static function ($fecha): string {
     return $fecha;
 };
 
-/* ── Compras ────────────────────────────────────────────────────────── */
+/* ── Compras ──────────────────────────────────────────────────────────
+   La columna created_at puede no existir en instalaciones viejas. Se arma
+   la expresión según las columnas disponibles y se usa la fecha registrada
+   de la compra (fecha) antes que la hora de inserción, para que una compra
+   con fecha retroactiva aparezca en el período correcto. */
+$tieneCreatedAtCompras = false;
+$resColCompras = @$conexion->query("SHOW COLUMNS FROM compras LIKE 'created_at'");
+if ($resColCompras && $resColCompras->num_rows > 0) {
+    $tieneCreatedAtCompras = true;
+}
+if ($resColCompras) {
+    $resColCompras->free();
+}
+
+$fechaCompraExpr = "COALESCE(STR_TO_DATE(c.fecha, '%d-%m-%Y %h:%i %p'), CONCAT(c.dia, ' 00:00:00'))";
+if ($tieneCreatedAtCompras) {
+    $fechaCompraExpr = "COALESCE(STR_TO_DATE(c.fecha, '%d-%m-%Y %h:%i %p'), c.created_at, CONCAT(c.dia, ' 00:00:00'))";
+}
+
 $stmt = $conexion->prepare(
-    "SELECT COALESCE(c.created_at, STR_TO_DATE(c.fecha, '%d-%m-%Y %h:%i %p')) AS fecha_evento,
+    "SELECT $fechaCompraExpr AS fecha_evento,
             c.cod, c.cantidad, c.id_sucursal, c.user, c.status
      FROM compras c
      WHERE c.bss_id = ?
        AND c.cod IN ($idsSql)
-       AND (
-            (c.created_at IS NOT NULL AND c.created_at >= ? AND c.created_at < DATE_ADD(?, INTERVAL 1 DAY))
-            OR (c.created_at IS NULL AND c.dia BETWEEN ? AND ?)
-       )
+       AND $fechaCompraExpr >= ?
+       AND $fechaCompraExpr < DATE_ADD(?, INTERVAL 1 DAY)
      ORDER BY fecha_evento DESC"
 );
 if ($stmt) {
-    $stmt->bind_param('issss', $bssId, $desde, $hasta, $desde, $hasta);
+    $stmt->bind_param('iss', $bssId, $desde, $hasta);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($fila = $res->fetch_assoc()) {
