@@ -903,8 +903,664 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 color: #94a3b8 !important;
             }
 
+            /* ══════════════════════════════════════════════════════════
+               MOVIMIENTO GENERAL (línea de tiempo tipo git)
+               ══════════════════════════════════════════════════════════ */
+            .mov-presets {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .mov-preset {
+                background: rgba(30, 41, 59, .7);
+                border: 1px solid rgba(255, 255, 255, .09);
+                border-radius: 20px;
+                color: #94a3b8;
+                font-size: 12px;
+                font-weight: 500;
+                padding: 5px 12px;
+                cursor: pointer;
+                transition: background .2s ease, color .2s ease, border-color .2s ease;
+            }
+
+            .mov-preset:hover,
+            .mov-preset.active {
+                background: rgba(45, 212, 160, .18);
+                color: #2dd4a0;
+                border-color: rgba(45, 212, 160, .45);
+            }
+
+            .mov-toolbar {
+                display: flex;
+                align-items: flex-end;
+                gap: 12px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+            }
+
+            .mov-toolbar .filter-field {
+                flex: 0 0 auto;
+            }
+
+            .mov-toolbar .filter-input {
+                min-width: 132px;
+            }
+
+            .mov-type-filter {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+                margin-left: auto;
+            }
+
+            .mov-type-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: 1px solid rgba(255, 255, 255, .1);
+                border-radius: 20px;
+                background: rgba(30, 41, 59, .55);
+                color: #94a3b8;
+                padding: 6px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                user-select: none;
+                transition: all .18s ease;
+            }
+
+            .mov-type-chip .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--tc);
+                opacity: .45;
+                transition: opacity .18s ease;
+            }
+
+            .mov-type-chip.active {
+                color: var(--tc);
+                border-color: var(--tc);
+                background: var(--tbg);
+            }
+
+            .mov-type-chip.active .dot {
+                opacity: 1;
+                box-shadow: 0 0 8px var(--tc);
+            }
+
+            .mov-tools {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .mov-tool-btn {
+                min-width: 36px;
+                height: 34px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                border: 1px solid rgba(255, 255, 255, .1);
+                border-radius: 9px;
+                background: rgba(30, 41, 59, .6);
+                color: #94a3b8;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0 11px;
+                cursor: pointer;
+                transition: all .18s ease;
+            }
+
+            .mov-tool-btn:hover {
+                color: #e2e8f0;
+                border-color: rgba(255, 255, 255, .22);
+                background: rgba(30, 41, 59, .95);
+            }
+
+            .mov-kpis {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+
+            .mov-kpi {
+                border: 1px solid rgba(255, 255, 255, .07);
+                border-left: 3px solid var(--tc, #64748b);
+                border-radius: 12px;
+                padding: 11px 13px;
+                background: rgba(30, 41, 59, .35);
+                min-width: 0;
+            }
+
+            .mov-kpi .lbl {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: .07em;
+                text-transform: uppercase;
+                color: #64748b;
+                margin-bottom: 4px;
+            }
+
+            .mov-kpi .lbl i {
+                color: var(--tc, #64748b);
+                font-size: 11px;
+            }
+
+            .mov-kpi .val {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 20px;
+                font-weight: 700;
+                line-height: 1.1;
+                color: #f1f5f9;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .mov-kpi .val small {
+                font-family: 'DM Sans', sans-serif;
+                font-size: 10px;
+                font-weight: 500;
+                color: #64748b;
+                margin-left: 2px;
+            }
+
+            .mov-kpi.off {
+                opacity: .45;
+            }
+
+            .mov-kpi .val.pos {
+                color: #34d399;
+            }
+
+            .mov-kpi .val.neg {
+                color: #f87171;
+            }
+
+            .mov-summary-wrap {
+                overflow-x: auto;
+                border: 1px solid rgba(255, 255, 255, .06);
+                border-radius: 12px;
+                margin-bottom: 16px;
+            }
+
+            .mov-summary {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 12px;
+                min-width: 620px;
+            }
+
+            .mov-summary th {
+                text-align: right;
+                font-size: 10px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .06em;
+                color: #475569;
+                padding: 9px 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, .06);
+                white-space: nowrap;
+            }
+
+            .mov-summary th:first-child,
+            .mov-summary td:first-child {
+                text-align: left;
+                position: sticky;
+                left: 0;
+                background: #0d1424;
+                z-index: 1;
+            }
+
+            .mov-summary td {
+                text-align: right;
+                padding: 8px 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, .04);
+                color: #cbd5e1;
+                white-space: nowrap;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .mov-summary tr:last-child td {
+                border-bottom: none;
+            }
+
+            .mov-summary .suc-name {
+                display: inline-flex;
+                align-items: center;
+                gap: 7px;
+                font-weight: 600;
+                color: #e2e8f0;
+            }
+
+            .mov-summary .suc-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--lane, #64748b);
+                flex: 0 0 8px;
+            }
+
+            .mov-summary .kpi-off {
+                color: #475569;
+            }
+
+            .mov-summary .net-pos {
+                color: #34d399;
+                font-weight: 700;
+            }
+
+            .mov-summary .net-neg {
+                color: #f87171;
+                font-weight: 700;
+            }
+
+            .mov-summary tfoot td {
+                background: rgba(255, 255, 255, .025);
+                color: #94a3b8;
+                font-weight: 700;
+                border-top: 1px solid rgba(255, 255, 255, .08);
+            }
+
+            .mov-hint {
+                margin: 10px 0 0;
+                font-size: 11px;
+                color: #475569;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .mov-graph-wrap {
+                overflow: auto;
+                max-height: 72vh;
+                border: 1px solid rgba(255, 255, 255, .07);
+                border-radius: 14px;
+                background: rgba(2, 6, 23, .35);
+                margin-top: 4px;
+            }
+
+            .mov-graph {
+                position: relative;
+                width: max-content;
+                min-width: 100%;
+                --cols-template: 170px 1fr;
+            }
+
+            .mov-grid {
+                display: grid;
+                grid-template-columns: var(--cols-template);
+                width: 100%;
+                min-width: max-content;
+            }
+
+            .mov-grid-head {
+                position: sticky;
+                top: 0;
+                z-index: 7;
+                background: #0b1120;
+                border-bottom: 1px solid rgba(255, 255, 255, .08);
+            }
+
+            .mov-corner {
+                position: sticky;
+                left: 0;
+                z-index: 8;
+                background: #0b1120;
+                padding: 12px 14px;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                color: #475569;
+                border-right: 1px solid rgba(255, 255, 255, .06);
+            }
+
+            .mov-branch-head {
+                position: relative;
+                padding: 9px 10px 8px 33px;
+                border-left: 1px solid rgba(255, 255, 255, .045);
+                cursor: grab;
+                user-select: none;
+                transition: background .15s ease, box-shadow .15s ease, opacity .15s ease;
+            }
+
+            .mov-branch-head:hover {
+                background: rgba(255, 255, 255, .025);
+            }
+
+            .mov-branch-head.dragging {
+                opacity: .35;
+            }
+
+            .mov-branch-head.drop-target {
+                box-shadow: inset 2px 0 0 #2dd4a0;
+                background: rgba(45, 212, 160, .05);
+            }
+
+            .mov-lane-dot {
+                position: absolute;
+                left: 15px;
+                top: 14px;
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                background: var(--lane);
+                box-shadow: 0 0 0 3px color-mix(in srgb, var(--lane) 20%, transparent);
+            }
+
+            .mov-branch-top {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                min-width: 0;
+            }
+
+            .mov-drag {
+                color: #475569;
+                font-size: 13px;
+                line-height: 1;
+                cursor: grab;
+                letter-spacing: -2px;
+            }
+
+            .mov-branch-name {
+                font-size: 12px;
+                font-weight: 700;
+                color: #e2e8f0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .mov-move-btns {
+                margin-left: auto;
+                display: inline-flex;
+                gap: 2px;
+                flex: 0 0 auto;
+            }
+
+            .mov-move-btns button {
+                width: 18px;
+                height: 18px;
+                border: 1px solid rgba(255, 255, 255, .08);
+                border-radius: 5px;
+                background: transparent;
+                color: #64748b;
+                font-size: 12px;
+                line-height: 1;
+                padding: 0;
+                cursor: pointer;
+            }
+
+            .mov-move-btns button:hover {
+                color: #2dd4a0;
+                border-color: rgba(45, 212, 160, .4);
+            }
+
+            .mov-branch-types {
+                display: flex;
+                gap: 3px;
+                margin-top: 6px;
+            }
+
+            .mov-btype {
+                width: 21px;
+                height: 18px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(255, 255, 255, .08);
+                border-radius: 5px;
+                background: transparent;
+                color: #475569;
+                font-size: 9px;
+                font-weight: 800;
+                padding: 0;
+                cursor: pointer;
+                transition: all .15s ease;
+            }
+
+            .mov-btype.on {
+                color: var(--tc);
+                border-color: color-mix(in srgb, var(--tc) 45%, transparent);
+                background: color-mix(in srgb, var(--tc) 12%, transparent);
+            }
+
+            .mov-btype:hover {
+                border-color: var(--tc);
+            }
+
+            .mov-branch-total {
+                margin-top: 5px;
+                font-size: 9.5px;
+                color: #64748b;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .mov-branch-total .off {
+                opacity: .35;
+                text-decoration: line-through;
+            }
+
+            .mov-row {
+                position: relative;
+                border-bottom: 1px solid rgba(255, 255, 255, .035);
+            }
+
+            .mov-row:nth-child(odd) {
+                background: rgba(255, 255, 255, .012);
+            }
+
+            .mov-time {
+                position: sticky;
+                left: 0;
+                z-index: 4;
+                background: #0b1120;
+                padding: 9px 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+                border-right: 1px solid rgba(255, 255, 255, .06);
+                min-width: 0;
+            }
+
+            .mov-time-date {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 11.5px;
+                font-weight: 600;
+                color: #cbd5e1;
+                white-space: nowrap;
+            }
+
+            .mov-time-hour {
+                font-size: 10.5px;
+                color: #64748b;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .mov-time-type {
+                margin-top: 3px;
+                font-size: 9px;
+                font-weight: 800;
+                letter-spacing: .06em;
+                text-transform: uppercase;
+                color: var(--tc, #94a3b8);
+            }
+
+            .mov-cell {
+                position: relative;
+                min-height: 52px;
+                padding: 7px 10px 7px 33px;
+                border-left: 1px solid rgba(255, 255, 255, .03);
+            }
+
+            .mov-cell::before {
+                content: '';
+                position: absolute;
+                left: 19px;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: var(--lane);
+                opacity: .22;
+            }
+
+            .mov-dot {
+                position: absolute;
+                left: 15px;
+                top: 20px;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--tc);
+                border: 2px solid #0b1120;
+                box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 25%, transparent);
+                z-index: 3;
+            }
+
+            .mov-node {
+                position: relative;
+                z-index: 2;
+                border: 1px solid rgba(255, 255, 255, .06);
+                border-left: 2px solid var(--tc);
+                border-radius: 8px;
+                padding: 5px 8px;
+                background: #101a2d;
+                font-size: 11px;
+                line-height: 1.35;
+                color: #cbd5e1;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+                min-width: 0;
+            }
+
+            .mov-node-top {
+                display: flex;
+                align-items: baseline;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .mov-node-qty {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--tc);
+                white-space: nowrap;
+            }
+
+            .mov-node-title {
+                font-weight: 700;
+                color: #e2e8f0;
+                font-size: 10.5px;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+            }
+
+            .mov-node-meta {
+                color: #64748b;
+                font-size: 9.5px;
+                margin-top: 1px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .mov-node a {
+                color: #93c5fd;
+                text-decoration: none;
+            }
+
+            .mov-node a:hover {
+                text-decoration: underline;
+            }
+
+            .mov-node--out {
+                border-left-color: #f59e0b;
+            }
+
+            .mov-node--in {
+                border-left-color: #22c55e;
+            }
+
+            .mov-traslado {
+                --tc: #a78bfa;
+                --tbg: rgba(167, 139, 250, .12);
+            }
+
+            .mov-compra {
+                --tc: #34d399;
+                --tbg: rgba(52, 211, 153, .12);
+            }
+
+            .mov-venta {
+                --tc: #60a5fa;
+                --tbg: rgba(96, 165, 250, .12);
+            }
+
+            .mov-merma {
+                --tc: #f87171;
+                --tbg: rgba(248, 113, 113, .12);
+            }
+
+            .mov-arcs {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 1;
+                pointer-events: none;
+                overflow: visible;
+            }
+
+            .mov-arcs path {
+                fill: none;
+                stroke: #a78bfa;
+                stroke-width: 1.7;
+                opacity: .65;
+            }
+
+            .mov-arcs path.mov-arc-glow {
+                stroke-width: 5;
+                opacity: .10;
+            }
+
+            .mov-graph-status {
+                padding: 26px 12px;
+            }
+
             /* ── Responsive ──────────────────────────────────────────── */
             @media (max-width: 640px) {
+                .mov-toolbar {
+                    align-items: stretch;
+                }
+
+                .mov-type-filter {
+                    margin-left: 0;
+                    width: 100%;
+                }
+
+                .mov-tools {
+                    width: 100%;
+                    justify-content: flex-end;
+                }
+
+                .mov-kpis {
+                    grid-template-columns: 1fr 1fr;
+                }
                 .kpi-grid {
                     grid-template-columns: 1fr 1fr;
                 }
@@ -1030,6 +1686,74 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div id="stock-chart-empty" class="state-empty" style="display:none;">
                                     <i class="fa fa-inbox"></i>Sin movimientos en este período
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Movimiento general (compras, ventas, traslados y mermas) ── -->
+                        <div class="ficha-panel" id="panel-mov-general">
+                            <div class="ficha-panel-header">
+                                <span class="ficha-panel-title">
+                                    <i class="fa fa-code-fork" style="color:#a78bfa;"></i>
+                                    Movimiento general
+                                </span>
+                                <div class="mov-presets">
+                                    <span class="mov-preset" data-mov-days="7">7 días</span>
+                                    <span class="mov-preset active" data-mov-days="30">30 días</span>
+                                    <span class="mov-preset" data-mov-days="90">90 días</span>
+                                    <span class="mov-preset" data-mov-days="365">1 año</span>
+                                </div>
+                            </div>
+                            <div class="ficha-panel-body">
+                                <div class="mov-toolbar">
+                                    <div class="filter-field">
+                                        <label>Desde</label>
+                                        <input id="mov-desde" class="filter-input" type="text"
+                                            value="<?= date('Y-m-d', strtotime('-29 days')) ?>">
+                                    </div>
+                                    <div class="filter-field">
+                                        <label>Hasta</label>
+                                        <input id="mov-hasta" class="filter-input" type="text"
+                                            value="<?= date('Y-m-d') ?>">
+                                    </div>
+                                    <button class="btn-filter" id="mov-btn-consultar">
+                                        <i class="fa fa-search"></i> Consultar
+                                    </button>
+                                    <div class="mov-type-filter" id="mov-type-filter"></div>
+                                    <div class="mov-tools">
+                                        <button type="button" class="mov-tool-btn" id="mov-btn-sort"
+                                            title="Cambiar el orden de las fechas">
+                                            <i class="fa fa-sort-amount-desc"></i>
+                                            <span id="mov-sort-label">Recientes</span>
+                                        </button>
+                                        <button type="button" class="mov-tool-btn" id="mov-btn-reset"
+                                            title="Restablecer columnas, filtros y orden">
+                                            <i class="fa fa-undo"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="mov-kpis" class="mov-kpis"></div>
+                                <div id="mov-summary"></div>
+                                <div id="mov-note" class="mov-hint" style="display:none;"></div>
+
+                                <div id="mov-status" class="state-loading mov-graph-status">
+                                    <i class="fa fa-circle-o-notch spin"></i>
+                                    Cargando movimientos…
+                                </div>
+
+                                <div id="mov-graph-wrap" class="mov-graph-wrap" style="display:none;">
+                                    <div id="mov-graph" class="mov-graph">
+                                        <svg id="mov-arcs" class="mov-arcs" aria-hidden="true"></svg>
+                                        <div id="mov-head" class="mov-grid mov-grid-head"></div>
+                                        <div id="mov-rows"></div>
+                                    </div>
+                                </div>
+
+                                <p class="mov-hint">
+                                    <i class="fa fa-info-circle"></i>
+                                    Arrastra los encabezados o usa ‹ › para reordenar las sucursales.
+                                    Los botones C / V / T / M activan o desactivan los KPIs y movimientos de esa sucursal.
+                                </p>
                             </div>
                         </div>
 
@@ -1773,6 +2497,900 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             // Auto-load on page open
             consultarPeriodo();
+        </script>
+
+        <script>
+            /* ══════════════════════════════════════════════════════════════
+               MOVIMIENTO GENERAL
+               Línea de tiempo tipo git: una columna/lane por sucursal.
+               ══════════════════════════════════════════════════════════════ */
+            (function() {
+                'use strict';
+
+                const PRODUCTO_ID = <?= (int) $idProducto ?>;
+                const BSS_ID = <?= (int) $bss_id ?>;
+                const PREFS_KEY = 'fichaMovGeneral:' + BSS_ID;
+
+                const TIPOS = {
+                    compra: { label: 'Compras', short: 'C', color: '#34d399' },
+                    venta: { label: 'Ventas', short: 'V', color: '#60a5fa' },
+                    traslado: { label: 'Traslados', short: 'T', color: '#a78bfa' },
+                    merma: { label: 'Mermas', short: 'M', color: '#f87171' }
+                };
+                const TIPOS_ORDEN = ['compra', 'venta', 'traslado', 'merma'];
+                const PALETA = ['#f59e0b', '#22d3ee', '#fb7185', '#a3e635', '#c084fc', '#38bdf8', '#f472b6', '#facc15', '#4ade80', '#e879f9'];
+
+                const MG = {
+                    data: null,
+                    sucursales: [],
+                    mapaSucursales: new Map(),
+                    ordenServidor: [],
+                    orden: [],
+                    tipos: { compra: true, venta: true, traslado: true, merma: true },
+                    ocultos: {},
+                    sort: 'desc',
+                    unidad: 'UND',
+                    template: '170px 1fr',
+                    cargando: false,
+                    truncado: false
+                };
+
+                let dragBranchId = null;
+                let fpMovDesde = null;
+                let fpMovHasta = null;
+
+                const $id = (id) => document.getElementById(id);
+                const nf = new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 });
+                const num = (valor) => nf.format(Number(valor) || 0);
+                const esc = (valor) => String(valor ?? '').replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[c]));
+                const pad2 = (n) => String(n).padStart(2, '0');
+                const fmtISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+                const rgba = (hex, alpha) => {
+                    const n = parseInt(String(hex).slice(1), 16);
+                    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+                };
+                const cssEsc = (s) => String(s).replace(/["\\]/g, '\\$&');
+                const colorSucursal = (id) => {
+                    let h = 0;
+                    String(id).split('').forEach((ch) => {
+                        h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+                    });
+                    return PALETA[h % PALETA.length];
+                };
+
+                function fechaPartes(iso) {
+                    const s = String(iso || '');
+                    const partes = s.split(' ');
+                    const f = (partes[0] || '').split('-');
+                    return {
+                        fecha: f.length === 3 ? `${f[2]}/${f[1]}/${f[0]}` : (partes[0] || ''),
+                        hora: (partes[1] || '').slice(0, 5)
+                    };
+                }
+
+                /* ── Preferencias de vista (por negocio) ───────────────── */
+                function cargarPrefs() {
+                    try {
+                        const raw = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+                        if (!raw || typeof raw !== 'object') return;
+                        if (Array.isArray(raw.orden)) MG.orden = raw.orden.map(String);
+                        if (raw.tipos && typeof raw.tipos === 'object') {
+                            TIPOS_ORDEN.forEach((t) => {
+                                if (typeof raw.tipos[t] === 'boolean') MG.tipos[t] = raw.tipos[t];
+                            });
+                        }
+                        if (raw.ocultos && typeof raw.ocultos === 'object') {
+                            MG.ocultos = raw.ocultos;
+                        }
+                        if (raw.sort === 'asc' || raw.sort === 'desc') MG.sort = raw.sort;
+                    } catch (e) {
+                        /* localStorage no disponible */
+                    }
+                }
+
+                function guardarPrefs() {
+                    try {
+                        localStorage.setItem(PREFS_KEY, JSON.stringify({
+                            orden: MG.orden,
+                            tipos: MG.tipos,
+                            ocultos: MG.ocultos,
+                            sort: MG.sort
+                        }));
+                    } catch (e) {
+                        /* localStorage no disponible */
+                    }
+                }
+
+                function oculto(branchId, tipo) {
+                    const fila = MG.ocultos[String(branchId)];
+                    return !!(fila && fila[tipo]);
+                }
+
+                function inicializarOcultos(branchId) {
+                    const key = String(branchId);
+                    if (!MG.ocultos[key] || typeof MG.ocultos[key] !== 'object') {
+                        MG.ocultos[key] = {};
+                    }
+                    TIPOS_ORDEN.forEach((t) => {
+                        if (typeof MG.ocultos[key][t] !== 'boolean') MG.ocultos[key][t] = false;
+                    });
+                }
+
+                /* ── Sucursales y orden de columnas ────────────────────── */
+                function prepararSucursales(data) {
+                    const mapa = new Map();
+
+                    (data.sucursales || []).forEach((s) => {
+                        const id = String(s.id);
+                        mapa.set(id, {
+                            id: id,
+                            nombre: String(s.nombre || ('Sucursal #' + id)),
+                            principal: !!s.principal,
+                            color: colorSucursal(id)
+                        });
+                    });
+
+                    (data.eventos || []).forEach((ev) => {
+                        const agregar = (id, nombre) => {
+                            if (id === null || id === undefined || id === '') return;
+                            const key = String(id);
+                            if (mapa.has(key)) return;
+                            mapa.set(key, {
+                                id: key,
+                                nombre: String(nombre || ('Sucursal #' + key)),
+                                principal: false,
+                                color: colorSucursal(key)
+                            });
+                        };
+                        if (ev.tipo === 'traslado') {
+                            agregar(ev.origen_id, ev.origen);
+                            agregar(ev.destino_id, ev.destino);
+                        } else {
+                            agregar(ev.sucursal_id, ev.sucursal);
+                        }
+                    });
+
+                    MG.mapaSucursales = mapa;
+                    MG.ordenServidor = Array.from(mapa.keys());
+                    const orden = [];
+                    MG.orden.forEach((id) => {
+                        const key = String(id);
+                        if (mapa.has(key) && !orden.includes(key)) orden.push(key);
+                    });
+                    MG.ordenServidor.forEach((id) => {
+                        if (!orden.includes(id)) orden.push(id);
+                    });
+                    MG.orden = orden;
+                    aplicarOrden();
+                }
+
+                function aplicarOrden() {
+                    MG.sucursales = MG.orden
+                        .map((id) => MG.mapaSucursales.get(String(id)))
+                        .filter(Boolean);
+                    MG.sucursales.forEach((s) => inicializarOcultos(s.id));
+                }
+
+                /* ── Eventos y ocurrencias por sucursal ────────────────── */
+                function ocurrencias(ev) {
+                    if (ev.tipo === 'traslado') {
+                        const origen = (ev.origen_id === null || ev.origen_id === undefined) ? null : String(ev.origen_id);
+                        const destino = (ev.destino_id === null || ev.destino_id === undefined) ? null : String(ev.destino_id);
+                        if (origen && destino && origen === destino) {
+                            return [{ id: origen, signo: 0, interno: true }];
+                        }
+                        const lista = [];
+                        if (origen) lista.push({ id: origen, signo: -1 });
+                        if (destino) lista.push({ id: destino, signo: 1 });
+                        return lista;
+                    }
+                    return [{
+                        id: String(ev.sucursal_id ?? '0'),
+                        signo: Number(ev.signo) || 0
+                    }];
+                }
+
+                function visibleEn(branchId, tipo) {
+                    if (!MG.tipos[tipo]) return false;
+                    return !oculto(branchId, tipo);
+                }
+
+                function ocurrenciasVisibles(ev) {
+                    return ocurrencias(ev).filter((o) => visibleEn(o.id, ev.tipo));
+                }
+
+                function ordenarEventos(lista) {
+                    const factor = MG.sort === 'asc' ? 1 : -1;
+                    return lista.slice().sort((a, b) => {
+                        const cmp = String(a.fecha || '').localeCompare(String(b.fecha || ''));
+                        if (cmp !== 0) return cmp * factor;
+                        return String(a.id || '').localeCompare(String(b.id || '')) * factor;
+                    });
+                }
+
+                function eventosVisibles() {
+                    return (MG.data && MG.data.eventos ? MG.data.eventos : []).filter((ev) => {
+                        return ocurrenciasVisibles(ev).length > 0;
+                    });
+                }
+
+                /* ── Totales que respetan los toggles ──────────────────── */
+                function calcularTotales() {
+                    const porSucursal = new Map();
+                    MG.sucursales.forEach((s) => {
+                        porSucursal.set(String(s.id), {
+                            compra: 0,
+                            venta: 0,
+                            trasladoIn: 0,
+                            trasladoOut: 0,
+                            merma: 0
+                        });
+                    });
+
+                    const global = { compra: 0, venta: 0, traslado: 0, merma: 0 };
+
+                    (MG.data && MG.data.eventos ? MG.data.eventos : []).forEach((ev) => {
+                        if (!MG.tipos[ev.tipo]) return;
+                        const occ = ocurrenciasVisibles(ev);
+                        if (!occ.length) return;
+
+                        const cantidad = Number(ev.cantidad) || 0;
+                        if (ev.tipo === 'traslado') {
+                            global.traslado += cantidad;
+                        } else {
+                            global[ev.tipo] += cantidad;
+                        }
+
+                        occ.forEach((o) => {
+                            if (!porSucursal.has(o.id)) {
+                                porSucursal.set(o.id, {
+                                    compra: 0,
+                                    venta: 0,
+                                    trasladoIn: 0,
+                                    trasladoOut: 0,
+                                    merma: 0
+                                });
+                            }
+                            const fila = porSucursal.get(o.id);
+                            if (ev.tipo === 'traslado') {
+                                if (o.signo < 0) fila.trasladoOut += cantidad;
+                                if (o.signo > 0) fila.trasladoIn += cantidad;
+                            } else {
+                                fila[ev.tipo] += cantidad;
+                            }
+                        });
+                    });
+
+                    return {
+                        global: global,
+                        netoGlobal: global.compra - global.venta - global.merma,
+                        porSucursal: porSucursal
+                    };
+                }
+
+                /* ── Cabecera de tipos (global) ────────────────────────── */
+                function renderTipos() {
+                    const cont = $id('mov-type-filter');
+                    if (!cont) return;
+
+                    cont.innerHTML = TIPOS_ORDEN.map((t) => {
+                        const cfg = TIPOS[t];
+                        const activo = MG.tipos[t] !== false;
+                        return `<button type="button" class="mov-type-chip ${activo ? 'active' : ''}"
+                            data-global-type="${t}"
+                            style="--tc:${cfg.color};--tbg:${rgba(cfg.color, .14)}"
+                            title="${activo ? 'Ocultar' : 'Mostrar'} ${cfg.label} en todas las sucursales">
+                            <span class="dot"></span>${cfg.label}
+                        </button>`;
+                    }).join('');
+
+                    cont.querySelectorAll('[data-global-type]').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const t = btn.dataset.globalType;
+                            MG.tipos[t] = MG.tipos[t] === false;
+                            guardarPrefs();
+                            renderTodo();
+                        });
+                    });
+                }
+
+                /* ── KPIs globales ─────────────────────────────────────── */
+                function renderKpis(tot) {
+                    const cont = $id('mov-kpis');
+                    if (!cont) return;
+
+                    const definiciones = [
+                        { key: 'compra', label: 'Compras', icon: 'fa-arrow-down', color: TIPOS.compra.color, valor: tot.global.compra },
+                        { key: 'venta', label: 'Ventas', icon: 'fa-arrow-up', color: TIPOS.venta.color, valor: tot.global.venta },
+                        { key: 'traslado', label: 'Traslados', icon: 'fa-exchange', color: TIPOS.traslado.color, valor: tot.global.traslado },
+                        { key: 'merma', label: 'Mermas', icon: 'fa-trash', color: TIPOS.merma.color, valor: tot.global.merma },
+                        { key: 'neto', label: 'Neto', icon: 'fa-balance-scale', color: '#2dd4bf', valor: tot.netoGlobal }
+                    ];
+
+                    cont.innerHTML = definiciones.map((k) => {
+                        const apagado = k.key !== 'neto' && MG.tipos[k.key] === false;
+                        const claseValor = k.key === 'neto' ? (k.valor >= 0 ? 'pos' : 'neg') : '';
+                        const valor = apagado ? '—' : `${num(k.valor)} <small>${esc(MG.unidad)}</small>`;
+                        return `<div class="mov-kpi ${apagado ? 'off' : ''}" style="--tc:${k.color}">
+                            <div class="lbl"><i class="fa ${k.icon}"></i>${k.label}</div>
+                            <div class="val ${claseValor}">${valor}</div>
+                        </div>`;
+                    }).join('');
+                }
+
+                /* ── Resumen por sucursal (KPIs por columna) ───────────── */
+                function renderSummary(tot) {
+                    const cont = $id('mov-summary');
+                    if (!cont) return;
+
+                    if (!MG.sucursales.length) {
+                        cont.innerHTML = '<div class="state-empty"><i class="fa fa-inbox"></i>Sin sucursales para mostrar</div>';
+                        return;
+                    }
+
+                    const cero = { compra: 0, venta: 0, trasladoIn: 0, trasladoOut: 0, merma: 0 };
+                    const valor = (v, activo) => activo ? num(v) : '<span class="kpi-off">—</span>';
+
+                    const filas = MG.sucursales.map((s) => {
+                        const id = String(s.id);
+                        const t = tot.porSucursal.get(id) || cero;
+                        const cOn = MG.tipos.compra && !oculto(id, 'compra');
+                        const vOn = MG.tipos.venta && !oculto(id, 'venta');
+                        const tOn = MG.tipos.traslado && !oculto(id, 'traslado');
+                        const mOn = MG.tipos.merma && !oculto(id, 'merma');
+                        const netoTraslado = t.trasladoIn - t.trasladoOut;
+                        const neto = t.compra + t.trasladoIn - t.venta - t.trasladoOut - t.merma;
+
+                        return `<tr>
+                            <td><span class="suc-name"><span class="suc-dot" style="--lane:${s.color}"></span>${esc(s.nombre)}</span></td>
+                            <td>${valor(t.compra, cOn)}</td>
+                            <td>${valor(t.venta, vOn)}</td>
+                            <td title="Entradas: ${num(t.trasladoIn)} · Salidas: ${num(t.trasladoOut)}">${tOn ? ((netoTraslado > 0 ? '+' : '') + num(netoTraslado)) : '<span class="kpi-off">—</span>'}</td>
+                            <td>${valor(t.merma, mOn)}</td>
+                            <td class="${neto >= 0 ? 'net-pos' : 'net-neg'}">${neto > 0 ? '+' : ''}${num(neto)}</td>
+                        </tr>`;
+                    }).join('');
+
+                    const totalTrasladoNeto = MG.sucursales.reduce((acc, s) => {
+                        const t = tot.porSucursal.get(String(s.id));
+                        return acc + (t ? (t.trasladoIn - t.trasladoOut) : 0);
+                    }, 0);
+                    const totalNeto = tot.netoGlobal;
+
+                    cont.innerHTML = `<div class="mov-summary-wrap">
+                        <table class="mov-summary">
+                            <thead>
+                                <tr>
+                                    <th>Sucursal</th>
+                                    <th>Compras</th>
+                                    <th>Ventas</th>
+                                    <th>Traslados (neto)</th>
+                                    <th>Mermas</th>
+                                    <th>Neto (${esc(MG.unidad)})</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filas}</tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>Total visible</td>
+                                    <td>${MG.tipos.compra ? num(tot.global.compra) : '—'}</td>
+                                    <td>${MG.tipos.venta ? num(tot.global.venta) : '—'}</td>
+                                    <td>${MG.tipos.traslado ? ((totalTrasladoNeto > 0 ? '+' : '') + num(totalTrasladoNeto)) : '—'}</td>
+                                    <td>${MG.tipos.merma ? num(tot.global.merma) : '—'}</td>
+                                    <td class="${totalNeto >= 0 ? 'net-pos' : 'net-neg'}">${totalNeto > 0 ? '+' : ''}${num(totalNeto)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
+                }
+
+                /* ── Encabezados de columnas ───────────────────────────── */
+                function branchHeadHtml(s, tot) {
+                    const id = String(s.id);
+                    const t = tot.porSucursal.get(id) || {
+                        compra: 0,
+                        venta: 0,
+                        trasladoIn: 0,
+                        trasladoOut: 0,
+                        merma: 0
+                    };
+
+                    const partes = [];
+                    const agregarParte = (tipo, valorTxt) => {
+                        const activo = MG.tipos[tipo] && !oculto(id, tipo);
+                        partes.push(activo
+                            ? `<span style="color:${TIPOS[tipo].color}">${TIPOS[tipo].short} ${valorTxt}</span>`
+                            : `<span class="off">${TIPOS[tipo].short}</span>`);
+                    };
+                    agregarParte('compra', num(t.compra));
+                    agregarParte('venta', num(t.venta));
+                    const netoTraslado = t.trasladoIn - t.trasladoOut;
+                    agregarParte('traslado', `${netoTraslado > 0 ? '+' : ''}${num(netoTraslado)}`);
+                    agregarParte('merma', num(t.merma));
+
+                    const botonesTipo = TIPOS_ORDEN.map((tipo) => {
+                        const activo = MG.tipos[tipo] && !oculto(id, tipo);
+                        return `<button type="button" draggable="false"
+                            class="mov-btype ${activo ? 'on' : ''}"
+                            data-btype="${tipo}" data-branch-id="${id}"
+                            style="--tc:${TIPOS[tipo].color}"
+                            title="${activo ? 'Ocultar' : 'Mostrar'} ${TIPOS[tipo].label} de ${esc(s.nombre)}">
+                            ${TIPOS[tipo].short}
+                        </button>`;
+                    }).join('');
+
+                    return `<div class="mov-branch-head" draggable="true"
+                        data-branch-id="${id}" style="--lane:${s.color}">
+                        <div class="mov-branch-top">
+                            <span class="mov-drag" aria-hidden="true">⠿</span>
+                            <span class="mov-lane-dot"></span>
+                            <span class="mov-branch-name" title="${esc(s.nombre)}">${esc(s.nombre)}</span>
+                            <span class="mov-move-btns">
+                                <button type="button" draggable="false" data-move="-1" data-branch-id="${id}" title="Mover a la izquierda">‹</button>
+                                <button type="button" draggable="false" data-move="1" data-branch-id="${id}" title="Mover a la derecha">›</button>
+                            </span>
+                        </div>
+                        <div class="mov-branch-types">${botonesTipo}</div>
+                        <div class="mov-branch-total" title="KPIs visibles de ${esc(s.nombre)}">${partes.join(' · ')}</div>
+                    </div>`;
+                }
+
+                /* ── Nodo de un evento en una columna ──────────────────── */
+                function nodoHtml(ev, occ) {
+                    const cfg = TIPOS[ev.tipo] || { color: '#94a3b8', label: 'Movimiento' };
+                    const cantidad = Number(ev.cantidad) || 0;
+                    const esTraslado = ev.tipo === 'traslado';
+                    const esSalida = esTraslado ? occ.signo < 0 : (Number(ev.signo) || 0) < 0;
+                    let prefijo = esSalida ? '−' : '+';
+                    if (esTraslado && occ.signo === 0) prefijo = '±';
+
+                    let titulo = ev.subtipo || cfg.label.replace(/s$/, '');
+                    if (esTraslado) {
+                        titulo = occ.interno
+                            ? 'Traslado interno'
+                            : (esSalida ? 'Sale → ' + (ev.destino || '') : 'Entra ← ' + (ev.origen || ''));
+                    }
+
+                    let detalle = '';
+                    if (!esTraslado && ev.detalle) {
+                        detalle = esc(ev.detalle);
+                        if (ev.tipo === 'venta' && ev.referencia) {
+                            detalle = `<a href="${esc(ev.referencia)}" target="_blank" rel="noopener">${detalle}</a>`;
+                        }
+                    }
+
+                    const usuario = ev.usuario ? `<span title="Usuario"> · ${esc(ev.usuario)}</span>` : '';
+                    const razon = ev.razon ? ` title="${esc(ev.razon)}"` : '';
+                    const claseLado = esTraslado ? (esSalida ? 'mov-node--out' : (occ.interno ? '' : 'mov-node--in')) : '';
+
+                    return `<span class="mov-dot" data-event-id="${esc(ev.id)}" data-branch-id="${esc(occ.id)}" style="--tc:${cfg.color}"></span>
+                        <div class="mov-node ${claseLado}" style="--tc:${cfg.color}"${razon}>
+                            <div class="mov-node-top">
+                                <span class="mov-node-qty">${prefijo}${num(cantidad)} ${esc(MG.unidad)}</span>
+                                <span class="mov-node-title">${esc(titulo)}</span>
+                            </div>
+                            <div class="mov-node-meta">${detalle}${usuario}</div>
+                        </div>`;
+                }
+
+                /* ── Filas del gráfico ─────────────────────────────────── */
+                function rowHtml(ev) {
+                    const occ = ocurrenciasVisibles(ev);
+                    if (!occ.length) return '';
+
+                    const porSucursal = {};
+                    occ.forEach((o) => {
+                        if (!porSucursal[o.id]) porSucursal[o.id] = [];
+                        porSucursal[o.id].push(o);
+                    });
+
+                    const f = fechaPartes(ev.fecha);
+                    const cfg = TIPOS[ev.tipo] || { color: '#94a3b8', label: 'Movimiento' };
+                    const etiquetaTiempo = ev.subtipo || cfg.label.replace(/s$/, '');
+
+                    const celdas = MG.sucursales.map((s) => {
+                        const lista = porSucursal[String(s.id)] || [];
+                        return `<div class="mov-cell"
+                            data-branch-id="${s.id}" data-event-id="${esc(ev.id)}"
+                            style="--lane:${s.color};--tc:${cfg.color}">
+                            ${lista.map((o) => nodoHtml(ev, o)).join('')}
+                        </div>`;
+                    }).join('');
+
+                    return `<div class="mov-grid mov-row" data-event-id="${esc(ev.id)}" style="--cols-template:${MG.template}">
+                        <div class="mov-time" style="--tc:${cfg.color}">
+                            <span class="mov-time-date">${f.fecha}</span>
+                            <span class="mov-time-hour">${f.hora || '—'}</span>
+                            <span class="mov-time-type">${esc(etiquetaTiempo)}</span>
+                        </div>
+                        ${celdas}
+                    </div>`;
+                }
+
+                function renderGraph(tot) {
+                    const status = $id('mov-status');
+                    const wrap = $id('mov-graph-wrap');
+                    const head = $id('mov-head');
+                    const rows = $id('mov-rows');
+                    if (!status || !wrap || !head || !rows) return;
+
+                    const lista = ordenarEventos(eventosVisibles());
+                    const nota = $id('mov-note');
+                    if (nota) {
+                        nota.style.display = MG.truncado ? 'flex' : 'none';
+                        nota.innerHTML = MG.truncado
+                            ? '<i class="fa fa-filter"></i>Hay más de 5000 movimientos: se muestran los 5000 más recientes. Acota el intervalo para ver el resto.'
+                            : '';
+                    }
+
+                    if (!lista.length) {
+                        status.style.display = 'block';
+                        status.className = 'state-empty mov-graph-status';
+                        status.innerHTML = '<i class="fa fa-inbox"></i>Sin movimientos del producto en este período';
+                        wrap.style.display = 'none';
+                        head.innerHTML = '';
+                        rows.innerHTML = '';
+                        return;
+                    }
+
+                    const scrollLeft = wrap.scrollLeft;
+                    const scrollTop = wrap.scrollTop;
+                    const columnas = Math.max(1, MG.sucursales.length);
+                    MG.template = `170px repeat(${columnas}, minmax(190px, 1fr))`;
+
+                    const graph = $id('mov-graph');
+                    if (graph) graph.style.setProperty('--cols-template', MG.template);
+
+                    status.style.display = 'none';
+                    wrap.style.display = 'block';
+
+                    head.innerHTML = '<div class="mov-corner">Fecha / hora</div>' +
+                        MG.sucursales.map((s) => branchHeadHtml(s, tot)).join('');
+                    rows.innerHTML = lista.map(rowHtml).join('');
+
+                    wrap.scrollLeft = scrollLeft;
+                    wrap.scrollTop = scrollTop;
+
+                    enlazarEncabezados();
+                    requestAnimationFrame(dibujarArcos);
+                }
+
+                /* ── Arcos de traslado entre columnas ─────────────────── */
+                function dibujarArcos() {
+                    const graph = $id('mov-graph');
+                    const svg = $id('mov-arcs');
+                    if (!graph || !svg || !MG.data) return;
+
+                    svg.innerHTML = `<defs>
+                        <marker id="mov-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#a78bfa"></path>
+                        </marker>
+                    </defs>`;
+
+                    const gRect = graph.getBoundingClientRect();
+
+                    (MG.data.eventos || []).forEach((ev) => {
+                        if (ev.tipo !== 'traslado' || !MG.tipos.traslado) return;
+                        const occ = ocurrenciasVisibles(ev);
+                        if (occ.length < 2) return;
+
+                        const salida = occ.find((o) => o.signo < 0);
+                        const entrada = occ.find((o) => o.signo > 0);
+                        if (!salida || !entrada || salida.id === entrada.id) return;
+
+                        const dotSalida = graph.querySelector(
+                            `.mov-dot[data-event-id="${cssEsc(ev.id)}"][data-branch-id="${cssEsc(salida.id)}"]`
+                        );
+                        const dotEntrada = graph.querySelector(
+                            `.mov-dot[data-event-id="${cssEsc(ev.id)}"][data-branch-id="${cssEsc(entrada.id)}"]`
+                        );
+                        if (!dotSalida || !dotEntrada) return;
+
+                        const r1 = dotSalida.getBoundingClientRect();
+                        const r2 = dotEntrada.getBoundingClientRect();
+                        const x1 = r1.left - gRect.left + r1.width / 2;
+                        const y1 = r1.top - gRect.top + r1.height / 2;
+                        const x2 = r2.left - gRect.left + r2.width / 2;
+                        const y2 = r2.top - gRect.top + r2.height / 2;
+                        const dx = x2 - x1;
+                        const curva = Math.min(70, Math.abs(dx) * 0.3);
+                        const cx1 = x1 + (dx >= 0 ? curva : -curva);
+                        const cx2 = x2 - (dx >= 0 ? curva : -curva);
+                        const path = `M ${x1} ${y1} C ${cx1} ${y1 + 22}, ${cx2} ${y2 + 22}, ${x2} ${y2}`;
+
+                        const glow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        glow.setAttribute('d', path);
+                        glow.setAttribute('class', 'mov-arc-glow');
+
+                        const linea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        linea.setAttribute('d', path);
+                        linea.setAttribute('marker-end', 'url(#mov-arrow)');
+
+                        svg.appendChild(glow);
+                        svg.appendChild(linea);
+                    });
+                }
+
+                /* ── Interacción de encabezados ────────────────────────── */
+                function enlazarEncabezados() {
+                    const head = $id('mov-head');
+                    if (!head) return;
+
+                    head.querySelectorAll('.mov-branch-head').forEach((el) => {
+                        const branchId = el.dataset.branchId;
+
+                        el.addEventListener('dragstart', (e) => {
+                            dragBranchId = branchId;
+                            el.classList.add('dragging');
+                            try {
+                                e.dataTransfer.setData('text/plain', branchId);
+                                e.dataTransfer.effectAllowed = 'move';
+                            } catch (err) {
+                                /* navegador sin DataTransfer */
+                            }
+                        });
+
+                        el.addEventListener('dragend', () => {
+                            dragBranchId = null;
+                            head.querySelectorAll('.mov-branch-head').forEach((x) => {
+                                x.classList.remove('dragging', 'drop-target');
+                            });
+                        });
+
+                        el.addEventListener('dragover', (e) => {
+                            if (!dragBranchId || dragBranchId === branchId) return;
+                            e.preventDefault();
+                            head.querySelectorAll('.mov-branch-head').forEach((x) => {
+                                x.classList.remove('drop-target');
+                            });
+                            el.classList.add('drop-target');
+                        });
+
+                        el.addEventListener('dragleave', () => {
+                            el.classList.remove('drop-target');
+                        });
+
+                        el.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            el.classList.remove('drop-target');
+                            if (dragBranchId && dragBranchId !== branchId) {
+                                moverAntes(dragBranchId, branchId);
+                            }
+                            dragBranchId = null;
+                        });
+                    });
+
+                    head.querySelectorAll('[data-btype]').forEach((btn) => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const branchId = btn.dataset.branchId;
+                            const tipo = btn.dataset.btype;
+                            MG.ocultos[String(branchId)] = MG.ocultos[String(branchId)] || {};
+                            MG.ocultos[String(branchId)][tipo] = !MG.ocultos[String(branchId)][tipo];
+                            guardarPrefs();
+                            renderTodo();
+                        });
+                    });
+
+                    head.querySelectorAll('[data-move]').forEach((btn) => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            moverLado(btn.dataset.branchId, Number(btn.dataset.move));
+                        });
+                    });
+                }
+
+                function moverAntes(moverId, destinoId) {
+                    const mover = String(moverId);
+                    const destino = String(destinoId);
+                    const desde = MG.orden.indexOf(mover);
+                    const hasta = MG.orden.indexOf(destino);
+
+                    if (desde < 0 || hasta < 0) return;
+                    MG.orden.splice(desde, 1);
+                    const nuevoDestino = MG.orden.indexOf(destino);
+                    // Al arrastrar hacia la derecha se suelta después del destino.
+                    MG.orden.splice(nuevoDestino + (desde < hasta ? 1 : 0), 0, mover);
+                    aplicarOrden();
+                    guardarPrefs();
+                    renderTodo();
+                }
+
+                function moverLado(branchId, direccion) {
+                    const id = String(branchId);
+                    const indice = MG.orden.indexOf(id);
+                    const destino = indice + (direccion < 0 ? -1 : 1);
+                    if (indice < 0 || destino < 0 || destino >= MG.orden.length) return;
+
+                    [MG.orden[indice], MG.orden[destino]] = [MG.orden[destino], MG.orden[indice]];
+                    aplicarOrden();
+                    guardarPrefs();
+                    renderTodo();
+                }
+
+                /* ── Render completo ───────────────────────────────────── */
+                function renderTodo() {
+                    if (!MG.data) return;
+                    const tot = calcularTotales();
+                    renderTipos();
+                    renderKpis(tot);
+                    renderSummary(tot);
+                    renderGraph(tot);
+                }
+
+                /* ── Carga del endpoint ────────────────────────────────── */
+                function cargar() {
+                    if (MG.cargando) return;
+
+                    const desde = ($id('mov-desde') || {}).value || '';
+                    const hasta = ($id('mov-hasta') || {}).value || '';
+                    const status = $id('mov-status');
+                    const wrap = $id('mov-graph-wrap');
+                    const kpis = $id('mov-kpis');
+                    const summary = $id('mov-summary');
+
+                    MG.cargando = true;
+                    MG.data = null;
+                    if (status) {
+                        status.style.display = 'block';
+                        status.className = 'state-loading mov-graph-status';
+                        status.innerHTML = '<i class="fa fa-circle-o-notch spin"></i>Cargando movimientos…';
+                    }
+                    if (wrap) wrap.style.display = 'none';
+                    if (kpis) kpis.innerHTML = '';
+                    if (summary) summary.innerHTML = '';
+                    if ($id('mov-type-filter')) $id('mov-type-filter').innerHTML = '';
+
+                    const params = new URLSearchParams({
+                        id: PRODUCTO_ID,
+                        desde: desde,
+                        hasta: hasta
+                    });
+
+                    fetch('ficha_movimiento_general.php?' + params.toString())
+                        .then((r) => r.json())
+                        .then((data) => {
+                            MG.cargando = false;
+                            if (!data.ok) {
+                                throw new Error(data.error || 'No se pudieron cargar los movimientos');
+                            }
+
+                            MG.data = data;
+                            MG.unidad = (data.producto && data.producto.unidad) ? data.producto.unidad : 'UND';
+                            MG.truncado = !!data.truncado;
+
+                            if ($id('mov-desde')) $id('mov-desde').value = data.desde;
+                            if ($id('mov-hasta')) $id('mov-hasta').value = data.hasta;
+                            if (fpMovDesde) fpMovDesde.setDate(data.desde, false);
+                            if (fpMovHasta) fpMovHasta.setDate(data.hasta, false);
+
+                            prepararSucursales(data);
+                            renderTodo();
+                        })
+                        .catch((error) => {
+                            MG.cargando = false;
+                            if (status) {
+                                status.style.display = 'block';
+                                status.className = 'state-empty mov-graph-status';
+                                status.innerHTML = '<i class="fa fa-exclamation-triangle"></i>' +
+                                    esc(error.message || 'Error al conectar con el servidor');
+                            }
+                        });
+                }
+
+                /* ── Filtros de fecha ──────────────────────────────────── */
+                function aplicarRangoDias(dias) {
+                    const cantidad = Math.max(1, Number(dias) || 30);
+                    const hoy = new Date();
+                    const inicio = new Date(hoy);
+                    inicio.setDate(inicio.getDate() - (cantidad - 1));
+
+                    const desde = fmtISO(inicio);
+                    const hasta = fmtISO(hoy);
+
+                    if (fpMovDesde) fpMovDesde.setDate(desde, false);
+                    if (fpMovHasta) fpMovHasta.setDate(hasta, false);
+                    if ($id('mov-desde')) $id('mov-desde').value = desde;
+                    if ($id('mov-hasta')) $id('mov-hasta').value = hasta;
+
+                    cargar();
+                }
+
+                function initControles() {
+                    const inputDesde = $id('mov-desde');
+                    const inputHasta = $id('mov-hasta');
+
+                    if (typeof flatpickr === 'function') {
+                        fpMovDesde = flatpickr(inputDesde, {
+                            locale: 'es',
+                            dateFormat: 'Y-m-d',
+                            defaultDate: inputDesde.value
+                        });
+                        fpMovHasta = flatpickr(inputHasta, {
+                            locale: 'es',
+                            dateFormat: 'Y-m-d',
+                            defaultDate: inputHasta.value
+                        });
+                    }
+
+                    const btnConsultar = $id('mov-btn-consultar');
+                    if (btnConsultar) {
+                        btnConsultar.addEventListener('click', cargar);
+                    }
+
+                    document.querySelectorAll('[data-mov-days]').forEach((chip) => {
+                        chip.addEventListener('click', () => {
+                            document.querySelectorAll('[data-mov-days]').forEach((c) => {
+                                c.classList.remove('active');
+                            });
+                            chip.classList.add('active');
+                            aplicarRangoDias(chip.dataset.movDays);
+                        });
+                    });
+
+                    const btnSort = $id('mov-btn-sort');
+                    if (btnSort) {
+                        btnSort.addEventListener('click', () => {
+                            MG.sort = MG.sort === 'desc' ? 'asc' : 'desc';
+                            guardarPrefs();
+                            actualizarBotonOrden();
+                            renderTodo();
+                        });
+                    }
+
+                    const btnReset = $id('mov-btn-reset');
+                    if (btnReset) {
+                        btnReset.addEventListener('click', () => {
+                            MG.orden = MG.ordenServidor.slice();
+                            MG.ocultos = {};
+                            TIPOS_ORDEN.forEach((t) => {
+                                MG.tipos[t] = true;
+                            });
+                            MG.sort = 'desc';
+                            aplicarOrden();
+                            MG.sucursales.forEach((s) => inicializarOcultos(s.id));
+                            guardarPrefs();
+                            actualizarBotonOrden();
+                            renderTodo();
+                        });
+                    }
+
+                    actualizarBotonOrden();
+                }
+
+                function actualizarBotonOrden() {
+                    const label = $id('mov-sort-label');
+                    const icon = document.querySelector('#mov-btn-sort i');
+                    if (label) label.textContent = MG.sort === 'desc' ? 'Recientes' : 'Antiguos';
+                    if (icon) {
+                        icon.className = MG.sort === 'desc'
+                            ? 'fa fa-sort-amount-desc'
+                            : 'fa fa-sort-amount-asc';
+                    }
+                }
+
+                /* ── Arranque ──────────────────────────────────────────── */
+                cargarPrefs();
+                initControles();
+                cargar();
+
+                let resizeTimer = null;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        if (MG.data) dibujarArcos();
+                    }, 150);
+                });
+            })();
         </script>
     </body>
 
