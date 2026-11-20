@@ -2024,27 +2024,6 @@ $zona_tienda = $es_tienda_individual
                 color: #ffffff;
             }
 
-            .store-app-download {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.45rem;
-                margin-top: 0.9rem;
-                padding: 0.55rem 1.1rem;
-                border-radius: 999px;
-                background: #ffffff;
-                color: #1a7f4b;
-                font-weight: 700;
-                font-size: 0.88rem;
-                text-decoration: none;
-                border: 1.5px solid rgba(255, 255, 255, 0.9);
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-            }
-
-            .store-app-download:hover {
-                background: #f0fdf4;
-                color: #146c3f;
-            }
-
             .store-title {
                 font-size: 1.9rem;
                 font-weight: 800;
@@ -2836,9 +2815,6 @@ $zona_tienda = $es_tienda_individual
                                 </div>
                             </div>
                         <?php endif; ?>
-                        <a class="store-app-download" href="https://166.1.85.221.nip.io/iseller_store.apk" download>
-                            <i class="bi bi-android2"></i> Descargar la app
-                        </a>
                     </div>
                 </div>
                 <!-- Decorative slogan right -->
@@ -3245,9 +3221,6 @@ $zona_tienda = $es_tienda_individual
                         <button type="button" class="btn rounded-pill px-4 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTiendasCercanas" style="background:#1a7f4b;color:#fff;border:none;box-shadow:0 2px 12px rgba(26,127,75,0.25);">
                             <i class="bi bi-shop-window me-2"></i> Encontrar tiendas cercanas
                         </button>
-                        <a href="https://166.1.85.221.nip.io/iseller_store.apk" class="btn rounded-pill px-4 py-2 fw-semibold" style="background:#fff;color:#1a7f4b;border:1.5px solid #1a7f4b;" download>
-                            <i class="bi bi-android2 me-2"></i> Descargar la app
-                        </a>
                     </div>
                 </div>
                 <div class="mkt-hero-img-col">

@@ -6,14 +6,16 @@ if ($_SESSION["nivel"] != 1) {
     exit;
 }
 
-$nombre = $_POST["nombre"];
-$tipo = $_POST["tipo"];
-$productos_accion = $_POST["productos_accion"];
-$stockCritico = $_POST["stock_critico"];
+$nombre = trim($_POST["nombre"] ?? '');
+$tipo = trim($_POST["tipo"] ?? '');
+$productos_accion = $_POST["productos_accion"] ?? '';
+$stockCritico = (int) ($_POST["stock_critico"] ?? 0);
 $bss_id = (int) $_SESSION["bss_id"];
 
-if (empty($nombre) || empty($tipo)) {
-    echo json_encode(['error' => 'Datos', 'message' => 'Faltan datos']);
+$tipos_permitidos = ['Depósito', 'Tienda'];
+
+if ($nombre === '' || !in_array($tipo, $tipos_permitidos, true)) {
+    echo json_encode(['error' => 'Datos', 'message' => 'Selecciona un tipo de sucursal válido.']);
     exit;
 }
 

@@ -128,7 +128,6 @@ if (isLoggedIn()) {
                         </li>
                         <li><a class="dropdown-item" href="perfil.php"><i class="bi bi-person-circle me-2"></i> Mi Perfil</a></li>
                         <li><a class="dropdown-item" href="javascript:void(0)" onclick="typeof loadSavedCarts==='function'&&loadSavedCarts()"><i class="bi bi-folder-check me-2"></i> Cargar Carrito</a></li>
-                        <li><a class="dropdown-item text-success fw-bold" href="iseller_store.apk" download><i class="bi bi-android2 me-2"></i> Descargar App</a></li>
                         <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión</a></li>
                     </ul>
                 <?php else: ?>

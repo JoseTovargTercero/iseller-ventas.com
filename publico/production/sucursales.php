@@ -145,6 +145,7 @@ if ($_SESSION['nivel'] == 1) {
 
       .suc-tipo {
         display: inline-block;
+        max-width: 100%;
         margin-top: 4px;
         padding: 2px 9px;
         border-radius: 20px;
@@ -152,6 +153,24 @@ if ($_SESSION['nivel'] == 1) {
         font-weight: 600;
         color: var(--dash-mint);
         background: rgba(45, 212, 160, .1);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .suc-tipo.tipo-deposito {
+        color: #f5b041;
+        background: rgba(245, 176, 65, .12);
+      }
+
+      .suc-tipo.tipo-tienda {
+        color: var(--dash-mint);
+        background: rgba(45, 212, 160, .1);
+      }
+
+      .suc-tipo.tipo-otro {
+        color: var(--dash-text-muted);
+        background: rgba(255, 255, 255, .06);
       }
 
       .suc-stats {
@@ -521,6 +540,14 @@ if ($_SESSION['nivel'] == 1) {
                     <input type="text" id="edit_nombre" name="edit_nombre" required class="form-control">
                   </div>
                   <div class="mb-3">
+                    <label class="form-label" for="edit_tipo">Tipo de sucursal</label>
+                    <select id="edit_tipo" name="edit_tipo" class="form-control" required>
+                      <option value="">Seleccione una opción</option>
+                      <option value="Depósito">Depósito</option>
+                      <option value="Tienda">Tienda</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
                     <label class="form-label" for="edit_stock_critico">Cantidad mínima para stock crítico</label>
                     <input type="text" id="edit_stock_critico" name="edit_stock_critico" required class="form-control">
                   </div>
@@ -574,38 +601,11 @@ if ($_SESSION['nivel'] == 1) {
                   </div>
                   <div class="mb-3">
                     <label class="form-label" for="tipo">Tipo de sucursal</label>
-                    <input list="tipos-comercio" id="tipo" name="tipo" class="form-control" placeholder="Ej: Panadería" required>
-                    <datalist id="tipos-comercio">
-                      <option value="Panadería">
-                      <option value="Carnicería">
-                      <option value="Heladería">
-                      <option value="Frigorífico">
-                      <option value="Supermercado">
-                      <option value="Verdulería">
-                      <option value="Pescadería">
-                      <option value="Tienda de Ropa">
-                      <option value="Joyería">
-                      <option value="Farmacia">
-                      <option value="Ferretería">
-                      <option value="Papelería">
-                      <option value="Librería">
-                      <option value="Tienda de Electrónica">
-                      <option value="Tienda de Mascotas">
-                      <option value="Floristería">
-                      <option value="Barbería">
-                      <option value="Peluquería">
-                      <option value="Restaurante">
-                      <option value="Cafetería">
-                      <option value="Tienda de Deportes">
-                      <option value="Juguetería">
-                      <option value="Boutique">
-                      <option value="Auto Lavado">
-                      <option value="Gimnasio">
-                      <option value="Tienda de Muebles">
-                      <option value="Centro de Estética">
-                      <option value="Tienda de Telefonía">
-                      <option value="Otro">
-                    </datalist>
+                    <select id="tipo" name="tipo" class="form-control" required>
+                      <option value="">Seleccione una opción</option>
+                      <option value="Depósito">Depósito</option>
+                      <option value="Tienda">Tienda</option>
+                    </select>
                   </div>
                   <div class="mb-3">
                     <label class="form-label" for="stock_critico">Cantidad mínima para stock crítico</label>
@@ -692,6 +692,23 @@ if ($_SESSION['nivel'] == 1) {
         })[c]);
 
       const $addModal = $('#addModal');
+      const TIPOS_SUCURSAL = ['Depósito', 'Tienda'];
+
+      // Deja el select de tipo con el valor actual; si es un registro antiguo
+      // con otro tipo, lo agrega como opción para no perderlo al editar.
+      function setTipoSelect(select, tipo) {
+        const actual = (tipo || '').trim();
+        const previa = select.querySelector('option[data-legacy="1"]');
+        if (previa) previa.remove();
+
+        if (actual && !TIPOS_SUCURSAL.includes(actual)) {
+          const opt = new Option(actual + ' (actual)', actual);
+          opt.dataset.legacy = '1';
+          select.add(opt, 1);
+        }
+
+        select.value = actual;
+      }
 
       $(document).ready(function() {
         $('#btn-add-sucursal').on('click', function() {
@@ -774,6 +791,9 @@ if ($_SESSION['nivel'] == 1) {
               if (lista.length > 0) {
                 lista.forEach(item => {
                   sucursales[item.id] = item;
+                  const tipoTexto = (item.tipo || '').trim();
+                  const tipoClase = /dep[oó]sito/i.test(tipoTexto) ? 'tipo-deposito' :
+                    /tienda/i.test(tipoTexto) ? 'tipo-tienda' : 'tipo-otro';
                   $grid.append(`
             <article class="suc-card">
               <div class="suc-card-top">
@@ -783,7 +803,7 @@ if ($_SESSION['nivel'] == 1) {
                 </div>
                 <div class="suc-head">
                   <h6 title="${esc(item.nombre)}">${esc(item.nombre)}</h6>
-                  <span class="suc-tipo">${esc(item.tipo) || 'Sin tipo'}</span>
+                  <span class="suc-tipo ${tipoClase}">${esc(tipoTexto) || 'Sin tipo'}</span>
                 </div>
                 <a data-id="${item.id}" class="btn-edit-icon" title="Editar"><ion-icon name="create-outline"></ion-icon></a>
                 <a data-id="${item.id}" class="btn-delete-icon" title="Eliminar"><ion-icon name="trash-outline"></ion-icon></a>
@@ -878,6 +898,7 @@ if ($_SESSION['nivel'] == 1) {
       function cargarDatosForm(datos) {
         sucursal_editar = datos.id;
         document.getElementById('edit_nombre').value = datos.nombre;
+        setTipoSelect(document.getElementById('edit_tipo'), datos.tipo);
         document.getElementById('edit_stock_critico').value = datos.stockCritico;
         document.getElementById('section_edit').classList.remove('hide');
         document.getElementById('section_tabla').classList.add('hide');
@@ -887,6 +908,10 @@ if ($_SESSION['nivel'] == 1) {
         document.getElementById('section_edit').classList.add('hide');
         document.getElementById('section_tabla').classList.remove('hide');
         document.getElementById('form-data').reset();
+        const editTipo = document.getElementById('edit_tipo');
+        const legacy = editTipo.querySelector('option[data-legacy="1"]');
+        if (legacy) legacy.remove();
+        editTipo.value = '';
         document.getElementById('foto2-name').textContent = 'Ningún archivo seleccionado';
         document.querySelectorAll('#form-data input').forEach(f => f.disabled = false);
       }

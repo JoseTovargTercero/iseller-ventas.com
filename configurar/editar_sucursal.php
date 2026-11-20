@@ -45,27 +45,29 @@ function cargarArchivo($archivo, $folder, $id)
 
 
 // Validar datos esperados
-if (!isset($_POST['edit_nombre'], $_POST['edit_stock_critico'], $_POST['id_editar'])) {
+if (!isset($_POST['edit_nombre'], $_POST['edit_tipo'], $_POST['edit_stock_critico'], $_POST['id_editar'])) {
 	$response['mensaje'] = 'Faltan datos requeridos.';
 	echo json_encode($response);
 	exit;
 }
 
 $nombre = trim($_POST['edit_nombre']);
+$tipo = trim($_POST['edit_tipo']);
 $stock_critico = trim($_POST['edit_stock_critico']);
 $id = trim($_POST['id_editar']);
+$bss_id = (int) ($_SESSION['bss_id'] ?? 0);
 
 // Validar que no estén vacíos
-if ($nombre === '' || $stock_critico === '' || $id === '') {
+if ($nombre === '' || $tipo === '' || $stock_critico === '' || $id === '') {
 	$response['mensaje'] = 'Todos los campos son obligatorios.';
 	echo json_encode($response);
 	exit;
 }
 
 // Preparar y ejecutar la consulta
-$stmt = $conexion->prepare("UPDATE sucursales SET nombre = ?, stockCritico = ? WHERE id = ? AND bss_id=$bss_id");
+$stmt = $conexion->prepare("UPDATE sucursales SET nombre = ?, tipo = ?, stockCritico = ? WHERE id = ? AND bss_id = ?");
 if ($stmt) {
-	$stmt->bind_param("sii", $nombre, $stock_critico, $id);
+	$stmt->bind_param("ssiii", $nombre, $tipo, $stock_critico, $id, $bss_id);
 	cargarArchivo("foto2", '../publico/production/images/sucursal_logo/', $id);
 
 	if ($stmt->execute()) {
