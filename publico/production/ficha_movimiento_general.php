@@ -184,6 +184,7 @@ if ($stmt) {
 /* ── Ventas ─────────────────────────────────────────────────────────── */
 $stmt = $conexion->prepare(
     "SELECT o.id AS orden_id, o.created AS fecha_evento, o.id_sucursal, o.status,
+            COALESCE(o.usuario, 0) AS usuario_id,
             COALESCE(NULLIF(TRIM(u.nombre), ''), 'Sin usuario') AS usuario,
             SUM(oa.quantity * CASE WHEN COALESCE(p.mayor, '0') = '1'
                     THEN GREATEST(COALESCE(p.cantidad_unidades, 1), 1)
@@ -225,6 +226,7 @@ if ($stmt) {
             'cantidad' => round($cantidad, 4),
             'monto' => round((float) $fila['venta_usd'], 2),
             'signo' => -1,
+            'usuario_id' => (int) $fila['usuario_id'],
             'usuario' => (string) $fila['usuario'],
             'detalle' => 'Venta #' . (int) $fila['orden_id'],
             'referencia' => 'detallesVenta.php?id=' . (int) $fila['orden_id'],

@@ -1507,6 +1507,23 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 border-left: 3px solid #60a5fa;
             }
 
+            .mov-group-user {
+                margin-top: 1px;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 10px;
+                font-weight: 600;
+                color: #94a3b8;
+            }
+
+            .mov-group-user i {
+                margin-right: 4px;
+                font-size: 9px;
+                color: #64748b;
+            }
+
             .mov-group-total {
                 margin-top: 2px;
                 font-family: 'Space Grotesk', sans-serif;
@@ -2849,8 +2866,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     return partes.join(',');
                 }
 
-                // Agrupa ventas consecutivas. Solo compras y traslados cortan
-                // el grupo; las mermas se muestran dentro del grupo sin cortarlo.
+                // Agrupa ventas consecutivas por usuario. Solo compras y
+                // traslados cortan el grupo; las mermas se muestran dentro del
+                // grupo sin cortarlo. Un cambio de usuario también abre un grupo.
                 function construirBloques(ascendentes) {
                     const bloques = [];
                     let grupo = null;
@@ -2860,14 +2878,26 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         bloques.push(grupo);
                         grupo = null;
                     };
+                    const usuarioClave = (ev) => {
+                        const id = Number(ev.usuario_id);
+                        return (Number.isFinite(id) && id > 0)
+                            ? 'u:' + id
+                            : 'n:' + String(ev.usuario || '');
+                    };
 
                     ascendentes.forEach((ev) => {
                         if (ev.tipo === 'venta') {
+                            const claveUsuario = usuarioClave(ev);
+                            if (grupo && grupo.usuarioClave !== claveUsuario) {
+                                cerrar();
+                            }
                             if (!grupo) {
                                 grupo = {
                                     tipo: 'grupo',
                                     ventas: [],
                                     mermas: [],
+                                    usuarioClave: claveUsuario,
+                                    usuario: ev.usuario || 'Sin usuario',
                                     fechaInicio: ev.fecha,
                                     fechaFin: ev.fecha
                                 };
@@ -3267,7 +3297,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             : `${desde.fecha} · ${desde.hora || '00:00'} – ${hasta.hora || '00:00'}`)
                         : `${desde.fecha} ${desde.hora || '00:00'} – ${hasta.fecha} ${hasta.hora || '00:00'}`;
 
-                    const tituloGrupo = `${resumen.totalVentas} venta(s) · ${num(resumen.totalCantidad)} ${MG.unidad} · $${num(resumen.totalMonto)}`;
+                    const usuarioGrupo = grupo.usuario || 'Sin usuario';
+                    const tituloGrupo = `${usuarioGrupo} · ${resumen.totalVentas} venta(s) · ${num(resumen.totalCantidad)} ${MG.unidad} · $${num(resumen.totalMonto)}`;
 
                     const celdas = MG.sucursales.map((s) => {
                         const fila = resumen.porSucursal.get(String(s.id));
@@ -3310,6 +3341,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <span class="mov-time-date">${desde.fecha}</span>
                             <span class="mov-time-hour">${rango}</span>
                             <span class="mov-time-type">Grupo de ventas</span>
+                            <span class="mov-group-user" title="${esc(usuarioGrupo)}">
+                                <i class="fa fa-user"></i>${esc(usuarioGrupo)}
+                            </span>
                             <span class="mov-group-total">−${num(resumen.totalCantidad)} ${esc(MG.unidad)}</span>
                             <span class="mov-group-money">$${num(resumen.totalMonto)}</span>
                             <span class="mov-group-count">${resumen.totalVentas} venta(s) · Ver detalle →</span>
