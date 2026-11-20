@@ -4,6 +4,7 @@ require_once('session.php');
 require_once('_validador_campos.php');
 require_once('_canal.php');
 require_once('_stock_traslados.php');
+require_once('_stock_auditoria.php');
 
 header('Content-Type: application/json');
 
@@ -50,6 +51,9 @@ try {
     // migración 031. Debe hacerse antes de abrir la transacción.
     if (!st_asegurar_tabla($conexion)) {
         throw new Exception('No se pudo preparar la tabla de traslados. Ejecute la migración 031_stock_traslados.sql.');
+    }
+    if (!sa_asegurar_tabla($conexion)) {
+        throw new Exception('No se pudo preparar la auditoría de stock.');
     }
 
     $stmtProd = $conexion->prepare("SELECT nombre, modo_control FROM productos WHERE id = ? AND bss_id = ? LIMIT 1");
@@ -134,6 +138,8 @@ try {
 
     // VERIFICAR SI EXISTE EL PRODUCTO EN DESTINO
     $stock_destino = getStock($sucursal_2);
+    $stockDestinoAntes = $stock_destino === false ? 0.0 : (float) $stock_destino;
+    $stockDestinoDespues = $stockDestinoAntes + (float) $unidades_transferir;
     if ($stock_destino === false) {
         // Obtener porcentaje del producto
         $stmt = $conexion->prepare("SELECT porcentaje FROM productos WHERE id = ?");
@@ -205,7 +211,59 @@ try {
         $stmtTraslado->close();
         throw new Exception('No se pudo registrar el traslado.');
     }
+    $trasladoId = (int) $conexion->insert_id;
     $stmtTraslado->close();
+
+    $detalleAuditoria = [
+        'stock_traslado_id' => $trasladoId,
+        'sucursal_origen'   => (int) $sucursal,
+        'sucursal_destino'  => (int) $sucursal_2,
+        'modo_control'      => (string) ($prodTransferir['modo_control'] ?? 'NORMAL'),
+    ];
+
+    $auditoriaSalida = sa_registrar($conexion, [
+        'bss_id'              => $bss_id,
+        'id_sucursal'         => (int) $sucursal,
+        'id_producto'         => $id,
+        'producto_nombre'     => $prodTransferir['nombre'] ?? '',
+        'tipo_movimiento'     => 'TRANSFERENCIA_SALIDA',
+        'origen'              => 'transferencia',
+        'referencia_tipo'     => 'stock_traslado',
+        'referencia_id'       => $trasladoId,
+        'cantidad'            => $unidades_transferir,
+        'stock_anterior'      => (float) $stock_disponible,
+        'stock_nuevo'         => (float) $stock_disponible_origen,
+        'diferencia'          => (float) $stock_disponible_origen - (float) $stock_disponible,
+        'id_sucursal_origen'  => (int) $sucursal,
+        'id_sucursal_destino' => (int) $sucursal_2,
+        'detalle'             => $detalleAuditoria,
+        'usuario_id'          => $usuario_id,
+        'usuario_nombre'      => $usuario_nombre,
+    ]);
+
+    $auditoriaEntrada = sa_registrar($conexion, [
+        'bss_id'              => $bss_id,
+        'id_sucursal'         => (int) $sucursal_2,
+        'id_producto'         => $id,
+        'producto_nombre'     => $prodTransferir['nombre'] ?? '',
+        'tipo_movimiento'     => 'TRANSFERENCIA_ENTRADA',
+        'origen'              => 'transferencia',
+        'referencia_tipo'     => 'stock_traslado',
+        'referencia_id'       => $trasladoId,
+        'cantidad'            => $unidades_transferir,
+        'stock_anterior'      => (float) $stockDestinoAntes,
+        'stock_nuevo'         => (float) $stockDestinoDespues,
+        'diferencia'          => (float) $stockDestinoDespues - (float) $stockDestinoAntes,
+        'id_sucursal_origen'  => (int) $sucursal,
+        'id_sucursal_destino' => (int) $sucursal_2,
+        'detalle'             => $detalleAuditoria,
+        'usuario_id'          => $usuario_id,
+        'usuario_nombre'      => $usuario_nombre,
+    ]);
+
+    if (!$auditoriaSalida || !$auditoriaEntrada) {
+        throw new Exception('No se pudo registrar la auditoría del movimiento de stock.');
+    }
 
     $conexion->commit(); // CONFIRMAR TRANSACCIÓN
     $response['success'] = true;

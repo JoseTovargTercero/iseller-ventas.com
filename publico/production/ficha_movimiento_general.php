@@ -188,6 +188,9 @@ $stmt = $conexion->prepare(
             SUM(oa.quantity * CASE WHEN COALESCE(p.mayor, '0') = '1'
                     THEN GREATEST(COALESCE(p.cantidad_unidades, 1), 1)
                     ELSE 1 END) AS cantidad,
+            SUM(CASE WHEN o.status = '4'
+                    THEN oa.precio_venta_dolar * oa.quantity * (1 - COALESCE(o.descontado, 0) / 100)
+                    ELSE oa.precio_venta_dolar * oa.quantity END) AS venta_usd,
             COUNT(*) AS lineas
      FROM orden o
      INNER JOIN orden_articulos oa ON oa.order_id = o.id
@@ -195,7 +198,7 @@ $stmt = $conexion->prepare(
      LEFT JOIN usuarios u ON u.id = o.usuario
      WHERE o.bss_id = ?
        AND oa.product_id IN ($idsSql)
-       AND o.status IN (1, 2, 3, 4)
+       AND o.status IN (1, 2, 4)
        AND o.created >= ?
        AND o.created < DATE_ADD(?, INTERVAL 1 DAY)
      GROUP BY o.id, o.created, o.id_sucursal, o.status, o.usuario, u.nombre
@@ -213,12 +216,14 @@ if ($stmt) {
         }
         $eventos[] = [
             'id' => 'venta-' . (int) $fila['orden_id'],
+            'orden_id' => (int) $fila['orden_id'],
             'fecha' => $fecha,
             'tipo' => 'venta',
             'subtipo' => 'Venta',
             'sucursal_id' => (int) $fila['id_sucursal'],
             'sucursal' => $nombreSucursal($fila['id_sucursal']),
             'cantidad' => round($cantidad, 4),
+            'monto' => round((float) $fila['venta_usd'], 2),
             'signo' => -1,
             'usuario' => (string) $fila['usuario'],
             'detalle' => 'Venta #' . (int) $fila['orden_id'],

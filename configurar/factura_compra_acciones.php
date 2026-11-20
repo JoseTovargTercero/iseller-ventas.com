@@ -4,6 +4,7 @@ require_once('session.php');
 require_once('_factura_compra.php');
 require_once('_canal.php');
 require_once('_productos_precio_compra.php');
+require_once('_stock_auditoria.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -176,6 +177,9 @@ if ($accion === 'guardar') {
     $hoy = date('Y-m-d');
 
     producto_asegurar_historial_precio($conexion);
+    if (!sa_asegurar_tabla($conexion)) {
+        fcResponder(false, 'No se pudo preparar la auditoría de stock.');
+    }
 
     $conexion->begin_transaction();
 
@@ -340,7 +344,36 @@ if ($accion === 'guardar') {
                 $sucursal
             );
 
-            canal_sumar_compra($conexion, $productoId, $sucursal, $bssId, $cantidad, $usuarioId);
+            $compraStock = canal_sumar_compra($conexion, $productoId, $sucursal, $bssId, $cantidad, $usuarioId);
+            $auditoriaOk = sa_registrar($conexion, [
+                'bss_id'          => $bssId,
+                'id_sucursal'     => $sucursal,
+                'id_producto'     => $productoId,
+                'producto_nombre' => $nombreProducto,
+                'tipo_movimiento' => 'COMPRA_FACTURA',
+                'origen'          => 'compra_factura',
+                'referencia_tipo' => 'factura_compra',
+                'referencia_id'   => $facturaId,
+                'cantidad'        => $cantidad,
+                'stock_anterior'  => (float) ($compraStock['stock_base'] ?? 0),
+                'stock_nuevo'     => (float) ($compraStock['stock'] ?? 0),
+                'diferencia'      => (float) ($compraStock['stock'] ?? 0) - (float) ($compraStock['stock_base'] ?? 0),
+                'detalle'         => [
+                    'proveedor'       => $proveedor,
+                    'numero_factura'  => $numeroFactura,
+                    'factura_id'      => $facturaId,
+                    'precio_bulto'    => $precio,
+                    'unidades_bulto'  => $unidadesBulto,
+                    'porcentaje'      => $porcentaje,
+                    'subtotal'        => $subtotal,
+                ],
+                'usuario_id'      => $usuarioId,
+                'usuario_nombre'  => $usuario,
+            ]);
+            if (!$auditoriaOk) {
+                throw new Exception('No se pudo registrar la auditoría del movimiento de stock.');
+            }
+
             $stmtPct = $conexion->prepare("UPDATE stock SET porcentaje = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
             if ($stmtPct) {
                 $stmtPct->bind_param('diii', $porcentaje, $productoId, $sucursal, $bssId);

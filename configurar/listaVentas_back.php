@@ -11,6 +11,59 @@ header('Content-Type: application/json');
 // Obtener datos del payload
 $input = json_decode(file_get_contents("php://input"), true);
 
+/**
+ * Expande el filtro de ventas de un grupo de movimiento: acepta IDs sueltos
+ * y rangos comprimidos (ej. "1-5,8,10-12"). Devuelve una lista de enteros.
+ */
+function lv_expandir_ordenes($raw): array
+{
+    if (is_array($raw)) {
+        $raw = implode(',', $raw);
+    }
+    $raw = trim((string) $raw);
+    if ($raw === '') {
+        return [];
+    }
+
+    $ids = [];
+    foreach (explode(',', $raw) as $token) {
+        $token = trim($token);
+        if ($token === '') {
+            continue;
+        }
+
+        if (preg_match('/^(\d+)\s*-\s*(\d+)$/', $token, $m)) {
+            $desde = max(1, (int) $m[1]);
+            $hasta = max(1, (int) $m[2]);
+            if ($desde > $hasta) {
+                [$desde, $hasta] = [$hasta, $desde];
+            }
+            if ($hasta - $desde > 5000) {
+                $hasta = $desde + 5000;
+            }
+            for ($i = $desde; $i <= $hasta; $i++) {
+                $ids[$i] = $i;
+                if (count($ids) >= 5000) {
+                    break 2;
+                }
+            }
+        } elseif (preg_match('/^\d+$/', $token)) {
+            $id = (int) $token;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        if (count($ids) >= 5000) {
+            break;
+        }
+    }
+
+    return array_values($ids);
+}
+
+$ordenesFiltro = lv_expandir_ordenes($input['ordenes'] ?? $_GET['ordenes'] ?? '');
+
 // ===================================================================
 // ACTION: totales_por_usuario
 // ===================================================================
@@ -117,6 +170,12 @@ $sucursal = ($_SESSION["nivel"] == 1) ? ($input['sucursal'] ?? null) : $_SESSION
 $periodo_tiempo = $input["periodo"] ?? '';
 $filtro_fecha = $input['fechaSolic'] ?? '';
 
+// Un filtro por grupo de movimiento no depende del período; si no llega
+// período válido se usa 'dia' y luego el rango se anula con 1=1.
+if ($ordenesFiltro && !in_array($periodo_tiempo, ['dia', 'semana', 'mes'], true)) {
+    $periodo_tiempo = 'dia';
+}
+
 // Construir condiciones adicionales (usamos alias 'o' para todas las consultas a la tabla orden)
 $extraCond = $sucursal ? " AND o.id_sucursal=" . (int) $sucursal : '';
 
@@ -172,6 +231,13 @@ switch ($periodo_tiempo) {
     default:
         echo json_encode(['status' => 'error', 'mensaje' => 'No se indico un periodo de tiempo']);
         exit;
+}
+
+// Si viene un filtro de grupo, manda sobre el período: se muestran exactamente
+// esas ventas aunque estén en fechas distintas.
+if ($ordenesFiltro) {
+    $filtroPeriodo = '1=1';
+    $extraCond .= ' AND o.id IN (' . implode(',', $ordenesFiltro) . ')';
 }
 
 // -------------------------------------------------------------------
@@ -419,7 +485,7 @@ $queryTabla = "
       AND o.bss_id = '$bss_id' 
       $extraCond $user_cond
     ORDER BY o.id DESC
-    LIMIT 150
+    LIMIT " . ($ordenesFiltro ? 500 : 150) . "
 ";
 
 $resultTabla = $conexion->query($queryTabla);

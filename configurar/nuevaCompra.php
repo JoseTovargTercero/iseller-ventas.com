@@ -4,6 +4,7 @@ require_once('session.php');
 require_once('_validador_campos.php');
 require_once('_canal.php');
 require_once('_productos_precio_compra.php');
+require_once('_stock_auditoria.php');
 
 header('Content-Type: application/json');
 
@@ -27,9 +28,13 @@ $sucursal      = $_SESSION["nivel"] == 1 ? (int) trim($_POST['sucursal']) : (int
 $bss_id        = (int) $_SESSION["bss_id"];
 $usuarioId     = (int) ($_SESSION['id'] ?? 0);
 
-// Se asegura la tabla de historial antes de abrir la transacción (el DDL
+// Se aseguran las tablas de historial antes de abrir la transacción (el DDL
 // implícito no debe ejecutarse dentro de ella).
 producto_asegurar_historial_precio($conexion);
+if (!sa_asegurar_tabla($conexion)) {
+    echo json_encode(['success' => false, 'message' => 'No se pudo preparar la auditoría de stock.']);
+    exit;
+}
 
 if ($cantidadNueva <= 0) {
   echo json_encode(['success' => false, 'message' => 'La cantidad comprada debe ser mayor que cero.']);
@@ -142,7 +147,35 @@ try {
       VALUES (2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   $stmt->bind_param("sssssssssssss", $id, $nombreP, $precio, $cantidadTexto, $cantidadPP, $porcentaje, $fechaActual, $usuario, $semana, $dia, $mes, $sucursal, $bss_id);
   $stmt->execute();
+  $compraId = (int) $conexion->insert_id;
   $stmt->close();
+
+  $auditoriaOk = sa_registrar($conexion, [
+    'bss_id'          => $bss_id,
+    'id_sucursal'     => $sucursal,
+    'id_producto'     => $id,
+    'producto_nombre' => $nombreP,
+    'tipo_movimiento' => 'COMPRA',
+    'origen'          => 'nueva_compra',
+    'referencia_tipo' => 'compra',
+    'referencia_id'   => $compraId,
+    'cantidad'        => $cantidadNueva,
+    'stock_anterior'  => (float) ($compra['stock_base'] ?? 0),
+    'stock_nuevo'     => (float) ($compra['stock'] ?? 0),
+    'diferencia'      => (float) ($compra['stock'] ?? 0) - (float) ($compra['stock_base'] ?? 0),
+    'detalle'         => [
+      'precio'         => $precio,
+      'porcentaje'     => $porcentaje,
+      'unidades_bulto' => $cantidadPP,
+      'proveedor'      => $proveedor,
+      'compra_id'      => $compraId,
+    ],
+    'usuario_id'      => $usuarioId,
+    'usuario_nombre'  => $usuario,
+  ]);
+  if (!$auditoriaOk) {
+    throw new Exception('No se pudo registrar la auditoría del movimiento de stock.');
+  }
 
   $conexion->commit();
   $response['success'] = true;

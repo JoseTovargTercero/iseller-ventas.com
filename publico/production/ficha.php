@@ -984,7 +984,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             .mov-type-chip.active {
                 color: var(--tc);
                 border-color: var(--tc);
-                background: var(--tbg);
+                background: rgba(255, 255, 255, .035);
             }
 
             .mov-type-chip.active .dot {
@@ -1034,7 +1034,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 border-left: 3px solid var(--tc, #64748b);
                 border-radius: 12px;
                 padding: 11px 13px;
-                background: rgba(30, 41, 59, .35);
+                background: rgba(24, 27, 34, .55);
                 min-width: 0;
             }
 
@@ -1117,7 +1117,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 text-align: left;
                 position: sticky;
                 left: 0;
-                background: #0d1424;
+                background: #14171d;
                 z-index: 1;
             }
 
@@ -1186,7 +1186,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 max-height: 72vh;
                 border: 1px solid rgba(255, 255, 255, .07);
                 border-radius: 14px;
-                background: rgba(2, 6, 23, .35);
+                background: rgba(0, 0, 0, .18);
                 margin-top: 4px;
             }
 
@@ -1208,7 +1208,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 position: sticky;
                 top: 0;
                 z-index: 7;
-                background: #0b1120;
+                background: #14171d;
                 border-bottom: 1px solid rgba(255, 255, 255, .08);
             }
 
@@ -1216,7 +1216,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 position: sticky;
                 left: 0;
                 z-index: 8;
-                background: #0b1120;
+                background: #14171d;
                 padding: 12px 14px;
                 font-size: 10px;
                 font-weight: 700;
@@ -1334,7 +1334,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             .mov-btype.on {
                 color: var(--tc);
                 border-color: color-mix(in srgb, var(--tc) 45%, transparent);
-                background: color-mix(in srgb, var(--tc) 12%, transparent);
+                background: transparent;
             }
 
             .mov-btype:hover {
@@ -1369,7 +1369,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 position: sticky;
                 left: 0;
                 z-index: 4;
-                background: #0b1120;
+                background: #14171d;
                 padding: 9px 12px;
                 display: flex;
                 flex-direction: column;
@@ -1427,7 +1427,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 height: 10px;
                 border-radius: 50%;
                 background: var(--tc);
-                border: 2px solid #0b1120;
+                border: 2px solid #14171d;
                 box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 25%, transparent);
                 z-index: 3;
             }
@@ -1439,7 +1439,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 border-left: 2px solid var(--tc);
                 border-radius: 8px;
                 padding: 5px 8px;
-                background: #101a2d;
+                background: #181b22;
                 font-size: 11px;
                 line-height: 1.35;
                 color: #cbd5e1;
@@ -1486,6 +1486,111 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             .mov-node a:hover {
                 text-decoration: underline;
+            }
+
+            /* ── Grupo de ventas ───────────────────────────────────── */
+            .mov-row.mov-group-row {
+                cursor: pointer;
+                background: transparent;
+            }
+
+            .mov-row.mov-group-row:hover {
+                background: rgba(255, 255, 255, .035);
+            }
+
+            .mov-group-row:focus-visible {
+                outline: 2px solid #2dd4a0;
+                outline-offset: -2px;
+            }
+
+            .mov-group-time {
+                border-left: 3px solid #60a5fa;
+            }
+
+            .mov-group-total {
+                margin-top: 2px;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 14px;
+                font-weight: 700;
+                color: #93c5fd;
+                line-height: 1.15;
+            }
+
+            .mov-group-money {
+                font-size: 11px;
+                font-weight: 700;
+                color: #34d399;
+            }
+
+            .mov-group-count {
+                margin-top: 2px;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: .03em;
+                color: #64748b;
+            }
+
+            .mov-group-node {
+                display: block;
+                border: 1px solid rgba(255, 255, 255, .07);
+                border-left: 3px solid #60a5fa;
+                border-radius: 8px;
+                background: #181b22;
+                padding: 5px 8px;
+                text-decoration: none;
+                color: #cbd5e1;
+                transition: background .15s ease, border-color .15s ease;
+            }
+
+            .mov-group-node:hover {
+                background: #1f242c;
+                border-color: rgba(255, 255, 255, .16);
+                border-left-color: #60a5fa;
+                color: #f1f5f9;
+            }
+
+            .mov-group-node-top {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .mov-group-node-qty {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 13px;
+                font-weight: 700;
+                color: #93c5fd;
+                white-space: nowrap;
+            }
+
+            .mov-group-node-title {
+                font-size: 9.5px;
+                font-weight: 700;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+            }
+
+            .mov-group-node-meta {
+                margin-top: 1px;
+                font-size: 10px;
+                font-weight: 600;
+                color: #34d399;
+            }
+
+            .mov-group-merma {
+                display: inline-block;
+                margin-top: 4px;
+                border: 1px solid rgba(248, 113, 113, .28);
+                border-radius: 5px;
+                background: rgba(248, 113, 113, .08);
+                color: #f87171;
+                font-size: 9.5px;
+                font-weight: 700;
+                padding: 1px 6px;
+                white-space: nowrap;
             }
 
             .mov-node--out {
@@ -2720,6 +2825,131 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     });
                 }
 
+                // Los grupos de ventas van por URL. Se comprimen los IDs
+                // consecutivos (1-5,8,10-12) para no generar URLs enormes.
+                function comprimirIds(ids) {
+                    const nums = Array.from(new Set(ids.map(Number).filter((n) => Number.isInteger(n) && n > 0)))
+                        .sort((a, b) => a - b);
+                    if (!nums.length) return '';
+
+                    const partes = [];
+                    let inicio = nums[0];
+                    let previo = nums[0];
+
+                    for (let i = 1; i < nums.length; i++) {
+                        const actual = nums[i];
+                        if (actual === previo + 1) {
+                            previo = actual;
+                            continue;
+                        }
+                        partes.push(inicio === previo ? String(inicio) : `${inicio}-${previo}`);
+                        inicio = previo = actual;
+                    }
+                    partes.push(inicio === previo ? String(inicio) : `${inicio}-${previo}`);
+                    return partes.join(',');
+                }
+
+                // Agrupa ventas consecutivas. Solo compras y traslados cortan
+                // el grupo; las mermas se muestran dentro del grupo sin cortarlo.
+                function construirBloques(ascendentes) {
+                    const bloques = [];
+                    let grupo = null;
+
+                    const cerrar = () => {
+                        if (!grupo) return;
+                        bloques.push(grupo);
+                        grupo = null;
+                    };
+
+                    ascendentes.forEach((ev) => {
+                        if (ev.tipo === 'venta') {
+                            if (!grupo) {
+                                grupo = {
+                                    tipo: 'grupo',
+                                    ventas: [],
+                                    mermas: [],
+                                    fechaInicio: ev.fecha,
+                                    fechaFin: ev.fecha
+                                };
+                            }
+                            grupo.ventas.push(ev);
+                            if (String(ev.fecha) < String(grupo.fechaInicio)) grupo.fechaInicio = ev.fecha;
+                            if (String(ev.fecha) > String(grupo.fechaFin)) grupo.fechaFin = ev.fecha;
+                        } else if (ev.tipo === 'compra' || ev.tipo === 'traslado') {
+                            cerrar();
+                            bloques.push({ tipo: 'evento', evento: ev });
+                        } else if (ev.tipo === 'merma') {
+                            // No corta: si hay un grupo abierto, la merma queda dentro.
+                            if (grupo) {
+                                grupo.mermas.push(ev);
+                            } else {
+                                bloques.push({ tipo: 'evento', evento: ev });
+                            }
+                        }
+                    });
+
+                    cerrar();
+                    return bloques;
+                }
+
+                function resumenGrupo(grupo) {
+                    const porSucursal = new Map();
+                    const ordenes = new Set();
+                    let totalCantidad = 0;
+                    let totalMonto = 0;
+                    let totalVentas = 0;
+
+                    const filaVacia = () => ({
+                        cantidad: 0,
+                        monto: 0,
+                        ventas: 0,
+                        ordenes: [],
+                        mermas: 0,
+                        mermaCantidad: 0,
+                        mermaDetalle: []
+                    });
+
+                    (grupo.ventas || []).forEach((ev) => {
+                        const cantidad = Number(ev.cantidad) || 0;
+                        const monto = Number(ev.monto) || 0;
+                        totalCantidad += cantidad;
+                        totalMonto += monto;
+                        totalVentas++;
+
+                        if (ev.orden_id) ordenes.add(Number(ev.orden_id));
+
+                        ocurrenciasVisibles(ev).forEach((o) => {
+                            if (!porSucursal.has(o.id)) porSucursal.set(o.id, filaVacia());
+                            const fila = porSucursal.get(o.id);
+                            fila.cantidad += cantidad;
+                            fila.monto += monto;
+                            fila.ventas++;
+                            if (ev.orden_id) fila.ordenes.push(Number(ev.orden_id));
+                        });
+                    });
+
+                    (grupo.mermas || []).forEach((ev) => {
+                        const cantidad = Number(ev.cantidad) || 0;
+                        const fecha = fechaPartes(ev.fecha);
+                        const detalle = `${fecha.fecha} ${fecha.hora || '00:00'} · −${num(cantidad)}`;
+                        ocurrenciasVisibles(ev).forEach((o) => {
+                            if (!porSucursal.has(o.id)) porSucursal.set(o.id, filaVacia());
+                            const fila = porSucursal.get(o.id);
+                            fila.mermas++;
+                            fila.mermaCantidad += cantidad;
+                            fila.mermaDetalle.push(detalle);
+                        });
+                    });
+
+                    return {
+                        porSucursal,
+                        ordenes: comprimirIds(Array.from(ordenes)),
+                        totalCantidad,
+                        totalMonto,
+                        totalVentas
+                    };
+                }
+
                 /* ── Totales que respetan los toggles ──────────────────── */
                 function calcularTotales() {
                     const porSucursal = new Map();
@@ -3013,6 +3243,81 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     </div>`;
                 }
 
+                // Un grupo de ventas entre dos compras/traslados. El grupo
+                // completo (y cada nodo de sucursal) abre listaVentas.php
+                // con los IDs de esas ventas en la URL.
+                function rowGrupoHtml(grupo) {
+                    const resumen = resumenGrupo(grupo);
+                    if (!resumen.totalVentas) {
+                        return (grupo.mermas || []).map(rowHtml).join('');
+                    }
+                    // Si el endpoint no trae los IDs de las órdenes, se muestran
+                    // las ventas sueltas en vez de perderlas.
+                    if (!resumen.ordenes) {
+                        return grupo.ventas.map(rowHtml).join('') +
+                            (grupo.mermas || []).map(rowHtml).join('');
+                    }
+
+                    const desde = fechaPartes(grupo.fechaInicio);
+                    const hasta = fechaPartes(grupo.fechaFin);
+                    const mismoDia = String(grupo.fechaInicio).slice(0, 10) === String(grupo.fechaFin).slice(0, 10);
+                    const rango = mismoDia
+                        ? (desde.hora === hasta.hora
+                            ? `${desde.fecha} · ${desde.hora || '00:00'}`
+                            : `${desde.fecha} · ${desde.hora || '00:00'} – ${hasta.hora || '00:00'}`)
+                        : `${desde.fecha} ${desde.hora || '00:00'} – ${hasta.fecha} ${hasta.hora || '00:00'}`;
+
+                    const tituloGrupo = `${resumen.totalVentas} venta(s) · ${num(resumen.totalCantidad)} ${MG.unidad} · $${num(resumen.totalMonto)}`;
+
+                    const celdas = MG.sucursales.map((s) => {
+                        const fila = resumen.porSucursal.get(String(s.id));
+                        if (!fila) {
+                            return `<div class="mov-cell" data-branch-id="${s.id}" style="--lane:${s.color}"></div>`;
+                        }
+
+                        let contenido = '';
+                        if (fila.ventas > 0) {
+                            const ordenesSucursal = comprimirIds(fila.ordenes);
+                            const urlSucursal = 'listaVentas.php?ordenes=' + encodeURIComponent(ordenesSucursal);
+                            contenido += `<a class="mov-group-node" href="${esc(urlSucursal)}"
+                                title="Abrir en Lista de ventas las ${fila.ventas} venta(s) de ${esc(s.nombre)}">
+                                <span class="mov-group-node-top">
+                                    <span class="mov-group-node-qty">−${num(fila.cantidad)} ${esc(MG.unidad)}</span>
+                                    <span class="mov-group-node-title">${fila.ventas} venta(s)</span>
+                                </span>
+                                <span class="mov-group-node-meta">$${num(fila.monto)}</span>
+                            </a>`;
+                        }
+
+                        if (fila.mermas > 0) {
+                            const detalleMermas = (fila.mermaDetalle || []).join(' | ');
+                            contenido += `<span class="mov-group-merma"
+                                title="${esc(detalleMermas || (fila.mermas + ' merma(s) dentro del grupo'))}">
+                                −${num(fila.mermaCantidad)} ${esc(MG.unidad)} merma
+                            </span>`;
+                        }
+
+                        return `<div class="mov-cell" data-branch-id="${s.id}" style="--lane:${s.color}">${contenido}</div>`;
+                    }).join('');
+
+                    return `<div class="mov-grid mov-row mov-group-row"
+                        data-ordenes="${esc(resumen.ordenes)}"
+                        tabindex="0" role="link"
+                        aria-label="Abrir ${esc(tituloGrupo)} en Lista de ventas"
+                        title="Abrir ${esc(tituloGrupo)} en Lista de ventas"
+                        style="--cols-template:${MG.template}">
+                        <div class="mov-time mov-group-time" style="--tc:#60a5fa">
+                            <span class="mov-time-date">${desde.fecha}</span>
+                            <span class="mov-time-hour">${rango}</span>
+                            <span class="mov-time-type">Grupo de ventas</span>
+                            <span class="mov-group-total">−${num(resumen.totalCantidad)} ${esc(MG.unidad)}</span>
+                            <span class="mov-group-money">$${num(resumen.totalMonto)}</span>
+                            <span class="mov-group-count">${resumen.totalVentas} venta(s) · Ver detalle →</span>
+                        </div>
+                        ${celdas}
+                    </div>`;
+                }
+
                 function renderGraph(tot) {
                     const status = $id('mov-status');
                     const wrap = $id('mov-graph-wrap');
@@ -3020,7 +3325,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const rows = $id('mov-rows');
                     if (!status || !wrap || !head || !rows) return;
 
-                    const lista = ordenarEventos(eventosVisibles());
+                    // Se agrupa siempre en orden cronológico ascendente y luego se
+                    // invierte el resultado si la vista está en "recientes".
+                    const ordenTipo = { compra: 0, traslado: 1, venta: 2, merma: 3 };
+                    const ascendentes = eventosVisibles().slice().sort((a, b) => {
+                        const cmp = String(a.fecha || '').localeCompare(String(b.fecha || ''));
+                        if (cmp !== 0) return cmp;
+                        const ta = ordenTipo[a.tipo] ?? 9;
+                        const tb = ordenTipo[b.tipo] ?? 9;
+                        if (ta !== tb) return ta - tb;
+                        return String(a.id || '').localeCompare(String(b.id || ''));
+                    });
+                    const bloques = construirBloques(ascendentes);
+                    if (MG.sort === 'desc') bloques.reverse();
+
                     const nota = $id('mov-note');
                     if (nota) {
                         nota.style.display = MG.truncado ? 'flex' : 'none';
@@ -3029,7 +3347,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             : '';
                     }
 
-                    if (!lista.length) {
+                    if (!bloques.length) {
                         status.style.display = 'block';
                         status.className = 'state-empty mov-graph-status';
                         status.innerHTML = '<i class="fa fa-inbox"></i>Sin movimientos del producto en este período';
@@ -3052,7 +3370,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     head.innerHTML = '<div class="mov-corner">Fecha / hora</div>' +
                         MG.sucursales.map((s) => branchHeadHtml(s, tot)).join('');
-                    rows.innerHTML = lista.map(rowHtml).join('');
+                    rows.innerHTML = bloques.map((bloque) => {
+                        return bloque.tipo === 'grupo'
+                            ? rowGrupoHtml(bloque)
+                            : rowHtml(bloque.evento);
+                    }).join('');
 
                     wrap.scrollLeft = scrollLeft;
                     wrap.scrollTop = scrollTop;
@@ -3361,6 +3683,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             guardarPrefs();
                             actualizarBotonOrden();
                             renderTodo();
+                        });
+                    }
+
+                    const abrirGrupo = (fila) => {
+                        if (!fila) return;
+                        const ordenes = fila.dataset.ordenes || '';
+                        if (!ordenes) return;
+                        window.location.href = 'listaVentas.php?ordenes=' + encodeURIComponent(ordenes);
+                    };
+
+                    const rowsEl = $id('mov-rows');
+                    if (rowsEl) {
+                        rowsEl.addEventListener('click', (e) => {
+                            const fila = e.target.closest('.mov-group-row');
+                            if (!fila) return;
+                            // Los enlaces internos (nodos de sucursal) ya navegan solos.
+                            if (e.target.closest('a')) return;
+                            abrirGrupo(fila);
+                        });
+
+                        rowsEl.addEventListener('keydown', (e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return;
+                            const fila = e.target.closest('.mov-group-row');
+                            if (!fila) return;
+                            e.preventDefault();
+                            abrirGrupo(fila);
                         });
                     }
 

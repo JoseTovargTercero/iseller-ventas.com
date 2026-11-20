@@ -2,6 +2,8 @@
     document.getElementById(id).addEventListener("change", cargarInfo);
 });
 
+const ORDENES_GRUPO = new URLSearchParams(window.location.search).get("ordenes") || "";
+
 function cargarInfo() {
     const fechaSolic = document.getElementById("fechaSolic").value;
     const sucursal = document.getElementById("sucursal_selector").value;
@@ -21,6 +23,7 @@ function cargarInfo() {
                 fechaSolic: fechaSolic,
                 sucursal: sucursal,
                 usuario: usuario,
+                ordenes: ORDENES_GRUPO,
             }),
         })
         /*.then((response) => response.text()) // Primero obtenemos el texto plano
@@ -96,6 +99,12 @@ function cargarInfo() {
                 ]);
             });
             table.draw();
+
+            const grupoCount = document.getElementById("grupo-count");
+            if (grupoCount) {
+                const totalGrupo = Array.isArray(data.tabla) ? data.tabla.length : 0;
+                grupoCount.textContent = `(${totalGrupo} venta${totalGrupo === 1 ? "" : "s"})`;
+            }
         })
         .catch((error) => {
             console.error("Error en la solicitud:", error);

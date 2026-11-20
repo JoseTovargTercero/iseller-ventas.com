@@ -27,6 +27,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $usuarios[] = $row;
   }
   $stmt->close();
+
+  // Filtro por IDs de ventas enviado desde un grupo de Movimiento general.
+  $ordenesGrupoRaw = $_GET['ordenes'] ?? '';
+  if (is_array($ordenesGrupoRaw)) {
+    $ordenesGrupoRaw = implode(',', $ordenesGrupoRaw);
+  }
+  $ordenesGrupoRaw = trim((string) $ordenesGrupoRaw);
+  $mostrarGrupo = $ordenesGrupoRaw !== '' && preg_match('/\d/', $ordenesGrupoRaw) === 1;
 ?>
   <!DOCTYPE html>
   <html lang="es">
@@ -623,6 +631,20 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         <?php echo $topnav ?>
 
         <div class="right_col">
+          <?php if ($mostrarGrupo): ?>
+            <div class="dash-panel" style="margin-bottom:16px;border-left:3px solid var(--dash-mint);">
+              <div class="panel-body" style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <ion-icon name="git-commit-outline" style="color:var(--dash-mint);font-size:18px;flex:0 0 auto;"></ion-icon>
+                <span style="font-size:13px;color:var(--dash-text);">
+                  Mostrando solo las ventas del grupo seleccionado.
+                  <b id="grupo-count" style="color:var(--dash-mint);"></b>
+                </span>
+                <a href="listaVentas.php" class="btn-dash-secondary" style="margin-left:auto;text-decoration:none;">
+                  Ver todas las ventas
+                </a>
+              </div>
+            </div>
+          <?php endif; ?>
           <div class="d-flex justify-content-end dash-header">
 
             <?php if ($_SESSION["nivel"] == 1): ?>
@@ -642,7 +664,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <h6><ion-icon name="receipt-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Listado de ventas</h6>
                     <small style="color:var(--dash-text-muted);font-size:11px;">Los créditos otorgados se visualizarán en la lista; sin embargo, no serán considerados en la totalización hasta su cancelación.</small>
                   </div>
-                  <input type="date" class="dash-date-input" name="fechaSolic" id="fechaSolic">
+                  <input type="date" class="dash-date-input" name="fechaSolic" id="fechaSolic"
+                    <?= $mostrarGrupo ? 'disabled title="Filtrado por grupo de movimiento"' : '' ?>>
                 </div>
                 <div class="panel-body p-0">
                   <div class="dash-table-wrap">
@@ -829,7 +852,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       let table = new DataTable('#datatable');
       const periodo = 'dia';
     </script>
-    <script src="../build/js/info_ventas.js"></script>
+    <script src="../build/js/info_ventas.js?v=2"></script>
 
 
 
