@@ -44,7 +44,7 @@ const configPaginas = {
   },
   "deudas_sucursales.php": {
     titulo: "Deudas entre sucursales",
-    subtitulo: "Consulta de obligaciones, abonos y saldos entre sucursales",
+    subtitulo: "Registro de abonos entre sucursales",
   },
   "nuevaCompra.php": {
     titulo: "Compras",

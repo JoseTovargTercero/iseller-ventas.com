@@ -308,6 +308,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                       <th>Cliente</th>
                       <th>Cédula</th>
                       <th>Créditos</th>
+                      <th>Días desde último crédito</th>
                       <th>Total USD</th>
                       <th>Sucursal</th>
                       <th></th>
@@ -372,6 +373,18 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         return escapeHtml(cedula);
       }
 
+      function celdaDiasUltimoCredito(fila) {
+        const dias = fila.dias_ultimo_credito;
+        if (dias === null || dias === undefined || dias === '') {
+          return '<span title="Sin fecha de crédito">—</span>';
+        }
+
+        const numeroDias = Math.max(0, Number(dias) || 0);
+        const fecha = String(fila.ultimo_credito || '').trim();
+        const titulo = fecha ? 'Último crédito: ' + fecha : 'Días desde el último crédito';
+        return '<span title="' + escapeHtml(titulo) + '">' + numeroDias + '</span>';
+      }
+
       function cargarTabla(sucursal = null) {
         $.ajax({
           url: '../../configurar/creditos_list.php',
@@ -394,6 +407,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                   celdaCliente(data[i]),
                   celdaCedula(data[i]),
                   data[i].cantidad_creditos,
+                  celdaDiasUltimoCredito(data[i]),
                   data[i].suma_monto ? '$ ' + data[i].suma_monto : '-',
                   data[i].sucursal,
                   `<a class="btn-detalles" href="creditos_cliente.php?cliente=${encodeURIComponent(nombreEnlace)}" title="Ver detalles">

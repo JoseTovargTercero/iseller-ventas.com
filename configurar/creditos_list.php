@@ -21,9 +21,11 @@ $query6 = $conexion->query("SELECT
     MAX(TRIM(C.cedula)) AS cedula,
     COUNT(*) AS total,
     SUM(C.total_price) AS suma_monto,
-    MAX(S.nombre) AS sucursal
+    MAX(S.nombre) AS sucursal,
+    MAX(O.created) AS ultimo_credito
   FROM `creditos` AS C
   LEFT JOIN sucursales AS S ON S.id = C.sucursal_id
+  LEFT JOIN orden AS O ON O.id = C.order_id
   WHERE C.estado = 2 AND C.bss_id = $bss_id $extraCond
   GROUP BY CASE
       WHEN TRIM(COALESCE(C.cedula, '')) = '' THEN CONCAT('NOMBRE:', COALESCE(C.negocio, ''))
@@ -36,6 +38,27 @@ $cedulas = [];
 if ($query6 && $query6->num_rows > 0) {
   while ($row6 = $query6->fetch_assoc()) {
     $row6['cedula'] = trim((string) ($row6['cedula'] ?? ''));
+
+    // Días transcurridos desde la fecha del último crédito del cliente.
+    $ultimoCredito = trim((string) ($row6['ultimo_credito'] ?? ''));
+    $diasUltimoCredito = null;
+    $ultimoCreditoFecha = '';
+    if ($ultimoCredito !== '' && strpos($ultimoCredito, '0000-00-00') !== 0) {
+      try {
+        $fechaCredito = new DateTime($ultimoCredito);
+        $fechaCredito->setTime(0, 0, 0);
+        $hoy = new DateTime('today');
+        $diasUltimoCredito = max(0, (int) $fechaCredito->diff($hoy)->format('%r%a'));
+        $ultimoCreditoFecha = $fechaCredito->format('d/m/Y');
+      } catch (Throwable $e) {
+        $diasUltimoCredito = null;
+        $ultimoCreditoFecha = '';
+      }
+    }
+
+    $row6['ultimo_credito_fecha'] = $ultimoCreditoFecha;
+    $row6['dias_ultimo_credito'] = $diasUltimoCredito;
+
     $filas[] = $row6;
     if ($row6['cedula'] !== '') {
       $cedulas[$row6['cedula']] = true;
@@ -77,7 +100,9 @@ foreach ($filas as $fila) {
     'nombre_base' => $cedula !== '' ? ($mapaBase[$cedula] ?? '') : '',
     'cantidad_creditos' => $fila['total'],
     'suma_monto' => $fila['suma_monto'] ? number_format($fila['suma_monto'], 2, '.', ',') : '0.00',
-    'sucursal' => $fila['sucursal']
+    'sucursal' => $fila['sucursal'],
+    'ultimo_credito' => $fila['ultimo_credito_fecha'],
+    'dias_ultimo_credito' => $fila['dias_ultimo_credito']
   ];
 }
 

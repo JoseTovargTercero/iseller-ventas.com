@@ -144,7 +144,6 @@ if ($error === '') {
             o.total_price,
             o.total_price_bs,
             o.total_price_cop,
-            o.tipoPago,
             COALESCE(s.nombre, '—') AS sucursal,
             EXISTS(
                 SELECT 1 FROM creditos c
@@ -207,16 +206,6 @@ if ($error === '') {
     }
 }
 
-$pagosTexto = [
-    '1' => 'Punto',
-    '2' => 'Pago Móvil',
-    '3' => 'Transferencia',
-    '4' => 'BS Efectivo',
-    '5' => 'Dólares',
-    '6' => 'Pesos',
-    '7' => 'Biopago',
-    '8' => 'Fraccionado',
-];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -543,7 +532,6 @@ $pagosTexto = [
                                         <th class="cc-right">USD</th>
                                         <th class="cc-right">Bs</th>
                                         <th class="cc-right">COP</th>
-                                        <th>Pago</th>
                                         <th>Estado</th>
                                         <th class="cc-right">Acciones</th>
                                     </tr>
@@ -551,7 +539,7 @@ $pagosTexto = [
                                 <tbody>
                                     <?php if (!$ordenes): ?>
                                         <tr>
-                                            <td colspan="10" class="cc-empty">Este cliente no tiene compras registradas.</td>
+                                            <td colspan="9" class="cc-empty">Este cliente no tiene compras registradas.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($ordenes as $orden): ?>
@@ -563,7 +551,6 @@ $pagosTexto = [
                                             $tipoTexto = $status === 4 ? 'Mayor' : ($esCredito ? 'Crédito' : 'Venta');
                                             $estadoClase = $esCreditoActivo ? 'credit' : 'ok';
                                             $estadoTexto = $esCreditoActivo ? 'Crédito activo' : ($esCredito ? 'Crédito pagado' : 'Pagada');
-                                            $tipoPago = (string) ($orden['tipoPago'] ?? '');
                                             ?>
                                             <tr>
                                                 <td><?= htmlspecialchars(date('d/m/Y H:i', strtotime((string) $orden['created'])), ENT_QUOTES, 'UTF-8') ?></td>
@@ -573,7 +560,6 @@ $pagosTexto = [
                                                 <td class="cc-right cc-money">$<?= number_format((float) $orden['total_price'], 2, '.', ',') ?></td>
                                                 <td class="cc-right cc-money"><?= number_format((float) $orden['total_price_bs'], 2, ',', '.') ?></td>
                                                 <td class="cc-right cc-money"><?= number_format((float) $orden['total_price_cop'], 0, ',', '.') ?></td>
-                                                <td><?= htmlspecialchars($pagosTexto[$tipoPago] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
                                                 <td><span class="cc-badge <?= $estadoClase ?>"><?= $estadoTexto ?></span></td>
                                                 <td class="cc-right">
                                                     <div class="cc-actions">

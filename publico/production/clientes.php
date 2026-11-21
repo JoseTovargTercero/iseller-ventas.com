@@ -45,6 +45,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             background-color: #bee5eb0f !important;
         }
 
+        /* Buscador con botón: evita lanzar una petición por cada letra */
+        .clientes-buscador {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 460px;
+            margin-bottom: 14px;
+        }
+
+        .clientes-buscador .form-control {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .clientes-buscador .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
         /* ── Móvil (WebView de la app) ───────────────────────────────── */
         @media (max-width: 768px) {
             .right_col {
@@ -82,6 +103,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+            }
+
+            .clientes-buscador {
+                max-width: 100%;
             }
         }
     </style>
@@ -161,6 +186,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                 </div>
                                 <div class='x_content '>
+                                    <div class="clientes-buscador">
+                                        <input type="search" id="buscar-cliente" class="form-control form-control-sm"
+                                            placeholder="Buscar por cédula, nombre o teléfono" autocomplete="off"
+                                            aria-label="Buscar cliente">
+                                        <button type="button" id="btn-buscar-cliente" class="btn btn-sm btn-primary">
+                                            <i class="fa fa-search"></i> Buscar
+                                        </button>
+                                    </div>
                                     <div class='card-box'>
                                         <table id="datatable" class="table table-bordered" style="width:100%">
                                             <thead>
@@ -211,6 +244,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     let table = new DataTable('#datatable', {
                         processing: true,
                         serverSide: true,
+                        // Sin el buscador nativo: la búsqueda se dispara con el botón o Enter.
+                        dom: 'lrtip',
                         ajax: {
                             url: '../../configurar/clientes_list.php',
                             type: 'POST',
@@ -228,7 +263,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         ],
                         language: {
                             processing: '<span class="text-muted">Cargando clientes...</span>',
-                            search: 'Buscar:',
                             lengthMenu: 'Mostrar _MENU_ registros',
                             info: 'Mostrando _START_ a _END_ de _TOTAL_ clientes',
                             infoEmpty: 'Sin clientes para mostrar',
@@ -287,6 +321,28 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             }
                         ]
                     });
+
+                    const inputBuscarCliente = document.getElementById('buscar-cliente');
+                    const btnBuscarCliente = document.getElementById('btn-buscar-cliente');
+
+                    function buscarClientes() {
+                        const valor = inputBuscarCliente.value.trim();
+                        // Si el texto no cambió, no se vuelve a consultar el servidor.
+                        if (table.search() === valor) return;
+                        table.search(valor).draw();
+                    }
+
+                    btnBuscarCliente.addEventListener('click', buscarClientes);
+
+                    inputBuscarCliente.addEventListener('keydown', function(evento) {
+                        if (evento.key === 'Enter') {
+                            evento.preventDefault();
+                            buscarClientes();
+                        }
+                    });
+
+                    // Permite limpiar con la "x" del input type="search".
+                    inputBuscarCliente.addEventListener('search', buscarClientes);
 
                     $(document).on('click', '.btn-editar-cliente', function() {
                         const btn = $(this);

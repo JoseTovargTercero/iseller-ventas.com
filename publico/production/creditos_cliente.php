@@ -6,14 +6,39 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
   $topnav = topnav();
   $cliente = $_GET['cliente'];
 
+  // Cédula del cliente a partir de sus créditos activos
+  $cedulaCliente = '';
+  $stmtCedula = $conexion->prepare("SELECT TRIM(cedula) AS cedula FROM creditos WHERE negocio = ? AND bss_id = ? AND estado = '2' AND TRIM(COALESCE(cedula, '')) <> '' LIMIT 1");
+  if ($stmtCedula) {
+    $stmtCedula->bind_param('si', $cliente, $bss_id);
+    $stmtCedula->execute();
+    $rowCedula = $stmtCedula->get_result()->fetch_assoc();
+    $stmtCedula->close();
+    if ($rowCedula) $cedulaCliente = trim($rowCedula['cedula'] ?? '');
+  }
+
   // Teléfono del cliente para compartir la deuda por WhatsApp
   $telefonoCliente = '';
-  $stmtTel = $conexion->prepare("SELECT c.telefono FROM creditos cr INNER JOIN clientes c ON c.cedula = cr.cedula AND c.bss_id = cr.bss_id WHERE cr.negocio = ? AND cr.bss_id = ? AND cr.estado = '2' AND cr.cedula <> '' LIMIT 1");
-  $stmtTel->bind_param('si', $cliente, $bss_id);
-  $stmtTel->execute();
-  $rowTel = $stmtTel->get_result()->fetch_assoc();
-  $stmtTel->close();
-  if ($rowTel) $telefonoCliente = trim($rowTel['telefono'] ?? '');
+  if ($cedulaCliente !== '') {
+    $stmtTel = $conexion->prepare("SELECT telefono FROM clientes WHERE cedula = ? AND bss_id = ? LIMIT 1");
+    if ($stmtTel) {
+      $stmtTel->bind_param('si', $cedulaCliente, $bss_id);
+      $stmtTel->execute();
+      $rowTel = $stmtTel->get_result()->fetch_assoc();
+      $stmtTel->close();
+      if ($rowTel) $telefonoCliente = trim($rowTel['telefono'] ?? '');
+    }
+  } else {
+    // Si el crédito no tiene cédula, se intenta ubicar al cliente por nombre.
+    $stmtTel = $conexion->prepare("SELECT telefono FROM clientes WHERE nombre = ? AND bss_id = ? LIMIT 1");
+    if ($stmtTel) {
+      $stmtTel->bind_param('si', $cliente, $bss_id);
+      $stmtTel->execute();
+      $rowTel = $stmtTel->get_result()->fetch_assoc();
+      $stmtTel->close();
+      if ($rowTel) $telefonoCliente = trim($rowTel['telefono'] ?? '');
+    }
+  }
 
   // Guarda el teléfono capturado en el Swal, solo si el cliente aún no tiene uno
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telefono'])) {
@@ -52,6 +77,42 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       color: var(--dash-text-muted);
       margin: 2px 0 0;
       font-size: 13px;
+    }
+    .dash-header {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .cliente-datos,
+    .credito-tiempos {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px 8px;
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--dash-text-muted);
+    }
+    .cliente-datos span,
+    .credito-tiempos span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--dash-border);
+      border-radius: 8px;
+      padding: 4px 10px;
+    }
+    .cliente-datos ion-icon {
+      color: var(--dash-mint);
+      font-size: 14px;
+    }
+    .cliente-datos b,
+    .credito-tiempos b {
+      color: var(--dash-text);
+      font-weight: 600;
+    }
+    .credito-tiempos span {
+      color: var(--dash-text-muted);
     }
 
     .dash-btn-wa {
@@ -384,7 +445,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       <div class="d-flex justify-content-between dash-header">
         <div>
           <h3>Créditos</h3>
-          <p>Cliente: <?= htmlspecialchars($cliente) ?></p>
+          <p>Cliente: <strong><?= htmlspecialchars($cliente) ?></strong></p>
+          <div class="cliente-datos">
+            <span>
+              <ion-icon name="card-outline"></ion-icon>
+              Cédula: <b><?= $cedulaCliente !== '' ? htmlspecialchars($cedulaCliente) : 'Sin cédula' ?></b>
+            </span>
+            <span>
+              <ion-icon name="call-outline"></ion-icon>
+              Teléfono: <b><?= $telefonoCliente !== '' ? htmlspecialchars($telefonoCliente) : 'Sin teléfono' ?></b>
+            </span>
+          </div>
+          <div class="credito-tiempos">
+            <span>
+              <ion-icon name="time-outline"></ion-icon>
+              Último crédito: <b id="ultimo-credito-tiempo">—</b>
+            </span>
+            <span>
+              <ion-icon name="hourglass-outline"></ion-icon>
+              Crédito más antiguo pendiente: <b id="credito-viejo-tiempo">—</b>
+            </span>
+          </div>
         </div>
         <button type="button" class="dash-btn-wa" onclick="compartirWhatsApp()">
           <ion-icon name="logo-whatsapp"></ion-icon> Compartir deuda
@@ -592,6 +673,8 @@ async function cargarCreditos() {
           <small>Bs</small></b>
         </td>
       </tr>`);
+
+    actualizarMetricasTiempo();
   } catch (error) {
     console.error(error);
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>';
@@ -720,6 +803,7 @@ async function cargarDeuda() {
       ? `<div style="padding:16px;text-align:center;color:var(--dash-mint);font-size:14px;font-weight:600;"><ion-icon name="checkmark-circle"></ion-icon> ¡Todo pagado! No hay deuda pendiente. <button class="dash-btn-pagar dash-btn-pagar-sm" style="margin-left:12px;" onclick="procesarPagosSecuencial()">Pagar Todo</button></div>`
       : '';
 
+    actualizarMetricasTiempo();
   } catch (error) {
     console.error(error);
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>';
@@ -730,6 +814,72 @@ function formatearMiles(n) {
   const num = parseFloat(n);
   if (isNaN(num)) return n;
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function diasDesdeFecha(fecha) {
+  const partes = String(fecha || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!partes) return null;
+
+  const fechaCredito = new Date(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3]));
+  const hoy = new Date();
+  const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  return Math.max(0, Math.round((fechaHoy - fechaCredito) / 86400000));
+}
+
+function textoHaceDias(dias) {
+  if (dias === null || dias === undefined) return '—';
+  if (dias === 0) return 'Hoy';
+  return 'Hace ' + dias + (dias === 1 ? ' día' : ' días');
+}
+
+function actualizarMetricasTiempo() {
+  const ultimoEl = document.getElementById('ultimo-credito-tiempo');
+  const viejoEl = document.getElementById('credito-viejo-tiempo');
+  if (!ultimoEl || !viejoEl) return;
+  if (!Array.isArray(ordenesCredito) || ordenesCredito.length === 0) return;
+  if (!deudaActual || deudaActual.usd === undefined) return;
+
+  const ordenadas = ordenesCredito.slice().sort((a, b) =>
+    String(a.fecha || '').localeCompare(String(b.fecha || ''))
+  );
+
+  // Tiempo desde el crédito más reciente.
+  const ultimo = ordenadas[ordenadas.length - 1];
+  const diasUltimo = diasDesdeFecha(ultimo && ultimo.fecha);
+  ultimoEl.textContent = textoHaceDias(diasUltimo);
+  ultimoEl.title = ultimo && ultimo.fecha ? 'Último crédito: ' + ultimo.fecha : '';
+
+  // Los abonos se aplican a los créditos más antiguos primero. Se busca el
+  // primer crédito que todavía tenga saldo después de aplicar lo abonado.
+  const totalUSD = Math.max(0, Number(deudaInicialUSD) || 0);
+  const restanteUSD = Math.max(0, Number(deudaActual.usd) || 0);
+  let abonadoUSD = Math.max(0, totalUSD - restanteUSD);
+  let creditoViejo = null;
+
+  for (const ord of ordenadas) {
+    const totalOrden = Number(ord.totales && ord.totales.usd) || 0;
+    if (totalOrden <= 0) continue;
+
+    if (abonadoUSD + 0.009 >= totalOrden) {
+      abonadoUSD -= totalOrden;
+      continue;
+    }
+
+    creditoViejo = ord;
+    break;
+  }
+
+  if (restanteUSD <= 0.009) {
+    viejoEl.textContent = 'Sin deuda pendiente';
+    viejoEl.title = '';
+  } else if (creditoViejo) {
+    const diasViejo = diasDesdeFecha(creditoViejo.fecha);
+    viejoEl.textContent = textoHaceDias(diasViejo);
+    viejoEl.title = 'Crédito pendiente más antiguo: ' + creditoViejo.fecha;
+  } else {
+    viejoEl.textContent = '—';
+    viejoEl.title = '';
+  }
 }
 
 function normalizarTelefono(tel) {
