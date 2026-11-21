@@ -814,6 +814,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 padding-bottom: 60px;
             }
 
+            .stock-panel-tools {
+                display: flex;
+                align-items: flex-end;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            #stock-sucursal {
+                min-width: 180px;
+            }
+
             .stock-legend {
                 display: flex;
                 align-items: center;
@@ -1726,6 +1737,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 .branch-summary {
                     grid-template-columns: 1fr 1fr;
                 }
+
+                .stock-panel-tools {
+                    width: 100%;
+                }
+
+                .stock-panel-tools .filter-field {
+                    flex: 1;
+                }
+
+                #stock-sucursal {
+                    width: 100%;
+                    min-width: 0;
+                }
             }
         </style>
     </head>
@@ -1805,20 +1829,37 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="ficha-panel-header">
                                 <span class="ficha-panel-title">
                                     <i class="fa fa-line-chart" style="color:#38bdf8;"></i>
-                                    Movimiento de stock
+                                    Movimiento de stock por sucursal
                                 </span>
-                                <div class="preset-chips">
-                                    <span class="preset-chip stock-chip" data-stock-days="7">7 días</span>
-                                    <span class="preset-chip stock-chip active" data-stock-days="30">30 días</span>
-                                    <span class="preset-chip stock-chip" data-stock-days="90">90 días</span>
-                                    <span class="preset-chip stock-chip" data-stock-days="365">1 año</span>
+                                <div class="stock-panel-tools">
+                                    <div class="filter-field">
+                                        <label for="stock-sucursal">Sucursal</label>
+                                        <select id="stock-sucursal" class="filter-input" aria-label="Sucursal del gráfico">
+                                            <option value="">Cargando…</option>
+                                        </select>
+                                    </div>
+                                    <div class="preset-chips">
+                                        <span class="preset-chip stock-chip" data-stock-days="7">7 días</span>
+                                        <span class="preset-chip stock-chip active" data-stock-days="30">30 días</span>
+                                        <span class="preset-chip stock-chip" data-stock-days="90">90 días</span>
+                                        <span class="preset-chip stock-chip" data-stock-days="365">1 año</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="ficha-panel-body">
                                 <div class="stock-legend">
-                                    <span><i style="background:#3b82f6;"></i> Compras</span>
-                                    <span><i style="background:#34d399;"></i> Ventas</span>
-                                    <span><i style="background:#f87171;"></i> Mermas</span>
+                                    <span title="Compras, compras con factura y traslados recibidos">
+                                        <i style="background:#34d399;"></i> Ingresos
+                                    </span>
+                                    <span title="Ventas del producto en la sucursal">
+                                        <i style="background:#60a5fa;"></i> Ventas
+                                    </span>
+                                    <span title="Traslados enviados a otras sucursales">
+                                        <i style="background:#a78bfa;"></i> Salidas
+                                    </span>
+                                    <span title="Mermas y pérdidas registradas">
+                                        <i style="background:#f87171;"></i> Mermas
+                                    </span>
                                     <span id="stock-current" class="stock-current"></span>
                                 </div>
                                 <div id="stock-chart"></div>
@@ -2111,7 +2152,33 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 const productoId = <?= $idProducto ?>;
                 const chartEl = document.querySelector('#stock-chart');
                 const emptyEl = document.querySelector('#stock-chart-empty');
+                const sucursalSelect = document.getElementById('stock-sucursal');
                 let stockChart = null;
+                let stockDiasActual = 30;
+                let stockRequestId = 0;
+
+                // El gráfico siempre trabaja con una sucursal. La primera carga
+                // deja seleccionada la sucursal principal que devuelve el servidor.
+                function pintarSucursales(data) {
+                    if (!sucursalSelect) return;
+
+                    const lista = data.sucursales || [];
+                    const actual = data.sucursal && data.sucursal.id !== undefined
+                        ? String(data.sucursal.id)
+                        : '';
+
+                    const opciones = lista.map((s) =>
+                        `<option value="${esc(s.id)}">${esc(s.nombre)}</option>`
+                    ).join('');
+
+                    if (sucursalSelect.dataset.opciones !== opciones) {
+                        sucursalSelect.innerHTML = opciones;
+                        sucursalSelect.dataset.opciones = opciones;
+                    }
+                    if (actual !== '') {
+                        sucursalSelect.value = actual;
+                    }
+                }
 
                 // Una sola línea con el stock real: cada movimiento se ordena por su hora.
                 function fechaEtiqueta(iso) {
@@ -2139,7 +2206,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         const etiqueta = fechaDia && fechaDia !== ultimaFecha ? fechaEtiqueta(fechaDia) : '';
                         const cantidad = Number(evento.cantidad || 0);
 
-                        acumulado += evento.tipo === 'compras' ? cantidad : -cantidad;
+                        acumulado += evento.tipo === 'ingreso' ? cantidad : -cantidad;
                         puntos.push({
                             label: etiqueta,
                             y: Math.round(acumulado * 100) / 100,
@@ -2150,14 +2217,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     const total = puntos.length;
                     const datos = {
-                        compras: Array(total).fill(null),
-                        ventas: Array(total).fill(null),
-                        mermas: Array(total).fill(null),
+                        ingreso: Array(total).fill(null),
+                        venta: Array(total).fill(null),
+                        salida: Array(total).fill(null),
+                        merma: Array(total).fill(null),
                         neutro: Array(total).fill(null)
                     };
 
                     for (let j = 1; j < total; j++) {
                         const tipo = puntos[j].tipo;
+                        if (!datos[tipo]) continue;
                         datos[tipo][j - 1] = puntos[j - 1].y;
                         datos[tipo][j] = puntos[j].y;
                     }
@@ -2165,9 +2234,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     return {
                         categories: puntos.map(p => p.label),
                         series: [
-                            { name: 'Compras', data: datos.compras },
-                            { name: 'Ventas', data: datos.ventas },
-                            { name: 'Mermas', data: datos.mermas },
+                            { name: 'Ingresos', data: datos.ingreso },
+                            { name: 'Ventas', data: datos.venta },
+                            { name: 'Salidas', data: datos.salida },
+                            { name: 'Mermas', data: datos.merma },
                             { name: 'Sin movimiento', data: datos.neutro }
                         ]
                     };
@@ -2177,8 +2247,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const unidad = data.unidad || 'UND';
                     const stockActualEl = document.getElementById('stock-current');
                     const stockActual = Number(data.stock_actual || 0);
+                    const sucursalNombre = data.sucursal && data.sucursal.nombre
+                        ? ' · ' + data.sucursal.nombre
+                        : '';
                     if (stockActualEl) {
-                        stockActualEl.textContent = 'Stock actual: ' +
+                        stockActualEl.textContent = 'Stock actual' + sucursalNombre + ': ' +
                             stockActual.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
                             ' ' + unidad;
                     }
@@ -2190,6 +2263,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         }
                         chartEl.innerHTML = '';
                         emptyEl.style.display = 'block';
+                        emptyEl.innerHTML = '<i class="fa fa-inbox"></i>Sin movimientos en este período';
                         return;
                     }
 
@@ -2221,7 +2295,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             },
                             fontFamily: "'DM Sans', sans-serif",
                         },
-                        colors: ['#3b82f6', '#34d399', '#f87171', 'rgba(148,163,184,.4)'],
+                        colors: ['#34d399', '#60a5fa', '#a78bfa', '#f87171', 'rgba(148,163,184,.4)'],
                         stroke: {
                             curve: 'smooth',
                             width: 3
@@ -2298,13 +2372,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
 
                 function cargarMovimientosStock(dias) {
-                    fetch('ficha_movimientos_stock.php?id=' + encodeURIComponent(productoId) + '&dias=' + encodeURIComponent(dias))
+                    stockDiasActual = Math.max(1, Number(dias) || stockDiasActual || 30);
+                    const requestId = ++stockRequestId;
+
+                    const params = new URLSearchParams({
+                        id: productoId,
+                        dias: stockDiasActual
+                    });
+                    if (sucursalSelect && sucursalSelect.value) {
+                        params.set('sucursal', sucursalSelect.value);
+                    }
+
+                    fetch('ficha_movimientos_stock.php?' + params.toString())
                         .then(r => r.json())
                         .then(data => {
+                            if (requestId !== stockRequestId) return;
                             if (!data.ok) throw new Error(data.error || 'No se pudieron cargar los movimientos');
+                            pintarSucursales(data);
                             renderStockChart(data);
                         })
                         .catch(error => {
+                            if (requestId !== stockRequestId) return;
                             if (stockChart) {
                                 stockChart.destroy();
                                 stockChart = null;
@@ -2322,6 +2410,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         cargarMovimientosStock(this.dataset.stockDays);
                     });
                 });
+
+                if (sucursalSelect) {
+                    sucursalSelect.addEventListener('change', function() {
+                        cargarMovimientosStock(stockDiasActual);
+                    });
+                }
 
                 cargarMovimientosStock(30);
             })();

@@ -1,274 +1,421 @@
 <?php
 require_once('configuracion.php');
 require_once('session.php');
-require_once('_validador_campos.php');
 require_once('_canal.php');
 require_once('_stock_traslados.php');
+require_once('_stock_cargamentos.php');
 require_once('_stock_auditoria.php');
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-$response = ['success' => false, 'message' => ''];
-
-$campos_requeridos = ['producto'];
-if ($_SESSION["nivel"] == 1) {
-    array_push($campos_requeridos, 'sucursal');
-}
-$validador = new ValidadorCampos($campos_requeridos, 'POST');
-$validador->validar();
-
-
-
-$id                       = intval($_POST['producto']);
-$unidades_transferir      = floatval($_POST['unidades_transferir']);
-$bss_id                   = $_SESSION["bss_id"];
-$sucursal                 = $_POST['sucursal'];
-$sucursal_2               = $_POST['sucursal_2'];
-
-$usuario_id      = (int) ($_SESSION['id'] ?? 0);
-$usuario_nombre  = (string) ($_SESSION['nombre'] ?? 'Desconocido');
-
-// Obtener existencia del porducto
-
-function getStock($sucursal)
+function mt_responder(array $datos, int $codigo = 200): void
 {
-    global $conexion, $bss_id, $id;
+    http_response_code($codigo);
+    echo json_encode($datos, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
-    $sql = "SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1";
-    $stmt = $conexion->prepare($sql);
-    $stmt->bind_param("iii", $id, $sucursal, $bss_id);
+$contenido = file_get_contents('php://input');
+$json = json_decode($contenido, true);
+$input = is_array($json) ? $json : $_POST;
+
+$bssId          = (int) ($_SESSION['bss_id'] ?? 0);
+$usuarioId      = (int) ($_SESSION['id'] ?? 0);
+$usuarioNombre  = (string) ($_SESSION['nombre'] ?? '');
+$nivel          = (int) ($_SESSION['nivel'] ?? 0);
+
+if ($bssId <= 0 || $usuarioId <= 0 || ($nivel !== 1 && $nivel !== 2)) {
+    mt_responder(['success' => false, 'message' => 'Sesión no válida.'], 401);
+}
+
+$sucursal  = $nivel === 2 ? (int) ($_SESSION['sucursal'] ?? 0) : (int) ($input['sucursal'] ?? 0);
+$sucursal2 = (int) ($input['sucursal_2'] ?? 0);
+$motivo    = trim(strip_tags((string) ($input['motivo'] ?? '')));
+
+if (function_exists('mb_substr')) {
+    $motivo = mb_substr($motivo, 0, 1000, 'UTF-8');
+} else {
+    $motivo = substr($motivo, 0, 1000);
+}
+
+if ($sucursal <= 0 || $sucursal2 <= 0) {
+    mt_responder(['success' => false, 'message' => 'Seleccione la sucursal de origen y destino.'], 400);
+}
+if ($sucursal === $sucursal2) {
+    mt_responder(['success' => false, 'message' => 'La sucursal de origen y destino no pueden ser iguales.'], 400);
+}
+if ($motivo === '') {
+    mt_responder(['success' => false, 'message' => 'Indique el motivo del cargamento.'], 400);
+}
+
+foreach ([$sucursal, $sucursal2] as $sucursalId) {
+    $stmt = $conexion->prepare('SELECT id FROM sucursales WHERE id = ? AND bss_id = ? LIMIT 1');
+    if (!$stmt) {
+        mt_responder(['success' => false, 'message' => 'Error de base de datos.'], 500);
+    }
+    $stmt->bind_param('ii', $sucursalId, $bssId);
     $stmt->execute();
-    $stmt->bind_result($stock);
-    $found = $stmt->fetch();
+    $existe = (bool) $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$existe) {
+        mt_responder(['success' => false, 'message' => 'La sucursal no pertenece al negocio.'], 400);
+    }
+}
+
+$itemsInput = $input['items'] ?? null;
+if (!is_array($itemsInput) || count($itemsInput) === 0) {
+    // Compatibilidad con el envío anterior de un solo producto.
+    $productoLegacy = (int) ($input['producto'] ?? 0);
+    $cantidadLegacy = (float) str_replace(',', '.', (string) ($input['unidades_transferir'] ?? '0'));
+    if ($productoLegacy > 0 && $cantidadLegacy > 0) {
+        $itemsInput = [['producto' => $productoLegacy, 'cantidad' => $cantidadLegacy]];
+    }
+}
+
+if (!is_array($itemsInput) || count($itemsInput) === 0) {
+    mt_responder(['success' => false, 'message' => 'Agregue al menos un artículo al cargamento.'], 400);
+}
+if (count($itemsInput) > 200) {
+    mt_responder(['success' => false, 'message' => 'El cargamento supera el máximo de artículos permitido.'], 400);
+}
+
+// Agrupa por producto para que un artículo repetido no genere movimientos
+// duplicados dentro del mismo cargamento.
+$itemsPorProducto = [];
+foreach ($itemsInput as $item) {
+    $productoId = (int) ($item['producto'] ?? $item['producto_id'] ?? 0);
+    $cantidad = (float) str_replace(',', '.', (string) ($item['cantidad'] ?? $item['unidades_transferir'] ?? 0));
+    if ($productoId <= 0 || !is_finite($cantidad) || $cantidad <= 0) {
+        mt_responder(['success' => false, 'message' => 'Hay un artículo con producto o cantidad inválida.'], 400);
+    }
+    if (!isset($itemsPorProducto[$productoId])) {
+        $itemsPorProducto[$productoId] = ['producto' => $productoId, 'cantidad' => 0.0];
+    }
+    $itemsPorProducto[$productoId]['cantidad'] += $cantidad;
+}
+$items = array_values($itemsPorProducto);
+
+$conciliaciones = is_array($input['conciliaciones'] ?? null) ? $input['conciliaciones'] : [];
+$productos = [];
+
+foreach ($items as &$item) {
+    $productoId = (int) $item['producto'];
+
+    $stmt = $conexion->prepare(
+        'SELECT id, nombre, modo_control, porcentaje FROM productos WHERE id = ? AND bss_id = ? LIMIT 1'
+    );
+    if (!$stmt) {
+        mt_responder(['success' => false, 'message' => 'Error de base de datos.'], 500);
+    }
+    $stmt->bind_param('ii', $productoId, $bssId);
+    $stmt->execute();
+    $producto = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    return $found ? (float)$stock : false;
+    if (!$producto) {
+        mt_responder(['success' => false, 'message' => 'Uno de los productos no existe en el catálogo.'], 400);
+    }
+    if ((string) ($producto['modo_control'] ?? 'NORMAL') === 'CANAL') {
+        mt_responder([
+            'success' => false,
+            'message' => 'El producto "' . $producto['nombre'] . '" es una res en canal. Transfiera la res completa desde Ajustes de stock.'
+        ], 400);
+    }
+
+    $itemsStmt = $conexion->prepare(
+        'SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1'
+    );
+    if (!$itemsStmt) {
+        mt_responder(['success' => false, 'message' => 'Error de base de datos.'], 500);
+    }
+    $itemsStmt->bind_param('iii', $productoId, $sucursal, $bssId);
+    $itemsStmt->execute();
+    $stockOrigenFila = $itemsStmt->get_result()->fetch_assoc();
+    $itemsStmt->close();
+
+    if (!$stockOrigenFila) {
+        mt_responder([
+            'success' => false,
+            'message' => 'El producto "' . $producto['nombre'] . '" no existe en la sucursal de origen.'
+        ], 400);
+    }
+    if ((float) $stockOrigenFila['stock'] + 0.0001 < (float) $item['cantidad']) {
+        mt_responder([
+            'success' => false,
+            'message' => 'No hay stock suficiente para "' . $producto['nombre'] . '". Disponible: ' . canal_numero((float) $stockOrigenFila['stock']) . '.'
+        ], 400);
+    }
+
+    $productos[$productoId] = $producto;
+    $item['nombre'] = (string) $producto['nombre'];
+    $item['porcentaje'] = (string) ($producto['porcentaje'] ?? '0');
+    $item['estricto'] = canal_producto_estricto($conexion, $productoId, $bssId);
+}
+unset($item);
+
+// Antes de tocar stock se piden las confirmaciones de los productos estrictos.
+$pendientes = [];
+foreach ($items as $item) {
+    if (!$item['estricto']) {
+        continue;
+    }
+    try {
+        $contexto = canal_contexto_estricto($conexion, (int) $item['producto'], $sucursal2, $bssId);
+    } catch (Throwable $e) {
+        $contexto = null;
+    }
+    if (!$contexto) {
+        continue;
+    }
+
+    $productoId = (int) $item['producto'];
+    $conc = $conciliaciones[$productoId] ?? $conciliaciones[(string) $productoId] ?? null;
+    $stockVisto = $conc ? (float) ($conc['stock_visto'] ?? -1) : -1;
+    $confirmado = $conc && !empty($conc['confirmado']);
+    if (!$confirmado || abs($stockVisto - (float) $contexto['stock_actual']) > 0.0001) {
+        $pendientes[$productoId] = $contexto;
+    }
 }
 
+if ($pendientes) {
+    mt_responder([
+        'success' => false,
+        'requiere_conciliacion' => true,
+        'message' => 'Confirme la cantidad anterior de los productos con seguimiento estricto.',
+        'productos' => array_values($pendientes),
+    ]);
+}
+
+// Las tablas de historial se aseguran fuera de la transacción.
+if (!st_asegurar_tabla($conexion) || !sc_asegurar_tabla($conexion) || !sa_asegurar_tabla($conexion)) {
+    mt_responder(['success' => false, 'message' => 'No se pudo preparar el historial de traslados y auditoría.'], 500);
+}
+
+$totalUnidades = 0.0;
+foreach ($items as $item) {
+    $totalUnidades += (float) $item['cantidad'];
+}
+
+$conexion->begin_transaction();
 
 try {
-    // La bitácora de traslados se crea sola si el hosting no ejecutó la
-    // migración 031. Debe hacerse antes de abrir la transacción.
-    if (!st_asegurar_tabla($conexion)) {
-        throw new Exception('No se pudo preparar la tabla de traslados. Ejecute la migración 031_stock_traslados.sql.');
-    }
-    if (!sa_asegurar_tabla($conexion)) {
-        throw new Exception('No se pudo preparar la auditoría de stock.');
-    }
-
-    $stmtProd = $conexion->prepare("SELECT nombre, modo_control FROM productos WHERE id = ? AND bss_id = ? LIMIT 1");
-    $stmtProd->bind_param('ii', $id, $bss_id);
-    $stmtProd->execute();
-    $prodTransferir = $stmtProd->get_result()->fetch_assoc();
-    $stmtProd->close();
-    // La res en canal se transfiere completa desde Ajustes de stock; el
-    // seguimiento estricto usa el mismo flujo de confirmación de las nuevas
-    // compras (muestra el stock actual y pide confirmación, no bloquea).
-    if ($prodTransferir && (string) ($prodTransferir['modo_control'] ?? 'NORMAL') === 'CANAL') {
-        throw new Exception('Este producto es una res en canal. Transfiera la res completa desde Ajustes de stock.');
-    }
-    $estricto = canal_producto_estricto($conexion, $id, $bss_id);
-
-    // VERIFICAR QUE NO SEAN LAS MISMAS SUCURSALES
-    if ($sucursal === $sucursal_2) {
-        throw new Exception('La sucursal origen y destino no pueden ser iguales.');
+    $cargamentoId = sc_crear($conexion, [
+        'bss_id'          => $bssId,
+        'sucursal_origen' => $sucursal,
+        'sucursal_destino' => $sucursal2,
+        'motivo'          => $motivo,
+        'usuario_id'      => $usuarioId,
+        'usuario_nombre'  => $usuarioNombre,
+        'total_productos' => count($items),
+        'total_unidades'  => $totalUnidades,
+    ]);
+    if ($cargamentoId <= 0) {
+        throw new Exception('No se pudo crear el registro del cargamento.');
     }
 
-    // Seguimiento estricto: el backend no confía en el frontend. Sin la
-    // confirmación responde con el contexto (stock actual de la sucursal
-    // destino, que es donde entra el stock) y no modifica nada.
-    if ($estricto && empty($_POST['conciliacion_confirmada'])) {
-        try {
-            $contexto = canal_contexto_estricto($conexion, $id, $sucursal_2, $bss_id);
-        } catch (Throwable $e) {
-            $contexto = null;
+    foreach ($items as $item) {
+        $productoId = (int) $item['producto'];
+        $cantidad = (float) $item['cantidad'];
+        $nombreProducto = (string) $item['nombre'];
+
+        // Stock de origen bloqueado para que la cantidad anterior sea exacta.
+        $stmt = $conexion->prepare(
+            'SELECT id, stock FROM stock
+             WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?
+             ORDER BY id ASC LIMIT 1 FOR UPDATE'
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo consultar el stock de origen.');
         }
-        echo json_encode([
-            'success' => false,
-            'requiere_conciliacion' => true,
-            'message' => 'Confirme la cantidad anterior antes de transferir.',
-            'contexto' => $contexto
-        ]);
-        exit;
-    }
-
-    $stockVisto = isset($_POST['stock_visto']) ? floatval($_POST['stock_visto']) : -1;
-    if ($estricto && $stockVisto < 0) {
-        throw new Exception('Falta confirmar el stock anterior.');
-    }
-
-    // VERIFICAR SI EXISTE EL PRODUCTO EN ORIGEN Y OBTENER DISPONIBILIDAD
-    $stock_disponible = getStock($sucursal);
-
-    if ($stock_disponible === false) {
-        throw new Exception('El producto no existe en la sucursal de origen.');
-    }
-
-    $conexion->begin_transaction(); // INICIAR TRANSACCIÓN
-
-    // Conciliación estricta: el stock de destino no debió cambiar desde que
-    // se mostró (es el que se está confirmando).
-    if ($estricto) {
-        $stmt = $conexion->prepare("SELECT stock FROM stock WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? LIMIT 1 FOR UPDATE");
-        $stmt->bind_param("iii", $id, $sucursal_2, $bss_id);
+        $stmt->bind_param('iii', $productoId, $sucursal, $bssId);
         $stmt->execute();
-        $stockActual = (float) ($stmt->get_result()->fetch_assoc()['stock'] ?? 0);
+        $filaOrigen = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        if (abs($stockActual - $stockVisto) > 0.0001) {
-            $conexion->rollback();
-            try {
-                $contexto = canal_contexto_estricto($conexion, $id, $sucursal_2, $bss_id);
-            } catch (Throwable $e) {
-                $contexto = null;
+
+        if (!$filaOrigen) {
+            throw new Exception('El producto "' . $nombreProducto . '" ya no tiene stock en la sucursal de origen.');
+        }
+
+        $stockOrigenAntes = (float) $filaOrigen['stock'];
+        if ($stockOrigenAntes + 0.0001 < $cantidad) {
+            throw new Exception('No hay stock suficiente para "' . $nombreProducto . '". Disponible: ' . canal_numero($stockOrigenAntes) . '.');
+        }
+        $stockOrigenDespues = max(0, $stockOrigenAntes - $cantidad);
+
+        // Stock de destino bloqueado; si no existe se crea en cero.
+        $stmt = $conexion->prepare(
+            'SELECT id, stock FROM stock
+             WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?
+             ORDER BY id ASC LIMIT 1 FOR UPDATE'
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo consultar el stock de destino.');
+        }
+        $stmt->bind_param('iii', $productoId, $sucursal2, $bssId);
+        $stmt->execute();
+        $filaDestino = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($filaDestino) {
+            $stockDestinoId = (int) $filaDestino['id'];
+            $stockDestinoAntes = (float) $filaDestino['stock'];
+        } else {
+            $porcentaje = (string) ($item['porcentaje'] ?? '0');
+            $stmt = $conexion->prepare(
+                "INSERT INTO stock (id_producto, porcentaje, stock, id_sucursal, bss_id)
+                 VALUES (?, ?, '0', ?, ?)"
+            );
+            if (!$stmt) {
+                throw new Exception('No se pudo crear el stock en la sucursal destino.');
             }
-            echo json_encode([
-                'success' => false,
-                'requiere_conciliacion' => true,
-                'message' => 'El stock cambió desde que se mostró. Confirme de nuevo.',
-                'contexto' => $contexto
-            ]);
-            exit;
+            $stmt->bind_param('isii', $productoId, $porcentaje, $sucursal2, $bssId);
+            if (!$stmt->execute()) {
+                $stmt->close();
+                throw new Exception('No se pudo crear el stock en la sucursal destino.');
+            }
+            $stockDestinoId = (int) $stmt->insert_id;
+            $stmt->close();
+            $stockDestinoAntes = 0.0;
         }
-    }
+        $stockDestinoDespues = $stockDestinoAntes + $cantidad;
 
-    // SE VERIFICA SI HAY DISPONIBILIDAD PARA CUMPLIR CON LAS UNIDADES A TRANSFERIR
-    if ($stock_disponible < $unidades_transferir) {
-        throw new Exception('No hay stock suficiente para realizar esta acción. Disponible: ' . canal_numero($stock_disponible) . '.');
-    }
-
-    // VERIFICAR SI EXISTE EL PRODUCTO EN DESTINO
-    $stock_destino = getStock($sucursal_2);
-    $stockDestinoAntes = $stock_destino === false ? 0.0 : (float) $stock_destino;
-    $stockDestinoDespues = $stockDestinoAntes + (float) $unidades_transferir;
-    if ($stock_destino === false) {
-        // Obtener porcentaje del producto
-        $stmt = $conexion->prepare("SELECT porcentaje FROM productos WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $stmt->bind_result($porcentaje);
-        if (!$stmt->fetch()) {
-            throw new Exception('Producto no encontrado.');
+        // Verificación final para productos estrictos: el stock de destino
+        // no debió cambiar desde que el usuario confirmó.
+        if (!empty($item['estricto'])) {
+            $conc = $conciliaciones[$productoId] ?? $conciliaciones[(string) $productoId] ?? null;
+            $stockVisto = $conc ? (float) ($conc['stock_visto'] ?? -1) : -1;
+            if (!$conc || empty($conc['confirmado']) || abs($stockVisto - $stockDestinoAntes) > 0.0001) {
+                $conexion->rollback();
+                try {
+                    $contexto = canal_contexto_estricto($conexion, $productoId, $sucursal2, $bssId);
+                } catch (Throwable $e) {
+                    $contexto = null;
+                }
+                mt_responder([
+                    'success' => false,
+                    'requiere_conciliacion' => true,
+                    'message' => 'El stock cambió desde que se mostró. Confirme de nuevo.',
+                    'productos' => $contexto ? [$contexto] : [],
+                ]);
+            }
         }
-        $stmt->close();
 
-
-        // Insertar producto en destino
-        $stmt = $conexion->prepare("INSERT INTO stock (id_producto, porcentaje, stock, id_sucursal, bss_id) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("iddii", $id, $porcentaje, $unidades_transferir, $sucursal_2, $bss_id);
+        $stmt = $conexion->prepare('UPDATE stock SET stock = ? WHERE id = ?');
+        if (!$stmt) {
+            throw new Exception('No se pudo actualizar el stock de destino.');
+        }
+        $stockDestinoTexto = canal_numero($stockDestinoDespues);
+        $stmt->bind_param('si', $stockDestinoTexto, $stockDestinoId);
         if (!$stmt->execute()) {
-            throw new Exception('No se pudo registrar el producto en la sucursal destino.');
+            $stmt->close();
+            throw new Exception('No se pudo actualizar el stock de destino.');
         }
         $stmt->close();
 
-        $response['message'] = 'El producto se creó en la sucursal destino y el stock fue actualizado.';
-    } else {
-        // Actualizar stock en destino
-        $nuevo_stock_destino = $stock_destino + $unidades_transferir;
-
-        // Actualizar el stock en destino
-        $stmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
-        $stmt->bind_param("diii", $nuevo_stock_destino, $id, $sucursal_2, $bss_id);
+        $stmt = $conexion->prepare('UPDATE stock SET stock = ? WHERE id = ?');
+        if (!$stmt) {
+            throw new Exception('No se pudo actualizar el stock de origen.');
+        }
+        $stockOrigenTexto = canal_numero($stockOrigenDespues);
+        $stockOrigenId = (int) $filaOrigen['id'];
+        $stmt->bind_param('si', $stockOrigenTexto, $stockOrigenId);
         if (!$stmt->execute()) {
-            throw new Exception('No se pudo actualizar el stock en la sucursal destino.');
+            $stmt->close();
+            throw new Exception('No se pudo actualizar el stock de origen.');
         }
         $stmt->close();
 
-        $response['message'] = 'Stock actualizado exitosamente.';
+        $stmt = $conexion->prepare(
+            "INSERT INTO stock_traslados
+                (cargamento_id, bss_id, id_producto, producto_nombre, cantidad,
+                 sucursal_origen, sucursal_destino, usuario_id, usuario_nombre)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo registrar el artículo del cargamento.');
+        }
+        $stmt->bind_param(
+            'iiisdiiis',
+            $cargamentoId,
+            $bssId,
+            $productoId,
+            $nombreProducto,
+            $cantidad,
+            $sucursal,
+            $sucursal2,
+            $usuarioId,
+            $usuarioNombre
+        );
+        if (!$stmt->execute()) {
+            $stmt->close();
+            throw new Exception('No se pudo registrar el artículo del cargamento.');
+        }
+        $trasladoId = (int) $conexion->insert_id;
+        $stmt->close();
+
+        $detalle = [
+            'cargamento_id'    => $cargamentoId,
+            'motivo'           => $motivo,
+            'stock_traslado_id' => $trasladoId,
+            'sucursal_origen'  => $sucursal,
+            'sucursal_destino' => $sucursal2,
+        ];
+
+        $auditoriaSalida = sa_registrar($conexion, [
+            'bss_id'              => $bssId,
+            'id_sucursal'         => $sucursal,
+            'id_producto'         => $productoId,
+            'producto_nombre'     => $nombreProducto,
+            'tipo_movimiento'     => 'TRANSFERENCIA_SALIDA',
+            'origen'              => 'cargamento',
+            'referencia_tipo'     => 'cargamento',
+            'referencia_id'       => $cargamentoId,
+            'cantidad'            => $cantidad,
+            'stock_anterior'      => $stockOrigenAntes,
+            'stock_nuevo'         => $stockOrigenDespues,
+            'diferencia'          => $stockOrigenDespues - $stockOrigenAntes,
+            'id_sucursal_origen'  => $sucursal,
+            'id_sucursal_destino' => $sucursal2,
+            'detalle'             => $detalle,
+            'usuario_id'          => $usuarioId,
+            'usuario_nombre'      => $usuarioNombre,
+        ]);
+
+        $auditoriaEntrada = sa_registrar($conexion, [
+            'bss_id'              => $bssId,
+            'id_sucursal'         => $sucursal2,
+            'id_producto'         => $productoId,
+            'producto_nombre'     => $nombreProducto,
+            'tipo_movimiento'     => 'TRANSFERENCIA_ENTRADA',
+            'origen'              => 'cargamento',
+            'referencia_tipo'     => 'cargamento',
+            'referencia_id'       => $cargamentoId,
+            'cantidad'            => $cantidad,
+            'stock_anterior'      => $stockDestinoAntes,
+            'stock_nuevo'         => $stockDestinoDespues,
+            'diferencia'          => $stockDestinoDespues - $stockDestinoAntes,
+            'id_sucursal_origen'  => $sucursal,
+            'id_sucursal_destino' => $sucursal2,
+            'detalle'             => $detalle,
+            'usuario_id'          => $usuarioId,
+            'usuario_nombre'      => $usuarioNombre,
+        ]);
+
+        if (!$auditoriaSalida || !$auditoriaEntrada) {
+            throw new Exception('No se pudo registrar la auditoría del cargamento.');
+        }
     }
 
-    // Actualizar el stock en origen
-    $stock_disponible_origen = $stock_disponible - $unidades_transferir;
+    $conexion->commit();
 
-    $stmt = $conexion->prepare("UPDATE stock SET stock = ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?");
-    $stmt->bind_param("diii", $stock_disponible_origen, $id, $sucursal, $bss_id);
-    if (!$stmt->execute()) {
-        throw new Exception('No se pudo actualizar el stock en la sucursal de origen.');
-    }
-
-    $stmt->close();
-
-    // Registrar el traslado para el historial de movimientos (origen → destino)
-    $stmtTraslado = $conexion->prepare(
-        "INSERT INTO stock_traslados
-            (bss_id, id_producto, producto_nombre, cantidad, sucursal_origen, sucursal_destino, usuario_id, usuario_nombre)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-    if (!$stmtTraslado) {
-        throw new Exception('No se pudo registrar el traslado.');
-    }
-    $stmtTraslado->bind_param(
-        "iisdiiis",
-        $bss_id,
-        $id,
-        $prodTransferir['nombre'],
-        $unidades_transferir,
-        $sucursal,
-        $sucursal_2,
-        $usuario_id,
-        $usuario_nombre
-    );
-    if (!$stmtTraslado->execute()) {
-        $stmtTraslado->close();
-        throw new Exception('No se pudo registrar el traslado.');
-    }
-    $trasladoId = (int) $conexion->insert_id;
-    $stmtTraslado->close();
-
-    $detalleAuditoria = [
-        'stock_traslado_id' => $trasladoId,
-        'sucursal_origen'   => (int) $sucursal,
-        'sucursal_destino'  => (int) $sucursal_2,
-        'modo_control'      => (string) ($prodTransferir['modo_control'] ?? 'NORMAL'),
-    ];
-
-    $auditoriaSalida = sa_registrar($conexion, [
-        'bss_id'              => $bss_id,
-        'id_sucursal'         => (int) $sucursal,
-        'id_producto'         => $id,
-        'producto_nombre'     => $prodTransferir['nombre'] ?? '',
-        'tipo_movimiento'     => 'TRANSFERENCIA_SALIDA',
-        'origen'              => 'transferencia',
-        'referencia_tipo'     => 'stock_traslado',
-        'referencia_id'       => $trasladoId,
-        'cantidad'            => $unidades_transferir,
-        'stock_anterior'      => (float) $stock_disponible,
-        'stock_nuevo'         => (float) $stock_disponible_origen,
-        'diferencia'          => (float) $stock_disponible_origen - (float) $stock_disponible,
-        'id_sucursal_origen'  => (int) $sucursal,
-        'id_sucursal_destino' => (int) $sucursal_2,
-        'detalle'             => $detalleAuditoria,
-        'usuario_id'          => $usuario_id,
-        'usuario_nombre'      => $usuario_nombre,
+    mt_responder([
+        'success' => true,
+        'message' => 'Cargamento trasladado correctamente. Artículos: ' . count($items) . '.',
+        'cargamento_id' => $cargamentoId,
+        'total_productos' => count($items),
+        'total_unidades' => $totalUnidades,
     ]);
-
-    $auditoriaEntrada = sa_registrar($conexion, [
-        'bss_id'              => $bss_id,
-        'id_sucursal'         => (int) $sucursal_2,
-        'id_producto'         => $id,
-        'producto_nombre'     => $prodTransferir['nombre'] ?? '',
-        'tipo_movimiento'     => 'TRANSFERENCIA_ENTRADA',
-        'origen'              => 'transferencia',
-        'referencia_tipo'     => 'stock_traslado',
-        'referencia_id'       => $trasladoId,
-        'cantidad'            => $unidades_transferir,
-        'stock_anterior'      => (float) $stockDestinoAntes,
-        'stock_nuevo'         => (float) $stockDestinoDespues,
-        'diferencia'          => (float) $stockDestinoDespues - (float) $stockDestinoAntes,
-        'id_sucursal_origen'  => (int) $sucursal,
-        'id_sucursal_destino' => (int) $sucursal_2,
-        'detalle'             => $detalleAuditoria,
-        'usuario_id'          => $usuario_id,
-        'usuario_nombre'      => $usuario_nombre,
-    ]);
-
-    if (!$auditoriaSalida || !$auditoriaEntrada) {
-        throw new Exception('No se pudo registrar la auditoría del movimiento de stock.');
-    }
-
-    $conexion->commit(); // CONFIRMAR TRANSACCIÓN
-    $response['success'] = true;
-} catch (Exception $e) {
-    $conexion->rollback(); // REVERTIR SI HAY ERROR
-    $response = ['success' => false, 'message' => $e->getMessage()];
+} catch (Throwable $e) {
+    $conexion->rollback();
+    mt_responder(['success' => false, 'message' => $e->getMessage()], 400);
 }
-echo json_encode($response);

@@ -71,7 +71,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     <div class="row">
                         <div class="col-lg-12">
-                            <div class="x_panel">
+                            <div class="x_panel" id="card-movimientos">
                                 <div class="x_title">
                                     <h2>Movimientos de stock</h2>
                                     <ul class="nav navbar-right panel_toolbox">
@@ -128,10 +128,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <th>Cantidad</th>
                                                     <th>Sucursal origen</th>
                                                     <th>Sucursal destino</th>
+                                                    <th>Cargamento</th>
+                                                    <th>Motivo</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="movimientos-body">
-                                                <tr><td colspan="5" class="text-center">Cargando movimientos...</td></tr>
+                                                <tr><td colspan="7" class="text-center">Cargando movimientos...</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -147,7 +149,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <div class="x_title">
                                         <h2>Datos del Producto <small>* obligatorio</small></h2>
                                         <ul class="nav navbar-right panel_toolbox">
-                                            <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                                            <li>
+                                                <button type="button" id="btn-volver-movimientos" class="btn btn-default btn-sm">
+                                                    <i class="fa fa-list"></i> Ver movimientos
+                                                </button>
                                             </li>
                                         </ul>
                                         <div class="clearfix"></div>
@@ -194,12 +199,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <div class=' form-group'>
                                                     <div class='row'>
                                                         <div class="col-lg-4">
-                                                            <label for='codigo' for='codigo'>Filtro</label>
-                                                            <input type='text' required="required" class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
+                                                            <label for='codigo'>Filtro</label>
+                                                            <input type='text' class='form-control' name='codigo' placeholder="Nombre" id='codigo'>
                                                         </div>
                                                         <div class="col-lg-8">
                                                             <label for='producto'>Seleccione el producto</label>
-                                                            <select id="producto" name="producto" class="form-control" required>
+                                                            <select id="producto" name="producto" class="form-control">
                                                                 <option>-- Indique un filtro --</option>
                                                             </select>
                                                         </div>
@@ -210,22 +215,48 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </div>
                                             <div class="row mb-3">
                                                 <div class="col-lg-3">
-                                                    <label for='disponible' for='disponible'>Disponibilidad</label>
-                                                    <input type='text' readonly required="required" class='form-control' name='disponible' placeholder="Stock disponible" id='disponible'>
+                                                    <label for='disponible'>Disponibilidad</label>
+                                                    <input type='text' readonly class='form-control' name='disponible' placeholder="Stock disponible" id='disponible'>
                                                 </div>
-                                                <div class="col-lg-9">
-
-                                                    <div class=" form-group">
-                                                        <label class="form-label" for="comprado">Unidades a transferir</label>
-                                                        <input type="text" id="unidades_transferir" name="unidades_transferir" required="required" class="form-control" placeholder="Cantidad de unidades a transferir">
-                                                    </div>
+                                                <div class="col-lg-6">
+                                                    <label class="form-label" for="unidades_transferir">Unidades a transferir</label>
+                                                    <input type="number" step="any" min="0.0001" id="unidades_transferir" name="unidades_transferir" class="form-control" placeholder="Cantidad de unidades a transferir">
                                                 </div>
+                                                <div class="col-lg-3 d-flex align-items-end">
+                                                    <button type="button" id="btn-agregar-articulo" class="btn btn-default" style="width:100%;">
+                                                        <i class="fa fa-plus"></i> Agregar artículo
+                                                    </button>
+                                                </div>
+                                            </div>
 
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Producto</th>
+                                                            <th class="text-right">Disponible</th>
+                                                            <th class="text-right">Cantidad</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="cargamento-items-body">
+                                                        <tr>
+                                                            <td colspan="4" class="text-center text-muted">Sin artículos agregados.</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div class="form-group mt-3">
+                                                <label class="form-label" for="motivo-cargamento">Motivo del cargamento *</label>
+                                                <textarea id="motivo-cargamento" name="motivo" class="form-control" rows="2" required placeholder="Indique el motivo del traslado"></textarea>
                                             </div>
 
                                             <div class="ln_solid"></div>
                                             <div class='form-group mt-3 text-end'>
-                                                <input type='submit' style="float: right;" class="btn btn-success actualizar" value="Guardar">
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="fa fa-truck"></i> Guardar cargamento
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -268,6 +299,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             let precio_consultado
             let producto_consultado
             let producto_estricto = false
+            let productoActual = null
+            let cargamentoItems = []
 
             // Consultar productos
             function obtener_registros(producto) {
@@ -330,11 +363,16 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             $(document).on('change', '#sucursal', function() {
                 form_reset()
                 producto_estricto = false;
+                productoActual = null;
+                cargamentoItems = [];
+                renderCargamentoItems();
             }); // resetear form al cambiar el select
 
 
             $(document).on('change', '#producto', function() {
                 var producto = $(this).val();
+                productoActual = null;
+                document.getElementById('disponible').value = '';
                 if (producto != "") {
                     buscarProducto(producto);
                 } else {
@@ -385,11 +423,19 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             precio_consultado = res.data.precio_compra;
                             producto_consultado = res.data.nombre
                             producto_estricto = res.data.seguimiento_estricto == 1;
+                            productoActual = {
+                                id: parseInt(codigo, 10),
+                                nombre: res.data.nombre,
+                                stock: Number(res.data.stock) || 0,
+                                unidad: res.data.unidad || 'UND',
+                                estricto: producto_estricto
+                            };
 
                             document.getElementById('disponible').value = res.data.stock;
-                            //        document.querySelector('[name=nombrepor]').value = res.data.nombre;
                         } else {
                             producto_estricto = false;
+                            productoActual = null;
+                            document.getElementById('disponible').value = '';
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Producto no encontrado',
@@ -400,6 +446,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     })
                     .catch(err => {
                         console.error(err);
+                        productoActual = null;
                         Swal.fire({
                             icon: 'error',
                             title: 'Error de conexión',
@@ -408,6 +455,99 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     });
             }
 
+            function escHtml(valor) {
+                return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(c) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    } [c];
+                });
+            }
+
+            function formatoCantidad(valor) {
+                return Number(valor || 0).toLocaleString('es-VE', {
+                    maximumFractionDigits: 4
+                });
+            }
+
+            function renderCargamentoItems() {
+                const tbody = document.getElementById('cargamento-items-body');
+                if (!cargamentoItems.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin artículos agregados.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = cargamentoItems.map(function(item, index) {
+                    return `<tr>
+                        <td>${escHtml(item.nombre)}</td>
+                        <td class="text-right">${formatoCantidad(item.stock)} ${escHtml(item.unidad)}</td>
+                        <td class="text-right">${formatoCantidad(item.cantidad)} ${escHtml(item.unidad)}</td>
+                        <td class="text-right">
+                            <button type="button" class="btn btn-danger btn-xs btn-quitar-item" data-index="${index}" title="Quitar artículo">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+
+            function agregarArticuloCargamento() {
+                if (!productoActual) {
+                    Alerta.toast('error', 'Seleccione un producto');
+                    return;
+                }
+
+                const cantidad = parseFloat(document.getElementById('unidades_transferir').value);
+                if (!(cantidad > 0)) {
+                    Alerta.toast('error', 'Indique una cantidad mayor que cero');
+                    return;
+                }
+
+                const existente = cargamentoItems.find(function(item) {
+                    return item.producto === productoActual.id;
+                });
+                const cantidadTotal = (existente ? existente.cantidad : 0) + cantidad;
+
+                if (!productoActual.estricto && cantidadTotal > productoActual.stock + 0.0001) {
+                    Alerta.toast('error', 'No hay suficientes productos en stock. Disponible: ' + formatoCantidad(productoActual.stock));
+                    return;
+                }
+
+                if (existente) {
+                    existente.cantidad = cantidadTotal;
+                } else {
+                    cargamentoItems.push({
+                        producto: productoActual.id,
+                        nombre: productoActual.nombre,
+                        stock: productoActual.stock,
+                        unidad: productoActual.unidad,
+                        estricto: productoActual.estricto,
+                        cantidad: cantidad
+                    });
+                }
+
+                renderCargamentoItems();
+
+                document.getElementById('unidades_transferir').value = '';
+                document.getElementById('producto').value = '';
+                document.getElementById('disponible').value = '';
+                productoActual = null;
+                producto_estricto = false;
+            }
+
+            document.getElementById('btn-agregar-articulo').addEventListener('click', agregarArticuloCargamento);
+
+            document.getElementById('cargamento-items-body').addEventListener('click', function(evento) {
+                const boton = evento.target.closest('.btn-quitar-item');
+                if (!boton) return;
+                const indice = parseInt(boton.dataset.index, 10);
+                if (isNaN(indice)) return;
+                cargamentoItems.splice(indice, 1);
+                renderCargamentoItems();
+            });
 
             // Movimientos de stock con filtros por producto y sucursales
             function cargarMovimientos() {
@@ -421,11 +561,11 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     .then(res => res.json())
                     .then(json => {
                         if (!json.ok) {
-                            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se pudieron cargar los movimientos</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No se pudieron cargar los movimientos</td></tr>';
                             return;
                         }
                         if (!json.movimientos.length) {
-                            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay movimientos con los filtros seleccionados</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay movimientos con los filtros seleccionados</td></tr>';
                             return;
                         }
                         tbody.innerHTML = json.movimientos.map(m => `<tr>
@@ -434,11 +574,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <td>${m.cantidad}</td>
                             <td>${m.origen || '—'}</td>
                             <td>${m.destino || '—'}</td>
+                            <td>${m.cargamento_id ? '#' + m.cargamento_id : '—'}</td>
+                            <td>${escHtml(m.motivo || '—')}</td>
                         </tr>`).join('');
                     })
                     .catch(err => {
                         console.error("Error al cargar movimientos:", err);
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se pudieron cargar los movimientos</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No se pudieron cargar los movimientos</td></tr>';
                     });
             }
 
@@ -447,25 +589,27 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             });
             cargarMovimientos();
 
-            // Mostrar el formulario de transferencia y ocultar la tabla de movimientos
+            // Mostrar el formulario y ocultar la card completa de movimientos
+            const cardMovimientos = document.getElementById('card-movimientos');
             const panelTransferencia = document.getElementById('panel-transferencia');
-            const tablaMovimientos = document.getElementById('movimientos-tabla-wrap');
             const btnTransferencia = document.getElementById('btn-transferencia');
+            const btnVolverMovimientos = document.getElementById('btn-volver-movimientos');
 
-            function alternarTransferencia(mostrar) {
-                const abrir = mostrar === undefined
-                    ? panelTransferencia.style.display === 'none'
-                    : mostrar;
+            function mostrarTransferencia(mostrar) {
+                cardMovimientos.style.display = mostrar ? 'none' : '';
+                panelTransferencia.style.display = mostrar ? '' : 'none';
 
-                panelTransferencia.style.display = abrir ? '' : 'none';
-                tablaMovimientos.style.display = abrir ? 'none' : '';
-                btnTransferencia.innerHTML = abrir
-                    ? '<i class="fa fa-list"></i> Ver movimientos'
-                    : '<i class="fa fa-exchange"></i> Nuevo traslado';
+                if (mostrar) {
+                    panelTransferencia.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
 
             btnTransferencia.addEventListener('click', function() {
-                alternarTransferencia();
+                mostrarTransferencia(true);
+            });
+
+            btnVolverMovimientos.addEventListener('click', function() {
+                mostrarTransferencia(false);
             });
 
             // Confirmación de stock para productos con seguimiento estricto
@@ -500,13 +644,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 return false;
             }
 
-            async function enviarTransferencia(formData) {
+            async function enviarCargamento(payload) {
                 const res = await fetch('../../configurar/modificar_stock_transferir.php', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
                 });
                 const text = await res.text();
-                console.log("Respuesta cruda del servidor:", text);
                 let json;
                 try {
                     json = JSON.parse(text);
@@ -515,58 +661,100 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     Alerta.mostrar('error', 'El servidor no devolvió un JSON válido.');
                     return null;
                 }
+
                 if (json.requiere_conciliacion) {
-                    const confirmado = await mostrarConciliacion(json.contexto);
-                    if (!confirmado) return null;
-                    formData.set('conciliacion_confirmada', '1');
-                    formData.set('stock_visto', String(json.contexto.stock_actual));
-                    return enviarTransferencia(formData);
+                    const productos = json.productos || (json.contexto ? [json.contexto] : []);
+                    if (!productos.length) {
+                        Alerta.toast('error', 'No se pudo obtener la cantidad anterior.');
+                        return null;
+                    }
+
+                    const conciliaciones = Object.assign({}, payload.conciliaciones || {});
+                    for (const contexto of productos) {
+                        const confirmado = await mostrarConciliacion(contexto);
+                        if (!confirmado) return null;
+                        conciliaciones[contexto.id] = {
+                            confirmado: 1,
+                            stock_visto: contexto.stock_actual
+                        };
+                    }
+
+                    payload.conciliaciones = conciliaciones;
+                    return enviarCargamento(payload);
                 }
+
                 return json;
             }
 
-            // ENVIAR LA TRANSFERENCIA AL BACK
+            // ENVIAR EL CARGAMENTO AL BACKEND
             document.getElementById('data-form').addEventListener('submit', async function(e) {
-                e.preventDefault(); // Evitar envío tradicional
+                e.preventDefault();
 
                 const form = e.target;
-                const formData = new FormData(form);
+                const sucursal = document.getElementById('sucursal').value;
+                const sucursalDestino = document.getElementById('sucursal_2').value;
+                const motivo = document.getElementById('motivo-cargamento').value.trim();
 
-
-                for (let [key, value] of formData.entries()) {
-                    if (value == '') {
-                        console.log('Campo vacío: ' + key)
-                        Alerta.toast('error', 'Error: Campo (a) vacío (s)')
-                        return
-                    }
+                if (!sucursal || !sucursalDestino) {
+                    Alerta.toast('error', 'Seleccione la sucursal de origen y destino');
+                    return;
                 }
-
                 if (!verificarSucursales()) {
-                    return; // Previene el guardado o envío
+                    return;
+                }
+                if (!motivo) {
+                    Alerta.toast('error', 'Indique el motivo del cargamento');
+                    document.getElementById('motivo-cargamento').focus();
+                    return;
+                }
+                if (!cargamentoItems.length) {
+                    Alerta.toast('error', 'Agregue al menos un artículo al cargamento');
+                    return;
                 }
 
-                // En productos estrictos la validación de stock la hace el
-                // backend después de la confirmación
-                if (!producto_estricto) {
-                    const disponible = parseInt(document.getElementById('disponible').value)
-                    const unidades_transferir = parseInt(document.getElementById('unidades_transferir').value)
-
-                    if (unidades_transferir > disponible) {
-                        Alerta.toast('error', 'No hay suficientes productos en stock')
-                        return
+                for (const item of cargamentoItems) {
+                    if (!item.estricto && item.cantidad > item.stock + 0.0001) {
+                        Alerta.toast('error', 'No hay suficientes productos en stock para "' + item.nombre + '". Disponible: ' + formatoCantidad(item.stock));
+                        return;
                     }
                 }
 
-                const json = await enviarTransferencia(formData);
-                if (!json) return;
+                const payload = {
+                    accion: 'guardar_cargamento',
+                    sucursal: sucursal,
+                    sucursal_2: sucursalDestino,
+                    motivo: motivo,
+                    items: cargamentoItems.map(function(item) {
+                        return {
+                            producto: item.producto,
+                            cantidad: item.cantidad
+                        };
+                    }),
+                    conciliaciones: {}
+                };
 
-                if (json.success) {
-                    Alerta.mostrar('success', json.message);
-                    form.reset(); // Opcional: limpia el formulario
-                    cargarMovimientos();
-                    alternarTransferencia(false);
-                } else {
-                    Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
+                const boton = form.querySelector('button[type="submit"]');
+                boton.disabled = true;
+
+                try {
+                    const json = await enviarCargamento(payload);
+                    if (!json) return;
+
+                    if (json.success) {
+                        Alerta.mostrar('success', json.message);
+                        form.reset();
+                        cargamentoItems = [];
+                        renderCargamentoItems();
+                        productoActual = null;
+                        producto_estricto = false;
+                        document.getElementById('disponible').value = '';
+                        cargarMovimientos();
+                        mostrarTransferencia(false);
+                    } else {
+                        Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
+                    }
+                } finally {
+                    boton.disabled = false;
                 }
             });
         </script>

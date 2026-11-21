@@ -6,6 +6,7 @@
 require_once(__DIR__ . '/configuracion.php');
 require_once(__DIR__ . '/session.php');
 require_once(__DIR__ . '/_stock_traslados.php');
+require_once(__DIR__ . '/_stock_cargamentos.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -27,10 +28,16 @@ if (!st_asegurar_tabla($conexion)) {
     echo json_encode(['ok' => false, 'error' => 'No se pudo preparar la tabla de traslados.']);
     exit;
 }
+if (!sc_asegurar_tabla($conexion)) {
+    echo json_encode(['ok' => false, 'error' => 'No se pudo preparar la tabla de cargamentos.']);
+    exit;
+}
 
 $sql = "SELECT T.created_at AS fecha, T.cantidad, T.usuario_nombre,
+               T.cargamento_id, C.motivo AS cargamento_motivo,
                COALESCE(so.nombre, '—') AS origen, COALESCE(sd.nombre, '—') AS destino
         FROM stock_traslados T
+        LEFT JOIN stock_cargamentos C ON C.id = T.cargamento_id AND C.bss_id = T.bss_id
         LEFT JOIN sucursales so ON so.id = T.sucursal_origen AND so.bss_id = T.bss_id
         LEFT JOIN sucursales sd ON sd.id = T.sucursal_destino AND sd.bss_id = T.bss_id
         WHERE T.bss_id = $bssId";
@@ -56,6 +63,8 @@ if ($res) {
             'origen' => (string) $fila['origen'],
             'destino' => (string) $fila['destino'],
             'usuario' => (string) $fila['usuario_nombre'],
+            'cargamento_id' => $fila['cargamento_id'] !== null ? (int) $fila['cargamento_id'] : null,
+            'motivo' => (string) ($fila['cargamento_motivo'] ?? ''),
         ];
     }
 }
