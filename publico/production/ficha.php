@@ -1033,70 +1033,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 background: rgba(30, 41, 59, .95);
             }
 
-            .mov-kpis {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-                gap: 10px;
-                margin-bottom: 14px;
-            }
-
-            .mov-kpi {
-                border: 1px solid rgba(255, 255, 255, .07);
-                border-left: 3px solid var(--tc, #64748b);
-                border-radius: 12px;
-                padding: 11px 13px;
-                background: rgba(24, 27, 34, .55);
-                min-width: 0;
-            }
-
-            .mov-kpi .lbl {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 10px;
-                font-weight: 700;
-                letter-spacing: .07em;
-                text-transform: uppercase;
-                color: #64748b;
-                margin-bottom: 4px;
-            }
-
-            .mov-kpi .lbl i {
-                color: var(--tc, #64748b);
-                font-size: 11px;
-            }
-
-            .mov-kpi .val {
-                font-family: 'Space Grotesk', sans-serif;
-                font-size: 20px;
-                font-weight: 700;
-                line-height: 1.1;
-                color: #f1f5f9;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .mov-kpi .val small {
-                font-family: 'DM Sans', sans-serif;
-                font-size: 10px;
-                font-weight: 500;
-                color: #64748b;
-                margin-left: 2px;
-            }
-
-            .mov-kpi.off {
-                opacity: .45;
-            }
-
-            .mov-kpi .val.pos {
-                color: #34d399;
-            }
-
-            .mov-kpi .val.neg {
-                color: #f87171;
-            }
-
             .mov-summary-wrap {
                 overflow-x: auto;
                 border: 1px solid rgba(255, 255, 255, .06);
@@ -1708,9 +1644,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     justify-content: flex-end;
                 }
 
-                .mov-kpis {
-                    grid-template-columns: 1fr 1fr;
-                }
                 .kpi-grid {
                     grid-template-columns: 1fr 1fr;
                 }
@@ -1912,7 +1845,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                 </div>
 
-                                <div id="mov-kpis" class="mov-kpis"></div>
                                 <div id="mov-summary"></div>
                                 <div id="mov-note" class="mov-hint" style="display:none;"></div>
 
@@ -3156,7 +3088,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     return {
                         global: global,
-                        netoGlobal: global.compra - global.venta - global.merma,
                         porSucursal: porSucursal
                     };
                 }
@@ -3185,30 +3116,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             renderTodo();
                         });
                     });
-                }
-
-                /* ── KPIs globales ─────────────────────────────────────── */
-                function renderKpis(tot) {
-                    const cont = $id('mov-kpis');
-                    if (!cont) return;
-
-                    const definiciones = [
-                        { key: 'compra', label: 'Compras', icon: 'fa-arrow-down', color: TIPOS.compra.color, valor: tot.global.compra },
-                        { key: 'venta', label: 'Ventas', icon: 'fa-arrow-up', color: TIPOS.venta.color, valor: tot.global.venta },
-                        { key: 'traslado', label: 'Traslados', icon: 'fa-exchange', color: TIPOS.traslado.color, valor: tot.global.traslado },
-                        { key: 'merma', label: 'Mermas', icon: 'fa-trash', color: TIPOS.merma.color, valor: tot.global.merma },
-                        { key: 'neto', label: 'Neto', icon: 'fa-balance-scale', color: '#2dd4bf', valor: tot.netoGlobal }
-                    ];
-
-                    cont.innerHTML = definiciones.map((k) => {
-                        const apagado = k.key !== 'neto' && MG.tipos[k.key] === false;
-                        const claseValor = k.key === 'neto' ? (k.valor >= 0 ? 'pos' : 'neg') : '';
-                        const valor = apagado ? '—' : `${num(k.valor)} <small>${esc(MG.unidad)}</small>`;
-                        return `<div class="mov-kpi ${apagado ? 'off' : ''}" style="--tc:${k.color}">
-                            <div class="lbl"><i class="fa ${k.icon}"></i>${k.label}</div>
-                            <div class="val ${claseValor}">${valor}</div>
-                        </div>`;
-                    }).join('');
                 }
 
                 /* ── Resumen por sucursal (KPIs por columna) ───────────── */
@@ -3719,7 +3626,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     if (!MG.data) return;
                     const tot = calcularTotales();
                     renderTipos();
-                    renderKpis(tot);
                     renderSummary(tot);
                     renderGraph(tot);
                 }
@@ -3732,7 +3638,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const hasta = ($id('mov-hasta') || {}).value || '';
                     const status = $id('mov-status');
                     const wrap = $id('mov-graph-wrap');
-                    const kpis = $id('mov-kpis');
                     const summary = $id('mov-summary');
 
                     MG.cargando = true;
@@ -3743,7 +3648,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         status.innerHTML = '<i class="fa fa-circle-o-notch spin"></i>Cargando movimientos…';
                     }
                     if (wrap) wrap.style.display = 'none';
-                    if (kpis) kpis.innerHTML = '';
                     if (summary) summary.innerHTML = '';
                     if ($id('mov-type-filter')) $id('mov-type-filter').innerHTML = '';
 

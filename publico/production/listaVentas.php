@@ -852,7 +852,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       let table = new DataTable('#datatable');
       const periodo = 'dia';
     </script>
-    <script src="../build/js/info_ventas.js?v=2"></script>
+    <script src="../build/js/info_ventas.js?v=3"></script>
 
 
 

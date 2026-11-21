@@ -925,7 +925,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       let table = new DataTable('#datatable');
       const periodo = 'mes';
     </script>
-    <script src="../build/js/info_ventas.js"></script>
+    <script src="../build/js/info_ventas.js?v=3"></script>
 
     <script>
       let _totalesUsuariosCargado = false;
