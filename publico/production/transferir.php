@@ -49,6 +49,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 padding: .55rem;
 
             }
+
+            .panel_toolbox .btn {
+                margin-top: 2px;
+                padding: 6px 12px;
+                font-size: 12px;
+                border-radius: 6px;
+            }
         </style>
     </head>
 
@@ -68,7 +75,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 <div class="x_title">
                                     <h2>Movimientos de stock</h2>
                                     <ul class="nav navbar-right panel_toolbox">
-                                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                                        <li>
+                                            <button type="button" id="btn-transferencia" class="btn btn-success btn-sm">
+                                                <i class="fa fa-exchange"></i> Nuevo traslado
+                                            </button>
                                         </li>
                                     </ul>
                                     <div class="clearfix"></div>
@@ -109,7 +119,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="table-responsive">
+                                    <div class="table-responsive" id="movimientos-tabla-wrap">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
@@ -127,14 +137,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-lg-12">
-                            <button type="button" id="btn-transferencia" class="btn btn-success">
-                                <i class="fa fa-exchange"></i> Nueva transferencia
-                            </button>
                         </div>
                     </div>
 
@@ -445,14 +447,25 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             });
             cargarMovimientos();
 
-            // Mostrar u ocultar el formulario de transferencia
-            document.getElementById('btn-transferencia').addEventListener('click', function() {
-                const panel = document.getElementById('panel-transferencia');
-                const oculto = panel.style.display === 'none';
-                panel.style.display = oculto ? '' : 'none';
-                this.innerHTML = oculto
-                    ? '<i class="fa fa-times"></i> Ocultar transferencia'
-                    : '<i class="fa fa-exchange"></i> Nueva transferencia';
+            // Mostrar el formulario de transferencia y ocultar la tabla de movimientos
+            const panelTransferencia = document.getElementById('panel-transferencia');
+            const tablaMovimientos = document.getElementById('movimientos-tabla-wrap');
+            const btnTransferencia = document.getElementById('btn-transferencia');
+
+            function alternarTransferencia(mostrar) {
+                const abrir = mostrar === undefined
+                    ? panelTransferencia.style.display === 'none'
+                    : mostrar;
+
+                panelTransferencia.style.display = abrir ? '' : 'none';
+                tablaMovimientos.style.display = abrir ? 'none' : '';
+                btnTransferencia.innerHTML = abrir
+                    ? '<i class="fa fa-list"></i> Ver movimientos'
+                    : '<i class="fa fa-exchange"></i> Nuevo traslado';
+            }
+
+            btnTransferencia.addEventListener('click', function() {
+                alternarTransferencia();
             });
 
             // Confirmación de stock para productos con seguimiento estricto
@@ -551,6 +564,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     Alerta.mostrar('success', json.message);
                     form.reset(); // Opcional: limpia el formulario
                     cargarMovimientos();
+                    alternarTransferencia(false);
                 } else {
                     Alerta.mostrar('warning', 'Hubo un problema ' + json.message);
                 }

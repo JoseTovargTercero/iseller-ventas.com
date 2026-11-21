@@ -1097,7 +1097,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 width: 100%;
                 border-collapse: collapse;
                 font-size: 12px;
-                min-width: 620px;
+                min-width: 700px;
             }
 
             .mov-summary th {
@@ -1154,13 +1154,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 color: #475569;
             }
 
-            .mov-summary .net-pos {
-                color: #34d399;
-                font-weight: 700;
-            }
-
-            .mov-summary .net-neg {
-                color: #f87171;
+            .mov-summary .stock-now {
+                color: #2dd4bf;
                 font-weight: 700;
             }
 
@@ -1897,6 +1892,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <i class="fa fa-info-circle"></i>
                                     Arrastra los encabezados o usa ‹ › para reordenar las sucursales.
                                     Los botones C / V / T / M activan o desactivan los KPIs y movimientos de esa sucursal.
+                                    La columna <strong>Stock actual</strong> muestra la existencia de hoy y no depende del período.
                                 </p>
                             </div>
                         </div>
@@ -2776,6 +2772,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             id: id,
                             nombre: String(s.nombre || ('Sucursal #' + id)),
                             principal: !!s.principal,
+                            stock: Number(s.stock) || 0,
                             color: colorSucursal(id)
                         });
                     });
@@ -2789,6 +2786,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 id: key,
                                 nombre: String(nombre || ('Sucursal #' + key)),
                                 principal: false,
+                                stock: 0,
                                 color: colorSucursal(key)
                             });
                         };
@@ -3140,7 +3138,6 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         const tOn = MG.tipos.traslado && !oculto(id, 'traslado');
                         const mOn = MG.tipos.merma && !oculto(id, 'merma');
                         const netoTraslado = t.trasladoIn - t.trasladoOut;
-                        const neto = t.compra + t.trasladoIn - t.venta - t.trasladoOut - t.merma;
 
                         return `<tr>
                             <td><span class="suc-name"><span class="suc-dot" style="--lane:${s.color}"></span>${esc(s.nombre)}</span></td>
@@ -3148,7 +3145,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <td>${valor(t.venta, vOn)}</td>
                             <td title="Entradas: ${num(t.trasladoIn)} · Salidas: ${num(t.trasladoOut)}">${tOn ? ((netoTraslado > 0 ? '+' : '') + num(netoTraslado)) : '<span class="kpi-off">—</span>'}</td>
                             <td>${valor(t.merma, mOn)}</td>
-                            <td class="${neto >= 0 ? 'net-pos' : 'net-neg'}">${neto > 0 ? '+' : ''}${num(neto)}</td>
+                            <td class="stock-now" title="Existencia actual en la sucursal">${num(s.stock || 0)}</td>
                         </tr>`;
                     }).join('');
 
@@ -3156,7 +3153,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         const t = tot.porSucursal.get(String(s.id));
                         return acc + (t ? (t.trasladoIn - t.trasladoOut) : 0);
                     }, 0);
-                    const totalNeto = tot.netoGlobal;
+                    const totalStock = MG.sucursales.reduce((acc, s) => acc + (Number(s.stock) || 0), 0);
 
                     cont.innerHTML = `<div class="mov-summary-wrap">
                         <table class="mov-summary">
@@ -3167,7 +3164,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <th>Ventas</th>
                                     <th>Traslados (neto)</th>
                                     <th>Mermas</th>
-                                    <th>Neto (${esc(MG.unidad)})</th>
+                                    <th title="Existencia actual del producto en cada sucursal">Stock actual (${esc(MG.unidad)})</th>
                                 </tr>
                             </thead>
                             <tbody>${filas}</tbody>
@@ -3178,7 +3175,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     <td>${MG.tipos.venta ? num(tot.global.venta) : '—'}</td>
                                     <td>${MG.tipos.traslado ? ((totalTrasladoNeto > 0 ? '+' : '') + num(totalTrasladoNeto)) : '—'}</td>
                                     <td>${MG.tipos.merma ? num(tot.global.merma) : '—'}</td>
-                                    <td class="${totalNeto >= 0 ? 'net-pos' : 'net-neg'}">${totalNeto > 0 ? '+' : ''}${num(totalNeto)}</td>
+                                    <td class="stock-now">${num(totalStock)}</td>
                                 </tr>
                             </tfoot>
                         </table>

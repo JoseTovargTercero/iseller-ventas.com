@@ -2,7 +2,8 @@
 /**
  * Movimiento general de un producto: compras, ventas, traslados y mermas.
  * Devuelve eventos individuales con fecha/hora y sucursal para pintarlos en
- * una línea de tiempo tipo git (una columna por sucursal).
+ * una línea de tiempo tipo git (una columna por sucursal), junto con el
+ * stock actual de cada sucursal.
  *
  * GET: id, desde (Y-m-d), hasta (Y-m-d)
  */
@@ -59,7 +60,7 @@ if (!$producto) {
 $baseId = (int) $producto['id'];
 
 $stmt = $conexion->prepare(
-    "SELECT id, nombre, unidad, cantidad_unidades, mayor
+    "SELECT id, nombre, unidad, cantidad_unidades, mayor, id_producto_relacionado
      FROM productos
      WHERE bss_id = ? AND (id = ? OR (id_producto_relacionado = ? AND mayor = '1'))"
 );
@@ -77,6 +78,7 @@ while ($fila = $resGrupo->fetch_assoc()) {
     $metaProducto[$pid] = [
         'factor' => $esMayor ? $unidades : 1.0,
         'mayor' => $esMayor,
+        'relacionado' => (int) ($fila['id_producto_relacionado'] ?? 0),
     ];
     if ($pid === $baseId) {
         $baseProducto = $fila;
@@ -97,6 +99,41 @@ $unidad = trim((string) ($productoSalida['unidad'] ?? 'UND')) ?: 'UND';
 $ids = array_map('intval', array_keys($metaProducto));
 $idsSql = implode(',', $ids);
 
+/* ── Stock actual por sucursal ────────────────────────────────────────
+   En las presentaciones al mayor la existencia real vive en el producto
+   base enlazado, así que se usan esos IDs (sin duplicarlos) y se suma el
+   stock de todas las filas de la sucursal. Se expresa en unidades base,
+   igual que las cantidades del movimiento general.                     */
+$stockIds = [];
+foreach ($metaProducto as $pid => $meta) {
+    $stockId = !empty($meta['mayor']) ? (int) ($meta['relacionado'] ?? 0) : 0;
+    if ($stockId <= 0) {
+        $stockId = (int) $pid;
+    }
+    if ($stockId > 0) {
+        $stockIds[$stockId] = true;
+    }
+}
+$stockIdsSql = implode(',', array_keys($stockIds));
+$stockPorSucursal = [];
+if ($stockIdsSql !== '') {
+    $stmt = $conexion->prepare(
+        "SELECT id_sucursal, COALESCE(SUM(CAST(stock AS DECIMAL(15,4))), 0) AS stock
+         FROM stock
+         WHERE bss_id = ? AND id_producto IN ($stockIdsSql)
+         GROUP BY id_sucursal"
+    );
+    if ($stmt) {
+        $stmt->bind_param('i', $bssId);
+        $stmt->execute();
+        $resStock = $stmt->get_result();
+        while ($fila = $resStock->fetch_assoc()) {
+            $stockPorSucursal[(int) $fila['id_sucursal']] = round((float) $fila['stock'], 4);
+        }
+        $stmt->close();
+    }
+}
+
 /* ── Sucursales del negocio (todas, aunque no tengan movimientos) ───── */
 $sucursales = [];
 $stmt = $conexion->prepare(
@@ -107,10 +144,12 @@ if ($stmt) {
     $stmt->execute();
     $resSuc = $stmt->get_result();
     while ($fila = $resSuc->fetch_assoc()) {
+        $sid = (int) $fila['id'];
         $sucursales[] = [
-            'id' => (int) $fila['id'],
+            'id' => $sid,
             'nombre' => (string) $fila['nombre'],
             'principal' => (int) ($fila['principal'] ?? 0) === 1,
+            'stock' => $stockPorSucursal[$sid] ?? 0,
         ];
     }
     $stmt->close();
