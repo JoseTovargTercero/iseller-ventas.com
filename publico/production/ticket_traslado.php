@@ -107,6 +107,13 @@ function ticket_h($texto): string
             text-align: right;
         }
 
+        .formato-impresion {
+            float: left;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 34px;
+        }
+
         .btn-imprimir,
         .btn-tabla {
             display: inline-block;
@@ -243,21 +250,6 @@ function ticket_h($texto): string
             line-height: 1.5;
         }
 
-        .firmas {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 50px;
-            margin-top: 55px;
-            font-size: 11px;
-            text-align: center;
-            color: #374151;
-        }
-
-        .firma {
-            padding-top: 7px;
-            border-top: 1px solid #111827;
-        }
-
         .error {
             max-width: 760px;
             margin: 40px auto;
@@ -269,28 +261,117 @@ function ticket_h($texto): string
             text-align: center;
         }
 
+        /* Impresora térmica de 58 mm */
+        @page {
+            size: 58mm auto;
+            margin: 0;
+        }
+
         @media print {
+            html,
             body {
+                width: 58mm;
+                margin: 0;
                 padding: 0;
                 background: #fff;
             }
 
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 9px;
+                line-height: 1.3;
+            }
+
             .acciones {
-                display: none;
+                display: none !important;
             }
 
             .ticket {
-                max-width: none;
-                padding: 0;
+                width: 48mm;
+                max-width: 48mm;
+                margin: 0 auto;
+                padding: 2mm 0;
                 border-radius: 0;
                 box-shadow: none;
             }
+
+            .ticket-head {
+                display: block;
+                padding-bottom: 1.5mm;
+                border-bottom: 1px solid #000;
+            }
+
+            .ticket-head h1 {
+                margin: 0 0 1mm;
+                font-size: 10px;
+                line-height: 1.2;
+                letter-spacing: 0;
+            }
+
+            .ticket-head p {
+                font-size: 7.5px;
+            }
+
+            .ticket-id {
+                margin-top: 1.5mm;
+                text-align: left;
+                font-size: 14px;
+                line-height: 1.1;
+            }
+
+            .ticket-id small {
+                font-size: 7px;
+            }
+
+            .datos {
+                display: block;
+                margin: 1.5mm 0;
+                font-size: 8.5px;
+            }
+
+            .dato {
+                margin-bottom: 1.2mm;
+            }
+
+            .dato strong {
+                margin-bottom: 0.3mm;
+                font-size: 7px;
+                letter-spacing: 0;
+            }
+
+            table {
+                font-size: 8.5px;
+            }
+
+            th,
+            td {
+                padding: 1mm 0.5mm;
+            }
+
+            th {
+                font-size: 7px;
+                letter-spacing: 0;
+            }
+
+            tfoot th {
+                font-size: 8.5px;
+            }
+
+            .nota {
+                margin-top: 1.5mm;
+                padding: 1.2mm;
+                border-radius: 0;
+                font-size: 7.5px;
+                line-height: 1.3;
+            }
+
         }
     </style>
 </head>
 
 <body>
     <div class="acciones">
+        <span class="formato-impresion">Formato: impresora térmica 58 mm</span>
         <?php if ($cargamento): ?>
             <a class="btn-tabla" href="transferir.php?cargamento=<?= (int) $cargamento['id'] ?>">Ver en la tabla</a>
         <?php endif; ?>
@@ -372,10 +453,6 @@ function ticket_h($texto): string
                 Artículos: <?= count($items) ?>. Unidades totales: <?= number_format($totalUnidades, 4, ',', '.') ?>.
             </div>
 
-            <div class="firmas">
-                <div class="firma">Despachado por</div>
-                <div class="firma">Recibido por</div>
-            </div>
         </div>
     <?php endif; ?>
 </body>
