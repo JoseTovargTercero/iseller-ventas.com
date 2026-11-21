@@ -85,7 +85,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 </div>
                                 <div class="x_content">
                                     <div class="row mb-3">
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-3">
                                             <label class="form-label" for="mov-filtro-producto">Producto</label>
                                             <select class="form-control" id="mov-filtro-producto">
                                                 <option value="">-- Todos --</option>
@@ -96,7 +96,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-3">
                                             <label class="form-label" for="mov-filtro-origen">Sucursal origen</label>
                                             <select class="form-control" id="mov-filtro-origen">
                                                 <option value="">-- Todas --</option>
@@ -107,7 +107,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-3">
                                             <label class="form-label" for="mov-filtro-destino">Sucursal destino</label>
                                             <select class="form-control" id="mov-filtro-destino">
                                                 <option value="">-- Todas --</option>
@@ -118,22 +118,32 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
+                                        <div class="col-lg-3">
+                                            <label class="form-label" for="mov-filtro-cargamento">ID cargamento</label>
+                                            <div style="display:flex;gap:6px;">
+                                                <input type="text" class="form-control" id="mov-filtro-cargamento" placeholder="Ej. 12 o #12">
+                                                <button type="button" class="btn btn-default" id="btn-buscar-cargamento" title="Buscar cargamento">
+                                                    <i class="fa fa-search"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="table-responsive" id="movimientos-tabla-wrap">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
                                                     <th>Fecha</th>
-                                                    <th>Tipo</th>
-                                                    <th>Cantidad</th>
+                                                    <th>Cargamento</th>
                                                     <th>Sucursal origen</th>
                                                     <th>Sucursal destino</th>
-                                                    <th>Cargamento</th>
+                                                    <th class="text-right">Artículos</th>
+                                                    <th class="text-right">Unidades</th>
                                                     <th>Motivo</th>
+                                                    <th class="text-right">Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="movimientos-body">
-                                                <tr><td colspan="7" class="text-center">Cargando movimientos...</td></tr>
+                                                <tr><td colspan="8" class="text-center">Cargando movimientos...</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -147,7 +157,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <form id='data-form'>
                                 <div class="x_panel">
                                     <div class="x_title">
-                                        <h2>Datos del Producto <small>* obligatorio</small></h2>
+                                        <h2>Datos del cargamento <small>* obligatorio</small></h2>
                                         <ul class="nav navbar-right panel_toolbox">
                                             <li>
                                                 <button type="button" id="btn-volver-movimientos" class="btn btn-default btn-sm">
@@ -268,6 +278,28 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 </div>
             </div>
         </div>
+
+        <!-- Modal: detalle del cargamento -->
+        <div class="modal fade" id="modalCargamento" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cargamento-titulo">Detalle del cargamento</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="cargamento-detalle"></div>
+                    <div class="modal-footer">
+                        <a href="#" id="btn-ticket-cargamento" class="btn btn-success" target="_blank" rel="noopener">
+                            <i class="fa fa-print"></i> Imprimir ticket
+                        </a>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <?php require('../assets/templates/modal.html'); ?>
         <!-- Bootstrap -->
         <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -323,6 +355,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }).done(function(resultado2) {
                     const $select = $("#producto");
                     $select.empty(); // Limpia opciones anteriores
+                    productoActual = null;
+                    producto_estricto = false;
+                    document.getElementById('disponible').value = '';
 
                     if (resultado2.length > 0) {
                         // Agrega las opciones recibidas
@@ -540,6 +575,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
             document.getElementById('btn-agregar-articulo').addEventListener('click', agregarArticuloCargamento);
 
+            document.getElementById('unidades_transferir').addEventListener('keydown', function(evento) {
+                if (evento.key === 'Enter') {
+                    evento.preventDefault();
+                    agregarArticuloCargamento();
+                }
+            });
+
             document.getElementById('cargamento-items-body').addEventListener('click', function(evento) {
                 const boton = evento.target.closest('.btn-quitar-item');
                 if (!boton) return;
@@ -549,44 +591,154 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 renderCargamentoItems();
             });
 
-            // Movimientos de stock con filtros por producto y sucursales
+            let CARGAMENTOS = {};
+
+            function fechaHora(valor) {
+                const texto = String(valor || '');
+                if (!texto) return '—';
+                const partes = texto.slice(0, 19).replace('T', ' ').split(/[- :]/);
+                if (partes.length < 5) return texto;
+                return partes[2] + '/' + partes[1] + '/' + partes[0] + ' ' + partes[3] + ':' + partes[4];
+            }
+
+            // Movimientos agrupados por cargamento
             function cargarMovimientos() {
                 const tbody = document.getElementById('movimientos-body');
                 const params = new URLSearchParams({
                     producto: document.getElementById('mov-filtro-producto').value,
                     origen: document.getElementById('mov-filtro-origen').value,
-                    destino: document.getElementById('mov-filtro-destino').value
+                    destino: document.getElementById('mov-filtro-destino').value,
+                    cargamento: document.getElementById('mov-filtro-cargamento').value.replace(/\D+/g, '')
                 });
+
                 fetch('../../configurar/movimientos_stock.php?' + params.toString())
                     .then(res => res.json())
                     .then(json => {
                         if (!json.ok) {
-                            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No se pudieron cargar los movimientos</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="8" class="text-center">No se pudieron cargar los movimientos</td></tr>';
                             return;
                         }
-                        if (!json.movimientos.length) {
-                            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay movimientos con los filtros seleccionados</td></tr>';
+
+                        const cargamentos = json.cargamentos || [];
+                        CARGAMENTOS = {};
+                        cargamentos.forEach(function(cargamento) {
+                            CARGAMENTOS[cargamento.grupo_id] = cargamento;
+                        });
+
+                        if (!cargamentos.length) {
+                            tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay traslados con los filtros seleccionados</td></tr>';
                             return;
                         }
-                        tbody.innerHTML = json.movimientos.map(m => `<tr>
-                            <td>${m.fecha}</td>
-                            <td>${m.tipo}</td>
-                            <td>${m.cantidad}</td>
-                            <td>${m.origen || '—'}</td>
-                            <td>${m.destino || '—'}</td>
-                            <td>${m.cargamento_id ? '#' + m.cargamento_id : '—'}</td>
-                            <td>${escHtml(m.motivo || '—')}</td>
-                        </tr>`).join('');
+
+                        tbody.innerHTML = cargamentos.map(function(cargamento) {
+                            const ticket = cargamento.cargamento_id
+                                ? '<a class="btn btn-success btn-sm" href="ticket_traslado.php?cargamento=' + cargamento.cargamento_id + '" target="_blank" rel="noopener"><i class="fa fa-print"></i> Ticket</a>'
+                                : '';
+
+                            return `<tr>
+                                <td>${fechaHora(cargamento.fecha)}</td>
+                                <td><strong>${cargamento.cargamento_id ? '#' + cargamento.cargamento_id : '—'}</strong></td>
+                                <td>${escHtml(cargamento.origen || '—')}</td>
+                                <td>${escHtml(cargamento.destino || '—')}</td>
+                                <td class="text-right">${cargamento.total_productos}</td>
+                                <td class="text-right">${formatoCantidad(cargamento.total_unidades)}</td>
+                                <td>${escHtml(cargamento.motivo || '—')}</td>
+                                <td class="text-right" style="white-space:nowrap;">
+                                    <button type="button" class="btn btn-default btn-sm" data-detalle="${cargamento.grupo_id}">
+                                        <i class="fa fa-eye"></i> Detalle
+                                    </button>
+                                    ${ticket}
+                                </td>
+                            </tr>`;
+                        }).join('');
                     })
                     .catch(err => {
                         console.error("Error al cargar movimientos:", err);
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No se pudieron cargar los movimientos</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No se pudieron cargar los movimientos</td></tr>';
                     });
             }
+
+            function abrirDetalleCargamento(grupoId) {
+                const cargamento = CARGAMENTOS[grupoId];
+                if (!cargamento) return;
+
+                document.getElementById('cargamento-titulo').textContent = cargamento.cargamento_id
+                    ? 'Cargamento #' + cargamento.cargamento_id
+                    : 'Traslado individual';
+
+                const filas = (cargamento.items || []).map(function(item) {
+                    return `<tr>
+                        <td>${escHtml(item.producto)}</td>
+                        <td class="text-right">${formatoCantidad(item.cantidad)}</td>
+                        <td>${escHtml(item.unidad || 'UND')}</td>
+                    </tr>`;
+                }).join('');
+
+                document.getElementById('cargamento-detalle').innerHTML = `
+                    <div class="row">
+                        <div class="col-sm-6 mb-2"><strong>Fecha y hora:</strong><br>${fechaHora(cargamento.fecha)}</div>
+                        <div class="col-sm-6 mb-2"><strong>Usuario:</strong><br>${escHtml(cargamento.usuario || '—')}</div>
+                        <div class="col-sm-6 mb-2"><strong>Origen:</strong><br>${escHtml(cargamento.origen || '—')}</div>
+                        <div class="col-sm-6 mb-2"><strong>Destino:</strong><br>${escHtml(cargamento.destino || '—')}</div>
+                        <div class="col-12 mb-2"><strong>Motivo:</strong><br>${escHtml(cargamento.motivo || '—')}</div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-right">Cantidad</th>
+                                    <th>Unidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filas || '<tr><td colspan="3" class="text-center text-muted">Sin artículos.</td></tr>'}</tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>Total</th>
+                                    <th class="text-right">${formatoCantidad(cargamento.total_unidades)}</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+
+                const btnTicket = document.getElementById('btn-ticket-cargamento');
+                if (cargamento.cargamento_id) {
+                    btnTicket.style.display = '';
+                    btnTicket.href = 'ticket_traslado.php?cargamento=' + cargamento.cargamento_id;
+                } else {
+                    btnTicket.style.display = 'none';
+                    btnTicket.href = '#';
+                }
+
+                $('#modalCargamento').modal('show');
+            }
+
+            document.getElementById('movimientos-body').addEventListener('click', function(evento) {
+                const boton = evento.target.closest('[data-detalle]');
+                if (!boton) return;
+                abrirDetalleCargamento(boton.dataset.detalle);
+            });
 
             ['mov-filtro-producto', 'mov-filtro-origen', 'mov-filtro-destino'].forEach(function(id) {
                 document.getElementById(id).addEventListener('change', cargarMovimientos);
             });
+
+            document.getElementById('btn-buscar-cargamento').addEventListener('click', cargarMovimientos);
+            document.getElementById('mov-filtro-cargamento').addEventListener('keydown', function(evento) {
+                if (evento.key === 'Enter') {
+                    evento.preventDefault();
+                    cargarMovimientos();
+                }
+            });
+
+            const paramsIniciales = new URLSearchParams(window.location.search);
+            const cargoInicial = paramsIniciales.get('cargamento');
+            if (cargoInicial) {
+                document.getElementById('mov-filtro-cargamento').value = cargoInicial.replace(/\D+/g, '');
+            }
+
             cargarMovimientos();
 
             // Mostrar el formulario y ocultar la card completa de movimientos
