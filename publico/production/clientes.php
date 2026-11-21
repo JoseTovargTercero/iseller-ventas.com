@@ -281,7 +281,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                     const nombreUrl = encodeURIComponent(String(row.nombre || '').trim());
                                     const urlCompras = 'compras_cliente.php?id=' + id + '&cedula=' + cedulaUrl + '&nombre=' + nombreUrl;
                                     return '<button class="btn btn-sm btn-info btn-editar-cliente" data-id="' + id + '" data-cedula="' + cedula + '" data-nombre="' + nombre + '" data-telefono="' + telefono + '" title="Editar"><i class="fa fa-pencil"></i></button> ' +
-                                        '<a class="btn btn-sm btn-success" href="' + urlCompras + '" title="Ver compras del cliente" target="_blank" rel="noopener"><i class="fa fa-shopping-bag"></i></a> ' +
+                                        '<a class="btn btn-sm btn-success" href="' + urlCompras + '" title="Ver compras del cliente"><i class="fa fa-shopping-bag"></i></a> ' +
                                         '<button class="btn btn-sm btn-danger btn-eliminar-cliente" data-id="' + id + '" title="Eliminar"><i class="fa fa-trash"></i></button>';
                                 }
                             }
