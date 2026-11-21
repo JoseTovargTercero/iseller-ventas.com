@@ -3018,7 +3018,7 @@ $stmt->close();
 
                         const esAdmin = Number(nivelUsuario) === 1;
 
-                        data.forEach(orden => {
+                        data.slice(0, 10).forEach(orden => {
                             const pendiente = Number(orden.pendiente) === 1;
                             const row = document.createElement('tr');
 

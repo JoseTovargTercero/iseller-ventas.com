@@ -281,6 +281,15 @@ try {
             if (!$padre || (int) ($padre['id_producto_relacionado'] ?? 0) > 0 || (string) ($padre['mayor'] ?? '0') === '1') {
                 var_respuesta(['ok' => false, 'message' => 'El producto base no es válido.'], 400);
             }
+
+            // La unidad y el origen ya no se piden en el formulario: se heredan del producto base.
+            if (!isset($_POST['unidad']) || trim((string) $_POST['unidad']) === '') {
+                $unidad = var_unidad((string) ($padre['unidad'] ?? 'UND'));
+            }
+            if (!isset($_POST['origen']) || trim((string) $_POST['origen']) === '') {
+                $origen = strtolower(var_texto($padre['origen'] ?? 'v', 2));
+            }
+
             if ($nombre === '') {
                 var_respuesta(['ok' => false, 'message' => 'Indique el nombre de la variación.'], 400);
             }
@@ -451,6 +460,15 @@ try {
             if (!$variacion || (int) ($variacion['id_producto_relacionado'] ?? 0) <= 0) {
                 var_respuesta(['ok' => false, 'message' => 'La variación no existe o ya fue desanclada.'], 400);
             }
+
+            // Si no se envían, se conservan la unidad y el origen actuales de la variación.
+            if (!isset($_POST['unidad']) || trim((string) $_POST['unidad']) === '') {
+                $unidad = var_unidad((string) ($variacion['unidad'] ?? 'UND'));
+            }
+            if (!isset($_POST['origen']) || trim((string) $_POST['origen']) === '') {
+                $origen = strtolower(var_texto($variacion['origen'] ?? 'v', 2));
+            }
+
             if ($nombre === '') {
                 var_respuesta(['ok' => false, 'message' => 'Indique el nombre de la variación.'], 400);
             }

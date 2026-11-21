@@ -3436,6 +3436,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (ev.tipo === 'venta' && ev.referencia) {
                             detalle = `<a href="${esc(ev.referencia)}" target="_blank" rel="noopener">${detalle}</a>`;
                         }
+                    } else if (esTraslado && ev.subtipo === 'Asignación' && ev.detalle) {
+                        // Identifica la asignación que originó el traslado.
+                        detalle = esc(ev.detalle);
                     }
 
                     const usuario = ev.usuario ? `<span title="Usuario"> · ${esc(ev.usuario)}</span>` : '';
@@ -3798,6 +3801,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (esTraslado) {
                             tipo = occ.interno ? 'Traslado' : (signo < 0 ? 'Sale' : 'Entra');
                             detalle = occ.interno ? 'interno' : (signo < 0 ? '→ ' + (ev.destino || '') : '← ' + (ev.origen || ''));
+                            // Las asignaciones también son traslados: se deja su documento en el TXT.
+                            if (ev.subtipo === 'Asignación' && ev.detalle) {
+                                detalle += ' · ' + ev.detalle;
+                            }
                         } else if (ev.detalle) {
                             detalle = String(ev.detalle);
                         }

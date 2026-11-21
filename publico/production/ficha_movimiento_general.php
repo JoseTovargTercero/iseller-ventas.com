@@ -339,14 +339,14 @@ $stmt = $conexion->prepare(
             COALESCE(a.aplicado_at, a.created_at, CONCAT(a.fecha, ' 00:00:00')) AS fecha_evento,
             d.producto_id, d.cantidad,
             a.sucursal_origen, a.sucursal_destino,
+            a.descuenta_origen, a.suma_destino,
             COALESCE(NULLIF(TRIM(u.nombre), ''), 'Sin usuario') AS usuario
      FROM asignaciones_sucursales a
      INNER JOIN asignaciones_sucursales_detalles d ON d.asignacion_id = a.id
      LEFT JOIN usuarios u ON u.id = a.usuario_id
      WHERE a.bss_id = ?
        AND a.estado = 'APLICADO'
-       AND a.descuenta_origen = 1
-       AND a.suma_destino = 1
+       AND (a.descuenta_origen = 1 OR a.suma_destino = 1)
        AND d.producto_id IN ($idsSql)
        AND COALESCE(a.aplicado_at, a.created_at, CONCAT(a.fecha, ' 00:00:00')) >= ?
        AND COALESCE(a.aplicado_at, a.created_at, CONCAT(a.fecha, ' 00:00:00')) < DATE_ADD(?, INTERVAL 1 DAY)
@@ -366,6 +366,8 @@ if ($stmt) {
         $cantidad *= $factorDe($pid);
         $origenId = (int) $fila['sucursal_origen'];
         $destinoId = (int) $fila['sucursal_destino'];
+        $mueveOrigen = (int) $fila['descuenta_origen'] === 1;
+        $mueveDestino = (int) $fila['suma_destino'] === 1;
         $documento = trim((string) ($fila['numero_documento'] ?? ''));
         $eventos[] = [
             'id' => 'asignacion-' . (int) $fila['asignacion_id'] . '-' . $pid,
@@ -379,8 +381,11 @@ if ($stmt) {
             'usuario' => (string) $fila['usuario'],
             'detalle' => 'Asignación' . ($documento !== '' ? ' ' . $documento : ''),
             'referencia' => '',
-            'origen_id' => $origenId,
-            'destino_id' => $destinoId,
+            // Solo se pinta el lado que realmente movió inventario. Así una
+            // asignación con salida de origen y sin suma en destino aparece
+            // igualmente como traslado saliente.
+            'origen_id' => $mueveOrigen ? $origenId : null,
+            'destino_id' => $mueveDestino ? $destinoId : null,
             'origen' => $nombreSucursal($origenId),
             'destino' => $nombreSucursal($destinoId),
         ];
@@ -391,14 +396,37 @@ if ($stmt) {
 /* ── Traslados manuales entre sucursales ────────────────────────────── */
 if (st_asegurar_tabla($conexion)) {
     $stmt = $conexion->prepare(
-        "SELECT id, created_at AS fecha_evento, id_producto, cantidad,
-                sucursal_origen, sucursal_destino, usuario_nombre
-         FROM stock_traslados
-         WHERE bss_id = ?
-           AND id_producto IN ($idsSql)
-           AND created_at >= ?
-           AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
-         ORDER BY created_at DESC"
+        "SELECT st.id, st.created_at AS fecha_evento, st.id_producto, st.cantidad,
+                st.sucursal_origen, st.sucursal_destino, st.usuario_nombre
+         FROM stock_traslados st
+         WHERE st.bss_id = ?
+           AND st.id_producto IN ($idsSql)
+           AND st.created_at >= ?
+           AND st.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+           /* Las asignaciones aplicadas también crean un traslado en esta
+              tabla. Se excluye aquí para no duplicarlo: el bloque de
+              asignaciones de arriba es el que lo pinta como traslado. */
+           AND NOT EXISTS (
+               SELECT 1
+               FROM asignaciones_sucursales a
+               INNER JOIN asignaciones_sucursales_detalles d ON d.asignacion_id = a.id
+               INNER JOIN productos p ON p.id = d.producto_id
+               WHERE a.bss_id = st.bss_id
+                 AND a.estado = 'APLICADO'
+                 AND a.usuario_id = st.usuario_id
+                 AND a.sucursal_origen = st.sucursal_origen
+                 AND a.sucursal_destino = st.sucursal_destino
+                 AND st.id_producto = CASE
+                         WHEN p.mayor = '1' THEN COALESCE(NULLIF(p.id_producto_relacionado, 0), p.id)
+                         ELSE p.id
+                     END
+                 AND ABS(st.cantidad - (d.cantidad * CASE
+                         WHEN p.mayor = '1' THEN GREATEST(COALESCE(p.cantidad_unidades, 1), 1)
+                         ELSE 1 END)) < 0.0001
+                 AND ABS(TIMESTAMPDIFF(SECOND, st.created_at,
+                         COALESCE(a.aplicado_at, a.created_at))) <= 30
+           )
+         ORDER BY st.created_at DESC"
     );
     if ($stmt) {
         $stmt->bind_param('iss', $bssId, $desde, $hasta);
