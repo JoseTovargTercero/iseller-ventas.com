@@ -32,6 +32,20 @@ if ($tipo_u === 1) {
     }
     $stmt->close();
 }
+
+// La sucursal ya no se elige en pantalla. Se usa la sucursal activa de la
+// sesión (o la primera disponible) solo para consultar el stock de referencia.
+$sucursalActual = (int) ($_SESSION['sucursal'] ?? 0);
+$sucursalValida = false;
+foreach ($sucursales as $s) {
+    if ((int) $s['id'] === $sucursalActual) {
+        $sucursalValida = true;
+        break;
+    }
+}
+if (!$sucursalValida) {
+    $sucursalActual = (int) ($sucursales[0]['id'] ?? 0);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -714,20 +728,13 @@ if ($tipo_u === 1) {
             </div>
 
             <div class="var-card">
+                <input type="hidden" id="sucursal" value="<?= (int) $sucursalActual ?>">
                 <div class="row g-2 align-items-end">
-                    <div class="col-lg-3 col-md-4">
-                        <label for="sucursal">Sucursal</label>
-                        <select id="sucursal" class="form-select var-input">
-                            <?php foreach ($sucursales as $s): ?>
-                                <option value="<?= (int) $s['id'] ?>"><?= htmlspecialchars($s['nombre']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-lg-6 col-md-5">
+                    <div class="col-lg-9 col-md-8">
                         <label for="padre">Producto base</label>
                         <select id="padre" class="form-select var-input"></select>
                     </div>
-                    <div class="col-lg-3 col-md-3 d-grid gap-2">
+                    <div class="col-lg-3 col-md-4 d-grid gap-2">
                         <button type="button" class="var-btn primary" id="btn-nueva">
                             <ion-icon name="add-outline"></ion-icon> Nueva variación
                         </button>
@@ -740,7 +747,7 @@ if ($tipo_u === 1) {
 
                 <div class="var-stats" id="padre-stats" style="display:none;">
                     <div class="var-stat"><span>Unidad</span><strong id="stat-unidad">—</strong></div>
-                    <div class="var-stat"><span>Stock sucursal</span><strong id="stat-stock">—</strong></div>
+                    <div class="var-stat"><span>Stock actual</span><strong id="stat-stock">—</strong></div>
                     <div class="var-stat"><span>Precio compra</span><strong id="stat-compra">—</strong></div>
                     <div class="var-stat"><span>% ganancia</span><strong id="stat-porcentaje">—</strong></div>
                     <div class="var-stat"><span>Und. por bulto</span><strong id="stat-unidades">—</strong></div>
@@ -1197,16 +1204,6 @@ if ($tipo_u === 1) {
         padreId = Number($('padre').value) || 0;
         pintarPadre();
     }
-
-    $('sucursal').addEventListener('change', async () => {
-        try {
-            status('');
-            await cargarProductos();
-            await recargarTodo();
-        } catch (e) {
-            status(e.message, true);
-        }
-    });
 
     function cambiarPadre() {
         padreId = Number($('padre').value) || 0;

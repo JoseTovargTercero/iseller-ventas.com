@@ -40,7 +40,7 @@ if ($desde > $hasta) {
     [$desde, $hasta] = [$hasta, $desde];
 }
 
-/* ── Producto y su familia (base + presentaciones al mayor) ─────────── */
+/* ── Producto y su familia (base + variaciones + presentaciones) ─────── */
 $stmt = $conexion->prepare(
     "SELECT id, nombre, unidad, cantidad_unidades, mayor, id_producto_relacionado
      FROM productos WHERE id = ? AND bss_id = ? LIMIT 1"
@@ -55,14 +55,14 @@ if (!$producto) {
     exit;
 }
 
-// Misma agrupación que la ficha: el producto consultado y sus presentaciones
-// al mayor enlazadas (no se mezclan variaciones/despiece de otros productos).
+// Misma agrupación que la ficha: el producto consultado, sus variaciones y
+// sus presentaciones al mayor enlazadas.
 $baseId = (int) $producto['id'];
 
 $stmt = $conexion->prepare(
     "SELECT id, nombre, unidad, cantidad_unidades, mayor, id_producto_relacionado
      FROM productos
-     WHERE bss_id = ? AND (id = ? OR (id_producto_relacionado = ? AND mayor = '1'))"
+     WHERE bss_id = ? AND (id = ? OR id_producto_relacionado = ?)"
 );
 $stmt->bind_param('iii', $bssId, $baseId, $baseId);
 $stmt->execute();
@@ -101,9 +101,9 @@ $idsSql = implode(',', $ids);
 
 /* ── Stock actual por sucursal ────────────────────────────────────────
    En las presentaciones al mayor la existencia real vive en el producto
-   base enlazado, así que se usan esos IDs (sin duplicarlos) y se suma el
-   stock de todas las filas de la sucursal. Se expresa en unidades base,
-   igual que las cantidades del movimiento general.                     */
+   base enlazado; las variaciones tienen su propio stock. Se usan esos IDs
+   sin duplicarlos y se suma el stock de todas las filas de la sucursal.
+   Se expresa en unidades base, igual que el movimiento general.        */
 $stockIds = [];
 foreach ($metaProducto as $pid => $meta) {
     $stockId = !empty($meta['mayor']) ? (int) ($meta['relacionado'] ?? 0) : 0;

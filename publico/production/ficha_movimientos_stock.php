@@ -36,13 +36,13 @@ if (!$producto) {
 
 $baseId = (int) $producto['id'];
 
-/* ── Producto base y presentaciones al mayor enlazadas ────────────────
-   El movimiento de stock de una presentación impacta la existencia del
-   producto base, por eso el gráfico trabaja con toda la familia.        */
+/* ── Producto base, variaciones y presentaciones al mayor enlazadas ───
+   Las ventas de una variación o presentación forman parte del movimiento
+   del producto base, por eso el gráfico trabaja con toda la familia.    */
 $stmt = $conexion->prepare(
     "SELECT id, nombre, unidad, cantidad_unidades, mayor, id_producto_relacionado
      FROM productos
-     WHERE bss_id = ? AND (id = ? OR (id_producto_relacionado = ? AND mayor = '1'))"
+     WHERE bss_id = ? AND (id = ? OR id_producto_relacionado = ?)"
 );
 $stmt->bind_param('iii', $bssId, $baseId, $baseId);
 $stmt->execute();
@@ -118,7 +118,8 @@ $sucursalId = (int) $sucursalSeleccionada['id'];
 
 /* ── Stock actual de la sucursal seleccionada ─────────────────────────
    En las presentaciones al mayor la existencia real vive en el producto
-   base enlazado; se suman los IDs sin duplicarlos.                     */
+   base enlazado; las variaciones tienen su propio stock. Se suman los IDs
+   sin duplicarlos.                                                     */
 $stockIds = [];
 foreach ($metaProducto as $pid => $meta) {
     $stockId = !empty($meta['mayor']) ? (int) ($meta['relacionado'] ?? 0) : 0;

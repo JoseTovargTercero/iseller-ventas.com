@@ -33,11 +33,11 @@ if ($desde > $hasta) {
     [$desde, $hasta] = [$hasta, $desde];
 }
 
-/* Productos al mayor enlazados: sus ventas también cuentan para el
-   producto base. La cantidad se lleva a unidades y a cajas. */
+/* Variaciones y presentaciones al mayor enlazadas: sus ventas también
+   cuentan para el producto base. La cantidad se lleva a unidades y a cajas. */
 $idsVenta = [(int) $idProducto];
 $stmtMayor = $conexion->prepare(
-    "SELECT id FROM productos WHERE bss_id = ? AND id_producto_relacionado = ? AND mayor = '1'"
+    "SELECT id FROM productos WHERE bss_id = ? AND id_producto_relacionado = ?"
 );
 $stmtMayor->bind_param('si', $bss_id, $idProducto);
 $stmtMayor->execute();

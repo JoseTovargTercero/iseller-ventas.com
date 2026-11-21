@@ -25,12 +25,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     $unidadesCaja   = max(1, (float) ($rowP['cantidad_unidades'] ?? 1));
     $esProductoMayor = ((string) ($rowP['mayor'] ?? '0')) === '1';
 
-    /* ─── Productos al mayor enlazados ─────────────────────────────
+    /* ─── Productos enlazados (variaciones y presentaciones al mayor) ──
        La ficha del producto base suma también lo vendido en sus
-       presentaciones al mayor.                                     */
+       variaciones y presentaciones al mayor.                          */
     $idsVenta = [(int) $idProducto];
     $stmtMayor = $conexion->prepare(
-        "SELECT id FROM productos WHERE bss_id = ? AND id_producto_relacionado = ? AND mayor = '1'"
+        "SELECT id FROM productos WHERE bss_id = ? AND id_producto_relacionado = ?"
     );
     $stmtMayor->bind_param('ii', $bss_id, $idProducto);
     $stmtMayor->execute();
