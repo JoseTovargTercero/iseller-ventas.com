@@ -340,6 +340,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="w-100 x_title productos-toolbar">
                                 <h2>Productos</h2>
                                 <div class="productos-toolbar-actions">
+                                    <button type="button" class="btn-print-lista" id="btn-imprimir-lista" title="Imprimir la lista de precios" aria-label="Imprimir lista de precios">
+                                        <ion-icon name="print-outline"></ion-icon>
+                                        <span>Lista de precios</span>
+                                    </button>
                                     <label class="productos-stock" title="Mostrar solo productos con stock positivo">
                                         <span class="switch">
                                             <input type="checkbox" id="switch-stock">
@@ -458,7 +462,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 // Tasas de cambio mostradas del negocio (bss_id en sesión)
                 const tasas = {
                     'cop': <?php echo json_encode((float) $pesoDolar); ?>,
-                    'bs': <?php echo json_encode((float) $bsDolar); ?>
+                    'bs': <?php echo json_encode((float) $bsDolar); ?>,
+                    'bcv': <?php echo json_encode((float) $bcv); ?>
                 };
 
                 $(document).ready(function() {
@@ -914,6 +919,267 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     llenarCategoriasProductos(grupoSel.value, categoriaActual);
                 }
 
+                // ── Impresión de la lista de precios ──────────────────────────────
+                // El aumento se aplica sobre el precio en bolívares; cuando es
+                // positivo, el dólar se recalcula como Bs / BCV con dos decimales.
+                // Los pesos se derivan de la proporción Bs/Pesos del producto y se
+                // redondean a la centena más cercana.
+                function precioParaImpresion(producto, incrementoBs) {
+                    const baseBs = Number(producto.precio_venta_bs) || 0;
+                    const baseUsd = Number(producto.precio_venta_dolar) || 0;
+                    const baseCop = Number(producto.precio_venta_peso) || 0;
+                    const bs = baseBs + incrementoBs;
+
+                    let usd = baseUsd;
+                    if (incrementoBs > 0 && Number(tasas.bcv) > 0) {
+                        usd = Math.trunc((bs / Number(tasas.bcv)) * 100) / 100;
+                    }
+
+                    let cop;
+                    if (baseBs > 0) {
+                        cop = baseCop * (bs / baseBs);
+                    } else {
+                        cop = usd * (Number(tasas.cop) || 0);
+                    }
+                    cop = Math.round(cop / 100) * 100;
+
+                    return {
+                        nombre: producto.nombre || '',
+                        categoria: producto.categoria_nombre || '',
+                        usd: usd,
+                        bs: bs,
+                        cop: cop
+                    };
+                }
+
+                function formatearUsdImpresion(valor) {
+                    return '$ ' + formatNumber((Number(valor) || 0).toFixed(2));
+                }
+
+                function formatearBsImpresion(valor) {
+                    const recortado = Math.trunc((Number(valor) || 0) * 100) / 100;
+                    return 'Bs. ' + formatNumber(recortado.toFixed(2));
+                }
+
+                function formatearCopImpresion(valor) {
+                    return formatNumber(Math.round(Number(valor) || 0)) + ' COP';
+                }
+
+                function construirHtmlImpresion(lista, opciones) {
+                    const individual = !!opciones.individual;
+                    const titulo = opciones.titulo || 'Lista de precios';
+                    const agrupar = !individual && opciones.agrupar !== false;
+                    const tarjeta = function(p) {
+                        return `<div class="pcard">
+                            <div class="pname">${escaparHtml(p.nombre)}</div>
+                            <div class="pusd">${formatearUsdImpresion(p.usd)}</div>
+                            <div class="psec">${formatearBsImpresion(p.bs)}</div>
+                            <div class="psec psec-cop">${formatearCopImpresion(p.cop)}</div>
+                        </div>`;
+                    };
+
+                    let cuerpo = '';
+                    if (agrupar) {
+                        const grupos = new Map();
+                        lista.forEach(function(p) {
+                            const clave = p.categoria || 'Sin categoría';
+                            if (!grupos.has(clave)) grupos.set(clave, []);
+                            grupos.get(clave).push(p);
+                        });
+                        Array.from(grupos.keys()).sort(function(a, b) {
+                            return a.localeCompare(b, 'es');
+                        }).forEach(function(categoria) {
+                            cuerpo += `<div class="pcat">${escaparHtml(categoria)}</div>`;
+                            cuerpo += `<div class="pgrid">${grupos.get(categoria).map(tarjeta).join('')}</div>`;
+                        });
+                    } else {
+                        cuerpo = `<div class="pgrid${individual ? ' single' : ''}">${lista.map(tarjeta).join('')}</div>`;
+                    }
+
+                    const fecha = new Date().toLocaleDateString('es-VE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+
+                    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>${escaparHtml(titulo)}</title>
+<style>
+    @page { size: A4 portrait; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
+    header { text-align: center; margin-bottom: 16px; }
+    h1 { margin: 0 0 3px; font-size: 20px; letter-spacing: .02em; }
+    .meta { font-size: 11px; color: #666; }
+    .pcat { margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #222; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; break-after: avoid; }
+    .pcat:first-child { margin-top: 0; }
+    .pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
+    .pgrid.single { grid-template-columns: minmax(0, 320px); justify-content: center; }
+    .pcard { padding: 10px 12px; border: 1px solid #d8d8d8; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
+    .pname { min-height: 30px; margin-bottom: 5px; font-size: 12px; font-weight: 700; line-height: 1.25; }
+    .pusd { font-size: 20px; font-weight: 800; line-height: 1.05; }
+    .psec { margin-top: 4px; font-size: 10px; font-weight: 500; color: #555; line-height: 1.35; }
+    .psec-cop { margin-top: 1px; }
+    .note { margin-top: 16px; text-align: right; font-size: 9px; color: #777; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+    <header>
+        <h1>${escaparHtml(titulo)}</h1>
+        <div class="meta">${fecha} &middot; ${lista.length} producto${lista.length === 1 ? '' : 's'}</div>
+    </header>
+    ${cuerpo}
+    <div class="note">Precios expresados en USD, bolívares (Bs.) y pesos colombianos (COP).</div>
+    <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); }; window.onafterprint = function () { window.close(); };<\/script>
+</body>
+</html>`;
+                }
+
+                function imprimirPrecios(lista, opciones) {
+                    if (!lista.length) {
+                        Alerta.toast('warning', 'No hay productos para imprimir.');
+                        return;
+                    }
+                    const ventana = window.open('', '_blank', 'width=900,height=720');
+                    if (!ventana) {
+                        Alerta.toast('error', 'El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e intenta de nuevo.');
+                        return;
+                    }
+                    ventana.document.open();
+                    ventana.document.write(construirHtmlImpresion(lista, opciones || {}));
+                    ventana.document.close();
+                }
+
+                function imprimirPrecioIndividual(id) {
+                    const producto = productos[id];
+                    if (!producto) return;
+                    imprimirPrecios([precioParaImpresion(producto, 0)], {
+                        titulo: producto.nombre || 'Precio',
+                        individual: true
+                    });
+                }
+
+                async function abrirModalImpresionPrecios() {
+                    const catalogo = Object.values(productos).filter(Boolean);
+                    if (!catalogo.length) {
+                        Alerta.toast('warning', 'No hay productos cargados para imprimir.');
+                        return;
+                    }
+
+                    const categorias = Array.from(new Set(catalogo.map(function(p) {
+                        return p.categoria_nombre;
+                    }).filter(Boolean))).sort(function(a, b) {
+                        return a.localeCompare(b, 'es');
+                    });
+
+                    const categoriaActual = document.getElementById('categoria-selector')?.value || '';
+                    const stockInicial = document.getElementById('switch-stock')?.checked ? 'checked' : '';
+                    const opcionesCategoria = ['<option value="">Todas las categorías</option>']
+                        .concat(categorias.map(function(c) {
+                            return '<option value="' + escaparHtml(c) + '"' + (c === categoriaActual ? ' selected' : '') + '>' + escaparHtml(c) + '</option>';
+                        }))
+                        .join('');
+
+                    const resultado = await Swal.fire({
+                        title: 'Imprimir lista de precios',
+                        width: 460,
+                        html: `
+                            <div class="print-config">
+                                <label class="print-check">
+                                    <input type="checkbox" id="print-solo-stock" ${stockInicial}>
+                                    <span>Solo productos con stock positivo</span>
+                                </label>
+
+                                <div class="print-field">
+                                    <label for="print-incremento">Aumentar al precio en bolívares</label>
+                                    <div class="print-input-wrap">
+                                        <span class="print-prefix">Bs.</span>
+                                        <input type="text" id="print-incremento" inputmode="decimal" autocomplete="off" placeholder="0,00">
+                                    </div>
+                                    <small>Si el aumento es mayor que cero, el precio en dólares se recalcula como Bs ÷ BCV, limitado a dos decimales.</small>
+                                </div>
+
+                                <div class="print-field">
+                                    <label for="print-categoria">Categoría a imprimir</label>
+                                    <select id="print-categoria">${opcionesCategoria}</select>
+                                </div>
+
+                                <div class="print-resumen" id="print-resumen"></div>
+                            </div>`,
+                        showCancelButton: true,
+                        confirmButtonText: 'Imprimir',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#2dd4a0',
+                        focusConfirm: false,
+                        didOpen: function() {
+                            const input = document.getElementById('print-incremento');
+                            const soloStock = document.getElementById('print-solo-stock');
+                            const categoria = document.getElementById('print-categoria');
+                            const resumen = document.getElementById('print-resumen');
+
+                            input.addEventListener('input', function() {
+                                const partes = this.value.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.');
+                                this.value = partes.length > 2 ? partes.shift() + '.' + partes.join('') : partes.join('.');
+                            });
+
+                            const actualizarResumen = function() {
+                                const n = catalogo.filter(function(p) {
+                                    if (soloStock.checked && !(parseFloat(String(p.stock).replace(',', '.')) > 0)) return false;
+                                    if (categoria.value && (p.categoria_nombre || '') !== categoria.value) return false;
+                                    return true;
+                                }).length;
+                                resumen.innerHTML = 'Se imprimirán <b>' + n + '</b> producto' + (n === 1 ? '' : 's') + '.';
+                            };
+
+                            [input, soloStock, categoria].forEach(function(el) {
+                                el.addEventListener('input', actualizarResumen);
+                                el.addEventListener('change', actualizarResumen);
+                            });
+                            actualizarResumen();
+                        },
+                        preConfirm: function() {
+                            const incremento = parseFloat(String(document.getElementById('print-incremento').value).replace(',', '.')) || 0;
+                            return {
+                                soloStock: document.getElementById('print-solo-stock').checked,
+                                incremento: Math.max(0, incremento),
+                                categoria: document.getElementById('print-categoria').value
+                            };
+                        }
+                    });
+
+                    if (!resultado.isConfirmed || !resultado.value) return;
+
+                    const config = resultado.value;
+                    let lista = catalogo.slice();
+                    if (config.soloStock) {
+                        lista = lista.filter(function(p) {
+                            return parseFloat(String(p.stock).replace(',', '.')) > 0;
+                        });
+                    }
+                    if (config.categoria) {
+                        lista = lista.filter(function(p) {
+                            return (p.categoria_nombre || '') === config.categoria;
+                        });
+                    }
+
+                    if (!lista.length) {
+                        Alerta.toast('warning', 'No hay productos que coincidan con los filtros seleccionados.');
+                        return;
+                    }
+
+                    const listaPrecios = lista.map(function(p) {
+                        return precioParaImpresion(p, config.incremento);
+                    });
+                    imprimirPrecios(listaPrecios, {
+                        titulo: config.categoria || 'Lista de precios',
+                        agrupar: !config.categoria
+                    });
+                }
+
                 // El stock puede llegar con varios decimales: se muestran como máximo dos
                 // (los enteros se dejan tal cual y no se pierde el valor real en data-stock).
                 function formatearStock(valor) {
@@ -942,6 +1208,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 if (data.status === "success") {
                                     // Limpia la tabla antes de insertar nuevos datos
                                     tabla.clear();
+                                    // El catálogo en memoria también se reinicia: al cambiar de
+                                    // sucursal no deben quedar productos de la carga anterior.
+                                    productos = [];
 
                                     // Agrega fila por fila
                                     data.data.forEach(row => {
@@ -965,6 +1234,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                                     <button type="button" class="accion-item btn-edit" data-id="${row.id}"><i class="icon-gray line icon-pencil"></i><span>Editar</span></button>
                                                     <button type="button" class="accion-item btn-tasas-producto" data-id="${row.id}"><ion-icon name="swap-horizontal-outline"></ion-icon><span>Tasas personalizadas</span>${tasasBadge}</button>
                                                     <button type="button" class="accion-item btn-foto-google" data-id="${row.id}"><ion-icon name="logo-google"></ion-icon><span>Buscar foto</span></button>
+                                                    <button type="button" class="accion-item btn-print-precio" data-id="${row.id}"><ion-icon name="print-outline"></ion-icon><span>Imprimir precio</span></button>
                                                     ${fichaItem}
                                                     <button type="button" class="accion-item accion-danger btn-delete" data-stock_id="${row.stock_id}" data-id="${row.id}"><i class="icon-gray line icon-trash"></i><span>Eliminar</span></button>
                                                 </div>
@@ -1035,6 +1305,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                 $(document).ready(function() {
                     cargarProductos($('#sucursal-selector').val());
+                    const btnImprimirLista = document.getElementById('btn-imprimir-lista');
+                    if (btnImprimirLista) btnImprimirLista.addEventListener('click', abrirModalImpresionPrecios);
                     $('#sucursal-selector').on('change', function() {
                         cargarProductos(this.value);
                     });
@@ -1157,6 +1429,12 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const btnTasasProducto = event.target.closest('.btn-tasas-producto');
                     if (btnTasasProducto) {
                         abrirTasasProducto(btnTasasProducto.getAttribute('data-id'));
+                        return;
+                    }
+
+                    const btnPrintPrecio = event.target.closest('.btn-print-precio');
+                    if (btnPrintPrecio) {
+                        imprimirPrecioIndividual(btnPrintPrecio.getAttribute('data-id'));
                         return;
                     }
 
@@ -2326,6 +2604,150 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     cursor: pointer;
                 }
 
+                /* Botón "Imprimir lista de precios" */
+                .btn-print-lista {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex: 0 0 auto;
+                    padding: 7px 12px;
+                    border: 1px solid rgba(45, 212, 160, .35);
+                    border-radius: 8px;
+                    background: rgba(45, 212, 160, .1);
+                    color: var(--dash-mint, #2dd4a0);
+                    font-size: 12px;
+                    font-weight: 600;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    cursor: pointer;
+                    transition: background .2s, border-color .2s, color .2s;
+                }
+
+                .btn-print-lista ion-icon {
+                    font-size: 15px;
+                }
+
+                .btn-print-lista:hover {
+                    background: rgba(45, 212, 160, .18);
+                    border-color: var(--dash-mint, #2dd4a0);
+                }
+
+                /* ── Modal: configuración de la lista de precios ── */
+                .print-config {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    text-align: left;
+                }
+
+                .print-config .print-check {
+                    display: flex;
+                    align-items: center;
+                    gap: 9px;
+                    margin: 0;
+                    padding: 10px 12px;
+                    border: 1px solid #2e353e;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, .03);
+                    color: #e8edf2;
+                    font-size: 12.5px;
+                    font-weight: 500;
+                    cursor: pointer;
+                }
+
+                .print-config .print-check input {
+                    width: 16px;
+                    height: 16px;
+                    margin: 0;
+                    accent-color: #2dd4a0;
+                    cursor: pointer;
+                }
+
+                .print-config .print-field label {
+                    display: block;
+                    margin-bottom: 5px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: .04em;
+                    text-transform: uppercase;
+                    color: #8a9ab5;
+                }
+
+                .print-config .print-input-wrap {
+                    display: flex;
+                    align-items: stretch;
+                    border: 1px solid #2e353e;
+                    border-radius: 8px;
+                    background: #12151a;
+                    overflow: hidden;
+                }
+
+                .print-config .print-prefix {
+                    display: flex;
+                    align-items: center;
+                    padding: 0 10px;
+                    border-right: 1px solid #2e353e;
+                    color: #8a9ab5;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+
+                .print-config .print-input-wrap input {
+                    flex: 1 1 auto;
+                    min-width: 0;
+                    padding: 9px 10px;
+                    border: 0;
+                    background: transparent;
+                    color: #e8edf2;
+                    font-size: 13px;
+                }
+
+                .print-config .print-input-wrap input:focus {
+                    outline: none;
+                }
+
+                .print-config .print-input-wrap:focus-within {
+                    border-color: #2dd4a0;
+                    box-shadow: 0 0 0 3px rgba(45, 212, 160, .12);
+                }
+
+                .print-config select {
+                    width: 100%;
+                    padding: 9px 10px;
+                    border: 1px solid #2e353e;
+                    border-radius: 8px;
+                    background: #12151a;
+                    color: #e8edf2;
+                    font-size: 13px;
+                }
+
+                .print-config select:focus {
+                    outline: none;
+                    border-color: #2dd4a0;
+                    box-shadow: 0 0 0 3px rgba(45, 212, 160, .12);
+                }
+
+                .print-config small {
+                    display: block;
+                    margin-top: 5px;
+                    font-size: 10.5px;
+                    line-height: 1.45;
+                    color: #8a9ab5;
+                }
+
+                .print-config .print-resumen {
+                    padding: 8px 12px;
+                    border: 1px solid rgba(45, 212, 160, .25);
+                    border-radius: 8px;
+                    background: rgba(45, 212, 160, .08);
+                    font-size: 11.5px;
+                    color: #2dd4a0;
+                }
+
+                .print-config .print-resumen b {
+                    color: #e8edf2;
+                }
+
                 .alerta-estricto {
                     display: flex;
                     align-items: center;
@@ -2391,6 +2813,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
 
                     .productos-toolbar-cat-search {
                         flex: 1 1 290px;
+                    }
+
+                    /* En pantallas medianas el botón queda solo con el icono */
+                    .btn-print-lista {
+                        padding: 7px 9px;
+                    }
+
+                    .btn-print-lista span {
+                        display: none;
                     }
                 }
 

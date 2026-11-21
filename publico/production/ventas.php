@@ -2427,6 +2427,24 @@ $stmt->close();
                                     <input type="text" id="telefonoClienteModal" class="form-control"
                                         placeholder="Telefono del cliente" maxlength="11" minlength="11">
                                 </div>
+
+                                <div id="seguimientoCreditoWrap" class="d-none">
+                                    <div class="mb-3">
+                                        <label class="d-flex align-items-center" for="seguimientoEstrictoCredito"
+                                            style="cursor:pointer;gap:8px;margin-bottom:0;">
+                                            <input type="checkbox" id="seguimientoEstrictoCredito"
+                                                style="width:16px;height:16px;margin:0;accent-color:var(--dash-mint);">
+                                            <span>Seguimiento estricto</span>
+                                        </label>
+                                        <small class="text-muted d-block" style="font-weight:400;margin-top:4px;">
+                                            Al activarlo se pedirá la fecha límite para pagar el crédito.
+                                        </small>
+                                    </div>
+                                    <div class="mb-3 d-none" id="fechaLimiteCreditoWrap">
+                                        <label for="fechaLimiteCredito">Fecha límite para pagar el crédito</label>
+                                        <input type="date" id="fechaLimiteCredito" class="form-control">
+                                    </div>
+                                </div>
                             </section>
                             </div><!-- /pasoDespacho1 -->
 
@@ -3472,6 +3490,37 @@ $stmt->close();
 
             let modalDespacho = null;
 
+            function fechaLocalISO() {
+                const hoy = new Date();
+                const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+                const dia = String(hoy.getDate()).padStart(2, '0');
+                return `${hoy.getFullYear()}-${mes}-${dia}`;
+            }
+
+            function actualizarSeguimientoCredito() {
+                const check = document.getElementById('seguimientoEstrictoCredito');
+                const wrap = document.getElementById('fechaLimiteCreditoWrap');
+                const fecha = document.getElementById('fechaLimiteCredito');
+                const activo = !!(check && check.checked);
+
+                if (wrap) wrap.classList.toggle('d-none', !activo);
+                if (fecha) {
+                    fecha.required = activo;
+                    if (activo && !fecha.min) fecha.min = fechaLocalISO();
+                }
+            }
+
+            function resetSeguimientoCredito() {
+                const check = document.getElementById('seguimientoEstrictoCredito');
+                const fecha = document.getElementById('fechaLimiteCredito');
+                if (check) check.checked = false;
+                if (fecha) {
+                    fecha.value = '';
+                    fecha.min = fechaLocalISO();
+                }
+                actualizarSeguimientoCredito();
+            }
+
             function confirmarVenta(tipo = 'venta') {
                 // 1. Reglas comunes ───────────────────────────────────────────────
                 if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
@@ -3508,18 +3557,22 @@ $stmt->close();
                 document.getElementById('nombreClienteModal').value = '';
                 document.getElementById('telefonoClienteModal').value = '';
 
+                const seguimientoWrap = document.getElementById('seguimientoCreditoWrap');
+
                 if (esCredito) {
                     setTimeout(() => document.getElementById('cedulaClienteModal').focus(), 500);
 
                     cliente_section.classList.remove('d-none'); // muestra la seccion de datos del cliente
                     metodo_pago_section.classList.add('d-none'); // oculta la seccion tipo de pago
                     tipo_despacho.value = '2';
+                    if (seguimientoWrap) seguimientoWrap.classList.remove('d-none');
 
                 } else {
                     document.getElementById('metodoPago').value = '';
                     //    setTimeout(() => document.getElementById('metodoPago').focus(), 500);
                     metodo_pago_section.classList.remove('d-none'); // muestra la seccion de tipo de pago
                     tipo_despacho.value = '1';
+                    if (seguimientoWrap) seguimientoWrap.classList.add('d-none');
 
 
                     if (registro_clientes == 1) {
@@ -3528,6 +3581,8 @@ $stmt->close();
                         cliente_section.classList.add('d-none'); // Oculta la vista de datos del cliente al momento de vender si la configuracion esta desactivada
                     }
                 }
+
+                resetSeguimientoCredito();
 
 
                 document.getElementById('resumenPesos').textContent = formatearMiles(total_pesos);
@@ -3671,6 +3726,11 @@ $stmt->close();
                     }
                 }); // Enivar el formulario cuando se presiona enter en el select de pago
 
+                const checkSeguimientoCredito = document.getElementById('seguimientoEstrictoCredito');
+                if (checkSeguimientoCredito) {
+                    checkSeguimientoCredito.addEventListener('change', actualizarSeguimientoCredito);
+                }
+
                 // Mover el panel de fracciones al paso 2 del wizard
                 const paso2 = document.getElementById('pasoDespacho2');
                 const panelFrac = document.getElementById('seccionFraccionado');
@@ -3769,16 +3829,38 @@ $stmt->close();
                         const result = indicadorCampoVacio(campo, nombreCampo);
 
                         if (!result) {
+                            btnConfirmarDespacho.disabled = false;
                             return; // Detiene la ejecución completa de la función donde se encuentre este código
                         }
                     }
                     // Verificas los datos
 
+                    const checkSeguimiento = document.getElementById('seguimientoEstrictoCredito');
+                    const fechaLimiteInput = document.getElementById('fechaLimiteCredito');
+                    const usaSeguimiento = !!(checkSeguimiento && checkSeguimiento.checked);
+                    const fechaLimite = fechaLimiteInput ? fechaLimiteInput.value.trim() : '';
+
+                    if (usaSeguimiento) {
+                        if (!fechaLimite) {
+                            Swal.fire('Fecha límite requerida', 'Indica la fecha límite para pagar el crédito.', 'error');
+                            btnConfirmarDespacho.disabled = false;
+                            return;
+                        }
+
+                        if (fechaLimite < fechaLocalISO()) {
+                            Swal.fire('Fecha inválida', 'La fecha límite no puede ser anterior a hoy.', 'error');
+                            btnConfirmarDespacho.disabled = false;
+                            return;
+                        }
+                    }
+
                     if (modalDespacho) modalDespacho.hide(); // Ocultas el modal
                     procesarPedido('0', 2, {
                         nombre: nombre,
                         cedula: cedula,
-                        telefono: telefo
+                        telefono: telefo,
+                        seguimiento_estricto: usaSeguimiento ? 1 : 0,
+                        fecha_limite: usaSeguimiento ? fechaLimite : ''
                     }); // envias el pedido
                 } // Valida los datos del credito
 
@@ -5264,7 +5346,9 @@ $stmt->close();
                 const datosCliente = {
                     nombre: cliente.nombre || "",
                     cedula: cliente.cedula || "",
-                    telefono: cliente.telefono || ""
+                    telefono: cliente.telefono || "",
+                    seguimiento_estricto: Number(cliente.seguimiento_estricto) === 1 ? 1 : 0,
+                    fecha_limite: cliente.fecha_limite || ""
                 };
 
                 let valorFinalBs = 0;
@@ -5561,6 +5645,19 @@ $stmt->close();
                             valido: false,
                             error: `Pedido [ID: ${pedido.id}]: El nombre del cliente es obligatorio para ventas a crédito.`
                         };
+                    }
+
+                    if (Number(datosCliente.seguimiento_estricto) === 1) {
+                        const fechaLimite = String(datosCliente.fecha_limite || '').trim();
+                        const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(fechaLimite) &&
+                            !isNaN(new Date(fechaLimite + 'T00:00:00').getTime());
+
+                        if (!fechaValida) {
+                            return {
+                                valido: false,
+                                error: `Pedido [ID: ${pedido.id}]: La fecha límite es obligatoria con seguimiento estricto.`
+                            };
+                        }
                     }
                 }
 

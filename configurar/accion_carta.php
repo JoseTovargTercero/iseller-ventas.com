@@ -11,6 +11,7 @@ require("_tasas_cambio.php");
 require_once("_resumen_mensual.php");
 require_once("_canal.php");
 require_once("_clientes.php");
+require_once("_creditos.php");
 
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
@@ -128,8 +129,12 @@ function logErrorVenta()
 
 function procesarCarritos()
 {
-    $pedidos = $_REQUEST['pedidos'];
     global $conexion;
+
+    // DDL fuera de la transacción de venta: el ALTER TABLE hace commit implícito.
+    credito_asegurar_columnas($conexion);
+
+    $pedidos = $_REQUEST['pedidos'];
     // recorre pedidos, cada pedido es un carrito. que posee un 'metodoPago', despacho (puede se placeOrder o placeOrderCredito), y un array de productos
     $pedidos = json_decode($pedidos, true);
     if (empty($pedidos)) {
@@ -635,12 +640,41 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         if ($tipo === 'credito') {
             $nombreC = $cliente['nombre'] ?? '';
             $cedulaC = $cliente['cedula'] ?? '';
+            $seguimientoC = !empty($cliente['seguimiento_estricto']) ? 1 : 0;
+            $fechaLimiteC = null;
+
+            if ($seguimientoC === 1) {
+                $fechaLimiteRaw = trim((string) ($cliente['fecha_limite'] ?? ''));
+                $fechaLimiteObj = DateTime::createFromFormat('Y-m-d', $fechaLimiteRaw);
+
+                if (!$fechaLimiteObj || $fechaLimiteObj->format('Y-m-d') !== $fechaLimiteRaw) {
+                    throw new Exception('Indique una fecha límite válida para el crédito.');
+                }
+
+                $fechaLimiteC = $fechaLimiteRaw;
+            }
 
             $stmtC = $conexion->prepare("
-                INSERT INTO creditos (order_id, total_price, total_price_bs, total_price_cop, negocio, tipoCompra, bss_id, sucursal_id, cedula)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO creditos (
+                    order_id, total_price, total_price_bs, total_price_cop, negocio,
+                    tipoCompra, bss_id, sucursal_id, cedula, seguimiento_estricto, fecha_limite
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmtC->bind_param("idssssiii", $orderID, $valorFinalVenta, $precioBs, $precioCop, $nombreC, $compraTipo, $bss_id, $id_sucursal, $cedulaC);
+            $stmtC->bind_param(
+                "idssssiiiis",
+                $orderID,
+                $valorFinalVenta,
+                $precioBs,
+                $precioCop,
+                $nombreC,
+                $compraTipo,
+                $bss_id,
+                $id_sucursal,
+                $cedulaC,
+                $seguimientoC,
+                $fechaLimiteC
+            );
             $stmtC->execute();
             $stmtC->close();
         }

@@ -11,10 +11,10 @@ if (!$esAdmin && !in_array('deudas_sucursales.php', $_SESSION['permisos'] ?? [],
 }
 
 $topnav = topnav();
-$sucursales = asig_listar_sucursales($conexion, (int) $bss_id);
-if (!$esAdmin) {
-    $sucursales = array_values(array_filter($sucursales, static fn($s) => (int) $s['id'] === $sucursalSesion));
-}
+$sucursalesTodas = asig_listar_sucursales($conexion, (int) $bss_id);
+$sucursalesFiltro = $esAdmin
+    ? $sucursalesTodas
+    : array_values(array_filter($sucursalesTodas, static fn($s) => (int) $s['id'] === $sucursalSesion));
 $hoy = date('Y-m-d');
 $bcvActual = isset($bcv) ? (float) $bcv : 0;
 $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
@@ -33,10 +33,91 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             padding: 24px 28px !important;
         }
 
-        .d-panel-body {
-            padding: 18px 20px;
+        .d-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
         }
 
+        .d-stat {
+            position: relative;
+            border: 1px solid var(--dash-border);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, .02);
+            padding: 16px 18px;
+            overflow: hidden;
+        }
+
+        .d-stat::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--stat-color, var(--dash-mint));
+        }
+
+        .d-stat span {
+            display: block;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .45px;
+            text-transform: uppercase;
+            color: var(--dash-text-muted);
+            margin-bottom: 7px;
+        }
+
+        .d-stat strong {
+            display: block;
+            font-size: 23px;
+            font-weight: 700;
+            color: var(--dash-text);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+
+        .d-stat small {
+            display: block;
+            font-size: 11.5px;
+            color: var(--dash-text-muted);
+            margin-top: 5px;
+        }
+
+        .d-stat.original {
+            --stat-color: #5b9cf5;
+        }
+
+        .d-stat.abonado {
+            --stat-color: var(--dash-mint);
+        }
+
+        .d-stat.saldo {
+            --stat-color: #f5b45b;
+        }
+
+        .d-stat.excedente {
+            --stat-color: #b18cff;
+        }
+
+        .d-filters {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        .d-filter {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 160px;
+        }
+
+        .d-filter label,
         .d-label {
             font-size: 10.5px;
             font-weight: 700;
@@ -75,37 +156,6 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
         .d-textarea {
             min-height: 72px;
             resize: vertical;
-        }
-
-        .d-pay-form {
-            border: 1px solid var(--dash-border);
-            border-radius: 11px;
-            padding: 16px;
-            background: rgba(45, 212, 160, .025);
-            margin: 0;
-        }
-
-        .d-pay-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .d-field {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .d-form-actions {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 16px;
-            padding-top: 14px;
-            border-top: 1px solid var(--dash-border);
         }
 
         .d-btn {
@@ -160,71 +210,37 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             box-shadow: none;
         }
 
-        .d-info {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-
-        .d-info-cell {
+        .d-icon-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 8px;
             border: 1px solid var(--dash-border);
-            border-radius: 9px;
-            padding: 10px 12px;
-            background: rgba(255, 255, 255, .02);
-        }
-
-        .d-info-cell span {
-            display: block;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: .4px;
+            background: transparent;
             color: var(--dash-text-muted);
-            margin-bottom: 3px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .18s ease;
+            text-decoration: none;
         }
 
-        .d-info-cell strong {
-            font-size: 14px;
-            color: var(--dash-text);
-            font-variant-numeric: tabular-nums;
+        .d-icon-btn:hover {
+            color: var(--dash-mint);
+            border-color: rgba(45, 212, 160, .5);
+            background: rgba(45, 212, 160, .06);
+            text-decoration: none;
         }
 
-        .d-info-msg {
-            grid-column: 1 / -1;
-            padding: 10px 12px;
-            border: 1px dashed var(--dash-border);
-            border-radius: 9px;
-            color: var(--dash-text-muted);
-            font-size: 12.5px;
-            background: rgba(255, 255, 255, .02);
-        }
-
-        .d-info-msg.error {
+        .d-icon-btn.danger:hover {
             color: #ef5a6f;
-            border-color: rgba(239, 90, 111, .35);
-            background: rgba(239, 90, 111, .05);
+            border-color: rgba(239, 90, 111, .5);
+            background: rgba(239, 90, 111, .06);
         }
 
-        .d-empty {
-            padding: 44px 20px;
-            text-align: center;
-            color: var(--dash-text-muted);
-        }
-
-        .d-empty ion-icon {
-            font-size: 40px;
-            opacity: .35;
-        }
-
-        .d-empty h5 {
-            color: var(--dash-text);
-            font-size: 15px;
-            margin: 12px 0 4px;
-        }
-
-        .d-empty p {
-            margin: 0;
-            font-size: 12.5px;
+        .d-icon-btn ion-icon {
+            font-size: 16px;
         }
 
         .d-table-wrap {
@@ -234,7 +250,6 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
 
         .d-table {
             width: 100%;
-            min-width: 880px;
             border-collapse: collapse;
             font-size: 13px;
         }
@@ -291,6 +306,55 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             word-break: break-word;
         }
 
+        .d-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .25px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .d-badge-pendiente {
+            background: rgba(245, 180, 91, .12);
+            color: #f5b45b;
+        }
+
+        .d-badge-parcial {
+            background: rgba(91, 156, 245, .12);
+            color: #5b9cf5;
+        }
+
+        .d-badge-pagada {
+            background: rgba(45, 212, 160, .12);
+            color: var(--dash-mint);
+        }
+
+        .d-empty {
+            padding: 44px 20px;
+            text-align: center;
+            color: var(--dash-text-muted);
+        }
+
+        .d-empty ion-icon {
+            font-size: 40px;
+            opacity: .35;
+        }
+
+        .d-empty h5 {
+            color: var(--dash-text);
+            font-size: 15px;
+            margin: 12px 0 4px;
+        }
+
+        .d-empty p {
+            margin: 0;
+            font-size: 12.5px;
+        }
+
         .d-modal .modal-content {
             background: #181b22;
             border: 1px solid var(--dash-border);
@@ -308,6 +372,8 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
 
         .d-modal .modal-body {
             padding: 18px 20px;
+            /* El CSS global del panel pone .modal-body como flex column;
+               eso comprimía las tablas y solo dejaba ver el thead. */
             display: block;
             flex: 1 1 auto;
             min-height: 0;
@@ -327,16 +393,92 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             text-shadow: none;
         }
 
-        .d-hist-resumen {
+        .d-detail-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
             margin-bottom: 14px;
         }
 
+        .d-detail-cell {
+            border: 1px solid var(--dash-border);
+            border-radius: 9px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, .02);
+        }
+
+        .d-detail-cell span {
+            display: block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: var(--dash-text-muted);
+            margin-bottom: 3px;
+        }
+
+        .d-detail-cell strong {
+            font-size: 13px;
+            color: var(--dash-text);
+        }
+
+        .d-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .45px;
+            color: var(--dash-text-muted);
+            margin: 18px 0 8px;
+        }
+
+        .d-summary-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(46, 53, 62, .45);
+            font-size: 12.5px;
+        }
+
+        .d-summary-line span {
+            color: var(--dash-text-muted);
+        }
+
+        .d-summary-line b {
+            color: var(--dash-text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .d-summary-line.total b {
+            color: var(--dash-mint);
+            font-size: 16px;
+        }
+
+        .d-pay-form {
+            border: 1px solid var(--dash-border);
+            border-radius: 11px;
+            padding: 14px;
+            background: rgba(45, 212, 160, .025);
+            margin-top: 8px;
+        }
+
+        .d-pay-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .d-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
         @media (max-width: 1000px) {
-            .d-info,
-            .d-hist-resumen {
+            .d-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .d-detail-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
@@ -346,29 +488,52 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                 padding: 14px 12px !important;
             }
 
-            .d-panel-body {
+            .d-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .d-stat {
+                padding: 14px 16px;
+            }
+
+            .d-filters {
                 padding: 14px;
+            }
+
+            .d-filter {
+                width: 100%;
             }
 
             .d-pay-grid {
                 grid-template-columns: 1fr;
             }
 
-            .d-pay-form {
-                padding: 13px;
+            .d-table thead {
+                display: none;
             }
 
-            .d-form-actions {
-                flex-direction: column-reverse;
-                align-items: stretch;
+            .d-table tbody tr {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px 10px;
+                padding: 12px;
+                border-bottom: 1px solid var(--dash-border);
             }
 
-            .d-form-actions .d-btn {
-                width: 100%;
+            .d-table tbody td {
+                padding: 2px 0;
+                border: none;
             }
 
-            .d-info,
-            .d-hist-resumen {
+            .d-table tbody td[data-label]::before {
+                content: attr(data-label) ': ';
+                color: var(--dash-text-muted);
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: .3px;
+            }
+
+            .d-detail-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -382,143 +547,170 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
             <?php echo $topnav ?>
 
             <div class="right_col" role="main">
-                <?php if (!$esAdmin): ?>
-                    <div class="dash-panel">
-                        <div class="d-empty">
-                            <ion-icon name="lock-closed-outline"></ion-icon>
-                            <h5>Acceso restringido</h5>
-                            <p>Solo un administrador puede registrar abonos entre sucursales.</p>
-                        </div>
+                <div class="d-stats">
+                    <div class="d-stat original">
+                        <span>Deuda original</span>
+                        <strong id="stat-original">$0.00</strong>
+                        <small id="stat-obligaciones">0 obligaciones</small>
                     </div>
-                <?php else: ?>
-                    <div class="dash-panel">
-                        <div class="panel-header">
-                            <h6><ion-icon name="wallet-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Registrar abono</h6>
-                        </div>
-                        <div class="panel-body d-panel-body">
-                            <form id="form-abono" class="d-pay-form" autocomplete="off">
-                                <div class="d-pay-grid" style="margin-bottom:14px;">
-                                    <div class="d-field">
-                                        <label class="d-label" for="deuda-acreedora">Sucursal acreedora *</label>
-                                        <select id="deuda-acreedora" class="d-select" required>
-                                            <option value="">Seleccione</option>
-                                            <?php foreach ($sucursales as $sucursal): ?>
-                                                <option value="<?= (int) $sucursal['id'] ?>"><?= htmlspecialchars($sucursal['nombre'], ENT_QUOTES, 'UTF-8') ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <div class="d-field">
-                                        <label class="d-label" for="deuda-deudora">Sucursal deudora *</label>
-                                        <select id="deuda-deudora" class="d-select" required>
-                                            <option value="">Seleccione</option>
-                                            <?php foreach ($sucursales as $sucursal): ?>
-                                                <option value="<?= (int) $sucursal['id'] ?>"><?= htmlspecialchars($sucursal['nombre'], ENT_QUOTES, 'UTF-8') ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div id="deuda-info" class="d-info d-none"></div>
-
-                                <div class="d-pay-grid">
-                                    <div class="d-field">
-                                        <label class="d-label" for="pago-monto">Importe USD *</label>
-                                        <input type="number" id="pago-monto" class="d-input" min="0.01" step="0.01" required>
-                                    </div>
-                                    <div class="d-field">
-                                        <label class="d-label" for="pago-fecha">Fecha del pago *</label>
-                                        <input type="date" id="pago-fecha" class="d-input" value="<?= htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8') ?>" required>
-                                    </div>
-                                    <div class="d-field">
-                                        <label class="d-label" for="pago-bcv">Tasa BCV</label>
-                                        <input type="number" id="pago-bcv" class="d-input" min="0" step="0.0001" value="<?= htmlspecialchars((string) $bcvActual, ENT_QUOTES, 'UTF-8') ?>">
-                                    </div>
-                                    <div class="d-field">
-                                        <label class="d-label" for="pago-peso">Dólar / peso</label>
-                                        <input type="number" id="pago-peso" class="d-input" min="0" step="0.0001" value="<?= htmlspecialchars((string) $pesoDolarActual, ENT_QUOTES, 'UTF-8') ?>">
-                                    </div>
-                                    <div class="d-field">
-                                        <label class="d-label" for="pago-metodo">Método de pago</label>
-                                        <select id="pago-metodo" class="d-select">
-                                            <option value="">Seleccione</option>
-                                            <option value="Punto">(1) Punto</option>
-                                            <option value="BioPago">(2) BioPago</option>
-                                            <option value="Pesos">(3) Pesos</option>
-                                            <option value="Efectivo">(4) Efectivo</option>
-                                            <option value="Pago Móvil">(5) Pago Móvil</option>
-                                            <option value="Transferencia">(6) Transferencia</option>
-                                            <option value="Dólares">(7) Dólares</option>
-                                            <option value="Fraccionado">(8) Fraccionado</option>
-                                        </select>
-                                    </div>
-                                    <div class="d-field">
-                                        <label class="d-label" for="pago-referencia">Referencia</label>
-                                        <input type="text" id="pago-referencia" class="d-input" placeholder="Número o referencia">
-                                    </div>
-                                    <div class="d-field" style="grid-column:1/-1;">
-                                        <label class="d-label" for="pago-observaciones">Observaciones</label>
-                                        <textarea id="pago-observaciones" class="d-textarea" placeholder="Opcional"></textarea>
-                                    </div>
-                                    <div class="d-field" style="grid-column:1/-1;">
-                                        <label class="d-label" for="pago-comprobante">Comprobante (imagen o PDF)</label>
-                                        <input type="file" id="pago-comprobante" class="d-input" accept="image/jpeg,image/png,image/webp,application/pdf">
-                                        <small class="d-muted" style="font-size:11px;">Máximo 5 MB. Formatos: JPG, PNG, WEBP o PDF.</small>
-                                    </div>
-                                </div>
-
-                                <div class="d-form-actions">
-                                    <button type="button" class="d-btn d-btn-ghost" id="btn-historial" disabled>
-                                        <ion-icon name="time-outline"></ion-icon> Historial de abonos
-                                    </button>
-                                    <button type="submit" class="d-btn d-btn-primary" id="btn-registrar-pago" disabled>
-                                        <ion-icon name="save-outline"></ion-icon> Registrar abono
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                    <div class="d-stat abonado">
+                        <span>Total abonado</span>
+                        <strong id="stat-abonado">$0.00</strong>
+                        <small>Pagos registrados</small>
                     </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <?php if ($esAdmin): ?>
-        <div class="modal fade d-modal" id="modalHistorial" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="historial-titulo">Historial de abonos</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                    <div class="d-stat saldo">
+                        <span>Saldo pendiente</span>
+                        <strong id="stat-saldo">$0.00</strong>
+                        <small id="stat-estados">0 pendientes · 0 parciales · 0 pagadas</small>
                     </div>
-                    <div class="modal-body">
-                        <div class="d-hist-resumen" id="historial-resumen"></div>
+                    <div class="d-stat excedente">
+                        <span>Excedente</span>
+                        <strong id="stat-excedente">$0.00</strong>
+                        <small>Sobre pagos por encima de la deuda</small>
+                    </div>
+                </div>
+
+                <div class="dash-panel" style="margin-bottom:18px;">
+                    <div class="panel-header">
+                        <h6><ion-icon name="git-compare-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Deuda global por sucursal</h6>
+                    </div>
+                    <div class="panel-body p-0">
                         <div class="d-table-wrap">
-                            <table class="d-table">
+                            <table class="d-table" id="tabla-pares">
                                 <thead>
                                     <tr>
-                                        <th>Fecha</th>
-                                        <th>Documento</th>
-                                        <th class="d-right">Monto</th>
-                                        <th class="d-right">BCV</th>
-                                        <th class="d-right">Dólar/peso</th>
-                                        <th>Método</th>
-                                        <th>Referencia</th>
-                                        <th>Observaciones</th>
-                                        <th>Comprobante</th>
-                                        <th>Usuario</th>
+                                        <th>Sucursal acreedora</th>
+                                        <th>Sucursal deudora</th>
+                                        <th class="d-center">Obligaciones</th>
+                                        <th class="d-right">Original</th>
+                                        <th class="d-right">Abonado</th>
+                                        <th class="d-right">Saldo</th>
+                                        <th class="d-right">Excedente</th>
+                                        <th class="d-center">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody id="historial-body"></tbody>
+                                <tbody></tbody>
                             </table>
                         </div>
+                        <div class="d-empty d-none" id="pares-vacios">
+                            <ion-icon name="git-compare-outline"></ion-icon>
+                            <h5>Sin relaciones de deuda</h5>
+                            <p>Las obligaciones entre sucursales aparecerán aquí.</p>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="d-btn d-btn-ghost" data-dismiss="modal">Cerrar</button>
+                </div>
+
+                <div class="dash-panel">
+                    <div class="panel-header">
+                        <h6><ion-icon name="wallet-outline" style="margin-right:8px;font-size:16px;color:var(--dash-mint);"></ion-icon>Obligaciones económicas</h6>
+                    </div>
+                    <div class="panel-body p-0">
+                        <div class="d-filters">
+                            <div class="d-filter">
+                                <label for="filtro-deudora">Sucursal deudora</label>
+                                <select id="filtro-deudora" class="d-select">
+                                    <option value="">Todas</option>
+                                    <?php foreach ($sucursalesFiltro as $sucursal): ?>
+                                        <option value="<?= (int) $sucursal['id'] ?>"><?= htmlspecialchars($sucursal['nombre']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="d-filter">
+                                <label for="filtro-estado">Estado</label>
+                                <select id="filtro-estado" class="d-select">
+                                    <option value="">Todos</option>
+                                    <option value="PENDIENTE">Pendiente</option>
+                                    <option value="PARCIAL">Parcial</option>
+                                    <option value="PAGADA">Pagada</option>
+                                </select>
+                            </div>
+                            <button type="button" class="d-btn d-btn-ghost" id="btn-filtrar">
+                                <ion-icon name="funnel-outline"></ion-icon> Filtrar
+                            </button>
+                        </div>
+                        <div class="d-table-wrap">
+                            <table class="d-table" id="tabla-deudas">
+                                <thead>
+                                    <tr>
+                                        <th>Documento</th>
+                                        <th>Fecha</th>
+                                        <th>Acreedora</th>
+                                        <th>Deudora</th>
+                                        <th class="d-right">Original</th>
+                                        <th class="d-right">Abonado</th>
+                                        <th class="d-right">Saldo</th>
+                                        <th class="d-right">Excedente</th>
+                                        <th class="d-center">Estado</th>
+                                        <th class="d-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="d-empty d-none" id="deudas-vacias">
+                            <ion-icon name="wallet-outline"></ion-icon>
+                            <h5>No hay obligaciones registradas</h5>
+                            <p>Las deudas se generan al aplicar una asignación de mercancía.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
+    </div>
+
+    <div class="modal fade d-modal" id="modalDeuda" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deuda-titulo">Detalle de la obligación</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body" id="deuda-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="d-btn" id="btn-eliminar-deuda" style="display:none;background:rgba(239,90,111,.1);border-color:rgba(239,90,111,.3);color:#ef5a6f;">
+                        <ion-icon name="trash-outline"></ion-icon> Eliminar asignación
+                    </button>
+                    <button type="button" class="d-btn d-btn-ghost" data-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade d-modal" id="modalHistorial" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historial-titulo">Historial de abonos</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-detail-grid" id="historial-resumen"></div>
+                    <div class="d-table-wrap">
+                        <table class="d-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Documento</th>
+                                    <th class="d-right">Monto</th>
+                                    <th class="d-right">BCV</th>
+                                    <th class="d-right">Dólar/peso</th>
+                                    <th>Método</th>
+                                    <th>Referencia</th>
+                                    <th>Observaciones</th>
+                                    <th>Comprobante</th>
+                                    <th>Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historial-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="d-btn d-btn-ghost" data-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="../vendors/jquery/dist/jquery.min.js"></script>
     <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -528,164 +720,371 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
     <script src="../build/js/modal.js"></script>
     <script src="js/nombre_pagina.js"></script>
 
-    <?php if ($esAdmin): ?>
-        <script>
-            const CFG = <?= json_encode([
-                            'endpoint' => '../../configurar/asignaciones_sucursales_back.php',
-                            'hoy' => $hoy,
-                            'bcv' => $bcvActual,
-                            'pesoDolar' => $pesoDolarActual,
-                        ], JSON_UNESCAPED_UNICODE) ?>;
+    <script>
+        const CFG = <?= json_encode([
+                    'esAdmin' => $esAdmin,
+                    'endpoint' => '../../configurar/asignaciones_sucursales_back.php',
+                    'hoy' => $hoy,
+                    'bcv' => $bcvActual,
+                    'pesoDolar' => $pesoDolarActual,
+                ], JSON_UNESCAPED_UNICODE) ?>;
 
-            const esc = (valor) => String(valor ?? '').replace(/[&<>"']/g, (c) => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            }[c]));
+        let cuentas = {};
 
-            const money = (valor) => '$' + Number(valor || 0).toLocaleString('es-VE', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+        const esc = (valor) => String(valor ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[c]));
+
+        const money = (valor) => '$' + Number(valor || 0).toLocaleString('es-VE', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        const qty = (valor) => {
+            const numero = Number(valor || 0);
+            return Number.isInteger(numero) ? String(numero) : String(numero).replace(/\.?0+$/, '');
+        };
+
+        const estadoBadge = (estado) => {
+            const clase = estado === 'PAGADA' ? 'd-badge-pagada' : (estado === 'PARCIAL' ? 'd-badge-parcial' : 'd-badge-pendiente');
+            return '<span class="d-badge ' + clase + '">' + esc(estado) + '</span>';
+        };
+
+        async function post(accion, datos = {}) {
+            const body = new URLSearchParams();
+            body.set('accion', accion);
+            Object.entries(datos).forEach(([clave, valor]) => body.set(clave, valor ?? ''));
+            const res = await fetch(CFG.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body
+            });
+            const texto = await res.text();
+            try {
+                return JSON.parse(texto);
+            } catch (error) {
+                console.error('Respuesta no válida:', texto);
+                return {
+                    status: 'error',
+                    msg: 'El servidor devolvió una respuesta no válida.'
+                };
+            }
+        }
+
+        async function postForm(accion, formData) {
+            formData.set('accion', accion);
+            const res = await fetch(CFG.endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            const texto = await res.text();
+            try {
+                return JSON.parse(texto);
+            } catch (error) {
+                console.error('Respuesta no válida:', texto);
+                return {
+                    status: 'error',
+                    msg: 'El servidor devolvió una respuesta no válida.'
+                };
+            }
+        }
+
+        function filtros() {
+            return {
+                sucursal_deudora: document.getElementById('filtro-deudora').value,
+                estado: document.getElementById('filtro-estado').value
+            };
+        }
+
+        async function cargarTodo() {
+            const datos = filtros();
+            const [resumen, lista] = await Promise.all([
+                post('deudas_resumen', datos),
+                post('deudas_listar', datos)
+            ]);
+
+            if (resumen.status === 'ok') {
+                pintarResumen(resumen.data.resumen);
+            }
+            if (lista.status === 'ok') {
+                pintarDeudas(lista.data.items || []);
+            } else {
+                document.querySelector('#tabla-deudas tbody').innerHTML = '<tr><td colspan="10" class="d-center" style="padding:24px;color:#ef5a6f;">' + esc(lista.msg) + '</td></tr>';
+            }
+        }
+
+        function pintarResumen(resumen) {
+            document.getElementById('stat-original').textContent = money(resumen.total_original);
+            document.getElementById('stat-abonado').textContent = money(resumen.total_abonado);
+            document.getElementById('stat-saldo').textContent = money(resumen.saldo);
+            document.getElementById('stat-excedente').textContent = money(resumen.excedente);
+            document.getElementById('stat-obligaciones').textContent = resumen.obligaciones + (resumen.obligaciones === 1 ? ' obligación' : ' obligaciones');
+            document.getElementById('stat-estados').textContent = resumen.pendientes + ' pendientes · ' + resumen.parciales + ' parciales · ' + resumen.pagadas + ' pagadas';
+
+            const $tbody = document.querySelector('#tabla-pares tbody');
+            const pares = resumen.pares || [];
+            if (pares.length === 0) {
+                $tbody.innerHTML = '';
+                document.getElementById('pares-vacios').classList.remove('d-none');
+                return;
+            }
+            document.getElementById('pares-vacios').classList.add('d-none');
+            $tbody.innerHTML = pares.map((par) => {
+                const parId = par.sucursal_acreedora + '-' + par.sucursal_deudora;
+                const acciones = CFG.esAdmin
+                    ? `<button type="button" class="d-icon-btn" data-general="${parId}" title="Registrar abono"><ion-icon name="cash-outline"></ion-icon></button>
+                       <button type="button" class="d-icon-btn" data-historial="${parId}" title="Ver historial de abonos"><ion-icon name="time-outline"></ion-icon></button>`
+                    : `<button type="button" class="d-icon-btn" data-historial="${parId}" title="Ver historial de abonos"><ion-icon name="eye-outline"></ion-icon></button>`;
+
+                return `<tr>
+                    <td data-label="Acreedora">${esc(par.acreedora_nombre)}</td>
+                    <td data-label="Deudora">${esc(par.deudora_nombre)}</td>
+                    <td data-label="Obligaciones" class="d-center">${par.obligaciones}</td>
+                    <td data-label="Original" class="d-right d-money">${money(par.total_original)}</td>
+                    <td data-label="Abonado" class="d-right d-money">${money(par.total_abonado)}</td>
+                    <td data-label="Saldo" class="d-right d-money">${money(par.saldo)}</td>
+                    <td data-label="Excedente" class="d-right d-money">${money(par.excedente)}</td>
+                    <td data-label="Acciones" class="d-center">
+                        <div style="display:flex;gap:5px;justify-content:center;">${acciones}</div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function pintarDeudas(items) {
+            cuentas = {};
+            items.forEach((item) => {
+                cuentas[item.id] = item;
             });
 
-            async function post(accion, datos = {}, opciones = {}) {
-                const body = new URLSearchParams();
-                body.set('accion', accion);
-                Object.entries(datos).forEach(([clave, valor]) => body.set(clave, valor ?? ''));
-
-                const ejecutar = opciones.silencioso && typeof window.fetchSilencioso === 'function' ?
-                    window.fetchSilencioso :
-                    fetch;
-
-                const res = await ejecutar(CFG.endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body
-                });
-                const texto = await res.text();
-                try {
-                    return JSON.parse(texto);
-                } catch (error) {
-                    console.error('Respuesta no válida:', texto);
-                    return {
-                        status: 'error',
-                        msg: 'El servidor devolvió una respuesta no válida.'
-                    };
+            const $tbody = document.querySelector('#tabla-deudas tbody');
+            if (items.length === 0) {
+                $tbody.innerHTML = '';
+                document.getElementById('deudas-vacias').classList.remove('d-none');
+                return;
+            }
+            document.getElementById('deudas-vacias').classList.add('d-none');
+            $tbody.innerHTML = items.map((item) => {
+                let acciones = '<button type="button" class="d-icon-btn" data-ver="' + item.id + '" title="Ver detalle"><ion-icon name="eye-outline"></ion-icon></button>';
+                if (item.puede_eliminar) {
+                    acciones += ' <button type="button" class="d-icon-btn danger" data-eliminar="' + item.asignacion_id + '" title="Eliminar asignación"><ion-icon name="trash-outline"></ion-icon></button>';
                 }
+                return `<tr>
+                    <td data-label="Documento"><strong>${esc(item.numero_documento)}</strong></td>
+                    <td data-label="Fecha">${esc(item.fecha)}</td>
+                    <td data-label="Acreedora">${esc(item.acreedora_nombre)}</td>
+                    <td data-label="Deudora">${esc(item.deudora_nombre)}</td>
+                    <td data-label="Original" class="d-right d-money">${money(item.monto_original)}</td>
+                    <td data-label="Abonado" class="d-right d-money">${money(item.total_abonado)}</td>
+                    <td data-label="Saldo" class="d-right d-money">${money(item.saldo)}</td>
+                    <td data-label="Excedente" class="d-right d-money">${money(item.excedente)}</td>
+                    <td data-label="Estado" class="d-center">${estadoBadge(item.estado_deuda)}</td>
+                    <td data-label="Acciones" class="d-center" style="white-space:nowrap;">${acciones}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function verDetalle(cuentaId) {
+            const data = await post('deudas_detalle', {
+                id: cuentaId
+            });
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
             }
 
-            async function postForm(accion, formData) {
-                formData.set('accion', accion);
-                const res = await fetch(CFG.endpoint, {
-                    method: 'POST',
-                    body: formData
-                });
-                const texto = await res.text();
-                try {
-                    return JSON.parse(texto);
-                } catch (error) {
-                    console.error('Respuesta no válida:', texto);
-                    return {
-                        status: 'error',
-                        msg: 'El servidor devolvió una respuesta no válida.'
-                    };
-                }
+            const d = data.data;
+            const c = d.cuenta;
+            const pagos = d.pagos || [];
+            const abonado = pagos.reduce((s, p) => s + Number(p.monto_usd || 0), 0);
+            const original = Number(c.monto_original);
+            const saldo = Math.max(0, original - abonado);
+            const excedente = Math.max(0, abonado - original);
+
+            const filasProductos = (d.detalles || []).map((detalle) => `<tr>
+                <td>${esc(detalle.producto_nombre)}</td>
+                <td class="d-right">${qty(detalle.cantidad)}</td>
+                <td class="d-right d-money">${money(detalle.costo_unitario)}</td>
+                <td class="d-right d-money">${money(detalle.subtotal)}</td>
+            </tr>`).join('');
+
+            const conceptosDetalle = d.conceptos || [];
+            const filasConceptos = conceptosDetalle.map((concepto) => `<tr>
+                <td>${esc(concepto.concepto)}</td>
+                <td class="d-right d-money">${money(concepto.monto)}</td>
+            </tr>`).join('');
+            const conceptosHtml = conceptosDetalle.length
+                ? `<div class="d-section-title">Conceptos y servicios sin inventario</div>
+                   <div class="d-table-wrap">
+                       <table class="d-table">
+                           <thead><tr><th>Concepto</th><th class="d-right">Monto USD</th></tr></thead>
+                           <tbody>${filasConceptos}</tbody>
+                       </table>
+                   </div>`
+                : '';
+
+            const filasPagos = pagos.length
+                ? pagos.map((pago) => `<tr>
+                    <td>${esc(pago.fecha)}</td>
+                    <td class="d-right d-money">${money(pago.monto_usd)}</td>
+                    <td class="d-right">${pago.tasa_bcv !== null ? Number(pago.tasa_bcv) : '—'}</td>
+                    <td class="d-right">${pago.tasa_peso_dolar !== null ? Number(pago.tasa_peso_dolar) : '—'}</td>
+                    <td>${esc(pago.metodo_pago || '—')}</td>
+                    <td>${esc(pago.referencia || '—')}</td>
+                    <td class="d-obs">${esc(pago.observaciones || '—')}</td>
+                    <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
+                    <td>${esc(pago.usuario_nombre || '—')}</td>
+                </tr>`).join('')
+                : '<tr><td colspan="9" class="d-muted d-center">Sin abonos registrados.</td></tr>';
+
+            document.getElementById('deuda-titulo').textContent = 'Obligación ' + (c.numero_documento || '');
+            document.getElementById('deuda-body').innerHTML = `
+                <div class="d-detail-grid">
+                    <div class="d-detail-cell"><span>Documento</span><strong>${esc(c.numero_documento)}</strong></div>
+                    <div class="d-detail-cell"><span>Fecha</span><strong>${esc(c.fecha)}</strong></div>
+                    <div class="d-detail-cell"><span>Acreedora</span><strong>${esc(c.acreedora_nombre)}</strong></div>
+                    <div class="d-detail-cell"><span>Deudora</span><strong>${esc(c.deudora_nombre)}</strong></div>
+                </div>
+
+                <div class="d-summary-line"><span>Monto original</span><b>${money(original)}</b></div>
+                <div class="d-summary-line"><span>Total abonado</span><b>${money(abonado)}</b></div>
+                <div class="d-summary-line"><span>Saldo pendiente</span><b>${money(saldo)}</b></div>
+                <div class="d-summary-line"><span>Excedente</span><b>${money(excedente)}</b></div>
+                <div class="d-summary-line"><span>Estado de la deuda</span><b>${estadoBadge(c.estado_deuda)}</b></div>
+
+                <div class="d-section-title">Productos de la asignación</div>
+                <div class="d-table-wrap">
+                    <table class="d-table">
+                        <thead><tr><th>Producto</th><th class="d-right">Cantidad</th><th class="d-right">Costo unitario</th><th class="d-right">Subtotal</th></tr></thead>
+                        <tbody>${filasProductos || '<tr><td colspan="4" class="d-muted d-center">Sin productos.</td></tr>'}</tbody>
+                    </table>
+                </div>
+
+                ${conceptosHtml}
+
+                <div class="d-section-title">Historial de abonos</div>
+                <div class="d-table-wrap">
+                    <table class="d-table">
+                        <thead><tr><th>Fecha</th><th class="d-right">Monto</th><th class="d-right">BCV</th><th class="d-right">Dólar/peso</th><th>Método</th><th>Referencia</th><th>Observaciones</th><th>Comprobante</th><th>Usuario</th></tr></thead>
+                        <tbody>${filasPagos}</tbody>
+                    </table>
+                </div>
+                <p class="d-muted" style="font-size:11.5px;margin-top:12px;">Los abonos se registran desde la deuda general por sucursal.</p>
+            `;
+
+            const btnEliminarDeuda = document.getElementById('btn-eliminar-deuda');
+            btnEliminarDeuda.dataset.asignacion = Number(c.asignacion_id);
+            btnEliminarDeuda.dataset.numero = c.numero_documento || '';
+            btnEliminarDeuda.style.display = (CFG.esAdmin && d.es_creador) ? 'inline-flex' : 'none';
+
+            $('#modalDeuda').modal('show');
+        }
+
+        async function verDeudaGeneral(acreedoraId, deudoraId) {
+            const data = await post('deudas_general_detalle', {
+                sucursal_acreedora: acreedoraId,
+                sucursal_deudora: deudoraId
+            });
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
             }
 
-            const selAcreedora = document.getElementById('deuda-acreedora');
-            const selDeudora = document.getElementById('deuda-deudora');
-            const infoDeuda = document.getElementById('deuda-info');
-            const formAbono = document.getElementById('form-abono');
-            const btnRegistrar = document.getElementById('btn-registrar-pago');
-            const btnHistorial = document.getElementById('btn-historial');
-            const modalHistorial = $('#modalHistorial');
+            const d = data.data;
+            const par = d.par;
 
-            let deudaActual = null;
-            let consultaSeq = 0;
-            let registrando = false;
-
-            function mostrarInfoMensaje(mensaje, esError = false) {
-                infoDeuda.classList.remove('d-none');
-                infoDeuda.innerHTML = '<div class="d-info-msg' + (esError ? ' error' : '') + '">' + esc(mensaje) + '</div>';
+            if (!d.puede_abonar) {
+                verHistorialGeneral(acreedoraId, deudoraId);
+                return;
             }
 
-            function pintarInfo(par) {
-                infoDeuda.classList.remove('d-none');
-                infoDeuda.innerHTML = `
-                    <div class="d-info-cell"><span>Obligaciones</span><strong>${Number(par.obligaciones) || 0}</strong></div>
-                    <div class="d-info-cell"><span>Original</span><strong>${money(par.total_original)}</strong></div>
-                    <div class="d-info-cell"><span>Abonado</span><strong>${money(par.total_abonado)}</strong></div>
-                    <div class="d-info-cell"><span>Saldo pendiente</span><strong>${money(par.saldo)}</strong></div>
-                `;
+            document.getElementById('deuda-titulo').textContent = 'Deuda general: ' + (par.acreedora_nombre || '') + ' → ' + (par.deudora_nombre || '');
+            document.getElementById('deuda-body').innerHTML = `
+                <div class="d-section-title">Registrar abono a la deuda general</div>
+                <p class="d-muted" style="font-size:11.5px;margin:-2px 0 10px;">El importe se distribuye automáticamente entre las obligaciones pendientes, de la más antigua a la más reciente.</p>
+                <form class="d-pay-form" id="form-pago">
+                    <input type="hidden" id="pago-acreedora" value="${Number(par.sucursal_acreedora)}">
+                    <input type="hidden" id="pago-deudora" value="${Number(par.sucursal_deudora)}">
+                    <div class="d-pay-grid">
+                        <div class="d-field">
+                            <label class="d-label" for="pago-monto">Importe USD *</label>
+                            <input type="number" id="pago-monto" class="d-input" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="d-field">
+                            <label class="d-label" for="pago-fecha">Fecha del pago *</label>
+                            <input type="date" id="pago-fecha" class="d-input" value="${esc(CFG.hoy)}" required>
+                        </div>
+                        <div class="d-field">
+                            <label class="d-label" for="pago-bcv">Tasa BCV</label>
+                            <input type="number" id="pago-bcv" class="d-input" min="0" step="0.0001" value="${Number(CFG.bcv || 0)}">
+                        </div>
+                        <div class="d-field">
+                            <label class="d-label" for="pago-peso">Dólar / peso</label>
+                            <input type="number" id="pago-peso" class="d-input" min="0" step="0.0001" value="${Number(CFG.pesoDolar || 0)}">
+                        </div>
+                        <div class="d-field">
+                            <label class="d-label" for="pago-metodo">Método de pago</label>
+                            <select id="pago-metodo" class="d-select">
+                                <option value="">Seleccione</option>
+                                <option value="Punto">(1) Punto</option>
+                                <option value="BioPago">(2) BioPago</option>
+                                <option value="Pesos">(3) Pesos</option>
+                                <option value="Efectivo">(4) Efectivo</option>
+                                <option value="Pago Móvil">(5) Pago Móvil</option>
+                                <option value="Transferencia">(6) Transferencia</option>
+                                <option value="Dólares">(7) Dólares</option>
+                                <option value="Fraccionado">(8) Fraccionado</option>
+                            </select>
+                        </div>
+                        <div class="d-field">
+                            <label class="d-label" for="pago-referencia">Referencia</label>
+                            <input type="text" id="pago-referencia" class="d-input" placeholder="Número o referencia">
+                        </div>
+                        <div class="d-field" style="grid-column:1/-1;">
+                            <label class="d-label" for="pago-observaciones">Observaciones</label>
+                            <textarea id="pago-observaciones" class="d-textarea" placeholder="Opcional"></textarea>
+                        </div>
+                        <div class="d-field" style="grid-column:1/-1;">
+                            <label class="d-label" for="pago-comprobante">Comprobante (imagen o PDF)</label>
+                            <input type="file" id="pago-comprobante" class="d-input" accept="image/jpeg,image/png,image/webp,application/pdf">
+                            <small class="d-muted" style="font-size:11px;">Máximo 5 MB. Formatos: JPG, PNG, WEBP o PDF.</small>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+                        <button type="submit" class="d-btn d-btn-primary" id="btn-registrar-pago">
+                            <ion-icon name="save-outline"></ion-icon> Registrar abono
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            const btnEliminarDeuda = document.getElementById('btn-eliminar-deuda');
+            btnEliminarDeuda.style.display = 'none';
+            $('#modalDeuda').modal('show');
+        }
+
+        async function verHistorialGeneral(acreedoraId, deudoraId) {
+            const data = await post('deudas_general_detalle', {
+                sucursal_acreedora: acreedoraId,
+                sucursal_deudora: deudoraId
+            });
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
             }
 
-            async function consultarDeuda() {
-                const secuencia = ++consultaSeq;
-                deudaActual = null;
-                btnRegistrar.disabled = true;
-                btnHistorial.disabled = true;
+            const d = data.data;
+            const par = d.par;
+            const pagos = d.pagos || [];
 
-                const acreedora = Number(selAcreedora.value) || 0;
-                const deudora = Number(selDeudora.value) || 0;
-
-                if (!acreedora || !deudora) {
-                    infoDeuda.classList.add('d-none');
-                    infoDeuda.innerHTML = '';
-                    return;
-                }
-
-                if (acreedora === deudora) {
-                    mostrarInfoMensaje('La sucursal acreedora y la deudora no pueden ser la misma.', true);
-                    return;
-                }
-
-                mostrarInfoMensaje('Consultando deuda...');
-
-                const data = await post('deudas_general_detalle', {
-                    sucursal_acreedora: acreedora,
-                    sucursal_deudora: deudora
-                }, {
-                    silencioso: true
-                });
-
-                if (secuencia !== consultaSeq) return;
-
-                if (data.status !== 'ok') {
-                    mostrarInfoMensaje(data.msg || 'No se pudo consultar la deuda.', true);
-                    return;
-                }
-
-                deudaActual = data.data;
-                pintarInfo(data.data.par);
-                btnRegistrar.disabled = !data.data.puede_abonar;
-                btnHistorial.disabled = false;
-            }
-
-            function pintarHistorial(data) {
-                const par = data.par || {};
-                const pagos = (data.pagos || []).slice().reverse();
-
-                document.getElementById('historial-titulo').textContent =
-                    'Historial de abonos · ' + (par.acreedora_nombre || '') + ' → ' + (par.deudora_nombre || '');
-
-                document.getElementById('historial-resumen').innerHTML = `
-                    <div class="d-info-cell"><span>Original</span><strong>${money(par.total_original)}</strong></div>
-                    <div class="d-info-cell"><span>Abonado</span><strong>${money(par.total_abonado)}</strong></div>
-                    <div class="d-info-cell"><span>Saldo</span><strong>${money(par.saldo)}</strong></div>
-                    <div class="d-info-cell"><span>Excedente</span><strong>${money(par.excedente)}</strong></div>
-                `;
-
-                const tbody = document.getElementById('historial-body');
-                if (!pagos.length) {
-                    tbody.innerHTML = '<tr><td colspan="10" class="d-muted d-center" style="padding:24px;">Sin abonos registrados.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = pagos.map((pago) => `<tr>
+            const filasPagos = pagos.length
+                ? pagos.map((pago) => `<tr>
                     <td>${esc(pago.fecha)}</td>
                     <td>${esc(pago.numero_documento || '—')}</td>
                     <td class="d-right d-money">${money(pago.monto_usd)}</td>
@@ -696,127 +1095,135 @@ $pesoDolarActual = isset($pesoDolar) ? (float) $pesoDolar : 0;
                     <td class="d-obs">${esc(pago.observaciones || '—')}</td>
                     <td>${pago.comprobante ? '<a href="../../' + encodeURI(pago.comprobante) + '" target="_blank" rel="noopener">Ver</a>' : '—'}</td>
                     <td>${esc(pago.usuario_nombre || '—')}</td>
-                </tr>`).join('');
-            }
+                </tr>`).join('')
+                : '<tr><td colspan="10" class="d-muted d-center">Sin abonos registrados.</td></tr>';
 
-            async function abrirHistorial() {
-                const acreedora = Number(selAcreedora.value) || 0;
-                const deudora = Number(selDeudora.value) || 0;
+            document.getElementById('historial-titulo').textContent = 'Historial de abonos: ' + (par.acreedora_nombre || '') + ' → ' + (par.deudora_nombre || '');
+            document.getElementById('historial-resumen').innerHTML = `
+                <div class="d-detail-cell"><span>Original</span><strong>${money(par.total_original)}</strong></div>
+                <div class="d-detail-cell"><span>Abonado</span><strong>${money(par.total_abonado)}</strong></div>
+                <div class="d-detail-cell"><span>Saldo pendiente</span><strong>${money(par.saldo)}</strong></div>
+                <div class="d-detail-cell"><span>Excedente</span><strong>${money(par.excedente)}</strong></div>
+            `;
+            document.getElementById('historial-body').innerHTML = filasPagos;
+            $('#modalHistorial').modal('show');
+        }
 
-                if (!acreedora || !deudora || acreedora === deudora) {
-                    Alerta.toast('error', 'Selecciona una deuda entre sucursales válida.');
-                    return;
-                }
-
-                btnHistorial.disabled = true;
-
-                const data = await post('deudas_general_detalle', {
-                    sucursal_acreedora: acreedora,
-                    sucursal_deudora: deudora
-                }, {
-                    silencioso: true
-                });
-
-                // Si el usuario cambió la selección mientras se consultaba, se ignora.
-                if (Number(selAcreedora.value) !== acreedora || Number(selDeudora.value) !== deudora) {
-                    return;
-                }
-
-                if (data.status !== 'ok') {
-                    btnHistorial.disabled = false;
-                    Alerta.toast('error', data.msg || 'No se pudo cargar el historial.');
-                    return;
-                }
-
-                deudaActual = data.data;
-                pintarInfo(data.data.par);
-                btnRegistrar.disabled = !data.data.puede_abonar;
-                pintarHistorial(data.data);
-                btnHistorial.disabled = false;
-                modalHistorial.modal('show');
-            }
-
-            selAcreedora.addEventListener('change', consultarDeuda);
-            selDeudora.addEventListener('change', consultarDeuda);
-            btnHistorial.addEventListener('click', abrirHistorial);
-
-            formAbono.addEventListener('submit', async (evento) => {
-                evento.preventDefault();
-
-                if (registrando) return;
-
-                const acreedora = Number(selAcreedora.value) || 0;
-                const deudora = Number(selDeudora.value) || 0;
-
-                if (!deudaActual || !acreedora || !deudora || acreedora === deudora) {
-                    Alerta.toast('error', 'Selecciona una deuda entre sucursales válida.');
-                    return;
-                }
-
-                if (!deudaActual.puede_abonar) {
-                    Alerta.toast('error', 'No tienes permiso para registrar abonos.');
-                    return;
-                }
-
-                const monto = Number(document.getElementById('pago-monto').value || 0);
-                if (!(monto > 0)) {
-                    Alerta.toast('error', 'El monto del abono debe ser mayor que cero.');
-                    return;
-                }
-
-                const fecha = document.getElementById('pago-fecha').value;
-                if (!fecha) {
-                    Alerta.toast('error', 'La fecha del pago es obligatoria.');
-                    return;
-                }
-
-                const archivo = document.getElementById('pago-comprobante').files[0];
-                if (archivo && archivo.size > 5 * 1024 * 1024) {
-                    Alerta.toast('error', 'El comprobante supera los 5 MB.');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.set('sucursal_acreedora', acreedora);
-                formData.set('sucursal_deudora', deudora);
-                formData.set('monto_usd', monto);
-                formData.set('fecha', fecha);
-                formData.set('tasa_bcv', document.getElementById('pago-bcv').value);
-                formData.set('tasa_peso_dolar', document.getElementById('pago-peso').value);
-                formData.set('metodo_pago', document.getElementById('pago-metodo').value);
-                formData.set('referencia', document.getElementById('pago-referencia').value);
-                formData.set('observaciones', document.getElementById('pago-observaciones').value);
-                if (archivo) {
-                    formData.set('comprobante', archivo);
-                }
-
-                registrando = true;
-                btnRegistrar.disabled = true;
-                const contenidoBoton = btnRegistrar.innerHTML;
-                btnRegistrar.innerHTML = '<ion-icon name="hourglass-outline"></ion-icon> Registrando...';
-
-                try {
-                    const data = await postForm('registrar_pago_general', formData);
-
-                    if (data.status !== 'ok') {
-                        Alerta.toast('error', data.msg || 'No se pudo registrar el abono.');
-                        return;
-                    }
-
-                    Alerta.toast('success', data.msg || 'Abono registrado correctamente.');
-                    document.getElementById('pago-monto').value = '';
-                    document.getElementById('pago-referencia').value = '';
-                    document.getElementById('pago-observaciones').value = '';
-                    document.getElementById('pago-comprobante').value = '';
-                    await consultarDeuda();
-                } finally {
-                    registrando = false;
-                    btnRegistrar.innerHTML = contenidoBoton;
-                    btnRegistrar.disabled = !(deudaActual && deudaActual.puede_abonar);
-                }
+        async function eliminarAsignacion(asignacionId, numeroDocumento = '') {
+            const confirmacion = await Swal.fire({
+                title: '¿Eliminar la asignación aplicada?',
+                html: 'Se eliminará la asignación <strong>' + esc(numeroDocumento || ('#' + asignacionId)) + '</strong>, su obligación económica, los abonos registrados, los movimientos y la bitácora. Se revertirá el inventario. <strong>Esta acción no se puede deshacer.</strong>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar todo',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef5a6f'
             });
-        </script>
-    <?php endif; ?>
+            if (!confirmacion.isConfirmed) return;
+
+            const data = await post('eliminar', {
+                id: asignacionId
+            });
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
+            }
+
+            $('#modalDeuda').modal('hide');
+            Alerta.toast('success', data.msg);
+            cargarTodo();
+        }
+
+        document.getElementById('btn-filtrar').addEventListener('click', cargarTodo);
+
+        document.getElementById('tabla-pares').addEventListener('click', (e) => {
+            const botonHistorial = e.target.closest('[data-historial]');
+            if (botonHistorial) {
+                const [acreedora, deudora] = String(botonHistorial.dataset.historial || '').split('-').map(Number);
+                if (acreedora > 0 && deudora > 0) {
+                    verHistorialGeneral(acreedora, deudora);
+                }
+                return;
+            }
+
+            const boton = e.target.closest('[data-general]');
+            if (!boton) return;
+            const [acreedora, deudora] = String(boton.dataset.general || '').split('-').map(Number);
+            if (acreedora > 0 && deudora > 0) {
+                verDeudaGeneral(acreedora, deudora);
+            }
+        });
+
+        document.getElementById('tabla-deudas').addEventListener('click', (e) => {
+            const eliminar = e.target.closest('[data-eliminar]');
+            if (eliminar) {
+                const cuenta = Object.values(cuentas).find((item) => Number(item.asignacion_id) === Number(eliminar.dataset.eliminar));
+                eliminarAsignacion(Number(eliminar.dataset.eliminar), cuenta ? cuenta.numero_documento : '');
+                return;
+            }
+
+            const boton = e.target.closest('[data-ver]');
+            if (!boton) return;
+            verDetalle(Number(boton.dataset.ver));
+        });
+
+        document.getElementById('btn-eliminar-deuda').addEventListener('click', () => {
+            const boton = document.getElementById('btn-eliminar-deuda');
+            eliminarAsignacion(Number(boton.dataset.asignacion || 0), boton.dataset.numero || '');
+        });
+
+        document.getElementById('deuda-body').addEventListener('submit', async (e) => {
+            if (e.target.id !== 'form-pago') return;
+            e.preventDefault();
+
+            const monto = Number(document.getElementById('pago-monto').value || 0);
+            if (monto <= 0) {
+                Alerta.toast('error', 'El monto del abono debe ser mayor que cero.');
+                return;
+            }
+
+            const archivo = document.getElementById('pago-comprobante').files[0];
+            if (archivo && archivo.size > 5 * 1024 * 1024) {
+                Alerta.toast('error', 'El comprobante supera los 5 MB.');
+                return;
+            }
+
+            const boton = document.getElementById('btn-registrar-pago');
+            boton.disabled = true;
+
+            const acreedora = Number(document.getElementById('pago-acreedora').value);
+            const deudora = Number(document.getElementById('pago-deudora').value);
+
+            const formData = new FormData();
+            formData.set('sucursal_acreedora', acreedora);
+            formData.set('sucursal_deudora', deudora);
+            formData.set('monto_usd', monto);
+            formData.set('fecha', document.getElementById('pago-fecha').value);
+            formData.set('tasa_bcv', document.getElementById('pago-bcv').value);
+            formData.set('tasa_peso_dolar', document.getElementById('pago-peso').value);
+            formData.set('metodo_pago', document.getElementById('pago-metodo').value);
+            formData.set('referencia', document.getElementById('pago-referencia').value);
+            formData.set('observaciones', document.getElementById('pago-observaciones').value);
+            if (archivo) {
+                formData.set('comprobante', archivo);
+            }
+
+            const data = await postForm('registrar_pago_general', formData);
+
+            boton.disabled = false;
+
+            if (data.status !== 'ok') {
+                Alerta.toast('error', data.msg);
+                return;
+            }
+
+            Alerta.toast('success', data.msg);
+            await cargarTodo();
+            await verDeudaGeneral(acreedora, deudora);
+        });
+
+        cargarTodo();
+    </script>
 </body>
 
 </html>

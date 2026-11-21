@@ -15,6 +15,7 @@ require_once __DIR__ . '/../configurar/_resumen_mensual.php';
 require_once __DIR__ . '/../configurar/_canal.php';
 require_once __DIR__ . '/../configurar/_clientes.php';
 require_once __DIR__ . '/../configurar/_nombres.php';
+require_once __DIR__ . '/../configurar/_creditos.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -32,6 +33,7 @@ if ($sucursalId <= 0) {
 // La tabla-candado de clientes se prepara fuera de la transacción de venta,
 // porque el DDL hace commit implícito.
 cl_asegurar_tabla($conexion);
+credito_asegurar_columnas($conexion);
 
 $entrada = entrada();
 $ventas = $entrada['ventas'] ?? null;
@@ -203,12 +205,41 @@ function procesarVenta($conexion, $venta, int $bssId, int $sucursalId, int $usua
         }
 
         if ($despacho === 2) {
+            $seguimientoC = !empty($cliente['seguimiento_estricto']) ? 1 : 0;
+            $fechaLimiteC = null;
+
+            if ($seguimientoC === 1) {
+                $fechaLimiteRaw = trim((string) ($cliente['fecha_limite'] ?? ''));
+                $fechaLimiteObj = DateTime::createFromFormat('Y-m-d', $fechaLimiteRaw);
+
+                if (!$fechaLimiteObj || $fechaLimiteObj->format('Y-m-d') !== $fechaLimiteRaw) {
+                    throw new Exception('Indique una fecha límite válida para el crédito.');
+                }
+
+                $fechaLimiteC = $fechaLimiteRaw;
+            }
+
             $stmtC = $conexion->prepare(
-                "INSERT INTO creditos (order_id, total_price, total_price_bs, total_price_cop, negocio, tipoCompra, bss_id, sucursal_id, cedula)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO creditos (
+                    order_id, total_price, total_price_bs, total_price_cop, negocio,
+                    tipoCompra, bss_id, sucursal_id, cedula, seguimiento_estricto, fecha_limite
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
             if ($stmtC) {
-                $stmtC->bind_param('idssssiii', $ordenId, $totalUsd, $totalBs, $totalCop, $nombreCliente, $compraTipo, $bssId, $sucursalId, $cedula);
+                $stmtC->bind_param(
+                    'idssssiiiis',
+                    $ordenId,
+                    $totalUsd,
+                    $totalBs,
+                    $totalCop,
+                    $nombreCliente,
+                    $compraTipo,
+                    $bssId,
+                    $sucursalId,
+                    $cedula,
+                    $seguimientoC,
+                    $fechaLimiteC
+                );
                 $stmtC->execute();
                 $stmtC->close();
             }
@@ -257,6 +288,14 @@ function validarVenta($venta, string $idPedido): ?string
         $cliente = $venta['cliente'] ?? [];
         if (trim((string)($cliente['cedula'] ?? '')) === '' || trim((string)($cliente['nombre'] ?? '')) === '') {
             return 'La venta a crédito exige cédula y nombre del cliente.';
+        }
+
+        if (!empty($cliente['seguimiento_estricto'])) {
+            $fechaLimite = trim((string)($cliente['fecha_limite'] ?? ''));
+            $fechaObj = DateTime::createFromFormat('Y-m-d', $fechaLimite);
+            if (!$fechaObj || $fechaObj->format('Y-m-d') !== $fechaLimite) {
+                return 'Indique una fecha límite válida para el crédito.';
+            }
         }
     }
 
