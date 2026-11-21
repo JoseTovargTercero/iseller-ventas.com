@@ -1217,12 +1217,59 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
             }
 
             .mov-branch-name {
+                min-width: 0;
                 font-size: 12px;
                 font-weight: 700;
                 color: #e2e8f0;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+            }
+
+            .mov-txt-btn {
+                flex: 0 0 auto;
+                height: 18px;
+                padding: 0 5px;
+                border: 1px solid rgba(255, 255, 255, .12);
+                border-radius: 5px;
+                background: transparent;
+                color: #94a3b8;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: .3px;
+                line-height: 1;
+                cursor: pointer;
+                transition: all .15s ease;
+            }
+
+            .mov-txt-btn:hover {
+                color: #2dd4a0;
+                border-color: rgba(45, 212, 160, .45);
+                background: rgba(45, 212, 160, .06);
+            }
+
+            #modalMovTexto .modal-body {
+                display: block;
+                overflow: auto;
+            }
+
+            .mov-texto-pre {
+                margin: 0;
+                padding: 2px;
+                max-height: 65vh;
+                overflow: auto;
+                color: #cbd5e1;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+                font-size: 12px;
+                line-height: 1.55;
+                white-space: pre;
+            }
+
+            @media (max-width: 640px) {
+                .mov-texto-pre {
+                    font-size: 10.5px;
+                }
             }
 
             .mov-move-btns {
@@ -1927,6 +1974,26 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         </button>
                     </div>
                     <div class="modal-body" id="desgloseContenido"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: columna del movimiento general en texto compacto -->
+        <div class="modal fade" id="modalMovTexto" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content ficha-modal">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="movTextoTitulo">Resumen en texto</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <pre id="movTextoPre" class="mov-texto-pre"></pre>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.07);">
+                        <button type="button" class="btn-filter" data-dismiss="modal">Cerrar</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3224,6 +3291,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <span class="mov-drag" aria-hidden="true">⠿</span>
                             <span class="mov-lane-dot"></span>
                             <span class="mov-branch-name" title="${esc(s.nombre)}">${esc(s.nombre)}</span>
+                            <button type="button" draggable="false" class="mov-txt-btn"
+                                data-txt-branch="${id}"
+                                title="Ver ${esc(s.nombre)} en texto compacto">TXT</button>
                             <span class="mov-move-btns">
                                 <button type="button" draggable="false" data-move="-1" data-branch-id="${id}" title="Mover a la izquierda">‹</button>
                                 <button type="button" draggable="false" data-move="1" data-branch-id="${id}" title="Mover a la derecha">›</button>
@@ -3522,6 +3592,149 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     });
                 }
 
+                /* ── Columna en texto compacto ────────────────────────── */
+                function textoColumna(branchId) {
+                    const clave = String(branchId);
+                    const suc = MG.mapaSucursales.get(clave);
+                    if (!suc) return 'Sucursal no encontrada.';
+
+                    const tot = calcularTotales();
+                    const cero = { compra: 0, venta: 0, trasladoIn: 0, trasladoOut: 0, merma: 0 };
+                    const t = tot.porSucursal.get(clave) || cero;
+                    const cOn = MG.tipos.compra && !oculto(clave, 'compra');
+                    const vOn = MG.tipos.venta && !oculto(clave, 'venta');
+                    const tOn = MG.tipos.traslado && !oculto(clave, 'traslado');
+                    const mOn = MG.tipos.merma && !oculto(clave, 'merma');
+                    const netoTraslado = (Number(t.trasladoIn) || 0) - (Number(t.trasladoOut) || 0);
+
+                    const lineas = [];
+                    lineas.push('SUCURSAL: ' + String(suc.nombre).toUpperCase());
+                    lineas.push('Stock actual: ' + num(suc.stock) + ' ' + MG.unidad);
+                    lineas.push(
+                        'Compras: ' + (cOn ? num(t.compra) : '—') +
+                        ' | Ventas: ' + (vOn ? num(t.venta) : '—') +
+                        ' | Traslados: ' + (tOn ? ((netoTraslado > 0 ? '+' : '') + num(netoTraslado)) : '—') +
+                        ' | Mermas: ' + (mOn ? num(t.merma) : '—')
+                    );
+                    lineas.push(
+                        'Entradas por traslado: ' + (tOn ? num(t.trasladoIn) : '—') +
+                        ' | Salidas por traslado: ' + (tOn ? num(t.trasladoOut) : '—')
+                    );
+                    lineas.push('');
+                    lineas.push('FECHA       HORA   TIPO       CANTIDAD     DETALLE');
+                    lineas.push('----------  -----  ---------  -----------  -------------------------');
+
+                    const ordenTipo = { compra: 0, traslado: 1, venta: 2, merma: 3 };
+                    const ascendentes = eventosVisibles().slice().sort((a, b) => {
+                        const cmp = String(a.fecha || '').localeCompare(String(b.fecha || ''));
+                        if (cmp !== 0) return cmp;
+                        const ta = ordenTipo[a.tipo] ?? 9;
+                        const tb = ordenTipo[b.tipo] ?? 9;
+                        if (ta !== tb) return ta - tb;
+                        return String(a.id || '').localeCompare(String(b.id || ''));
+                    });
+                    const bloques = construirBloques(ascendentes);
+                    if (MG.sort === 'desc') bloques.reverse();
+
+                    const maximo = 300;
+                    let mostrados = 0;
+                    let totalLineas = 0;
+
+                    bloques.forEach((bloque) => {
+                        if (bloque.tipo === 'grupo') {
+                            const resumen = resumenGrupo(bloque);
+                            const fila = resumen.porSucursal.get(clave);
+                            if (!fila || (!fila.ventas && !fila.mermas)) return;
+
+                            totalLineas++;
+                            if (mostrados >= maximo) return;
+
+                            const inicio = fechaPartes(bloque.fechaInicio);
+                            const fin = fechaPartes(bloque.fechaFin);
+                            const mismoDia = String(bloque.fechaInicio).slice(0, 10) === String(bloque.fechaFin).slice(0, 10);
+                            let hora = inicio.hora || '00:00';
+                            if (mismoDia && fin.hora && fin.hora !== inicio.hora) {
+                                hora += '-' + fin.hora;
+                            } else if (!mismoDia) {
+                                hora += '...';
+                            }
+
+                            const partes = [];
+                            if (fila.ventas) partes.push(fila.ventas + ' venta(s)');
+                            if (fila.monto) partes.push('$' + num(fila.monto));
+                            if (fila.mermas) partes.push(fila.mermas + ' merma(s) −' + num(fila.mermaCantidad) + ' ' + MG.unidad);
+
+                            const cantidad = fila.ventas
+                                ? '−' + num(fila.cantidad) + ' ' + MG.unidad
+                                : '−' + num(fila.mermaCantidad) + ' ' + MG.unidad;
+
+                            lineas.push(
+                                inicio.fecha.padEnd(10) + '  ' +
+                                hora.padEnd(5) + '  ' +
+                                'Ventas'.padEnd(9) + '  ' +
+                                cantidad.padEnd(11) + '  ' +
+                                partes.join(' · ')
+                            );
+                            mostrados++;
+                            return;
+                        }
+
+                        const ev = bloque.evento;
+                        const occ = ocurrenciasVisibles(ev).find((o) => String(o.id) === clave);
+                        if (!occ) return;
+
+                        totalLineas++;
+                        if (mostrados >= maximo) return;
+
+                        const fecha = fechaPartes(ev.fecha);
+                        const esTraslado = ev.tipo === 'traslado';
+                        const signo = esTraslado ? occ.signo : (Number(ev.signo) || 0);
+                        const prefijo = signo < 0 ? '−' : (signo > 0 ? '+' : '±');
+                        let tipo = ev.subtipo || (TIPOS[ev.tipo] ? TIPOS[ev.tipo].label.replace(/s$/, '') : 'Movimiento');
+
+                        let detalle = '';
+                        if (esTraslado) {
+                            tipo = occ.interno ? 'Traslado' : (signo < 0 ? 'Sale' : 'Entra');
+                            detalle = occ.interno ? 'interno' : (signo < 0 ? '→ ' + (ev.destino || '') : '← ' + (ev.origen || ''));
+                        } else if (ev.detalle) {
+                            detalle = String(ev.detalle);
+                        }
+                        if (ev.usuario) detalle += (detalle ? ' · ' : '') + ev.usuario;
+                        if (ev.razon) detalle += (detalle ? ' · ' : '') + ev.razon;
+
+                        const cantidad = prefijo + num(ev.cantidad) + ' ' + MG.unidad;
+                        lineas.push(
+                            fecha.fecha.padEnd(10) + '  ' +
+                            (fecha.hora || '—').padEnd(5) + '  ' +
+                            tipo.slice(0, 9).padEnd(9) + '  ' +
+                            cantidad.padEnd(11) + '  ' +
+                            detalle
+                        );
+                        mostrados++;
+                    });
+
+                    if (totalLineas === 0) {
+                        lineas.push('Sin movimientos visibles para esta sucursal.');
+                    } else if (totalLineas > maximo) {
+                        lineas.push('');
+                        lineas.push('... vista limitada a ' + maximo + ' de ' + totalLineas + ' movimientos.');
+                    }
+
+                    return lineas.join('\n');
+                }
+
+                function abrirTextoColumna(branchId) {
+                    const suc = MG.mapaSucursales.get(String(branchId));
+                    if (!suc) return;
+
+                    document.getElementById('movTextoTitulo').textContent = 'Resumen en texto · ' + suc.nombre;
+                    const pre = document.getElementById('movTextoPre');
+                    pre.textContent = textoColumna(branchId);
+                    pre.scrollTop = 0;
+                    pre.scrollLeft = 0;
+                    $('#modalMovTexto').modal('show');
+                }
+
                 /* ── Interacción de encabezados ────────────────────────── */
                 function enlazarEncabezados() {
                     const head = $id('mov-head');
@@ -3568,6 +3781,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 moverAntes(dragBranchId, branchId);
                             }
                             dragBranchId = null;
+                        });
+                    });
+
+                    head.querySelectorAll('[data-txt-branch]').forEach((btn) => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            abrirTextoColumna(btn.dataset.txtBranch);
                         });
                     });
 
