@@ -46,6 +46,9 @@ if ($_SESSION["nivel"] == 2) {
     if ($archivoActual === 'compras_facturas.php' && in_array('nuevaCompra.php', $_SESSION["permisos"] ?? [], true)) {
         $coincidencia = true;
     }
+    if ($archivoActual === 'compras_cliente.php' && in_array('clientes.php', $_SESSION["permisos"] ?? [], true)) {
+        $coincidencia = true;
+    }
     if ($coincidencia == false && $nombrePagina != 'detallesVenta.php' ) {
         $primerPermiso = reset($_SESSION["permisos"]);
         if ($primerPermiso) {

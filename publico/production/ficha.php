@@ -1254,21 +1254,131 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 overflow: auto;
             }
 
-            .mov-texto-pre {
-                margin: 0;
-                padding: 2px;
-                max-height: 65vh;
-                overflow: auto;
-                color: #cbd5e1;
+            .mov-texto-resumen {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+
+            .mov-texto-resumen-item {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                padding: 8px 10px;
+                border: 1px solid rgba(255, 255, 255, .06);
+                border-radius: 8px;
+                background: rgba(255, 255, 255, .02);
+            }
+
+            .mov-texto-resumen-item span {
+                color: #64748b;
+                font-size: 9.5px;
+                font-weight: 600;
+                letter-spacing: .5px;
+                text-transform: uppercase;
+            }
+
+            .mov-texto-resumen-item strong {
+                color: #e2e8f0;
+                font-size: 13px;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .mov-texto-tabla-wrap {
+                overflow-x: auto;
+            }
+
+            .mov-texto-tabla {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
                 font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
                 font-size: 12px;
-                line-height: 1.55;
-                white-space: pre;
+            }
+
+            /* Sin bordes: solo el fondo alterno mantiene las filas legibles. */
+            .mov-texto-tabla th,
+            .mov-texto-tabla td {
+                border: 0 !important;
+                padding: 4px 6px;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            .mov-texto-tabla th {
+                color: #64748b;
+                background: rgba(255, 255, 255, .03);
+                font-size: 9.5px;
+                font-weight: 700;
+                letter-spacing: .5px;
+                text-transform: uppercase;
+            }
+
+            .mov-texto-tabla td {
+                color: #cbd5e1;
+            }
+
+            .mov-texto-tabla tbody tr:nth-child(even) {
+                background: rgba(255, 255, 255, .015);
+            }
+
+            .mov-texto-tabla .col-fecha {
+                width: 82px;
+                white-space: nowrap;
+            }
+
+            .mov-texto-tabla .col-hora {
+                width: 60px;
+                white-space: nowrap;
+            }
+
+            .mov-texto-tabla .col-tipo {
+                width: 78px;
+                white-space: nowrap;
+            }
+
+            .mov-texto-tabla .col-cant {
+                width: 100px;
+                white-space: nowrap;
+            }
+
+            .mov-texto-tabla .col-det {
+                width: auto;
+                white-space: normal;
+                word-break: break-word;
+            }
+
+            .mov-texto-vacio,
+            .mov-texto-nota {
+                padding: 10px 6px;
+                color: #64748b;
+                font-size: 11px;
+            }
+
+            .mov-texto-nota {
+                margin-top: 6px;
             }
 
             @media (max-width: 640px) {
-                .mov-texto-pre {
+                .mov-texto-tabla {
                     font-size: 10.5px;
+                }
+
+                .mov-texto-tabla .col-fecha {
+                    width: 70px;
+                }
+
+                .mov-texto-tabla .col-hora {
+                    width: 50px;
+                }
+
+                .mov-texto-tabla .col-tipo {
+                    width: 62px;
+                }
+
+                .mov-texto-tabla .col-cant {
+                    width: 82px;
                 }
             }
 
@@ -1989,7 +2099,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         </button>
                     </div>
                     <div class="modal-body">
-                        <pre id="movTextoPre" class="mov-texto-pre"></pre>
+                        <div id="movTextoContenido"></div>
                     </div>
                     <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.07);">
                         <button type="button" class="btn-filter" data-dismiss="modal">Cerrar</button>
@@ -3593,10 +3703,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                 }
 
                 /* ── Columna en texto compacto ────────────────────────── */
-                function textoColumna(branchId) {
+                function datosTextoColumna(branchId) {
                     const clave = String(branchId);
                     const suc = MG.mapaSucursales.get(clave);
-                    if (!suc) return 'Sucursal no encontrada.';
+                    if (!suc) return null;
 
                     const tot = calcularTotales();
                     const cero = { compra: 0, venta: 0, trasladoIn: 0, trasladoOut: 0, merma: 0 };
@@ -3607,22 +3717,15 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const mOn = MG.tipos.merma && !oculto(clave, 'merma');
                     const netoTraslado = (Number(t.trasladoIn) || 0) - (Number(t.trasladoOut) || 0);
 
-                    const lineas = [];
-                    lineas.push('SUCURSAL: ' + String(suc.nombre).toUpperCase());
-                    lineas.push('Stock actual: ' + num(suc.stock) + ' ' + MG.unidad);
-                    lineas.push(
-                        'Compras: ' + (cOn ? num(t.compra) : '—') +
-                        ' | Ventas: ' + (vOn ? num(t.venta) : '—') +
-                        ' | Traslados: ' + (tOn ? ((netoTraslado > 0 ? '+' : '') + num(netoTraslado)) : '—') +
-                        ' | Mermas: ' + (mOn ? num(t.merma) : '—')
-                    );
-                    lineas.push(
-                        'Entradas por traslado: ' + (tOn ? num(t.trasladoIn) : '—') +
-                        ' | Salidas por traslado: ' + (tOn ? num(t.trasladoOut) : '—')
-                    );
-                    lineas.push('');
-                    lineas.push('FECHA       HORA   TIPO       CANTIDAD     DETALLE');
-                    lineas.push('----------  -----  ---------  -----------  -------------------------');
+                    const resumen = [
+                        { label: 'Stock actual', value: num(suc.stock) + ' ' + MG.unidad },
+                        { label: 'Compras', value: cOn ? num(t.compra) : '—' },
+                        { label: 'Ventas', value: vOn ? num(t.venta) : '—' },
+                        { label: 'Traslados (neto)', value: tOn ? ((netoTraslado > 0 ? '+' : '') + num(netoTraslado)) : '—' },
+                        { label: 'Mermas', value: mOn ? num(t.merma) : '—' },
+                        { label: 'Entradas por traslado', value: tOn ? num(t.trasladoIn) : '—' },
+                        { label: 'Salidas por traslado', value: tOn ? num(t.trasladoOut) : '—' }
+                    ];
 
                     const ordenTipo = { compra: 0, traslado: 1, venta: 2, merma: 3 };
                     const ascendentes = eventosVisibles().slice().sort((a, b) => {
@@ -3637,17 +3740,17 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     if (MG.sort === 'desc') bloques.reverse();
 
                     const maximo = 300;
-                    let mostrados = 0;
+                    const filas = [];
                     let totalLineas = 0;
 
                     bloques.forEach((bloque) => {
                         if (bloque.tipo === 'grupo') {
-                            const resumen = resumenGrupo(bloque);
-                            const fila = resumen.porSucursal.get(clave);
+                            const resumenGrupoData = resumenGrupo(bloque);
+                            const fila = resumenGrupoData.porSucursal.get(clave);
                             if (!fila || (!fila.ventas && !fila.mermas)) return;
 
                             totalLineas++;
-                            if (mostrados >= maximo) return;
+                            if (filas.length >= maximo) return;
 
                             const inicio = fechaPartes(bloque.fechaInicio);
                             const fin = fechaPartes(bloque.fechaFin);
@@ -3668,14 +3771,13 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                                 ? '−' + num(fila.cantidad) + ' ' + MG.unidad
                                 : '−' + num(fila.mermaCantidad) + ' ' + MG.unidad;
 
-                            lineas.push(
-                                inicio.fecha.padEnd(10) + '  ' +
-                                hora.padEnd(5) + '  ' +
-                                'Ventas'.padEnd(9) + '  ' +
-                                cantidad.padEnd(11) + '  ' +
-                                partes.join(' · ')
-                            );
-                            mostrados++;
+                            filas.push({
+                                fecha: inicio.fecha,
+                                hora: hora,
+                                tipo: 'Ventas',
+                                cantidad: cantidad,
+                                detalle: partes.join(' · ')
+                            });
                             return;
                         }
 
@@ -3684,7 +3786,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (!occ) return;
 
                         totalLineas++;
-                        if (mostrados >= maximo) return;
+                        if (filas.length >= maximo) return;
 
                         const fecha = fechaPartes(ev.fecha);
                         const esTraslado = ev.tipo === 'traslado';
@@ -3702,36 +3804,63 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         if (ev.usuario) detalle += (detalle ? ' · ' : '') + ev.usuario;
                         if (ev.razon) detalle += (detalle ? ' · ' : '') + ev.razon;
 
-                        const cantidad = prefijo + num(ev.cantidad) + ' ' + MG.unidad;
-                        lineas.push(
-                            fecha.fecha.padEnd(10) + '  ' +
-                            (fecha.hora || '—').padEnd(5) + '  ' +
-                            tipo.slice(0, 9).padEnd(9) + '  ' +
-                            cantidad.padEnd(11) + '  ' +
-                            detalle
-                        );
-                        mostrados++;
+                        filas.push({
+                            fecha: fecha.fecha,
+                            hora: fecha.hora || '—',
+                            tipo: tipo,
+                            cantidad: prefijo + num(ev.cantidad) + ' ' + MG.unidad,
+                            detalle: detalle
+                        });
                     });
 
-                    if (totalLineas === 0) {
-                        lineas.push('Sin movimientos visibles para esta sucursal.');
-                    } else if (totalLineas > maximo) {
-                        lineas.push('');
-                        lineas.push('... vista limitada a ' + maximo + ' de ' + totalLineas + ' movimientos.');
-                    }
-
-                    return lineas.join('\n');
+                    return { suc, resumen, filas, totalLineas, maximo };
                 }
 
                 function abrirTextoColumna(branchId) {
-                    const suc = MG.mapaSucursales.get(String(branchId));
-                    if (!suc) return;
+                    const datos = datosTextoColumna(branchId);
+                    if (!datos) return;
 
-                    document.getElementById('movTextoTitulo').textContent = 'Resumen en texto · ' + suc.nombre;
-                    const pre = document.getElementById('movTextoPre');
-                    pre.textContent = textoColumna(branchId);
-                    pre.scrollTop = 0;
-                    pre.scrollLeft = 0;
+                    document.getElementById('movTextoTitulo').textContent = 'Resumen en texto · ' + datos.suc.nombre;
+
+                    const resumenHtml = datos.resumen.map((item) => `
+                        <div class="mov-texto-resumen-item">
+                            <span>${esc(item.label)}</span>
+                            <strong>${esc(item.value)}</strong>
+                        </div>`).join('');
+
+                    const filasHtml = datos.filas.length
+                        ? datos.filas.map((fila) => `<tr>
+                            <td class="col-fecha">${esc(fila.fecha)}</td>
+                            <td class="col-hora">${esc(fila.hora)}</td>
+                            <td class="col-tipo">${esc(fila.tipo)}</td>
+                            <td class="col-cant">${esc(fila.cantidad)}</td>
+                            <td class="col-det">${esc(fila.detalle || '—')}</td>
+                        </tr>`).join('')
+                        : '<tr><td colspan="5" class="mov-texto-vacio">Sin movimientos visibles para esta sucursal.</td></tr>';
+
+                    const nota = datos.totalLineas > datos.maximo
+                        ? `<div class="mov-texto-nota">Vista limitada a ${datos.maximo} de ${datos.totalLineas} movimientos.</div>`
+                        : '';
+
+                    document.getElementById('movTextoContenido').innerHTML = `
+                        <div class="mov-texto-resumen">${resumenHtml}</div>
+                        <div class="mov-texto-tabla-wrap">
+                            <table class="mov-texto-tabla">
+                                <thead>
+                                    <tr>
+                                        <th class="col-fecha">Fecha</th>
+                                        <th class="col-hora">Hora</th>
+                                        <th class="col-tipo">Tipo</th>
+                                        <th class="col-cant">Cantidad</th>
+                                        <th class="col-det">Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasHtml}</tbody>
+                            </table>
+                        </div>
+                        ${nota}
+                    `;
+
                     $('#modalMovTexto').modal('show');
                 }
 

@@ -6,6 +6,7 @@ const configPaginas = {
   "creditos.php": { titulo: "Creditos", subtitulo: "Lista de creditos" },
   "productos.php": { titulo: "Productos", subtitulo: "Lista de productos" },
   "clientes.php": { titulo: "Clientes", subtitulo: "Gestión de clientes" },
+  "compras_cliente.php": { titulo: "Compras del cliente", subtitulo: "Historial de compras y créditos activos" },
   "users.php": { titulo: "Usuarios", subtitulo: "Registro de usuarios" },
   "permisos.php": { titulo: "Permisos", subtitulo: "Permisos de usuarios" },
   
