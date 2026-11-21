@@ -114,6 +114,37 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
     .credito-tiempos span {
       color: var(--dash-text-muted);
     }
+    .credito-tiempos span.vencido {
+      border-color: rgba(239,90,111,.35);
+      background: rgba(239,90,111,.08);
+      color: #ef5a6f;
+    }
+    .credito-tiempos span.vencido b {
+      color: #ef5a6f;
+    }
+    .credito-estricto {
+      display: flex;
+      width: fit-content;
+      align-items: center;
+      gap: 4px;
+      margin-top: 5px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(245,180,91,.12);
+      border: 1px solid rgba(245,180,91,.3);
+      color: #f5b45b;
+      font-size: 10.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .credito-estricto.vencido {
+      background: rgba(239,90,111,.12);
+      border-color: rgba(239,90,111,.3);
+      color: #ef5a6f;
+    }
+    .credito-estricto ion-icon {
+      font-size: 12px;
+    }
 
     .dash-btn-wa {
       display: inline-flex;
@@ -465,6 +496,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
               <ion-icon name="hourglass-outline"></ion-icon>
               Crédito más antiguo pendiente: <b id="credito-viejo-tiempo">—</b>
             </span>
+            <span id="seguimiento-estricto-info" class="d-none">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              Seguimiento estricto: <b id="seguimiento-estricto-texto">—</b>
+            </span>
           </div>
         </div>
         <button type="button" class="dash-btn-wa" onclick="compartirWhatsApp()">
@@ -603,6 +638,7 @@ async function cargarCreditos() {
     creditosCount = data.ordenes.length;
     ordenesCredito = data.ordenes;
     deudaInicialUSD = data.totales_global.usd;
+    actualizarResumenSeguimiento(data.ordenes);
     if (data.ordenes.length === 0) { window.location.href = 'creditos.php'; }
 
     data.ordenes.forEach(ord => {
@@ -626,10 +662,21 @@ async function cargarCreditos() {
       const ts_inicial_u = ts_inicial.usd.toFixed(2);
       const ts_inicial_c = ts_inicial.cop > 0 ? ts_inicial.cop.toLocaleString('es-CO') : '0,00';
       const ts_inicial_b = ts_inicial.bs > 0 ? ts_inicial.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 }) : '0,00';
+
+      const seguimientoEstricto = Number(ord.seguimiento_estricto) === 1;
+      const fechaLimite = String(ord.fecha_limite || '').trim();
+      const limiteVencido = seguimientoEstricto && fechaLimite !== '' && fechaLimite < fechaHoyISO();
+      const etiquetaEstricto = seguimientoEstricto
+        ? `<div class="credito-estricto ${limiteVencido ? 'vencido' : ''}" title="${limiteVencido ? 'Crédito con seguimiento estricto vencido' : 'Crédito con seguimiento estricto'}">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+            Seguimiento estricto${fechaLimite ? ' · Límite: ' + fechaLimiteTexto(fechaLimite) : ''}
+          </div>`
+        : '';
+
       tbody.insertAdjacentHTML('beforeend', `
         <tr style="background:rgba(255,255,255,.03);">
           <td>COMPRA: <b>${ord.id}</b></td>
-          <td>Fecha: ${ord.fecha}</td>
+          <td>Fecha: ${ord.fecha}${etiquetaEstricto}</td>
           <td class="text-center"><b>TOTAL:
             <span class="total_final">${ts.usd.toFixed(2)}</span>
             <span class="total_inicial hide">${ts_inicial_u}</span>
@@ -814,6 +861,42 @@ function formatearMiles(n) {
   const num = parseFloat(n);
   if (isNaN(num)) return n;
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fechaLimiteTexto(fecha) {
+  const partes = String(fecha || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : String(fecha || '');
+}
+
+function fechaHoyISO() {
+  const hoy = new Date();
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+}
+
+function actualizarResumenSeguimiento(ordenes) {
+  const info = document.getElementById('seguimiento-estricto-info');
+  const texto = document.getElementById('seguimiento-estricto-texto');
+  if (!info || !texto) return;
+
+  const estrictos = (ordenes || []).filter(ord => Number(ord.seguimiento_estricto) === 1);
+  if (estrictos.length === 0) {
+    info.classList.add('d-none');
+    info.classList.remove('vencido');
+    texto.textContent = '—';
+    return;
+  }
+
+  const fechas = estrictos
+    .map(ord => String(ord.fecha_limite || '').trim())
+    .filter(fecha => fecha !== '')
+    .sort();
+  const proximo = fechas[0] || '';
+  const vencidos = fechas.filter(fecha => fecha < fechaHoyISO()).length;
+
+  info.classList.remove('d-none');
+  info.classList.toggle('vencido', vencidos > 0);
+  texto.textContent = estrictos.length + (estrictos.length === 1 ? ' crédito' : ' créditos') +
+    (proximo ? ' · Próximo límite: ' + fechaLimiteTexto(proximo) : '');
 }
 
 function diasDesdeFecha(fecha) {

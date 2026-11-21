@@ -3,7 +3,9 @@ require_once 'configuracion.php';
 require_once 'session.php';
 require_once '_tasas_cambio.php';
 require("_calculadrora_precios.php");
+require_once '_creditos.php';
 $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
+credito_asegurar_columnas($conexion);
 
 
 header('Content-Type: application/json; charset=utf-8');
@@ -103,7 +105,9 @@ $sql = "SELECT creditos.tipoCompra,
                orden.total_price,
                creditos.total_price as total_inicial_dolares,
                creditos.total_price_bs as total_inicial_bs,
-               creditos.total_price_cop as total_inicial_cop
+               creditos.total_price_cop as total_inicial_cop,
+               creditos.seguimiento_estricto,
+               creditos.fecha_limite
           FROM creditos
      LEFT JOIN orden ON orden.id = creditos.order_id
          WHERE estado = '2' AND negocio = ?
@@ -152,6 +156,8 @@ while ($row = $res->fetch_assoc()) {
         'total'       => (float)$row['total_price'],
         'totales'     => $totales,
         'productos'   => $productos,
+        'seguimiento_estricto' => (int) ($row['seguimiento_estricto'] ?? 0),
+        'fecha_limite' => $row['fecha_limite'] ?: '',
         'totales_iniciales' => [
             'usd' => $row['total_inicial_dolares'],
             'cop' => $row['total_inicial_cop'],
