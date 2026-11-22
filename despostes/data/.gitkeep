@@ -1,0 +1,2 @@
+# Carpeta de datos del backend.
+# No se sirve por HTTP. El backend crea aquí codigos.json y solicitudes.json.
