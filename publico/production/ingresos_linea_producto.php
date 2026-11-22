@@ -535,6 +535,19 @@ $topnav = topnav();
             white-space: nowrap;
         }
 
+        .lp-prod-sub {
+            color: var(--dash-text-muted);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .lp-help {
+            display: block;
+            color: var(--dash-text-muted);
+            font-size: 11px;
+            margin-top: 6px;
+        }
+
         .swal2-popup {
             background: var(--dash-card) !important;
             border: 1px solid var(--dash-border) !important;
@@ -583,7 +596,7 @@ $topnav = topnav();
                 <div class="dash-header">
                     <div>
                         <h3>Ingresos por Línea de Producto</h3>
-                        <p>Consulta cuánto generó un grupo de productos y qué parte representa del total vendido.</p>
+                        <p>Consulta cuánto generó un grupo de productos y qué parte representa del total vendido. Incluye automáticamente variaciones, presentaciones al mayor y combos que contengan sus productos.</p>
                     </div>
                     <?php if ($tipo_u === 1): ?>
                         <div class="dash-controls">
@@ -705,14 +718,14 @@ $topnav = topnav();
 
                 <div class="dash-panel">
                     <div class="panel-header">
-                        <h6>Productos de la línea</h6>
+                        <h6>Productos principales de la línea</h6>
                         <span class="panel-badge" id="badgeProductos">0 productos</span>
                     </div>
                     <div class="panel-body p-0" style="overflow-x:auto;">
                         <table class="lp-table">
                             <thead>
                                 <tr>
-                                    <th>Producto</th>
+                                    <th>Producto principal</th>
                                     <th class="lp-num">Unidades</th>
                                     <th class="lp-num">Ingreso</th>
                                     <th class="lp-num">% de la línea</th>
@@ -755,12 +768,14 @@ $topnav = topnav();
                             </div>
                             <div class="form-group">
                                 <label class="col-form-label">
-                                    Productos * <span id="contadorProductos" style="text-transform:none;letter-spacing:0;">0 seleccionados</span>
+                                    Productos principales * <span id="contadorProductos" style="text-transform:none;letter-spacing:0;">0 seleccionados</span>
                                 </label>
                                 <input class="form-control" id="buscarProducto" placeholder="Buscar por nombre, código o categoría…" style="margin-bottom:8px;">
                                 <div class="lp-prod-list" id="listaProductos">
                                     <div class="lp-empty">Cargando productos…</div>
                                 </div>
+                                <div id="productosOcultos"></div>
+                                <small class="lp-help">Las variaciones, las presentaciones al mayor y los combos que contengan estos productos se suman automáticamente.</small>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -858,7 +873,9 @@ $topnav = topnav();
         function actualizarContador() {
             const cont = $id('listaProductos');
             if (!cont) return;
-            const total = cont.querySelectorAll('input[type="checkbox"]:checked').length;
+            const visibles = cont.querySelectorAll('input[type="checkbox"]:checked').length;
+            const ocultos = document.querySelectorAll('#productosOcultos .lp-prod-hidden').length;
+            const total = visibles + ocultos;
             $id('contadorProductos').textContent = total + (total === 1 ? ' seleccionado' : ' seleccionados');
         }
 
@@ -922,8 +939,12 @@ $topnav = topnav();
 
             tbody.innerHTML = productos.map((p) => {
                 const utilidad = Number(p.utilidad) || 0;
+                const presentaciones = Number(p.presentaciones) || 0;
+                const sub = presentaciones > 1
+                    ? '<div class="lp-prod-sub">' + presentaciones + ' presentaciones incluidas</div>'
+                    : '';
                 return '<tr>'
-                    + '<td>' + esc(p.nombre) + '</td>'
+                    + '<td><div>' + esc(p.nombre) + '</div>' + sub + '</td>'
                     + '<td class="lp-num">' + fmtNum(p.unidades) + '</td>'
                     + '<td class="lp-num">' + fmtMoney(p.ingreso) + '</td>'
                     + '<td class="lp-num">' + (Number(p.porcentaje) || 0).toFixed(1) + '%</td>'
@@ -1012,9 +1033,26 @@ $topnav = topnav();
 
             const cont = $id('listaProductos');
             const seleccionados = new Set((linea ? linea.productos : []).map(Number));
+            const visibles = new Set(Array.from(cont.querySelectorAll('input[type="checkbox"]')).map((cb) => Number(cb.value)));
+
             cont.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
                 cb.checked = seleccionados.has(Number(cb.value));
             });
+
+            // Productos que ya no están en el catálogo (eliminados) se conservan
+            // ocultos para no perder las ventas históricas de la línea.
+            const ocultos = $id('productosOcultos');
+            ocultos.innerHTML = '';
+            seleccionados.forEach((id) => {
+                if (!visibles.has(id)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.className = 'lp-prod-hidden';
+                    input.value = id;
+                    ocultos.appendChild(input);
+                }
+            });
+
             filtrarProductos();
             actualizarContador();
 
@@ -1130,7 +1168,8 @@ $topnav = topnav();
                 const id = $id('lineaId').value;
                 const nombre = $id('lineaNombre').value.trim();
                 const descripcion = $id('lineaDescripcion').value.trim();
-                const productos = Array.from($id('listaProductos').querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                const productos = Array.from($id('listaProductos').querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value)
+                    .concat(Array.from($id('productosOcultos').querySelectorAll('.lp-prod-hidden')).map((input) => input.value));
 
                 if (!nombre) {
                     Toast.fire({ icon: 'error', title: 'Ingrese un nombre para la línea' });

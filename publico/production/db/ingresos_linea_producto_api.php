@@ -60,20 +60,46 @@ function lp_ids(string $raw): array
     return array_slice(array_values($ids), 0, 5000);
 }
 
-/** Todos los ids deben pertenecer al negocio. */
-function lp_productos_validos(mysqli $conexion, array $ids, int $bss_id): bool
+/**
+ * Convierte las presentaciones enviadas a su producto principal.
+ * - Variación:      id_producto_relacionado -> principal.
+ * - Al mayor:       id_producto_relacionado -> principal (o a su variación).
+ * - Producto normal: se queda igual.
+ * Devuelve null si algún id no pertenece al negocio.
+ */
+function lp_productos_canonicos(mysqli $conexion, array $ids, int $bss_id): ?array
 {
     if (!$ids) {
-        return false;
+        return null;
     }
     $in  = implode(',', $ids);
-    $res = $conexion->query("SELECT COUNT(*) AS total FROM productos WHERE bss_id = $bss_id AND id IN ($in)");
+    $res = $conexion->query("
+        SELECT p.id,
+               COALESCE(NULLIF(parent.id_producto_relacionado, 0), NULLIF(p.id_producto_relacionado, 0), p.id) AS base_id
+        FROM productos p
+        LEFT JOIN productos parent ON parent.id = p.id_producto_relacionado AND parent.bss_id = p.bss_id
+        WHERE p.bss_id = $bss_id
+          AND p.id IN ($in)
+    ");
     if (!$res) {
-        return false;
+        return null;
     }
-    $total = (int) ($res->fetch_assoc()['total'] ?? 0);
+
+    $encontrados = 0;
+    $bases = [];
+    while ($row = $res->fetch_assoc()) {
+        $encontrados++;
+        $base_id = (int) $row['base_id'];
+        if ($base_id > 0) {
+            $bases[$base_id] = $base_id;
+        }
+    }
     $res->free();
-    return $total === count($ids);
+
+    if ($encontrados !== count($ids) || !$bases) {
+        return null;
+    }
+    return array_values($bases);
 }
 
 function lp_guardar_items(mysqli $conexion, int $linea_id, array $ids, int $bss_id): bool
@@ -100,11 +126,17 @@ if (in_array($accion, ['crear', 'editar', 'eliminar'], true) && $nivel !== 1) {
 switch ($accion) {
 
     case 'catalogo':
+        // Solo productos principales activos. Variaciones, presentaciones al
+        // mayor y combos no se eligen: sus ventas se suman solas al principal.
         $stmt = $conexion->prepare("
             SELECT p.id, p.nombre, p.codigo, p.categoria, cp.nombre AS categoria_nombre
             FROM productos p
             LEFT JOIN categorias_producto cp ON cp.id = p.categoria
-            WHERE p.bss_id = ? AND p.activo = 0
+            WHERE p.bss_id = ?
+              AND p.activo = 0
+              AND COALESCE(p.es_combo, 0) = 0
+              AND (p.mayor IS NULL OR p.mayor = 0)
+              AND (p.id_producto_relacionado IS NULL OR p.id_producto_relacionado = 0)
             ORDER BY p.nombre ASC
         ");
         $stmt->bind_param('i', $bss_id);
@@ -148,16 +180,31 @@ switch ($accion) {
         }
         $stmt->close();
 
-        $resItems = $conexion->query("SELECT linea_id, producto_id FROM linea_producto_items WHERE bss_id = $bss_id");
+        // Se devuelve el principal aunque el item guardado sea una variación
+        // o una presentación al mayor (datos creados antes de esta regla).
+        $resItems = $conexion->query("
+            SELECT li.linea_id,
+                   COALESCE(NULLIF(parent.id_producto_relacionado, 0), NULLIF(p.id_producto_relacionado, 0), p.id) AS producto_id
+            FROM linea_producto_items li
+            INNER JOIN productos p ON p.id = li.producto_id AND p.bss_id = li.bss_id
+            LEFT JOIN productos parent ON parent.id = p.id_producto_relacionado AND parent.bss_id = p.bss_id
+            WHERE li.bss_id = $bss_id
+        ");
         if ($resItems) {
             while ($item = $resItems->fetch_assoc()) {
                 $linea_id = (int) $item['linea_id'];
-                if (isset($lineas[$linea_id])) {
-                    $lineas[$linea_id]['productos'][] = (int) $item['producto_id'];
+                $producto_id = (int) $item['producto_id'];
+                if (isset($lineas[$linea_id]) && $producto_id > 0 && !in_array($producto_id, $lineas[$linea_id]['productos'], true)) {
+                    $lineas[$linea_id]['productos'][] = $producto_id;
                 }
             }
             $resItems->free();
         }
+
+        foreach ($lineas as &$linea) {
+            $linea['total_productos'] = count($linea['productos']);
+        }
+        unset($linea);
 
         lp_json(['success' => true, 'data' => array_values($lineas)]);
         break;
@@ -182,34 +229,142 @@ switch ($accion) {
         }
 
         $sucursal_id = lp_sucursal($nivel);
-        $sucCond     = $sucursal_id > 0 ? " AND o.id_sucursal = $sucursal_id" : '';
+        $sucCondDir   = $sucursal_id > 0 ? " AND o.id_sucursal = $sucursal_id" : '';
+        $sucCondCombo = $sucursal_id > 0 ? " AND o2.id_sucursal = $sucursal_id" : '';
 
-        // Indicadores de la línea en el período.
-        $stmt = $conexion->prepare("
+        /*
+         * Ventas directas de la línea. Cada presentación (producto principal,
+         * variación o al mayor) se resuelve a su principal; el ingreso y el
+         * costo se suman con el margen real de cada presentación.
+         */
+        $sqlDirecta = "
             SELECT
-                COALESCE(SUM(oa.quantity * CAST(oa.precio_venta_dolar AS DECIMAL(15,2))), 0) AS ingreso,
-                COALESCE(SUM(oa.quantity * CAST(oa.precio AS DECIMAL(15,2))), 0) AS costo,
-                COALESCE(SUM(oa.quantity), 0) AS unidades,
-                COUNT(DISTINCT o.id) AS tickets
+                o.id AS order_id,
+                o.created AS fecha,
+                oa.product_id AS presentacion_id,
+                base.id AS producto_id,
+                base.nombre AS nombre,
+                oa.quantity AS unidades,
+                oa.quantity * CAST(oa.precio_venta_dolar AS DECIMAL(15,2)) AS ingreso,
+                oa.quantity * CAST(oa.precio AS DECIMAL(15,2)) AS costo
             FROM orden_articulos oa
             INNER JOIN orden o ON o.id = oa.order_id
-            INNER JOIN linea_producto_items li ON li.producto_id = oa.product_id AND li.bss_id = oa.bss_id
-            WHERE li.linea_id = ?
-              AND o.bss_id = ?
+            INNER JOIN productos pv ON pv.id = oa.product_id
+            LEFT JOIN productos parent ON parent.id = pv.id_producto_relacionado AND parent.bss_id = oa.bss_id
+            INNER JOIN productos base ON base.id = COALESCE(NULLIF(parent.id_producto_relacionado, 0), NULLIF(pv.id_producto_relacionado, 0), pv.id)
+            INNER JOIN linea_producto_items li ON li.linea_id = ? AND li.producto_id = base.id AND li.bss_id = oa.bss_id
+            WHERE o.bss_id = ?
               AND o.status IN (1, 4)
               AND o.created >= ?
               AND o.created < DATE_ADD(?, INTERVAL 1 DAY)
-              $sucCond
-        ");
-        $stmt->bind_param('iiss', $linea_id, $bss_id, $desde, $hasta);
-        $stmt->execute();
-        $kpi = $stmt->get_result()->fetch_assoc() ?: [];
-        $stmt->close();
+              AND COALESCE(pv.es_combo, 0) = 0
+              $sucCondDir
+        ";
 
-        $ingreso  = round((float) ($kpi['ingreso'] ?? 0), 2);
-        $costo    = round((float) ($kpi['costo'] ?? 0), 2);
-        $unidades = round((float) ($kpi['unidades'] ?? 0), 3);
-        $tickets  = (int) ($kpi['tickets'] ?? 0);
+        /*
+         * Combos: la venta del combo se reparte entre sus componentes según el
+         * valor de referencia de cada uno. Así la línea recibe solo la parte
+         * que corresponde a sus productos y no se duplica entre líneas.
+         */
+        $sqlCombo = "
+            SELECT
+                t.order_id AS order_id,
+                t.fecha AS fecha,
+                comp.id AS presentacion_id,
+                base.id AS producto_id,
+                base.nombre AS nombre,
+                ci.cantidad * t.quantity AS unidades,
+                COALESCE(t.quantity * CAST(t.precio_venta_dolar AS DECIMAL(15,2))
+                    * (ci.cantidad * ci.venta_unitario_ref) / NULLIF(t.ref_venta_total, 0), 0) AS ingreso,
+                COALESCE(t.quantity * CAST(t.precio AS DECIMAL(15,2))
+                    * (ci.cantidad * ci.costo_unitario_ref) / NULLIF(t.ref_costo_total, 0), 0) AS costo
+            FROM (
+                SELECT
+                    oa2.id AS oa_id,
+                    oa2.order_id AS order_id,
+                    o2.created AS fecha,
+                    oa2.product_id AS combo_id,
+                    oa2.quantity AS quantity,
+                    oa2.precio_venta_dolar AS precio_venta_dolar,
+                    oa2.precio AS precio,
+                    oa2.bss_id AS bss_id,
+                    SUM(ci2.cantidad * ci2.venta_unitario_ref) AS ref_venta_total,
+                    SUM(ci2.cantidad * ci2.costo_unitario_ref) AS ref_costo_total
+                FROM orden_articulos oa2
+                INNER JOIN orden o2 ON o2.id = oa2.order_id
+                INNER JOIN productos combo2 ON combo2.id = oa2.product_id AND COALESCE(combo2.es_combo, 0) = 1
+                INNER JOIN combo_items ci2 ON ci2.combo_producto_id = oa2.product_id AND ci2.bss_id = oa2.bss_id
+                WHERE o2.bss_id = ?
+                  AND o2.status IN (1, 4)
+                  AND o2.created >= ?
+                  AND o2.created < DATE_ADD(?, INTERVAL 1 DAY)
+                  $sucCondCombo
+                GROUP BY oa2.id, oa2.order_id, o2.created, oa2.product_id, oa2.quantity, oa2.precio_venta_dolar, oa2.precio, oa2.bss_id
+            ) t
+            INNER JOIN combo_items ci ON ci.combo_producto_id = t.combo_id AND ci.bss_id = t.bss_id
+            INNER JOIN productos comp ON comp.id = ci.producto_id
+            LEFT JOIN productos parent ON parent.id = comp.id_producto_relacionado AND parent.bss_id = t.bss_id
+            INNER JOIN productos base ON base.id = COALESCE(NULLIF(parent.id_producto_relacionado, 0), NULLIF(comp.id_producto_relacionado, 0), comp.id)
+            INNER JOIN linea_producto_items li ON li.linea_id = ? AND li.producto_id = base.id AND li.bss_id = t.bss_id
+        ";
+
+        $unionVentas = "($sqlDirecta) UNION ALL ($sqlCombo)";
+        $tiposUnion  = 'iiss' . 'issi';
+        $paramsUnion = [$linea_id, $bss_id, $desde, $hasta, $bss_id, $desde, $hasta, $linea_id];
+
+        // Desglose por producto principal.
+        $stmtProd = $conexion->prepare("
+            SELECT v.producto_id, v.nombre,
+                   COALESCE(SUM(v.unidades), 0) AS unidades,
+                   COALESCE(SUM(v.ingreso), 0) AS ingreso,
+                   COALESCE(SUM(v.costo), 0) AS costo,
+                   COUNT(DISTINCT v.presentacion_id) AS presentaciones
+            FROM ($unionVentas) v
+            GROUP BY v.producto_id, v.nombre
+            ORDER BY ingreso DESC, v.nombre ASC
+        ");
+        $stmtProd->bind_param($tiposUnion, ...$paramsUnion);
+        $stmtProd->execute();
+        $resProd = $stmtProd->get_result();
+
+        $productos = [];
+        $ingreso = 0.0;
+        $costo = 0.0;
+        $unidades = 0.0;
+        while ($row = $resProd->fetch_assoc()) {
+            $ingresoProd = round((float) $row['ingreso'], 2);
+            $costoProd = round((float) $row['costo'], 2);
+            $unidadesProd = round((float) $row['unidades'], 3);
+            $ingreso += $ingresoProd;
+            $costo += $costoProd;
+            $unidades += $unidadesProd;
+            $productos[] = [
+                'id'            => (int) $row['producto_id'],
+                'nombre'        => $row['nombre'],
+                'unidades'      => $unidadesProd,
+                'ingreso'       => $ingresoProd,
+                'porcentaje'    => 0, // se calcula al final sobre el total de la línea
+                'costo'         => $costoProd,
+                'utilidad'      => round($ingresoProd - $costoProd, 2),
+                'presentaciones' => (int) $row['presentaciones'],
+            ];
+        }
+        $stmtProd->close();
+
+        $ingreso = round($ingreso, 2);
+        $costo = round($costo, 2);
+        $unidades = round($unidades, 3);
+        foreach ($productos as &$producto) {
+            $producto['porcentaje'] = $ingreso > 0 ? round($producto['ingreso'] / $ingreso * 100, 2) : 0;
+        }
+        unset($producto);
+
+        // Tickets con al menos un producto de la línea (directo o en combo).
+        $stmtTickets = $conexion->prepare("SELECT COUNT(DISTINCT v.order_id) AS tickets FROM ($unionVentas) v");
+        $stmtTickets->bind_param($tiposUnion, ...$paramsUnion);
+        $stmtTickets->execute();
+        $tickets = (int) ($stmtTickets->get_result()->fetch_assoc()['tickets'] ?? 0);
+        $stmtTickets->close();
 
         // Total vendido por el negocio en el mismo período y sucursal.
         $stmtTotal = $conexion->prepare("
@@ -220,67 +375,21 @@ switch ($accion) {
               AND o.status IN (1, 4)
               AND o.created >= ?
               AND o.created < DATE_ADD(?, INTERVAL 1 DAY)
-              $sucCond
+              $sucCondDir
         ");
         $stmtTotal->bind_param('iss', $bss_id, $desde, $hasta);
         $stmtTotal->execute();
         $totalPeriodo = round((float) ($stmtTotal->get_result()->fetch_assoc()['total'] ?? 0), 2);
         $stmtTotal->close();
 
-        // Desglose por producto de la línea.
-        $stmtProd = $conexion->prepare("
-            SELECT p.id, p.nombre,
-                   COALESCE(SUM(oa.quantity), 0) AS unidades,
-                   COALESCE(SUM(oa.quantity * CAST(oa.precio_venta_dolar AS DECIMAL(15,2))), 0) AS ingreso,
-                   COALESCE(SUM(oa.quantity * CAST(oa.precio AS DECIMAL(15,2))), 0) AS costo
-            FROM orden_articulos oa
-            INNER JOIN orden o ON o.id = oa.order_id
-            INNER JOIN linea_producto_items li ON li.producto_id = oa.product_id AND li.bss_id = oa.bss_id
-            INNER JOIN productos p ON p.id = oa.product_id
-            WHERE li.linea_id = ?
-              AND o.bss_id = ?
-              AND o.status IN (1, 4)
-              AND o.created >= ?
-              AND o.created < DATE_ADD(?, INTERVAL 1 DAY)
-              $sucCond
-            GROUP BY p.id, p.nombre
-            ORDER BY ingreso DESC, p.nombre ASC
-        ");
-        $stmtProd->bind_param('iiss', $linea_id, $bss_id, $desde, $hasta);
-        $stmtProd->execute();
-        $resProd = $stmtProd->get_result();
-        $productos = [];
-        while ($row = $resProd->fetch_assoc()) {
-            $ingresoProd = round((float) $row['ingreso'], 2);
-            $productos[] = [
-                'id'         => (int) $row['id'],
-                'nombre'     => $row['nombre'],
-                'unidades'   => round((float) $row['unidades'], 3),
-                'ingreso'    => $ingresoProd,
-                'porcentaje' => $ingreso > 0 ? round($ingresoProd / $ingreso * 100, 2) : 0,
-                'costo'      => round((float) $row['costo'], 2),
-                'utilidad'   => round($ingresoProd - (float) $row['costo'], 2),
-            ];
-        }
-        $stmtProd->close();
-
-        // Ingresos por día dentro del rango (se completan los días sin ventas).
+        // Ingresos de la línea por día (se completan los días sin ventas).
         $stmtDia = $conexion->prepare("
-            SELECT DATE(o.created) AS fecha,
-                   COALESCE(SUM(oa.quantity * CAST(oa.precio_venta_dolar AS DECIMAL(15,2))), 0) AS ingreso
-            FROM orden_articulos oa
-            INNER JOIN orden o ON o.id = oa.order_id
-            INNER JOIN linea_producto_items li ON li.producto_id = oa.product_id AND li.bss_id = oa.bss_id
-            WHERE li.linea_id = ?
-              AND o.bss_id = ?
-              AND o.status IN (1, 4)
-              AND o.created >= ?
-              AND o.created < DATE_ADD(?, INTERVAL 1 DAY)
-              $sucCond
-            GROUP BY DATE(o.created)
+            SELECT DATE(v.fecha) AS fecha, COALESCE(SUM(v.ingreso), 0) AS ingreso
+            FROM ($unionVentas) v
+            GROUP BY DATE(v.fecha)
             ORDER BY fecha ASC
         ");
-        $stmtDia->bind_param('iiss', $linea_id, $bss_id, $desde, $hasta);
+        $stmtDia->bind_param($tiposUnion, ...$paramsUnion);
         $stmtDia->execute();
         $resDia = $stmtDia->get_result();
         $porDia = [];
@@ -323,7 +432,7 @@ switch ($accion) {
         $id          = (int) ($_POST['id'] ?? 0);
         $nombre      = trim(strip_tags((string) ($_POST['nombre'] ?? '')));
         $descripcion = trim(strip_tags((string) ($_POST['descripcion'] ?? '')));
-        $productos   = lp_ids((string) ($_POST['productos'] ?? ''));
+        $enviados    = lp_ids((string) ($_POST['productos'] ?? ''));
 
         if ($nombre === '') {
             lp_error('El nombre de la línea es obligatorio');
@@ -334,10 +443,12 @@ switch ($accion) {
         if (mb_strlen($descripcion, 'UTF-8') > 255) {
             lp_error('La descripción no puede superar 255 caracteres');
         }
-        if (!$productos) {
+        if (!$enviados) {
             lp_error('Seleccione al menos un producto');
         }
-        if (!lp_productos_validos($conexion, $productos, $bss_id)) {
+
+        $productos = lp_productos_canonicos($conexion, $enviados, $bss_id);
+        if (!$productos) {
             lp_error('Hay productos que no pertenecen a este negocio');
         }
 
