@@ -98,7 +98,7 @@ function ds_codigo_normalizar(string $codigo): string
 
 function ds_codigo_valido(string $codigo): bool
 {
-    return (bool) preg_match('/^[A-Z0-9-]{6,32}$/', $codigo);
+    return (bool) preg_match('/^[A-Z0-9-]{3,32}$/', $codigo);
 }
 
 function ds_generar_codigo(string $prefijo): string
