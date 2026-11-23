@@ -796,6 +796,7 @@ $topnav = topnav();
         const API = 'db/ingresos_linea_producto_api.php';
         const PUEDE_EDITAR = <?= $tipo_u === 1 ? 'true' : 'false' ?>;
         const Toast = Swal.mixin({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+        const Alert = Swal.mixin({ background: '#181b22', color: '#e8edf2', confirmButtonColor: '#2dd4a0' });
 
         const $id = (id) => document.getElementById(id);
         let lineas = [];
@@ -1194,8 +1195,12 @@ $topnav = topnav();
                             Toast.fire({ icon: 'error', title: resp.msg || 'No se pudo guardar la línea' });
                             return;
                         }
+                        Alert.fire({
+                            icon: 'success',
+                            title: resp.msg || 'Línea guardada',
+                            confirmButtonText: 'Aceptar'
+                        });
                         $('#modalLinea').modal('hide');
-                        Toast.fire({ icon: 'success', title: resp.msg });
                         await cargarLineas(resp.id);
                         await cargarResumen();
                     })

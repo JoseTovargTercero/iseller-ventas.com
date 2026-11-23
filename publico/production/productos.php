@@ -974,7 +974,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             <div class="pname">${escaparHtml(p.nombre)}</div>
                             <div class="pusd">${formatearUsdImpresion(p.usd)}</div>
                             <div class="psec">${formatearBsImpresion(p.bs)}</div>
-                            <div class="psec psec-cop">${formatearCopImpresion(p.cop)}</div>
+                            <div class="psec">${formatearCopImpresion(p.cop)}</div>
                         </div>`;
                     };
 
@@ -990,10 +990,10 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                             return a.localeCompare(b, 'es');
                         }).forEach(function(categoria) {
                             cuerpo += `<div class="pcat">${escaparHtml(categoria)}</div>`;
-                            cuerpo += `<div class="pgrid">${grupos.get(categoria).map(tarjeta).join('')}</div>`;
+                            cuerpo += `<div class="plist">${grupos.get(categoria).map(tarjeta).join('')}</div>`;
                         });
                     } else {
-                        cuerpo = `<div class="pgrid${individual ? ' single' : ''}">${lista.map(tarjeta).join('')}</div>`;
+                        cuerpo = `<div class="plist">${lista.map(tarjeta).join('')}</div>`;
                     }
 
                     const fecha = new Date().toLocaleDateString('es-VE', {
@@ -1002,38 +1002,67 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         year: 'numeric'
                     });
 
+                    const encabezado = individual ? '' : `<header>
+                        <h1>${escaparHtml(titulo)}</h1>
+                        <div class="meta">${fecha} &middot; ${lista.length} producto${lista.length === 1 ? '' : 's'}</div>
+                    </header>`;
+
+                    const nota = individual ? '' : '<div class="note">Precios en USD, Bs. y COP.</div>';
+
                     return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <title>${escaparHtml(titulo)}</title>
 <style>
-    @page { size: A4 portrait; margin: 12mm; }
+    @page { size: 58mm auto; margin: 0; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
-    header { text-align: center; margin-bottom: 16px; }
-    h1 { margin: 0 0 3px; font-size: 20px; letter-spacing: .02em; }
-    .meta { font-size: 11px; color: #666; }
-    .pcat { margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #222; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; break-after: avoid; }
-    .pcat:first-child { margin-top: 0; }
-    .pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
-    .pgrid.single { grid-template-columns: minmax(0, 320px); justify-content: center; }
-    .pcard { padding: 10px 12px; border: 1px solid #d8d8d8; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
-    .pname { min-height: 30px; margin-bottom: 5px; font-size: 12px; font-weight: 700; line-height: 1.25; }
-    .pusd { font-size: 20px; font-weight: 800; line-height: 1.05; }
-    .psec { margin-top: 4px; font-size: 10px; font-weight: 500; color: #555; line-height: 1.35; }
-    .psec-cop { margin-top: 1px; }
-    .note { margin-top: 16px; text-align: right; font-size: 9px; color: #777; }
-    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    html { background: #eef1f5; }
+    body {
+        width: 58mm;
+        margin: 0 auto;
+        padding: 0;
+        background: #fff;
+        color: #000;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9px;
+    }
+    .contenido { width: 48mm; margin: 0 auto; padding: 3mm 0; }
+    header { margin: 0 0 1mm; padding-bottom: 1mm; border-bottom: 2px solid #000; text-align: center; }
+    h1 { margin: 0 0 .5mm; font-size: 11px; line-height: 1.2; }
+    .meta { font-size: 8px; line-height: 1.3; }
+    .pcat {
+        margin: 2mm 0 .5mm;
+        padding: .6mm 0;
+        border-top: 1px dashed #000;
+        border-bottom: 1px dashed #000;
+        text-align: center;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        break-after: avoid;
+    }
+    .pcat:first-child { margin-top: 0; border-top: 0; }
+    .pcard { padding: 1.4mm 0; border-bottom: 1px dashed #999; break-inside: avoid; page-break-inside: avoid; }
+    .pcard:last-child { border-bottom: 0; }
+    .pname { font-size: 9.5px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+    .pusd { margin-top: .6mm; font-size: 17px; font-weight: 800; line-height: 1.1; }
+    .psec { font-size: 8.5px; font-weight: 500; line-height: 1.35; }
+    .note { margin-top: 1.5mm; padding-top: 1mm; border-top: 1px dashed #999; text-align: center; font-size: 7.5px; color: #333; }
+    @media print {
+        html { background: #fff; }
+        body { width: 58mm; margin: 0; padding: 0; }
+        .contenido { padding: 2mm 0; }
+    }
 </style>
 </head>
 <body>
-    <header>
-        <h1>${escaparHtml(titulo)}</h1>
-        <div class="meta">${fecha} &middot; ${lista.length} producto${lista.length === 1 ? '' : 's'}</div>
-    </header>
-    ${cuerpo}
-    <div class="note">Precios expresados en USD, bolívares (Bs.) y pesos colombianos (COP).</div>
+    <div class="contenido">
+        ${encabezado}
+        ${cuerpo}
+        ${nota}
+    </div>
     <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); }; window.onafterprint = function () { window.close(); };<\/script>
 </body>
 </html>`;
@@ -1044,7 +1073,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         Alerta.toast('warning', 'No hay productos para imprimir.');
                         return;
                     }
-                    const ventana = window.open('', '_blank', 'width=900,height=720');
+                    const ventana = window.open('', '_blank', 'width=380,height=720');
                     if (!ventana) {
                         Alerta.toast('error', 'El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e intenta de nuevo.');
                         return;
@@ -1058,7 +1087,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const producto = productos[id];
                     if (!producto) return;
                     imprimirPrecios([precioParaImpresion(producto, 0)], {
-                        titulo: producto.nombre || 'Precio',
+                        titulo: 'Precio',
                         individual: true
                     });
                 }
