@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/private/lib.php';
+require __DIR__ . '/private/db.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
@@ -46,36 +47,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
 
         try {
-            $generados = ds_actualizar('codigos', function (array &$codigos) use ($cantidad, $nota, $config) {
-                $existentes = [];
-                foreach ($codigos as $item) {
-                    if (is_array($item)) {
-                        $existentes[] = (string) ($item['codigo'] ?? '');
+            $stmt = ds_db()->prepare('INSERT INTO codigos (codigo, nota) VALUES (:codigo, :nota)');
+            $generados = [];
+            for ($i = 0; $i < $cantidad; $i++) {
+                for ($intento = 0; $intento < 10; $intento++) {
+                    $codigo = ds_generar_codigo((string) $config['code_prefix']);
+                    try {
+                        $stmt->execute([':codigo' => $codigo, ':nota' => $nota]);
+                        $generados[] = $codigo;
+                        break;
+                    } catch (PDOException $repetido) {
+                        if ((int) ($repetido->errorInfo[1] ?? 0) !== 1062) {
+                            throw $repetido;
+                        }
                     }
                 }
-
-                $nuevos = [];
-                for ($i = 0; $i < $cantidad; $i++) {
-                    do {
-                        $codigo = ds_generar_codigo((string) $config['code_prefix']);
-                    } while (in_array($codigo, $existentes, true));
-
-                    $existentes[] = $codigo;
-                    $nuevos[] = $codigo;
-                    $codigos[] = [
-                        'codigo' => $codigo,
-                        'nota' => $nota,
-                        'creado' => ds_ahora(),
-                        'dispositivo' => null,
-                        'activado_en' => null,
-                        'expira_en' => null,
-                    ];
-                }
-                return $nuevos;
-            });
+            }
             $aviso = 'Códigos generados: ' . implode(', ', $generados);
         } catch (Throwable $e) {
-            $error = 'No se pudieron guardar los códigos. Revisa permisos de data/.';
+            $error = 'No se pudieron guardar los códigos. Revisa la base de datos.';
         }
     } elseif (!empty($_SESSION['admin']) && $accion === 'atender') {
         $id = (string) ($_POST['id'] ?? '');
@@ -149,18 +139,24 @@ if (!$logueado) {
     exit;
 }
 
-$codigos = ds_leer('codigos');
+$codigos = [];
 $solicitudes = ds_leer('solicitudes');
 $hoy = ds_hoy();
+
+try {
+    $codigos = ds_db()->query(
+        'SELECT codigo, dispositivo_id, nota, creado, activado_en, expira_en
+         FROM codigos ORDER BY creado DESC, id DESC'
+    )->fetchAll();
+} catch (Throwable $e) {
+    $error = 'No se pudieron leer los códigos. Revisa la base de datos.';
+}
 
 $disponibles = 0;
 $activos = 0;
 $vencidos = 0;
 foreach ($codigos as $item) {
-    if (!is_array($item)) {
-        continue;
-    }
-    $dispositivo = (string) ($item['dispositivo'] ?? '');
+    $dispositivo = (string) ($item['dispositivo_id'] ?? '');
     $expira = (string) ($item['expira_en'] ?? '');
     if ($dispositivo === '') {
         $disponibles++;
@@ -178,9 +174,6 @@ foreach ($solicitudes as $solicitud) {
     }
 }
 
-usort($codigos, static function ($a, $b) {
-    return strcmp((string) ($b['creado'] ?? ''), (string) ($a['creado'] ?? ''));
-});
 usort($solicitudes, static function ($a, $b) {
     return strcmp((string) ($b['fecha'] ?? ''), (string) ($a['fecha'] ?? ''));
 });
@@ -340,10 +333,10 @@ usort($solicitudes, static function ($a, $b) {
             <div class="empty">Aún no hay códigos generados.</div>
         <?php else: ?>
             <table>
-                <thead><tr><th>Código</th><th>Estado</th><th>Dispositivo</th><th>Activado</th><th>Vence</th><th>Nota</th></tr></thead>
+                <thead><tr><th>Código</th><th>Estado</th><th>ID del dispositivo</th><th>Activado</th><th>Vence</th><th>Nota</th></tr></thead>
                 <tbody>
-                <?php foreach ($codigos as $item): if (!is_array($item)) continue;
-                    $dispositivo = (string) ($item['dispositivo'] ?? '');
+                <?php foreach ($codigos as $item):
+                    $dispositivo = (string) ($item['dispositivo_id'] ?? '');
                     $expira = (string) ($item['expira_en'] ?? '');
                     if ($dispositivo === '') {
                         $clase = 'b-neutral'; $texto = 'Disponible';

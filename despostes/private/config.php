@@ -19,4 +19,13 @@ return [
     'payment_url' => '',   // Ej. https://tu-tienda.com/producto/membresia
     'whatsapp' => '',      // Ej. 584141234567 (sin + ni espacios)
     'support_email' => '', // Ej. soporte@tudominio.com
+
+    // Base de datos propia (PHP + MySQL). Cambia estas credenciales en producción.
+    'db' => [
+        'host' => '127.0.0.1',
+        'name' => 'desposte_membresia',
+        'user' => 'root',
+        'pass' => '',
+    ],
+    'auth_token_days' => 30,
 ];

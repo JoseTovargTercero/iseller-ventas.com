@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/private/lib.php';
+require __DIR__ . '/private/db.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     ds_json(['ok' => false, 'mensaje' => 'Método no permitido'], 405);
@@ -20,42 +21,56 @@ if (!ds_codigo_valido($codigo)) {
 $config = ds_config();
 
 try {
-    $resultado = ds_actualizar('codigos', function (array &$codigos) use ($device, $codigo, $config) {
-        foreach ($codigos as $indice => $item) {
-            if (!is_array($item)) {
-                continue;
-            }
-            if (strcasecmp((string) ($item['codigo'] ?? ''), $codigo) !== 0) {
-                continue;
-            }
+    $pdo = ds_db();
+    $pdo->beginTransaction();
 
-            $dispositivoActual = (string) ($item['dispositivo'] ?? '');
-            if ($dispositivoActual !== '' && $dispositivoActual !== $device) {
-                return ['ok' => false, 'mensaje' => 'Este código ya fue usado en otro dispositivo'];
-            }
+    $stmt = $pdo->prepare(
+        'SELECT id, dispositivo_id, expira_en
+         FROM codigos WHERE codigo = :codigo LIMIT 1 FOR UPDATE'
+    );
+    $stmt->execute([':codigo' => $codigo]);
+    $fila = $stmt->fetch();
 
-            $expira = (string) ($item['expira_en'] ?? '');
-            if ($expira !== '' && $expira < ds_hoy()) {
-                return ['ok' => false, 'mensaje' => 'El código está vencido'];
-            }
+    if (!$fila) {
+        $pdo->rollBack();
+        ds_json(['ok' => false, 'mensaje' => 'Código no encontrado']);
+    }
 
-            if ($dispositivoActual === '') {
-                $codigos[$indice]['dispositivo'] = $device;
-                $codigos[$indice]['activado_en'] = ds_hoy();
-                $codigos[$indice]['expira_en'] = ds_sumar_dias((int) $config['membership_days']);
-            }
+    $dispositivoActual = (string) ($fila['dispositivo_id'] ?? '');
+    if ($dispositivoActual !== '' && $dispositivoActual !== $device) {
+        $pdo->rollBack();
+        ds_json(['ok' => false, 'mensaje' => 'Este código ya fue usado en otro dispositivo']);
+    }
 
-            return [
-                'ok' => true,
-                'mensaje' => 'Membresía activada',
-                'expira' => (string) ($codigos[$indice]['expira_en'] ?? ''),
-            ];
-        }
+    $expira = (string) ($fila['expira_en'] ?? '');
+    if ($expira !== '' && $expira < ds_hoy()) {
+        $pdo->rollBack();
+        ds_json(['ok' => false, 'mensaje' => 'El código está vencido']);
+    }
 
-        return ['ok' => false, 'mensaje' => 'Código no encontrado'];
-    });
+    if ($dispositivoActual === '') {
+        $expira = ds_sumar_dias((int) $config['membership_days']);
+        $stmt = $pdo->prepare(
+            'UPDATE codigos
+             SET dispositivo_id = :device, activado_en = NOW(), expira_en = :expira
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            ':device' => $device,
+            ':expira' => $expira,
+            ':id' => $fila['id'],
+        ]);
+    }
+
+    $pdo->commit();
+    ds_json([
+        'ok' => true,
+        'mensaje' => 'Membresía activada',
+        'expira' => $expira,
+    ]);
 } catch (Throwable $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     ds_json(['ok' => false, 'mensaje' => 'No se pudo validar el código. Intenta de nuevo.'], 500);
 }
-
-ds_json($resultado);
