@@ -965,10 +965,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     return formatNumber(Math.round(Number(valor) || 0)) + ' COP';
                 }
 
-                function construirHtmlImpresion(lista, opciones) {
-                    const individual = !!opciones.individual;
-                    const titulo = opciones.titulo || 'Lista de precios';
-                    const agrupar = !individual && opciones.agrupar !== false;
+                function construirHtmlImpresion(lista) {
                     const tarjeta = function(p) {
                         return `<div class="pcard">
                             <div class="pname">${escaparHtml(p.nombre)}</div>
@@ -978,118 +975,103 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         </div>`;
                     };
 
-                    let cuerpo = '';
-                    if (agrupar) {
-                        const grupos = new Map();
-                        lista.forEach(function(p) {
-                            const clave = p.categoria || 'Sin categoría';
-                            if (!grupos.has(clave)) grupos.set(clave, []);
-                            grupos.get(clave).push(p);
-                        });
-                        Array.from(grupos.keys()).sort(function(a, b) {
-                            return a.localeCompare(b, 'es');
-                        }).forEach(function(categoria) {
-                            cuerpo += `<div class="pcat">${escaparHtml(categoria)}</div>`;
-                            cuerpo += `<div class="plist">${grupos.get(categoria).map(tarjeta).join('')}</div>`;
-                        });
-                    } else {
-                        cuerpo = `<div class="plist">${lista.map(tarjeta).join('')}</div>`;
-                    }
-
-                    const fecha = new Date().toLocaleDateString('es-VE', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    });
-
-                    const encabezado = individual ? '' : `<header>
-                        <h1>${escaparHtml(titulo)}</h1>
-                        <div class="meta">${fecha} &middot; ${lista.length} producto${lista.length === 1 ? '' : 's'}</div>
-                    </header>`;
-
-                    const nota = individual ? '' : '<div class="note">Precios en USD, Bs. y COP.</div>';
+                    const cuerpo = `<div class="plist">${lista.map(tarjeta).join('')}</div>`;
 
                     return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>${escaparHtml(titulo)}</title>
+<title></title>
 <style>
+    /* Ticket térmico de 58 mm: sin títulos ni datos que no se imprimen. */
     @page { size: 58mm auto; margin: 0; }
     * { box-sizing: border-box; }
-    html { background: #eef1f5; }
-    body {
+    html, body {
         width: 58mm;
-        margin: 0 auto;
+        margin: 0;
         padding: 0;
         background: #fff;
         color: #000;
+    }
+    body {
         font-family: Arial, Helvetica, sans-serif;
         font-size: 9px;
     }
-    .contenido { width: 48mm; margin: 0 auto; padding: 3mm 0; }
-    header { margin: 0 0 1mm; padding-bottom: 1mm; border-bottom: 2px solid #000; text-align: center; }
-    h1 { margin: 0 0 .5mm; font-size: 11px; line-height: 1.2; }
-    .meta { font-size: 8px; line-height: 1.3; }
-    .pcat {
-        margin: 2mm 0 .5mm;
-        padding: .6mm 0;
-        border-top: 1px dashed #000;
-        border-bottom: 1px dashed #000;
-        text-align: center;
-        font-size: 9px;
-        font-weight: 800;
-        letter-spacing: .04em;
-        text-transform: uppercase;
-        break-after: avoid;
+    .contenido {
+        width: 48mm;
+        margin-left: 5mm;
+        padding: 1.5mm 0;
     }
-    .pcat:first-child { margin-top: 0; border-top: 0; }
-    .pcard { padding: 1.4mm 0; border-bottom: 1px dashed #999; break-inside: avoid; page-break-inside: avoid; }
-    .pcard:last-child { border-bottom: 0; }
-    .pname { font-size: 9.5px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
-    .pusd { margin-top: .6mm; font-size: 17px; font-weight: 800; line-height: 1.1; }
-    .psec { font-size: 8.5px; font-weight: 500; line-height: 1.35; }
-    .note { margin-top: 1.5mm; padding-top: 1mm; border-top: 1px dashed #999; text-align: center; font-size: 7.5px; color: #333; }
+    .pcard {
+        padding: 1.2mm 0;
+        border-bottom: 1px dashed #000;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .pcard:first-child { padding-top: 0; }
+    .pcard:last-child { padding-bottom: 0; border-bottom: 0; }
+    .pname {
+        font-size: 9.5px;
+        font-weight: 700;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+    .pusd {
+        margin-top: .4mm;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1.05;
+    }
+    .psec {
+        font-size: 8.5px;
+        font-weight: 500;
+        line-height: 1.25;
+    }
     @media print {
-        html { background: #fff; }
-        body { width: 58mm; margin: 0; padding: 0; }
-        .contenido { padding: 2mm 0; }
+        @page { size: 58mm auto; margin: 0; }
+        html, body { width: 58mm !important; }
+        .contenido { width: 48mm; margin-left: 5mm; padding: 1.5mm 0; }
     }
 </style>
 </head>
 <body>
     <div class="contenido">
-        ${encabezado}
         ${cuerpo}
-        ${nota}
     </div>
     <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); }; window.onafterprint = function () { window.close(); };<\/script>
 </body>
 </html>`;
                 }
 
-                function imprimirPrecios(lista, opciones) {
+                function imprimirPrecios(lista) {
                     if (!lista.length) {
                         Alerta.toast('warning', 'No hay productos para imprimir.');
                         return;
                     }
-                    const ventana = window.open('', '_blank', 'width=380,height=720');
+
+                    // Se abre como documento propio (Blob) para que el navegador
+                    // aplique el @page de 58 mm en la vista previa de impresión.
+                    const html = construirHtmlImpresion(lista);
+                    const url = URL.createObjectURL(new Blob([html], {
+                        type: 'text/html;charset=utf-8'
+                    }));
+                    const ventana = window.open(url, '_blank', 'width=380,height=720');
                     if (!ventana) {
+                        URL.revokeObjectURL(url);
                         Alerta.toast('error', 'El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e intenta de nuevo.');
                         return;
                     }
-                    ventana.document.open();
-                    ventana.document.write(construirHtmlImpresion(lista, opciones || {}));
-                    ventana.document.close();
+
+                    // El documento se imprime y cierra solo; la URL se libera luego.
+                    setTimeout(function() {
+                        URL.revokeObjectURL(url);
+                    }, 60000);
                 }
 
                 function imprimirPrecioIndividual(id) {
                     const producto = productos[id];
                     if (!producto) return;
-                    imprimirPrecios([precioParaImpresion(producto, 0)], {
-                        titulo: 'Precio',
-                        individual: true
-                    });
+                    imprimirPrecios([precioParaImpresion(producto, 0)]);
                 }
 
                 async function abrirModalImpresionPrecios() {
@@ -1203,10 +1185,7 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     const listaPrecios = lista.map(function(p) {
                         return precioParaImpresion(p, config.incremento);
                     });
-                    imprimirPrecios(listaPrecios, {
-                        titulo: config.categoria || 'Lista de precios',
-                        agrupar: !config.categoria
-                    });
+                    imprimirPrecios(listaPrecios);
                 }
 
                 // El stock puede llegar con varios decimales: se muestran como máximo dos
