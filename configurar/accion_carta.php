@@ -12,6 +12,7 @@ require_once("_resumen_mensual.php");
 require_once("_canal.php");
 require_once("_clientes.php");
 require_once("_creditos.php");
+require_once("_gastos_reglas.php");
 
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
@@ -169,6 +170,7 @@ function procesarCarritos()
         $cliente = $pedido['datosCliente'] ?? []; // Cliente puede ser un array vacío si no se proporciona información
         $pagosFraccionados = $pedido['pagosFraccionados'] ?? null; // Desglose del pago fraccionado (tipoPago 8)
         $fechaVentaPedido = $pedido['fechaVenta'] ?? null; // Fecha real de la venta (también si se sincroniza offline después)
+        $gastoEventual = $pedido['gastoEventual'] ?? null; // Gasto eventual solicitado al descontar productos
 
         if (empty($productos)) {
             $errores[] = "El pedido con método de pago '$metodoPago' no tiene productos.";
@@ -197,7 +199,8 @@ function procesarCarritos()
             $cliente,
             $idPedido,
             $pagosFraccionados,
-            $fechaVentaPedido
+            $fechaVentaPedido,
+            $gastoEventual
         );
         if (!$respuesta['status']) {
             $errores[$idPedido] = $respuesta['data'];
@@ -269,7 +272,7 @@ function es_venta_mayor($cart)
  * @param float $precioCop Precio en pesos colombianos.
  */
 
-function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = ['nombre' => '', 'cedula' => '', 'telefono' => ''], $idPedido = null, $pagosFraccionados = null, $fechaVentaPedido = null)
+function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pagoTipo = 0, $precioBs = 0, $precioCop = 0, $cliente = ['nombre' => '', 'cedula' => '', 'telefono' => ''], $idPedido = null, $pagosFraccionados = null, $fechaVentaPedido = null, $gastoEventual = null)
 {
     global $id_sucursal, $bss_id, $registro_clientes;
 
@@ -281,6 +284,9 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
     $conexion->begin_transaction();
 
     try {
+        // Se captura antes de reclasificar la venta al mayor: el gasto eventual
+        // solo aplica a los descuentos de stock (despacho 3).
+        $esDescuento = ((int) $tipoVenta === 3);
         // Datos base
         $precioCopRaw = (float) ($precioCop ?? 0);
         $precioCop = formatPeso($precioCopRaw);
@@ -717,6 +723,23 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
             $stmtFrac->close();
         }
 
+        // Gasto eventual del descuento: se registra dentro de la misma transacción
+        // para que no exista un descuento sin su gasto ni un gasto sin descuento.
+        if ($esDescuento && is_array($gastoEventual)) {
+            registrar_gasto_eventual(
+                $conexion,
+                $gastoEventual,
+                $valorFinalVenta,
+                $fechaVenta,
+                date('Y-W', strtotime($fechaVenta)),
+                $mes,
+                (int) $bss_id,
+                (int) $id_sucursal,
+                (int) ($_SESSION['id'] ?? 0),
+                (int) $orderID
+            );
+        }
+
         $conexion->commit(); // Éxito
         resumen_mensual_invalidar($conexion, $bss_id, $id_sucursal, $mes);
 
@@ -728,4 +751,96 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
         $conexion->rollback();
         return ['status' => false, 'data' => 'Error al procesar la orden: ' . $e->getMessage()];
     }
+}
+
+/**
+ * Registra el valor de un descuento de productos como gasto eventual.
+ * Debe ejecutarse dentro de la transacción de la orden.
+ */
+function registrar_gasto_eventual($conexion, array $gasto, $montoUsd, $fecha, $semana, $mes, $bssId, $idSucursal, $usuarioId, $orderID)
+{
+    $concepto = trim(strip_tags((string) ($gasto['concepto'] ?? '')));
+    $monto = round((float) $montoUsd, 2);
+
+    if ($concepto === '' || $monto <= 0 || $bssId <= 0 || $idSucursal <= 0) {
+        return;
+    }
+
+    $concepto = function_exists('mb_substr')
+        ? mb_substr($concepto, 0, 255, 'UTF-8')
+        : substr($concepto, 0, 255);
+
+    $observacion = trim(strip_tags((string) ($gasto['observacion'] ?? '')));
+    $referencia = 'Descuento de productos · Orden #' . (int) $orderID;
+    $observacion = $observacion !== '' ? ($referencia . '. ' . $observacion) : $referencia;
+
+    // Categoría sugerida por el concepto (mismas reglas del módulo de gastos).
+    $categoriaId = null;
+    if (function_exists('gasto_sugerir') && function_exists('gasto_resolver_categoria')) {
+        $sugerida = gasto_sugerir($concepto);
+        if ($sugerida !== null) {
+            $resuelta = gasto_resolver_categoria($conexion, (int) $bssId, $sugerida);
+            if ($resuelta !== null) {
+                $categoriaId = (int) $resuelta['id'];
+            }
+        }
+    }
+
+    // Código secuencial por negocio, igual que aggregarGasto.php.
+    $numero = 1;
+    $stmtCodigo = $conexion->prepare("SELECT codigo FROM gastos WHERE bss_id = ? ORDER BY id DESC LIMIT 1");
+    if ($stmtCodigo) {
+        $stmtCodigo->bind_param('i', $bssId);
+        $stmtCodigo->execute();
+        $filaCodigo = $stmtCodigo->get_result()->fetch_assoc();
+        $stmtCodigo->close();
+        if ($filaCodigo && !empty($filaCodigo['codigo'])) {
+            $numero = (int) substr($filaCodigo['codigo'], 2) + 1;
+        }
+    }
+    $codigo = 'G-' . str_pad((string) $numero, 6, '0', STR_PAD_LEFT);
+
+    $tipo = 'VARIABLE';
+    $frecuencia = 'UNICO';
+    $moneda = 'USD';
+    $tasaCambio = 1.0;
+
+    if ($categoriaId !== null) {
+        $stmt = $conexion->prepare(
+            "INSERT INTO gastos
+             (codigo, fecha, semana, mes, concepto, categoria_id, tipo, frecuencia,
+              moneda, monto, tasa_cambio, monto_usd, observacion, usuario_id, id_sucursal, bss_id)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo preparar el gasto eventual: ' . $conexion->error);
+        }
+        $stmt->bind_param(
+            'sssssisssdddsiii',
+            $codigo, $fecha, $semana, $mes, $concepto, $categoriaId, $tipo, $frecuencia,
+            $moneda, $monto, $tasaCambio, $monto, $observacion, $usuarioId, $idSucursal, $bssId
+        );
+    } else {
+        $stmt = $conexion->prepare(
+            "INSERT INTO gastos
+             (codigo, fecha, semana, mes, concepto, tipo, frecuencia,
+              moneda, monto, tasa_cambio, monto_usd, observacion, usuario_id, id_sucursal, bss_id)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        );
+        if (!$stmt) {
+            throw new Exception('No se pudo preparar el gasto eventual: ' . $conexion->error);
+        }
+        $stmt->bind_param(
+            'ssssssssdddsiii',
+            $codigo, $fecha, $semana, $mes, $concepto, $tipo, $frecuencia,
+            $moneda, $monto, $tasaCambio, $monto, $observacion, $usuarioId, $idSucursal, $bssId
+        );
+    }
+
+    if (!$stmt->execute()) {
+        $error = $stmt->error;
+        $stmt->close();
+        throw new Exception('No se pudo registrar el gasto eventual: ' . $error);
+    }
+    $stmt->close();
 }

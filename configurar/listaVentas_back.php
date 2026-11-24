@@ -6,6 +6,7 @@
  */
 require_once("configuracion.php");
 require_once('session.php');
+require_once(__DIR__ . '/_caja_totales.php');
 header('Content-Type: application/json');
 
 // Obtener datos del payload
@@ -77,9 +78,10 @@ if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
 
     // Obtener todos los cortes de caja del día (apertura y cierre), con el nombre del usuario
     $sqlCortes = "
-        SELECT c.*, u.nombre as nombre_usuario
+        SELECT c.*, u.nombre as nombre_usuario, s.nombre as sucursal_nombre
         FROM cortes_de_caja c
         LEFT JOIN usuarios u ON c.usuario_id = u.id
+        LEFT JOIN sucursales s ON s.id = c.sucursal_id AND s.bss_id = c.bss_id
         WHERE c.fecha = '$filtro_fecha_u'
           AND c.bss_id = '$bss_id'
           $extraCond_u
@@ -96,6 +98,8 @@ if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
                 $usuarios_cortes[$uid] = [
                     'usuario_id' => $uid,
                     'nombre' => $row['nombre_usuario'] ?? "Usuario #{$uid}",
+                    'sucursal_id' => (int) ($row['sucursal_id'] ?? 0),
+                    'sucursal_nombre' => (string) ($row['sucursal_nombre'] ?? ''),
                     'apertura' => null,
                     'cierre' => null,
                     'sort_time' => $row['creado_en'] ?? $row['id']
@@ -149,6 +153,25 @@ if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
             }
         }
     }
+
+    // Completar el estado de cierre y los totales del sistema de cada usuario.
+    // Si no hay cierre, se calculan en vivo para que el administrador pueda
+    // revisar la diferencia y registrar el cierre desde cierres_caja.php.
+    foreach ($usuarios_cortes as &$usuarioCorte) {
+        if (!empty($usuarioCorte['cierre'])) {
+            $usuarioCorte['sin_cierre'] = false;
+            $usuarioCorte['sistema'] = $usuarioCorte['cierre']['sistema'];
+        } else {
+            $usuarioCorte['sin_cierre'] = true;
+            $usuarioCorte['sistema'] = caja_totales_sistema(
+                $conexion,
+                (int) $bss_id,
+                (int) $usuarioCorte['usuario_id'],
+                (string) $filtro_fecha_u
+            );
+        }
+    }
+    unset($usuarioCorte);
 
     // Ordenar por hora de apertura (sort_time)
     $cortes = array_values($usuarios_cortes);

@@ -3377,6 +3377,68 @@ $stmt->close();
                 resultHtml += `</tbody></table>`;
                 resultHtml += `<br><div>Total: ${totalFormateado} ${monedaTexto === 'USD' ? '<small>$</small>' : monedaTexto === 'COP' ? '<small>COP</small>' : '<small>BS</small>'}</div>`;
 
+                // Forma de pago y monto en la moneda de pago
+                const formatearMontoPago = (valor, decimales = 2) => new Intl.NumberFormat('es-VE', {
+                    minimumFractionDigits: decimales,
+                    maximumFractionDigits: decimales
+                }).format(Number(valor) || 0);
+
+                const etiquetasFormaPago = {
+                    'option1': 'Punto',
+                    'option2': 'Pago Móvil',
+                    'option3': 'Transferencia',
+                    'option4': 'Efectivo (Bs)',
+                    'option5': 'Dólares',
+                    'option6': 'Pesos',
+                    'option7': 'BioPago',
+                    'option8': 'Fraccionado'
+                };
+
+                let formaPago = etiquetasFormaPago[tipopago] || 'No especificado';
+                let pagoLineas = [];
+
+                if (Number(nuevoPedido.despacho) === 2) {
+                    formaPago = 'Crédito';
+                    pagoLineas.push('Moneda del crédito: Bs');
+                    pagoLineas.push('Monto del crédito: ' + formatearMontoPago(nuevoPedido.valorFinalBs) + ' Bs');
+                } else if (Number(nuevoPedido.despacho) === 3) {
+                    formaPago = 'Descuento de productos';
+                    pagoLineas.push('Valor descontado: $' + formatearMontoPago(nuevoPedido.valorFinalVenta));
+                } else if (tipopago === 'option8') {
+                    pagoLineas.push('Moneda de pago: Mixta');
+                    const pagosFraccionados = nuevoPedido.pagosFraccionados || {};
+                    const partesPago = [
+                        ['punto', 'Punto', 'Bs'],
+                        ['efectivo', 'Efectivo', 'Bs'],
+                        ['pagoMovil', 'Pago Móvil', 'Bs'],
+                        ['transferencia', 'Transferencia', 'Bs'],
+                        ['bioPago', 'BioPago', 'Bs'],
+                        ['dolares', 'Dólares', 'USD'],
+                        ['pesos', 'Pesos', 'COP']
+                    ];
+                    partesPago.forEach(function(parte) {
+                        const valor = Number(pagosFraccionados[parte[0]]) || 0;
+                        if (valor > 0) {
+                            pagoLineas.push(parte[1] + ': ' + formatearMontoPago(valor) + ' ' + parte[2]);
+                        }
+                    });
+                } else if (tipopago === 'option5') {
+                    pagoLineas.push('Moneda de pago: USD');
+                    pagoLineas.push('Monto pagado: ' + formatearMontoPago(nuevoPedido.valorFinalVenta) + ' USD');
+                } else if (tipopago === 'option6') {
+                    pagoLineas.push('Moneda de pago: COP');
+                    pagoLineas.push('Monto pagado: ' + formatearMontoPago(nuevoPedido.valorFinalCop) + ' COP');
+                } else {
+                    pagoLineas.push('Moneda de pago: Bs');
+                    pagoLineas.push('Monto pagado: ' + formatearMontoPago(nuevoPedido.valorFinalBs) + ' Bs');
+                }
+
+                resultHtml += `<div class="line"></div>`;
+                resultHtml += `<div style="font-size:11px;"><b>Forma de pago:</b> ${formaPago}</div>`;
+                pagoLineas.forEach(function(lineaPago) {
+                    resultHtml += `<div style="font-size:11px;">${lineaPago}</div>`;
+                });
+
                 // 5. Estructurar e Inyectar en la nueva ventana para proceder a la impresión física
                 const fecha = new Date().toLocaleString('es-VE', {
                     year: 'numeric',
@@ -5330,7 +5392,7 @@ $stmt->close();
                 nombre: '',
                 cedula: '',
                 telefono: ''
-            }) {
+            }, gastoEventual = null) {
                 if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
                     console.warn("No hay carrito activo para procesar.");
                     return false;
@@ -5384,6 +5446,14 @@ $stmt->close();
                     usuario_id: "<?php echo $usuario_id ?>",
                     usuario_nombre: "<?php echo $nombreUsuario ?>"
                 };
+
+                // El gasto eventual viaja dentro del pedido para que se registre
+                // junto con la venta, incluso si se sincroniza después sin conexión.
+                if (gastoEventual && String(gastoEventual.concepto || '').trim() !== '') {
+                    nuevoPedido.gastoEventual = {
+                        concepto: String(gastoEventual.concepto).trim().slice(0, 255)
+                    };
+                }
 
                 if (metodoPago === 'option8') {
                     nuevoPedido.pagosFraccionados = pagosFraccionadosNetos();
@@ -6462,18 +6532,75 @@ $stmt->close();
                 if (!carritoActivo || Object.keys(carritoActivo).length === 0) {
                     return false;
                 }
+
+                const itemsDescuento = Object.values(carritoActivo);
+                const totalDescuento = itemsDescuento.reduce(function(acumulado, p) {
+                    return acumulado + (Number(p.price) || 0) * (Number(p.qty) || 1);
+                }, 0);
+
                 Swal.fire({
-                    title: 'Esta seguro?',
-                    html: 'Se descontaran productos del almacen ¿desea continuar?',
+                    title: '¿Descontar productos?',
+                    html: `
+                        <div style="text-align:left;font-size:13px;">
+                            <p style="margin:0 0 12px;color:#e8edf2;line-height:1.45;">
+                                Se descontarán <b>${itemsDescuento.length}</b> producto${itemsDescuento.length === 1 ? '' : 's'} del almacén
+                                por un valor de <b style="color:#2dd4a0;">$${formatNumber(totalDescuento)}</b>.
+                            </p>
+
+                            <label style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;border:1px solid #2e353e;border-radius:10px;background:rgba(255,255,255,.03);cursor:pointer;margin:0;">
+                                <input type="checkbox" id="descuento-enviar-gasto" style="width:16px;height:16px;margin-top:2px;accent-color:#2dd4a0;cursor:pointer;">
+                                <span style="color:#e8edf2;">Enviar esta información a <b>Gastos</b> como gasto eventual</span>
+                            </label>
+
+                            <div id="descuento-gasto-campos" style="display:none;margin-top:12px;">
+                                <label for="descuento-gasto-concepto" style="display:block;margin-bottom:5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a9ab5;">Concepto del gasto *</label>
+                                <input type="text" id="descuento-gasto-concepto" class="form-control" maxlength="255" placeholder="Ej: Productos vencidos, consumo interno...">
+                                <small style="display:block;margin-top:6px;font-size:10.5px;color:#8a9ab5;line-height:1.45;">
+                                    Se registrará un gasto variable por única vez en USD por el valor del descuento.
+                                </small>
+                            </div>
+                        </div>`,
                     icon: 'question',
                     confirmButtonText: 'Continuar',
                     cancelButtonText: 'Cancelar',
                     confirmButtonColor: '#32d7c0',
                     showCancelButton: true,
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        procesarPedido('0', 3);
+                    focusConfirm: false,
+                    didOpen: () => {
+                        const chk = document.getElementById('descuento-enviar-gasto');
+                        const campos = document.getElementById('descuento-gasto-campos');
+                        const concepto = document.getElementById('descuento-gasto-concepto');
+                        if (!chk || !campos || !concepto) return;
+
+                        chk.addEventListener('change', function() {
+                            campos.style.display = this.checked ? 'block' : 'none';
+                            if (this.checked) {
+                                setTimeout(() => concepto.focus(), 50);
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const chk = document.getElementById('descuento-enviar-gasto');
+                        const concepto = document.getElementById('descuento-gasto-concepto');
+                        const enviarGasto = !!(chk && chk.checked);
+                        const textoConcepto = concepto ? concepto.value.trim() : '';
+
+                        if (enviarGasto && !textoConcepto) {
+                            Swal.showValidationMessage('Escribe el concepto del gasto.');
+                            return false;
+                        }
+
+                        return {
+                            enviarGasto,
+                            concepto: textoConcepto
+                        };
                     }
+                }).then((result) => {
+                    if (!result.isConfirmed || !result.value) return;
+                    const gastoEventual = result.value.enviarGasto ? {
+                        concepto: result.value.concepto
+                    } : null;
+                    procesarPedido('0', 3, {}, gastoEventual);
                 })
             }
 
