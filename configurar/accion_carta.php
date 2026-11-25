@@ -13,6 +13,7 @@ require_once("_canal.php");
 require_once("_clientes.php");
 require_once("_creditos.php");
 require_once("_gastos_reglas.php");
+require_once("_stock_pendiente.php");
 
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
@@ -134,6 +135,7 @@ function procesarCarritos()
 
     // DDL fuera de la transacción de venta: el ALTER TABLE hace commit implícito.
     credito_asegurar_columnas($conexion);
+    sp_preparar_venta($conexion, (int) ($_SESSION['bss_id'] ?? 0));
 
     $pedidos = $_REQUEST['pedidos'];
     // recorre pedidos, cada pedido es un carrito. que posee un 'metodoPago', despacho (puede se placeOrder o placeOrderCredito), y un array de productos
@@ -554,6 +556,9 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                             $cantHijo
                         );
                         if ($faltanteHijo !== null) {
+                            if ($faltanteHijo > 0) {
+                                sp_registrar($conexion, (int) $bss_id, $idHijo, (int) $id_sucursal, (float) $faltanteHijo);
+                            }
                             continue;
                         }
 
@@ -562,11 +567,16 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                             throw new Exception("Error al consultar stock de producto del combo: " . $stmtStock->error);
                         }
                         $resStockHijo = $stmtStock->get_result()->fetch_assoc();
-                        $stockNuevoHijo = max(0, (float)($resStockHijo['stock'] ?? 0) - $cantHijo);
+                        $stockActualHijo = (float) ($resStockHijo['stock'] ?? 0);
+                        $faltanteStockHijo = max(0, $cantHijo - $stockActualHijo);
+                        $stockNuevoHijo = max(0, $stockActualHijo - $cantHijo);
 
                         $updateStmt->bind_param("siii", $stockNuevoHijo, $idHijo, $id_sucursal, $bss_id);
                         if (!$updateStmt->execute()) {
                             throw new Exception("Error al descontar stock de producto del combo: " . $updateStmt->error);
+                        }
+                        if ($faltanteStockHijo > 0) {
+                            sp_registrar($conexion, (int) $bss_id, $idHijo, (int) $id_sucursal, $faltanteStockHijo);
                         }
                     }
                 }
@@ -592,13 +602,19 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                     throw new Exception("Error al consultar stock real mayor: " . $stmtStockParaMayor->error);
                 }
                 $result = $stmtStockParaMayor->get_result()->fetch_assoc();
-                $stock = max(0, (float) $result['stock'] - ((float) $item['qty'] * (float) $item['cantidadPaca']));
+                $stockActualMayor = (float) ($result['stock'] ?? 0);
+                $descontarMayor = (float) $item['qty'] * (float) $item['cantidadPaca'];
+                $faltanteMayor = max(0, $descontarMayor - $stockActualMayor);
+                $stock = max(0, $stockActualMayor - $descontarMayor);
                 // se debe multiplicar por la cantidad
 
 
                 $updateStmtMayor->bind_param("siii", $stock, $id_stock, $id_sucursal, $bss_id);
                 if (!$updateStmtMayor->execute()) {
                     throw new Exception("Error al actualizar stock de mayor: " . $updateStmtMayor->error);
+                }
+                if ($faltanteMayor > 0) {
+                    sp_registrar($conexion, (int) $bss_id, (int) $id_stock, (int) $id_sucursal, $faltanteMayor);
                 }
             } else {
 
@@ -618,13 +634,22 @@ function procesarOrden($conexion, $cart, $tipo = 'contado', $tipoVenta = 1, $pag
                         throw new Exception("Error al consultar stock detal: " . $stmtStock->error);
                     }
                     $result = $stmtStock->get_result()->fetch_assoc();
-                    $stock = max(0, (float) $result['stock'] - (float) $item['qty']);
+                    $stockActualDetal = (float) ($result['stock'] ?? 0);
+                    $faltanteDetal = max(0, (float) $item['qty'] - $stockActualDetal);
+                    $stock = max(0, $stockActualDetal - (float) $item['qty']);
 
 
                     $updateStmt->bind_param("siii", $stock, $item['id'], $id_sucursal, $bss_id);
                     if (!$updateStmt->execute()) {
                         throw new Exception("Error al actualizar stock detal: " . $updateStmt->error);
                     }
+                    if ($faltanteDetal > 0) {
+                        sp_registrar($conexion, (int) $bss_id, (int) $item['id'], (int) $id_sucursal, $faltanteDetal);
+                    }
+                } else if ($faltanteVariacion > 0) {
+                    // Variaciones: lo que no se cubrió con propia/respaldo/padre
+                    // queda como pendiente del producto vendido.
+                    sp_registrar($conexion, (int) $bss_id, (int) $item['id'], (int) $id_sucursal, (float) $faltanteVariacion);
                 }
             }
         }

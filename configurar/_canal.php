@@ -493,9 +493,28 @@ function canal_sumar_compra(
     }
     $stmt->close();
 
+    // El stock pudo quedar reducido por stock pendiente (trigger de la tabla
+    // stock). Se devuelve la existencia real para que la compra y su
+    // auditoría no muestren una cantidad mayor a la que quedó.
+    $stockReal = $stockNuevo;
+    $stmtReal = $conexion->prepare(
+        "SELECT stock FROM stock
+         WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?
+         LIMIT 1"
+    );
+    if ($stmtReal) {
+        $stmtReal->bind_param('iii', $productoId, $sucursalId, $bssId);
+        $stmtReal->execute();
+        $filaReal = $stmtReal->get_result()->fetch_assoc();
+        $stmtReal->close();
+        if ($filaReal) {
+            $stockReal = (float) $filaReal['stock'];
+        }
+    }
+
     return [
         'stock_base' => $stockBase,
-        'stock' => $stockNuevo,
+        'stock' => $stockReal,
         'lote_id' => $loteId,
     ];
 }

@@ -16,6 +16,7 @@ require_once __DIR__ . '/../configurar/_canal.php';
 require_once __DIR__ . '/../configurar/_clientes.php';
 require_once __DIR__ . '/../configurar/_nombres.php';
 require_once __DIR__ . '/../configurar/_creditos.php';
+require_once __DIR__ . '/../configurar/_stock_pendiente.php';
 
 exigirMetodo('POST');
 exigirApiKey();
@@ -34,6 +35,7 @@ if ($sucursalId <= 0) {
 // porque el DDL hace commit implícito.
 cl_asegurar_tabla($conexion);
 credito_asegurar_columnas($conexion);
+sp_preparar_venta($conexion, (int) $bssId);
 
 $entrada = entrada();
 $ventas = $entrada['ventas'] ?? null;
@@ -461,15 +463,20 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
                     if ($faltanteHijo !== null) {
                         if ($faltanteHijo > 0) {
                             $faltantes[] = ['id' => $idHijo, 'faltante' => $faltanteHijo];
+                            sp_registrar($conexion, (int) $bssId, $idHijo, (int) $sucursalId, (float) $faltanteHijo);
                         }
                         continue;
                     }
 
                     $disponible = stockActual($stmtStock, $idHijo, $sucursalId, $bssId);
-                    if ($disponible - $cantHijo < 0) {
-                        $faltantes[] = ['id' => $idHijo, 'faltante' => abs($disponible - $cantHijo)];
+                    $faltanteStockHijo = max(0, $cantHijo - $disponible);
+                    if ($faltanteStockHijo > 0) {
+                        $faltantes[] = ['id' => $idHijo, 'faltante' => $faltanteStockHijo];
                     }
                     actualizarStock($updateStmt, $idHijo, $sucursalId, $bssId, max(0, $disponible - $cantHijo));
+                    if ($faltanteStockHijo > 0) {
+                        sp_registrar($conexion, (int) $bssId, $idHijo, (int) $sucursalId, $faltanteStockHijo);
+                    }
                 }
             }
         }
@@ -491,12 +498,16 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
             if ($idStock > 0 && $unidades > 0) {
                 $descontar = $qty * $unidades;
                 $disponible = (float)$mayor['stock_base'];
-                if ($disponible - $descontar < 0) {
-                    $faltantes[] = ['id' => $productoId, 'faltante' => abs($disponible - $descontar)];
+                $faltanteMayor = max(0, $descontar - $disponible);
+                if ($faltanteMayor > 0) {
+                    $faltantes[] = ['id' => $productoId, 'faltante' => $faltanteMayor];
                 }
                 $updateStmtMayor->bind_param('diii', max(0, $disponible - $descontar), $idStock, $sucursalId, $bssId);
                 if (!$updateStmtMayor->execute()) {
                     throw new Exception('Error al actualizar el stock al mayor: ' . $updateStmtMayor->error);
+                }
+                if ($faltanteMayor > 0) {
+                    sp_registrar($conexion, (int) $bssId, (int) $idStock, (int) $sucursalId, $faltanteMayor);
                 }
             }
             continue;
@@ -506,17 +517,22 @@ function guardarArticulosYStock($conexion, int $ordenId, array $productos, int $
         if ($faltanteVariacion !== null) {
             if ($faltanteVariacion > 0) {
                 $faltantes[] = ['id' => $productoId, 'faltante' => $faltanteVariacion];
+                sp_registrar($conexion, (int) $bssId, $productoId, (int) $sucursalId, (float) $faltanteVariacion);
             }
             continue;
         }
 
         $disponible = stockActual($stmtStock, $productoId, $sucursalId, $bssId);
         $descontar = $qty;
+        $faltanteDetal = max(0, $descontar - $disponible);
 
-        if ($disponible - $descontar < 0) {
-            $faltantes[] = ['id' => $productoId, 'faltante' => abs($disponible - $descontar)];
+        if ($faltanteDetal > 0) {
+            $faltantes[] = ['id' => $productoId, 'faltante' => $faltanteDetal];
         }
         actualizarStock($updateStmt, $productoId, $sucursalId, $bssId, max(0, $disponible - $descontar));
+        if ($faltanteDetal > 0) {
+            sp_registrar($conexion, (int) $bssId, $productoId, (int) $sucursalId, $faltanteDetal);
+        }
     }
 
     $insertStmt->close();

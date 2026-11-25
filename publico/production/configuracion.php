@@ -15,6 +15,7 @@ $cortes_caja = 0;
 $registro_clientes = 0;
 $factura = 0;
 $seguimiento_estricto = 0;
+$stock_pendiente = 0;
 
 $query = "SELECT * FROM configuracion WHERE bss_id = $bss_id";
 $search = $conexion->query($query);
@@ -28,10 +29,11 @@ if ($search->num_rows > 0) {
     }
 }
 
-$queryNegocio = "SELECT seguimiento_estricto FROM negocio WHERE id = $bss_id LIMIT 1";
+$queryNegocio = "SELECT * FROM negocio WHERE id = $bss_id LIMIT 1";
 $resNegocio = $conexion->query($queryNegocio);
 if ($resNegocio && $rowN = $resNegocio->fetch_assoc()) {
-    $seguimiento_estricto = (int) $rowN['seguimiento_estricto'];
+    $seguimiento_estricto = (int) ($rowN['seguimiento_estricto'] ?? 0);
+    $stock_pendiente = (int) ($rowN['stock_pendiente'] ?? 0);
 }
 
 
@@ -132,6 +134,14 @@ if ($resNegocio && $rowN = $resNegocio->fetch_assoc()) {
                             'Seguimiento estricto de inventario',
                             'En las compras de productos marcados, exige confirmar la cantidad anterior antes de sumar la nueva mercancía.'
                         ); ?>
+
+                        <?= renderToggle(
+                            'stock_pendiente',
+                            $stock_pendiente == 1,
+                            'bi-box-seam',
+                            'Vender sin stock (stock pendiente)',
+                            'Si está desactivado, el stock se detiene en 0. Si está activado, las unidades que faltan se guardan como stock pendiente y se descuentan automáticamente cuando ingrese mercancía.'
+                        ); ?>
                     </div>
                 </div>
 
@@ -155,11 +165,17 @@ if ($resNegocio && $rowN = $resNegocio->fetch_assoc()) {
                                             status: status.trim()
                                         })
                                     })
-                                    .then(response => {
-                                        if (!response.ok) {
-                                            throw new Error('Error en la respuesta del servidor');
+                                    .then(async response => {
+                                        let data = null;
+                                        try {
+                                            data = await response.json();
+                                        } catch (e) {
+                                            data = null;
                                         }
-                                        return response.json();
+                                        if (!response.ok) {
+                                            throw new Error((data && data.message) || 'Error en la respuesta del servidor');
+                                        }
+                                        return data;
                                     })
                                     .then(data => {
                                         if (data.status === 'success') {
