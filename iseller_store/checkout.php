@@ -14,9 +14,12 @@ require_once('core/venezuela_geo.php');
 require_once('core/_calculadrora_precios.php');
 require_once('core/reglas_producto.php');
 require_once('core/combos.php');
+require_once('core/tienda_publicacion.php');
 require_once('../configurar/_canal.php');
 require_once('../publico/production/includes/notificaciones.php');
 require_once('core/notificaciones_admin.php');
+
+tienda_publicacion_asegurar($conexion);
 
 // Variables para mensajes
 $mensaje = '';
@@ -429,11 +432,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_pesos    = 0;
         $total_bolivares = 0;
         $items = [];
+        $permiteSinStock = false;
 
         $stmtProd = $conexion->prepare(
             "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor, p.es_combo,
                     s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
                     sb.stock AS stock_base,
+                    n.publicar_sin_stock,
                     COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
                     COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
              FROM productos p
@@ -512,6 +517,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $comboItems = [];
             $esMayor = (string)$prod['mayor'] === '1';
             $unidadesPaca = (float)$prod['cantidad_unidades'];
+            $permiteSinStock = (int)($prod['publicar_sin_stock'] ?? 0) === 1;
 
             if ($esCombo) {
                 // El combo se arma con las piezas base, no con su propia fila de stock.
@@ -523,7 +529,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
                     : (float)$prod['stock'];
             }
-            if ($stockDisponible < $qty) {
+            if (!$permiteSinStock && $stockDisponible < $qty) {
                 echo json_encode([
                     'success' => false,
                     'message' => 'No hay stock suficiente de «' . $prod['nombre'] . '». Disponible: ' . $stockDisponible,
@@ -632,9 +638,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Reservar stock de forma atómica (descuenta ya, no al enviar).
-        $stmtStock = $conexion_store->prepare("UPDATE stock SET stock = stock - ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?");
+        // Con venta sin stock el descuento se limita a lo disponible (nunca negativo).
+        $stmtStock = $conexion_store->prepare(
+            $permiteSinStock
+                ? "UPDATE stock SET stock = GREATEST(stock - ?, 0) WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?"
+                : "UPDATE stock SET stock = stock - ? WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?"
+        );
         // Al mayor se descuenta del producto base (stock.id_stock), no de la fila de la paca.
-        $stmtStockMayor = $conexion_store->prepare("UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?");
+        $stmtStockMayor = $conexion_store->prepare(
+            $permiteSinStock
+                ? "UPDATE stock SET stock = GREATEST(stock - ?, 0) WHERE id = ? AND bss_id = ?"
+                : "UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?"
+        );
         if (!$stmtStock || !$stmtStockMayor) {
             $conexion_store->rollback();
             echo json_encode(['success' => false, 'message' => 'No se pudo reservar el stock']);
@@ -675,7 +690,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (($consumoHijo['modo'] ?? 'NORMAL') === 'CANAL') {
                         continue;
                     }
-                    if (!producto_stock_descontar($conexion_store, $childId, $it['sucursal'], $bss_id, $descontar)) {
+                    if (!producto_stock_descontar($conexion_store, $childId, $it['sucursal'], $bss_id, $descontar, $permiteSinStock)) {
                         $comboCompleto = false;
                         break;
                     }
@@ -701,9 +716,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(['success' => false, 'message' => 'No hay stock suficiente de «' . $nombreIt . '» para completar el pedido']);
                     exit;
                 }
-                $stmtStockMayor->bind_param("diid", $descontar, $idStockMayor, $bss_id, $descontar);
+                if ($permiteSinStock) {
+                    $stmtStockMayor->bind_param("dii", $descontar, $idStockMayor, $bss_id);
+                } else {
+                    $stmtStockMayor->bind_param("diid", $descontar, $idStockMayor, $bss_id, $descontar);
+                }
                 $stmtStockMayor->execute();
-                if ($stmtStockMayor->affected_rows !== 1) {
+                if (!$permiteSinStock && $stmtStockMayor->affected_rows !== 1) {
                     $stmtStock->close();
                     $stmtStockMayor->close();
                     $conexion_store->rollback();
@@ -716,9 +735,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qtyStock = (float)$it['qty'];
             $pidStock = (int)$it['id'];
             $sidStock = (int)$it['sucursal'];
-            $stmtStock->bind_param("diiid", $qtyStock, $pidStock, $sidStock, $bss_id, $qtyStock);
+            if ($permiteSinStock) {
+                $stmtStock->bind_param("diii", $qtyStock, $pidStock, $sidStock, $bss_id);
+            } else {
+                $stmtStock->bind_param("diiid", $qtyStock, $pidStock, $sidStock, $bss_id, $qtyStock);
+            }
             $stmtStock->execute();
-            if ($stmtStock->affected_rows !== 1) {
+            if (!$permiteSinStock && $stmtStock->affected_rows !== 1) {
                 $stmtStock->close();
                 $stmtStockMayor->close();
                 $conexion_store->rollback();

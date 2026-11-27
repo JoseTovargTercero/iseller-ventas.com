@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/_calculadrora_precios.php';
+require_once __DIR__ . '/tienda_publicacion.php';
 
 // La API siempre responde JSON: un warning de PHP no debe romper el cuerpo.
 ini_set('display_errors', '0');
@@ -425,10 +426,11 @@ function api_store_by_slug(string $slug): array
     if (!preg_match('/^[a-zA-Z0-9._-]{1,150}$/', $slug)) {
         api_error(404, 'Tienda no encontrada');
     }
+    tienda_publicacion_asegurar($conexion);
     $stmt = $conexion->prepare(
         "SELECT id, nombre, nombre_visible, eslogan, slug, logo_url, portada_url, categoria,
                 config_delivery, datos_bancarios, lat, lng, geo_estado, geo_municipio,
-                reputacion_total, reputacion_pct, whatsapp, horarios
+                reputacion_total, reputacion_pct, whatsapp, horarios, publicar_sin_stock
          FROM negocio
          WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'
          LIMIT 1"

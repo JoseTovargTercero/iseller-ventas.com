@@ -2,6 +2,9 @@
 // api/get_categories_list.php
 header('Content-Type: application/json');
 require_once('../core/db.php');
+require_once('../core/tienda_publicacion.php');
+
+tienda_publicacion_asegurar($conexion);
 
 $tienda_slug = isset($_GET['tienda_slug']) ? trim($_GET['tienda_slug']) : '';
 
@@ -13,7 +16,7 @@ if ($tienda_slug !== '') {
         JOIN productos p ON p.categoria = c.id
         JOIN negocio_productos np ON np.producto_id = p.id
         JOIN negocio n ON n.id = np.negocio_id
-        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND (s.stock > 0 OR n.publicar_sin_stock = 1)
         WHERE n.slug = ? AND np.estado_publicacion = 1 AND p.activo = 0 AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
         ORDER BY c.nombre ASC
     ";
@@ -34,7 +37,7 @@ if ($tienda_slug !== '') {
         JOIN productos p ON p.categoria = c.id
         JOIN negocio_productos np ON np.producto_id = p.id
         JOIN negocio n ON n.id = np.negocio_id
-        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+        JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND (s.stock > 0 OR n.publicar_sin_stock = 1)
         WHERE np.estado_publicacion = 1 AND p.activo = 0 AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
         ORDER BY c.nombre ASC
     ";
@@ -58,7 +61,7 @@ $sqlMayor = "
          AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
     LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
     WHERE p.activo = 0 AND p.mayor = '1' AND p.cantidad_unidades > 0
-      AND sb.stock >= p.cantidad_unidades
+      AND (n.publicar_sin_stock = 1 OR sb.stock >= p.cantidad_unidades)
       AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
 ";
 if ($tienda_slug !== '') {

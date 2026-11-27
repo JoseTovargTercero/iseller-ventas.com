@@ -7,6 +7,9 @@ require_once('../core/_tasas_cambio.php');
 require_once('../core/_calculadrora_precios.php');
 require_once('../core/reglas_producto.php');
 require_once('../core/combos.php');
+require_once('../core/tienda_publicacion.php');
+
+tienda_publicacion_asegurar($conexion);
 
 header('Content-Type: application/json');
 
@@ -175,6 +178,7 @@ function formatearProducto(array $row, array $recompensas = []): array
         'cantidadPaca' => $row['cantidad_unidades'],
         'minimo_cantidad' => (float)($row['minimo_cantidad'] ?? 1),
         'paso_cantidad' => (float)($row['paso_cantidad'] ?? 1),
+        'venta_sin_stock' => (int)($row['publicar_sin_stock'] ?? 0) === 1 ? 1 : 0,
         'img' => urlImagenProducto($row),
         'bss_id' => $row['bss_id'],
         'id_sucursal' => $row['id_sucursal']
@@ -195,6 +199,9 @@ function prepararCombo(array $row, $conexion): array
 /** Un producto sin stock para su mínimo de compra no debe listarse. */
 function productoAgotado(array $row): bool
 {
+    if ((int)($row['publicar_sin_stock'] ?? 0) === 1) {
+        return false;
+    }
     $stock = ((int)($row['es_combo'] ?? 0) === 1)
         ? (float)($row['combo_stock'] ?? 0)
         : (float)($row['stock_visible'] ?? $row['stock'] ?? 0);
@@ -206,6 +213,8 @@ function productoAgotado(array $row): bool
 // Al mayor solo se muestra si el stock del producto base cubre al menos una paca.
 $where = "p.activo = 0 AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
           AND (
+              n.publicar_sin_stock = 1
+              OR
               (p.mayor = '1' AND p.cantidad_unidades > 0
                AND sb.stock >= p.cantidad_unidades * COALESCE(pr.minimo_cantidad, 1))
               OR
@@ -240,6 +249,7 @@ if ((string)($_GET['mayor'] ?? '') === '1') {
 
 if ($mode === 'search_index') {
     $sql = "SELECT p.id, p.nombre, p.codigo_barras, p.precio_compra, p.cantidad_unidades, p.origen, s.stock, s.porcentaje, p.mayor, p.es_combo,
+                   n.publicar_sin_stock,
                    MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
                             THEN ROUND(IFNULL(sb.stock, 0) / p.cantidad_unidades, 2)
                             ELSE s.stock END) AS stock_visible,
@@ -279,7 +289,7 @@ if ($mode === 'search_index') {
 
         // Los combos se incluyen en el SQL aunque no tengan piezas suficientes.
         $minimoVisible = (float)($row['minimo_cantidad'] ?? 1);
-        if ($stockVisible < ($minimoVisible > 0 ? $minimoVisible : 1)) continue;
+        if ((int)($row['publicar_sin_stock'] ?? 0) !== 1 && $stockVisible < ($minimoVisible > 0 ? $minimoVisible : 1)) continue;
 
         $searchIndex[] = [
             'id' => $row['id'],
@@ -288,6 +298,7 @@ if ($mode === 'search_index') {
             's' => $stockVisible,
             'm' => $row['mayor'],
             'combo' => $esCombo,
+            'v' => (int)($row['publicar_sin_stock'] ?? 0) === 1 ? 1 : 0,
             'ci' => array_map(function ($it) {
                 return ['n' => $it['nombre'], 'q' => $it['cantidad']];
             }, $comboItems),
@@ -342,7 +353,7 @@ if ($mode === 'destacados') {
     }
 
     $listaDest = implode(',', $idsDest);
-    $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
+    $sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, n.publicar_sin_stock, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
                    MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
                             THEN ROUND(IFNULL(sb.stock, 0) / p.cantidad_unidades, 2)
                             ELSE s.stock END) AS stock_visible,
@@ -423,7 +434,7 @@ if ($grupoFiltro !== '') {
 
 $offset = ($page - 1) * $limit;
 
-$sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
+$sql = "SELECT p.*, s.stock, s.porcentaje, s.id_sucursal, s.bss_id, n.slug, n.publicar_sin_stock, COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) as nombre_tienda, np.foto_url,
                MAX(CASE WHEN p.mayor = '1' AND p.cantidad_unidades > 0
                         THEN ROUND(IFNULL(sb.stock, 0) / p.cantidad_unidades, 2)
                         ELSE s.stock END) AS stock_visible,

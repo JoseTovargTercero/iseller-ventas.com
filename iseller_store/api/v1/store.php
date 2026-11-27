@@ -8,11 +8,13 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../../core/api_v1.php';
+require_once __DIR__ . '/../../core/tienda_publicacion.php';
 
 api_method('GET');
 api_rate_limit('store_ip', 120, 60);
 
 global $conexion;
+tienda_publicacion_asegurar($conexion);
 
 $slug = trim((string)($_GET['slug'] ?? ''));
 
@@ -27,7 +29,7 @@ function api_categorias(?int $bssId): array
             INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
                  AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
-            INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+            INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND (s.stock > 0 OR n.publicar_sin_stock = 1)
                  AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
             WHERE 1 = 1 $filtro
             ORDER BY c.nombre ASC";
@@ -59,7 +61,7 @@ function api_filtros(?int $bssId): array
             INNER JOIN negocio_productos np ON np.producto_id = p.id AND np.estado_publicacion = 1
             INNER JOIN negocio n ON np.negocio_id = n.id
                  AND n.tiene_tienda_virtual = 1 AND n.estado = 'activo'
-            INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND s.stock > 0
+            INNER JOIN stock s ON s.id_producto = p.id AND s.bss_id = n.id AND (s.stock > 0 OR n.publicar_sin_stock = 1)
                  AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
             WHERE c.grupo IS NOT NULL AND c.grupo <> '' $filtro
             ORDER BY c.grupo ASC";
@@ -232,6 +234,7 @@ api_ok([
         'logo_url'         => api_image($logo, 256, 80),
         'cover_url'        => api_image($portada, 1200, 72),
         'verified'         => true,
+        'sale_without_stock' => (int)($tienda['publicar_sin_stock'] ?? 0) === 1,
         'reputation_pct'   => (float)($tienda['reputacion_pct'] ?? 0),
         'reputation_total' => (int)($tienda['reputacion_total'] ?? 0),
         'whatsapp'         => (string)($tienda['whatsapp'] ?? ''),

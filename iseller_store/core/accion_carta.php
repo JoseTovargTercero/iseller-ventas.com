@@ -7,7 +7,10 @@ require_once('db.php');
 require_once('session.php');
 require("_tasas_cambio.php");
 require("_calculadrora_precios.php");
+require_once(__DIR__ . '/tienda_publicacion.php');
 require_once(__DIR__ . '/../../configurar/_canal.php');
+
+tienda_publicacion_asegurar($conexion);
 
 $desscontado = '';
 
@@ -133,10 +136,17 @@ function procesarCarritos()
             $idProd = (int)$prodFrontend['id'];
             
             // Consultar datos reales
-            $sqlProd = "SELECT p.*, s.stock, s.porcentaje, s.bss_id, s.id_sucursal 
+            $bssFiltro = (int)($prodFrontend['bss_id'] ?? 0);
+            $sucFiltro = (int)($prodFrontend['id_sucursal'] ?? 0);
+            $filtroStock = '';
+            if ($bssFiltro > 0) $filtroStock .= " AND s.bss_id = " . $bssFiltro;
+            if ($sucFiltro > 0) $filtroStock .= " AND s.id_sucursal = " . $sucFiltro;
+            $sqlProd = "SELECT p.*, s.stock, s.porcentaje, s.bss_id, s.id_sucursal,
+                               n.publicar_sin_stock
                         FROM productos p 
                         INNER JOIN stock s ON p.id = s.id_producto 
-                        WHERE p.id = ? LIMIT 1";
+                        INNER JOIN negocio n ON n.id = s.bss_id
+                        WHERE p.id = ? {$filtroStock} LIMIT 1";
             
             $stmtP = $conexion->prepare($sqlProd);
             $stmtP->bind_param("i", $idProd);
@@ -152,8 +162,9 @@ function procesarCarritos()
 
              // Validar Stock
              $qty = (float)$prodFrontend['qty'];
+             $ventaSinStock = (int)($prodDB['publicar_sin_stock'] ?? 0) === 1;
              // Si es venta al mayor, validar stock de bultos? (Lógica existente asumida correcta, pero se puede reforzar)
-             if ($qty > $prodDB['stock'] && $prodDB['mayor'] != '1') {
+             if (!$ventaSinStock && $qty > $prodDB['stock'] && $prodDB['mayor'] != '1') {
                  $errores[$idPedido] = "Stock insuficiente para el producto: " . $prodDB['nombre'];
                  break; 
              }

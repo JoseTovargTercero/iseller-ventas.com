@@ -22,11 +22,13 @@ require_once __DIR__ . '/../../core/api_v1.php';
 require_once __DIR__ . '/../../core/notificaciones_admin.php';
 require_once __DIR__ . '/../../core/reglas_producto.php';
 require_once __DIR__ . '/../../core/combos.php';
+require_once __DIR__ . '/../../core/tienda_publicacion.php';
 
 $user = api_auth();
 $userId = (int)$user['id'];
 global $conexion, $conexion_store;
 reglas_producto_asegurar($conexion);
+tienda_publicacion_asegurar($conexion);
 
 function api_order_summary(array $o): array
 {
@@ -206,6 +208,7 @@ $stmtProd = $conexion->prepare(
     "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p.mayor, p.es_combo,
             s.stock, s.porcentaje, s.bss_id, s.id_sucursal, s.id_stock,
             sb.stock AS stock_base,
+            n.publicar_sin_stock,
             COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
             COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
      FROM productos p
@@ -228,6 +231,7 @@ $items = [];
 $totalUsd = 0.0;
 $totalBs = 0.0;
 $totalCop = 0.0;
+$permiteSinStock = false;
 
 foreach ($itemsIn as $item) {
     if (!is_array($item)) {
@@ -280,6 +284,7 @@ foreach ($itemsIn as $item) {
     $comboItems = [];
     $esMayor = (string)$prod['mayor'] === '1';
     $unidadesPaca = (float)$prod['cantidad_unidades'];
+    $permiteSinStock = (int)($prod['publicar_sin_stock'] ?? 0) === 1;
 
     if ($esCombo) {
         $comboItems = combo_items($conexion, $pid, (int)$prod['bss_id']);
@@ -289,7 +294,7 @@ foreach ($itemsIn as $item) {
             ? ($unidadesPaca > 0 ? round((float)($prod['stock_base'] ?? 0) / $unidadesPaca, 2) : 0)
             : (float)$prod['stock'];
     }
-    if ($stockDisponible < $qty) {
+    if (!$permiteSinStock && $stockDisponible < $qty) {
         $stmtProd->close();
         api_error(409, 'No hay stock suficiente de «' . $prod['nombre'] . '». Disponible: ' . $stockDisponible, 'out_of_stock');
     }
@@ -357,11 +362,16 @@ try {
     $stmt->close();
 
     $stmt = $conexion_store->prepare(
-        "UPDATE stock SET stock = stock - ?
-         WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?"
+        $permiteSinStock
+            ? "UPDATE stock SET stock = GREATEST(stock - ?, 0)
+               WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ?"
+            : "UPDATE stock SET stock = stock - ?
+               WHERE id_producto = ? AND id_sucursal = ? AND bss_id = ? AND stock >= ?"
     );
     $stmtMayor = $conexion_store->prepare(
-        "UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?"
+        $permiteSinStock
+            ? "UPDATE stock SET stock = GREATEST(stock - ?, 0) WHERE id = ? AND bss_id = ?"
+            : "UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?"
     );
     if (!$stmt || !$stmtMayor) {
         throw new RuntimeException('stock_prepare');
@@ -376,7 +386,7 @@ try {
             foreach ($it['combo_items'] as $ci) {
                 $descontar = (float)$it['qty'] * (float)$ci['cantidad'];
                 $childId = (int)$ci['producto_id'];
-                if (!producto_stock_descontar($conexion_store, $childId, (int)$it['branch'], $bssId, $descontar)) {
+                if (!producto_stock_descontar($conexion_store, $childId, (int)$it['branch'], $bssId, $descontar, $permiteSinStock)) {
                     $stmt->close();
                     $stmtMayor->close();
                     throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
@@ -393,9 +403,13 @@ try {
                 $stmtMayor->close();
                 throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
             }
-            $stmtMayor->bind_param('diid', $descontar, $idStockMayor, $bssId, $descontar);
+            if ($permiteSinStock) {
+                $stmtMayor->bind_param('dii', $descontar, $idStockMayor, $bssId);
+            } else {
+                $stmtMayor->bind_param('diid', $descontar, $idStockMayor, $bssId, $descontar);
+            }
             $stmtMayor->execute();
-            if ($stmtMayor->affected_rows !== 1) {
+            if (!$permiteSinStock && $stmtMayor->affected_rows !== 1) {
                 $stmt->close();
                 $stmtMayor->close();
                 throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));
@@ -403,9 +417,13 @@ try {
             continue;
         }
 
-        $stmt->bind_param('diiid', $it['qty'], $it['id'], $it['branch'], $bssId, $it['qty']);
+        if ($permiteSinStock) {
+            $stmt->bind_param('diii', $it['qty'], $it['id'], $it['branch'], $bssId);
+        } else {
+            $stmt->bind_param('diiid', $it['qty'], $it['id'], $it['branch'], $bssId, $it['qty']);
+        }
         $stmt->execute();
-        if ($stmt->affected_rows !== 1) {
+        if (!$permiteSinStock && $stmt->affected_rows !== 1) {
             $stmt->close();
             $stmtMayor->close();
             throw new DomainException('out_of_stock:' . (string)($it['nombre'] ?? ''));

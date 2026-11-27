@@ -4,6 +4,9 @@ header('Content-Type: application/json');
 require_once('../core/db.php');
 require_once('../core/session.php');
 require_once('../core/combos.php');
+require_once('../core/tienda_publicacion.php');
+
+tienda_publicacion_asegurar($conexion);
 
 if (!isset($_GET['id']) || !isset($_GET['cantidad'])) {
     echo json_encode(['success' => false, 'message' => 'Faltan parámetros']);
@@ -17,6 +20,7 @@ $tienda_slug = $_GET['tienda_slug'] ?? null;
 // Buscamos dinámicamente el stock en la sucursal donde está publicado el producto
 $sql = "SELECT s.stock, s.id_stock, s.id_sucursal, s.bss_id,
                p.mayor, p.es_combo, p.cantidad_unidades,
+               n.publicar_sin_stock,
                sb.stock AS stock_base
         FROM productos p
         INNER JOIN negocio_productos np ON p.id = np.producto_id AND np.estado_publicacion = 1
@@ -57,8 +61,14 @@ if ($row = $res->fetch_assoc()) {
         $stockActual = $unidadesPaca > 0 ? round($stockBase / $unidadesPaca, 2) : 0;
     }
 
-    if ($stockActual >= $cantidad) {
-        echo json_encode(['success' => true, 'stock' => $stockActual]);
+    $ventaSinStock = (int)($row['publicar_sin_stock'] ?? 0) === 1;
+    if ($stockActual >= $cantidad || $ventaSinStock) {
+        echo json_encode([
+            'success' => true,
+            'stock' => $stockActual,
+            'venta_sin_stock' => $ventaSinStock,
+            'message' => $ventaSinStock && $stockActual < $cantidad ? 'Disponible bajo pedido' : 'Disponible'
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Stock insuficiente', 'current_stock' => $stockActual]);
     }

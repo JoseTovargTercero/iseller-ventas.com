@@ -2,7 +2,10 @@
 require_once('includes/requires.php');
 require_once('../../iseller_store/core/chat_compra.php');
 require_once('../../iseller_store/core/eslogan.php');
+require_once('../../iseller_store/core/tienda_publicacion.php');
 require_once('../../iseller_store/core/venezuela_geo.php');
+
+tienda_publicacion_asegurar($conexion);
 
 // El formulario guarda texto utf8mb4 (eslogan, nombre): con la conexión en utf8
 // (3 bytes) los emojis terminarían guardados como "????".
@@ -171,6 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre_visible = strip_tags(trim($_POST['nombre_visible'] ?? ''));
     $eslogan = mb_substr(strip_tags(trim($_POST['eslogan'] ?? '')), 0, 160);
     $notificacion_email = trim($_POST['notificacion_email'] ?? '');
+    $publicar_sin_stock = (isset($_POST['publicar_sin_stock']) && (string)$_POST['publicar_sin_stock'] === '1') ? 1 : 0;
 
     // El select no lista usuarios desactivados. Si llega vacío, conservar el
     // valor actual en vez de borrarlo; para borrarlo hay una opción explícita (0).
@@ -268,11 +272,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($logo_url) {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, direccion_tienda = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
-        $stmt->bind_param("sssssssssssssssisi", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $direccion_tienda, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, logo_url = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, direccion_tienda = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ?, publicar_sin_stock = ? WHERE id = ?");
+        $stmt->bind_param("sssssssssssssssisii", $slug, $delivery, $datos_bancarios, $logo_url, $categoria, $lat, $lng, $comunidad, $direccion_tienda, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $publicar_sin_stock, $bss_id);
     } else {
-        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, direccion_tienda = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssssssisi", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $direccion_tienda, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $bss_id);
+        $stmt = $conexion->prepare("UPDATE negocio SET slug = ?, config_delivery = ?, datos_bancarios = ?, categoria = ?, lat = ?, lng = ?, comunidad = ?, direccion_tienda = ?, geo_estado = ?, geo_municipio = ?, horarios = ?, nombre_visible = ?, notificacion_email = ?, eslogan = ?, destacados_activo = ?, destacados_ids = ?, publicar_sin_stock = ? WHERE id = ?");
+        $stmt->bind_param("ssssssssssssssisii", $slug, $delivery, $datos_bancarios, $categoria, $lat, $lng, $comunidad, $direccion_tienda, $geo_estado, $geo_municipio, $horarios, $nombre_visible, $notificacion_email, $eslogan, $destacados_activo, $destacados_json, $publicar_sin_stock, $bss_id);
     }
 
     $stmt->execute();
@@ -290,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, direccion_tienda, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email, destacados_activo, destacados_ids FROM negocio WHERE id = ?");
+$stmt = $conexion->prepare("SELECT tiene_tienda_virtual, slug, config_delivery, datos_bancarios, logo_url, portada_url, categoria, lat, lng, comunidad, direccion_tienda, geo_estado, geo_municipio, horarios, nombre_visible, eslogan, notificacion_email, destacados_activo, destacados_ids, publicar_sin_stock FROM negocio WHERE id = ?");
 $stmt->bind_param("i", $bss_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -305,6 +309,7 @@ if (!$tienda || ((int)$tienda['tiene_tienda_virtual'] === 0 && trim((string)$tie
 }
 
 $tienda_activa = (int)$tienda['tiene_tienda_virtual'] === 1;
+$publicar_sin_stock = (int)($tienda['publicar_sin_stock'] ?? 0) === 1;
 
 $conf_delivery = json_decode($tienda['config_delivery'] ?? '{}', true);
 $conf_bancos   = json_decode($tienda['datos_bancarios'] ?? '{}', true);
@@ -569,6 +574,116 @@ if ($destacados_ids) {
 
         .panel-body {
             padding: 22px;
+        }
+
+        /* ---- Método de publicación ---- */
+        .publish-options {
+            display: grid;
+            gap: 10px;
+        }
+
+        .publish-option {
+            position: relative;
+            display: block;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .publish-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .publish-option-body {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 1px solid var(--dash-border);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .publish-option:hover .publish-option-body {
+            border-color: rgba(45, 212, 160, 0.35);
+        }
+
+        .publish-option input:checked + .publish-option-body {
+            border-color: var(--dash-mint);
+            background: rgba(45, 212, 160, 0.08);
+        }
+
+        .publish-option input:focus-visible + .publish-option-body {
+            outline: 2px solid var(--dash-mint);
+            outline-offset: 2px;
+        }
+
+        .publish-option-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background: rgba(45, 212, 160, 0.12);
+            color: var(--dash-mint);
+            font-size: 20px;
+        }
+
+        .publish-option-text {
+            display: block;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .publish-option-text strong {
+            display: block;
+            color: var(--dash-text);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .publish-option-text small {
+            display: block;
+            color: var(--dash-text-muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .publish-option-check {
+            display: none;
+            color: var(--dash-mint);
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .publish-option input:checked + .publish-option-body .publish-option-check {
+            display: inline-flex;
+        }
+
+        .publish-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(45, 212, 160, 0.06);
+            border: 1px solid rgba(45, 212, 160, 0.18);
+            color: var(--dash-text-muted);
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .publish-note ion-icon {
+            color: var(--dash-mint);
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
         }
 
         /* ---- Forms ---- */
@@ -1235,6 +1350,10 @@ if ($destacados_ids) {
                             <ion-icon name="ribbon-outline"></ion-icon>
                             Recomendados
                         </div>
+                        <div class="sidebar-tab" data-tab="tab-publicacion" onclick="switchTab(this)">
+                            <ion-icon name="cloud-upload-outline"></ion-icon>
+                            Publicación
+                        </div>
                         <div class="sidebar-tab" data-tab="tab-envios" onclick="switchTab(this)">
                             <ion-icon name="car-outline"></ion-icon>
                             Envíos
@@ -1489,6 +1608,52 @@ if ($destacados_ids) {
                                         <?php endif; ?>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- TAB: Publicación -->
+                            <div class="config-tab-panel" id="tab-publicacion">
+                                <div class="dash-panel">
+                                    <div class="panel-header">
+                                        <h6><ion-icon name="cloud-upload-outline"></ion-icon>Publicación de productos</h6>
+                                    </div>
+                                    <div class="panel-body">
+                                        <p class="field-hint" style="margin-top:0;">
+                                            Elige cómo se muestran y venden tus productos en la tienda pública.
+                                        </p>
+                                        <div class="publish-options">
+                                            <label class="publish-option">
+                                                <input type="radio" name="publicar_sin_stock" value="0" <?= !$publicar_sin_stock ? 'checked' : '' ?>>
+                                                <span class="publish-option-body">
+                                                    <span class="publish-option-icon"><ion-icon name="cube-outline"></ion-icon></span>
+                                                    <span class="publish-option-text">
+                                                        <strong>Solo productos con stock</strong>
+                                                        <small>Los productos se ocultan de la tienda cuando su existencia llega a cero.</small>
+                                                    </span>
+                                                    <span class="publish-option-check"><ion-icon name="checkmark-circle"></ion-icon></span>
+                                                </span>
+                                            </label>
+                                            <label class="publish-option">
+                                                <input type="radio" name="publicar_sin_stock" value="1" <?= $publicar_sin_stock ? 'checked' : '' ?>>
+                                                <span class="publish-option-body">
+                                                    <span class="publish-option-icon"><ion-icon name="bag-check-outline"></ion-icon></span>
+                                                    <span class="publish-option-text">
+                                                        <strong>Mantener publicados y vender sin stock</strong>
+                                                        <small>Los productos siguen visibles y los clientes pueden comprar aunque no haya existencia.</small>
+                                                    </span>
+                                                    <span class="publish-option-check"><ion-icon name="checkmark-circle"></ion-icon></span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                        <div class="publish-note">
+                                            <ion-icon name="information-circle-outline"></ion-icon>
+                                            <span>Si eliges vender sin stock, los pedidos se registran igual y podrás reponer la mercancía después. El stock disponible se descuenta hasta cero.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-block">
+                                    <ion-icon name="save-outline"></ion-icon>
+                                    Guardar Publicación
+                                </button>
                             </div>
 
                             <!-- TAB: Envíos -->

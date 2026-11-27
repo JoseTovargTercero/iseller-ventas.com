@@ -9,9 +9,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../core/api_v1.php';
 require_once __DIR__ . '/../../core/reglas_producto.php';
 require_once __DIR__ . '/../../core/combos.php';
+require_once __DIR__ . '/../../core/tienda_publicacion.php';
 
 global $conexion;
 reglas_producto_asegurar($conexion);
+tienda_publicacion_asegurar($conexion);
 
 api_method('GET');
 api_rate_limit('products_ip', 180, 60);
@@ -35,7 +37,8 @@ $sort = ($_GET['sort'] ?? '') === 'name_desc' ? 'DESC' : 'ASC';
 $where = "np.estado_publicacion = 1
           AND p.activo = 0
           AND (
-              p.es_combo = 1
+              n.publicar_sin_stock = 1
+              OR p.es_combo = 1
               OR (p.mayor = '1' AND p.cantidad_unidades > 0
                   AND COALESCE(sb.stock, 0) >= p.cantidad_unidades * COALESCE(pr.minimo_cantidad, 1))
               OR ((p.mayor IS NULL OR p.mayor <> '1')
@@ -93,6 +96,7 @@ $sql = "SELECT p.id, p.nombre, p.precio_compra, p.cantidad_unidades, p.origen, p
                s.stock, s.porcentaje, s.bss_id, s.id_sucursal, np.foto_url,
                c.id AS categoria_id, c.nombre AS categoria_nombre,
                n.slug AS store_slug,
+               n.publicar_sin_stock,
                COALESCE(NULLIF(n.nombre_visible, ''), n.nombre) AS store_name,
                COALESCE(pr.minimo_cantidad, 1.00) AS minimo_cantidad,
                COALESCE(pr.paso_cantidad, 1.00) AS paso_cantidad
@@ -143,8 +147,9 @@ while ($fila = $res->fetch_assoc()) {
     }
 
     $minProducto = (float)($fila['minimo_cantidad'] ?? 1);
+    $ventaSinStock = (int)($fila['publicar_sin_stock'] ?? 0) === 1;
     // Los combos se incluyen en el SQL aunque no tengan piezas suficientes.
-    if ($stockProducto < ($minProducto > 0 ? $minProducto : 1)) {
+    if (!$ventaSinStock && $stockProducto < ($minProducto > 0 ? $minProducto : 1)) {
         continue;
     }
 
@@ -169,7 +174,8 @@ while ($fila = $res->fetch_assoc()) {
         'price_bs'      => api_trunc2((float)$precios['precio_venta_bs']),
         'price_cop'     => api_trunc2((float)$precios['precio_venta_peso']),
         'stock'         => $stockProducto,
-        'in_stock'      => $stockProducto >= $minProducto,
+        'in_stock'      => $ventaSinStock || $stockProducto >= $minProducto,
+        'sale_without_stock' => $ventaSinStock,
         'pack_size'     => (int)$fila['cantidad_unidades'],
         'bulk'          => (string)$fila['mayor'] === '1',
         'min_quantity'  => (float)$fila['minimo_cantidad'],

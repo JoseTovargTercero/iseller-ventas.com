@@ -6,6 +6,9 @@ require_once('iseller_store/core/_tasas_cambio.php');
 require_once('iseller_store/core/reputacion.php');
 require_once('iseller_store/core/eslogan.php');
 require_once('iseller_store/core/venezuela_geo.php');
+require_once('iseller_store/core/tienda_publicacion.php');
+
+tienda_publicacion_asegurar($conexion);
 
 // El texto de la tienda (eslogan, nombre, comunidad) es utf8mb4: con la conexión
 // en utf8 (3 bytes) los emojis se mostrarían como "????".
@@ -39,7 +42,7 @@ if (empty($tienda_slug) && $path !== '' && !in_array(strtolower($path), $reserva
 
 if ($tienda_slug) {
     // Buscar el negocio en la base de datos unificada
-    $stmtNegocio = $conexion->prepare("SELECT id, nombre, logo_url, portada_url, config_delivery, lat, lng, nombre_visible, eslogan, categoria, reputacion_total, reputacion_recomiendan, reputacion_pct, geo_estado, geo_municipio, direccion_tienda FROM negocio WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'");
+    $stmtNegocio = $conexion->prepare("SELECT id, nombre, logo_url, portada_url, config_delivery, lat, lng, nombre_visible, eslogan, categoria, reputacion_total, reputacion_recomiendan, reputacion_pct, geo_estado, geo_municipio, direccion_tienda, publicar_sin_stock FROM negocio WHERE slug = ? AND tiene_tienda_virtual = 1 AND estado = 'activo'");
     if ($stmtNegocio) {
         $stmtNegocio->bind_param("s", $tienda_slug);
         $stmtNegocio->execute();
@@ -300,7 +303,7 @@ if (!$es_tienda_individual) {
           AND p.activo = 0
           AND n.estado = 'activo'
           AND n.tiene_tienda_virtual = 1
-          AND s.stock > 0
+          AND (s.stock > 0 OR n.publicar_sin_stock = 1)
           AND c.grupo IS NOT NULL AND c.grupo <> ''
         GROUP BY c.grupo
         ORDER BY total_productos DESC, c.grupo ASC
@@ -319,7 +322,7 @@ if (!$es_tienda_individual) {
              AND (np.sucursal_id IS NULL OR s.id_sucursal = np.sucursal_id)
         LEFT JOIN stock sb ON sb.id = s.id_stock AND sb.id_sucursal = s.id_sucursal AND sb.bss_id = s.bss_id
         WHERE p.activo = 0 AND p.mayor = '1' AND p.cantidad_unidades > 0
-          AND sb.stock >= p.cantidad_unidades
+          AND (n.publicar_sin_stock = 1 OR sb.stock >= p.cantidad_unidades)
           AND n.estado = 'activo' AND n.tiene_tienda_virtual = 1
     ");
     $total_mayor_home = $resMayorHome ? (int)($resMayorHome->fetch_assoc()['total'] ?? 0) : 0;
@@ -4145,6 +4148,7 @@ $zona_tienda = $es_tienda_individual
                     mayor: item.m,
                     cantidadPaca: item.paca || 1,
                     es_combo: Number(item.combo) === 1 ? 1 : 0,
+                    venta_sin_stock: Number(item.v) === 1 ? 1 : 0,
                     combo_items: Array.isArray(item.ci) ? item.ci : [],
                     minimo_cantidad: Number(item.mq) > 0 ? Number(item.mq) : 1,
                     paso_cantidad: Number(item.sq) > 0 ? Number(item.sq) : 1,
@@ -4464,7 +4468,8 @@ $zona_tienda = $es_tienda_individual
 
                 const _itemMin = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
                 const _itemStock = Number(item.stock) || 0;
-                const _itemSinStock = _itemStock < _itemMin;
+                const _itemVentaSinStock = Number(item.venta_sin_stock) === 1;
+                const _itemSinStock = !_itemVentaSinStock && _itemStock < _itemMin;
 
                 html += `
                     <div class="list-group-item list-group-item-action border-0 border-bottom py-2" style="cursor: pointer;" onclick="seleccionarProductoBusqueda('${item.id}')">
@@ -4498,6 +4503,7 @@ $zona_tienda = $es_tienda_individual
                                         const _min  = Number(item.minimo_cantidad) > 0 ? Number(item.minimo_cantidad) : 1;
                                         const _step = Number(item.paso_cantidad) > 0 ? Number(item.paso_cantidad) : 1;
                                         const _stock = Number(item.stock) || 0;
+                                        const _sinLimite = Number(item.venta_sin_stock) === 1;
                                         return `
                                             <button class="btn-qty" onclick="changeQty(this, -1)" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">-</button>
                                             <input type="number" class="qty-input form-control-plaintext p-0 text-center" 
@@ -4506,7 +4512,7 @@ $zona_tienda = $es_tienda_individual
                                                 data-step="${_step}" data-min="${_min}"
                                                 step="${_step}" readonly
                                                 style="width: 40px; height: 30px;">
-                                            <button class="btn-qty" onclick="changeQty(this, 1, ${_stock})" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">+</button>
+                                            <button class="btn-qty" onclick="changeQty(this, 1, ${_sinLimite ? null : _stock})" style="border:none;background:none;font-weight:bold;cursor:pointer;padding:0 4px;">+</button>
                                         `;
                                     })()}
                                 </div>
@@ -4741,10 +4747,16 @@ $zona_tienda = $es_tienda_individual
                 const esCombo = Number(producto.es_combo) === 1;
                 const qtyMin = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
                 const qtyStep = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
-                const isOutOfStock = !isSocio && Number(producto.stock) < qtyMin;
+                const ventaSinStock = Number(producto.venta_sin_stock) === 1;
+                const isOutOfStock = !isSocio && !ventaSinStock && Number(producto.stock) < qtyMin;
                 const opacityClass = isOutOfStock ? 'opacity-50 grayscale' : '';
                 const btnDisabled = isOutOfStock ? 'disabled btn-disabled' : '';
                 const btnText = isOutOfStock ? 'Agotado' : '';
+                const stockLabel = esCombo
+                    ? (Number(producto.stock) >= qtyMin ? 'Combo' : (ventaSinStock ? 'Combo · bajo pedido' : 'Agotado'))
+                    : (Number(producto.stock) >= qtyMin
+                        ? 'Disponible: ' + producto.stock
+                        : (ventaSinStock ? 'Bajo pedido' : 'Agotado'));
 
                 // Badge de tienda — solo en modo Marketplace global
                 const esModoMarketplace = <?= $es_tienda_individual ? 'false' : 'true' ?>;
@@ -4814,7 +4826,7 @@ $zona_tienda = $es_tienda_individual
                             <div class="price-container">
                                 <div class="price-main"><span class="price-dolar">${precio_dolar}</span></div>
                                 <div class="price-sub"><span class="price-bs">${precio_bs}</span></div>
-                                <div class="stock-text">${esCombo ? (Number(producto.stock) >= qtyMin ? 'Combo' : 'Agotado') : (producto.stock > 0 ? 'Disponible: ' + producto.stock : 'Agotado')}</div>
+                                <div class="stock-text">${stockLabel}</div>
                             </div>
                             <div class="card-actions">
                                 <div class="quantity-control">
@@ -4826,7 +4838,7 @@ $zona_tienda = $es_tienda_individual
                                         data-step="${qtyStep}"
                                         data-min="${qtyMin}"
                                         step="${qtyStep}" readonly>
-                                    <button class="btn-qty" onclick="changeQty(this, 1, ${isSocio ? null : producto.stock})">+</button>
+                                    <button class="btn-qty" onclick="changeQty(this, 1, ${isSocio || ventaSinStock ? null : producto.stock})">+</button>
                                 </div>
                                 <button class="btn btn-add btn-add-to-car ${btnDisabled}" 
                                     data-add-id="${producto.id}"
@@ -4906,12 +4918,13 @@ $zona_tienda = $es_tienda_individual
             const modalQty = document.getElementById('modal-product-qty');
             const modalMin = Number(producto.minimo_cantidad) > 0 ? Number(producto.minimo_cantidad) : 1;
             const modalStep = Number(producto.paso_cantidad) > 0 ? Number(producto.paso_cantidad) : 1;
+            const ventaSinStock = Number(producto.venta_sin_stock) === 1;
             modalQty.value = modalMin;
             modalQty.min = modalMin;
             modalQty.step = modalStep;
             modalQty.dataset.min = modalMin;
             modalQty.dataset.step = modalStep;
-            modalQty.dataset.max = Number(producto.stock) || 0;
+            modalQty.dataset.max = ventaSinStock ? 0 : (Number(producto.stock) || 0);
 
             // Combo: se permite elegir cantidad, pero se muestra el detalle de sus piezas.
             const esCombo = Number(producto.es_combo) === 1;
@@ -4945,7 +4958,7 @@ $zona_tienda = $es_tienda_individual
 
             // Update Add to Cart Button
             const btn = document.getElementById('modal-btn-add');
-            btn.disabled = esCombo && Number(producto.stock) < modalMin;
+            btn.disabled = !ventaSinStock && esCombo && Number(producto.stock) < modalMin;
             btn.dataset.addId = producto.id;
             btn.dataset.codigo = producto.codigo || '';
             btn.dataset.p_d = producto.precio_dolar_visible;
@@ -6682,12 +6695,13 @@ $zona_tienda = $es_tienda_individual
                         const qtyMin = Number(it.minimo_cantidad) > 0 ? Number(it.minimo_cantidad) : 1;
                         const qtyStep = Number(it.paso_cantidad) > 0 ? Number(it.paso_cantidad) : 1;
                         const stockActual = Number(it.stock) || 0;
-                        const sinStock = stockActual < qtyMin;
+                        const ventaSinStock = Number(it.venta_sin_stock) === 1;
+                        const sinStock = !ventaSinStock && stockActual < qtyMin;
                         const qtyHtml =
                             '<div class="mkt-hero-qty">' +
                                 '<button type="button" onclick="changeQty(this, -1)">-</button>' +
                                 '<input type="number" data-cantidad-id="' + it.id + '" value="' + qtyMin + '" min="' + qtyMin + '" data-step="' + qtyStep + '" data-min="' + qtyMin + '" step="' + qtyStep + '" readonly>' +
-                                '<button type="button" onclick="changeQty(this, 1, ' + stockActual + ')">+</button>' +
+                                '<button type="button" onclick="changeQty(this, 1, ' + (ventaSinStock ? 'null' : stockActual) + ')">+</button>' +
                             '</div>';
 
                         html += '<div class="mkt-hero-results-item" role="button" onclick="heroSearchPick(' + it.id + ')">' +

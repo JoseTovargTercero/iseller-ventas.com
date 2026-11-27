@@ -92,7 +92,7 @@ if (!function_exists('producto_stock_info')) {
 
 if (!function_exists('producto_stock_descontar')) {
     /** Descuenta stock en unidades de venta; para al mayor usa el stock base. */
-    function producto_stock_descontar($conexion, int $productoId, int $sucursalId, int $bssId, float $cantidad): bool
+    function producto_stock_descontar($conexion, int $productoId, int $sucursalId, int $bssId, float $cantidad, bool $permitirFaltante = false): bool
     {
         $info = producto_stock_info($conexion, $productoId, $sucursalId, $bssId);
         if (!$info || $cantidad <= 0) {
@@ -101,6 +101,21 @@ if (!function_exists('producto_stock_descontar')) {
 
         $descontar = $cantidad * (float)$info['pack'];
         $rowId = (int)$info['row_id'];
+
+        if ($permitirFaltante) {
+            // Venta sin stock: descuenta solo lo disponible, sin dejar valores negativos.
+            $stmt = $conexion->prepare(
+                "UPDATE stock SET stock = GREATEST(stock - ?, 0) WHERE id = ? AND bss_id = ?"
+            );
+            if (!$stmt) {
+                return false;
+            }
+            $stmt->bind_param('dii', $descontar, $rowId, $bssId);
+            $ok = $stmt->execute();
+            $stmt->close();
+            return $ok;
+        }
+
         $stmt = $conexion->prepare(
             "UPDATE stock SET stock = stock - ? WHERE id = ? AND bss_id = ? AND stock >= ?"
         );
