@@ -73,6 +73,35 @@ curl -X POST "https://iseller-tiendas.com/inventario/despostes/estado.php" \
   -d "device_id=11111111-2222-3333-4444-555555555555"
 ```
 
+## Análisis de cargamento con IA
+
+`POST /inventario/despostes/analizar_cargamento.php` recibe:
+
+```json
+{
+  "device_id": "UUID",
+  "cargamento": {
+    "tipo": "Bovino",
+    "fecha": "2026-11-22",
+    "resumen": { "reses": 4, "despostadas": 2, "rendimiento": 50, "ganancia_neta": -200, "perdidas": 300, "merma": 200 },
+    "cortes": [{ "nombre": "Carne", "peso": 140, "esperado": 53, "obtenido": 35, "diferencia": -18 }],
+    "reses": [{ "identificador": "M001", "sexo": "Macho", "rendimiento": 56, "ganancia": -200 }]
+  }
+}
+```
+
+Devuelve `resumen`, `hallazgos`, `recomendaciones` y `alertas`. Usa caché en
+`data/analisis/` (30 días), límite de 60 solicitudes por hora y dispositivo y
+modelos de respaldo de Gemini.
+
+La clave se lee de `GEMINI_API_KEY` o de `private/gemini.local.php`
+(no versionado):
+
+```php
+<?php
+return ['api_key' => 'TU_CLAVE'];
+```
+
 ## App
 
 La app usa `AppConfig.API_BASE_URL`:
