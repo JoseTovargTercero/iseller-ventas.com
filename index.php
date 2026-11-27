@@ -1991,7 +1991,9 @@ $zona_tienda = $es_tienda_individual
                 align-items: center;
                 gap: 1.25rem;
                 padding: 0 2rem;
+                width: 100%;
                 max-width: 680px;
+                min-width: 0;
             }
 
             /* Circular logo */
@@ -2022,6 +2024,8 @@ $zona_tienda = $es_tienda_individual
 
             .store-text-info {
                 color: #ffffff;
+                min-width: 0;
+                max-width: 100%;
             }
 
             .store-title {
@@ -2085,6 +2089,8 @@ $zona_tienda = $es_tienda_individual
                 display: flex;
                 flex-wrap: wrap;
                 gap: 0.5rem;
+                max-width: 100%;
+                min-width: 0;
             }
 
             .store-badge {
@@ -2410,13 +2416,28 @@ $zona_tienda = $es_tienda_individual
             .store-rep-badge {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.45rem;
+                flex-wrap: wrap;
+                gap: 0.25rem 0.45rem;
                 background: rgba(255, 255, 255, 0.95);
                 color: #1f2933;
                 border-radius: 50px;
                 padding: 0.35rem 0.9rem;
                 font-size: 0.82rem;
                 font-weight: 600;
+                white-space: normal;
+                max-width: 100%;
+                min-width: 0;
+                line-height: 1.3;
+            }
+
+            .store-rep-badge .rep-label {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.3rem;
+                white-space: nowrap;
+            }
+
+            .store-rep-badge .rep-count {
                 white-space: nowrap;
             }
 
@@ -2441,6 +2462,7 @@ $zona_tienda = $es_tienda_individual
 
             .store-rep-bars {
                 display: inline-flex;
+                flex: 0 0 auto;
                 gap: 2px;
                 margin-left: 2px;
             }
@@ -2640,6 +2662,12 @@ $zona_tienda = $es_tienda_individual
                     margin-bottom: 0.6rem;
                 }
 
+                .store-rep-badge {
+                    font-size: 0.75rem;
+                    padding: 0.3rem 0.7rem;
+                    border-radius: 14px;
+                }
+
                 .category-nav-inner {
                     flex-wrap: wrap;
                 }
@@ -2805,7 +2833,7 @@ $zona_tienda = $es_tienda_individual
                             <div class="store-badges">
                                 <div class="store-rep-badge" style="--rep-color: <?= $repNivel['color'] ?>" title="Reputación basada en <?= (int)$negocio_data['reputacion_total'] ?> calificaciones de compradores">
                                     <span class="rep-dot"></span>
-                                    <span class="rep-pct"><?= round((float)$negocio_data['reputacion_pct']) ?>%</span> recomendado
+                                    <span class="rep-label"><span class="rep-pct"><?= round((float)$negocio_data['reputacion_pct']) ?>%</span> recomendado</span>
                                     <span class="rep-count">· <?= (int)$negocio_data['reputacion_total'] ?> calificaciones</span>
                                     <span class="store-rep-bars">
                                         <?php for ($i = 0; $i < 5; $i++): ?>

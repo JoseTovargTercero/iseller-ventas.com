@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/_pos_comun.php';
+require_once __DIR__ . '/../configurar/_stock_pendiente.php';
 
 exigirMetodo('GET');
 exigirApiKey();
@@ -26,6 +27,9 @@ $sucursalId = (int)($sesion['sucursal_id'] ?? 0);
 if ($sucursalId <= 0) {
     salir(409, ['ok' => false, 'error' => 'La sesión no tiene sucursal']);
 }
+
+// Descuenta pendientes antes de enviar el catálogo con existencias.
+sp_sincronizar($conexion, (int) $bssId, null, (int) $sucursalId);
 
 $puedeMayor = puedeVenderAlMayor($conexion, $sesion['id_user'], $sesion['nivel']);
 

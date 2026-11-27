@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 require_once 'configuracion.php'; // Asegúrate de conectar a tu base de datos
 require_once 'session.php'; // Asegúrate de conectar a tu base de datos
+require_once __DIR__ . '/_stock_pendiente.php';
 require("_tasas_cambio.php");
 require("_calculadrora_precios.php");
 $calculadora = new CalculadoraPrecios($pesoDolar, $peso_bolivar, $dolarBolivar, $bolivar_peso, $bcv, $data_monedas, $conexion, (int) $bss_id);
@@ -33,6 +34,9 @@ if ($filtro) {
         exit;
     }
 }
+
+// Deja el stock al día descontando los pendientes antes de listar.
+sp_sincronizar($conexion, (int) $bss_id, null, $filtro ? (int) $filtro : null);
 
 /*
 if (!$filtro) {

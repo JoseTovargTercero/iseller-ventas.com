@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SESSION["nivel"] == 1) {
       } elseif ($status === '1' && !sp_asegurar_todo($conexion)) {
         $puedeGuardar = false;
         http_response_code(500);
-        $response['message'] = 'No se pudo preparar la tabla o los triggers del stock pendiente. Verifica los permisos de la base de datos.';
+        $response['message'] = 'No se pudo preparar la tabla del stock pendiente. Verifica los permisos de la base de datos.';
       } else {
         $query = "UPDATE negocio SET stock_pendiente = ? WHERE id = ?";
         $etiqueta = 'stock pendiente';

@@ -6,6 +6,8 @@
  * no descuentan su propio stock; cada venta descuenta kg del lote y del padre.
  */
 
+require_once(__DIR__ . '/_stock_pendiente.php');
+
 function canal_numero($valor): string
 {
     $texto = number_format((float) $valor, 4, '.', '');
@@ -493,9 +495,12 @@ function canal_sumar_compra(
     }
     $stmt->close();
 
-    // El stock pudo quedar reducido por stock pendiente (trigger de la tabla
-    // stock). Se devuelve la existencia real para que la compra y su
-    // auditoría no muestren una cantidad mayor a la que quedó.
+    // Aplica el stock pendiente que exista para este producto/sucursal.
+    // Funciona con triggers (si el hosting los permite) o sin ellos.
+    sp_sincronizar($conexion, $bssId, $productoId, $sucursalId);
+
+    // Se devuelve la existencia real para que la compra y su auditoría no
+    // muestren una cantidad mayor a la que quedó.
     $stockReal = $stockNuevo;
     $stmtReal = $conexion->prepare(
         "SELECT stock FROM stock
