@@ -3886,7 +3886,7 @@ $zona_tienda = $es_tienda_individual
 
                                 <button class="btn modal-btn-add" id="modal-btn-add"
                                     data-add-id="" data-codigo="" data-P_D="" data-P_P="" data-P_B="">
-                                    <i class="bi bi-cart-plus-fill"></i> AGREGAR AL CARRITO
+                                    <i class="bi bi-cart-plus-fill"></i> AGREGA
                                 </button>
                             </div>
                         </div>
