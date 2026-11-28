@@ -314,12 +314,12 @@ if ($_SESSION['nivel'] == 1) {
                         card.innerHTML = `
                 <div class="branch-icon"><ion-icon name="storefront-outline"></ion-icon></div>
                 <div class="branch-info">
-                    <span class="branch-name">${s.nombre}</span>
+                    <span class="branch-name">${escaparHtml(s.nombre)}</span>
                     <span class="branch-hint">Entrar a esta sucursal</span>
                 </div>
                 <div class="branch-check"><ion-icon name="checkmark-outline"></ion-icon></div>
             `;
-                        card.addEventListener('click', () => seleccionar(s.id));
+                        card.addEventListener('click', () => seleccionarConConfirmacion(s, data.length));
                         grid.appendChild(card);
                     });
 
@@ -353,6 +353,138 @@ if ($_SESSION['nivel'] == 1) {
             loaderWatcher.observe(document.body, { childList: true, subtree: true });
             setTimeout(() => loaderWatcher.disconnect(), 10000);
             [500, 1500, 3000].forEach(ms => setTimeout(cerrarLoaderPegado, ms));
+
+            function escaparHtml(valor) {
+                return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(c) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[c];
+                });
+            }
+
+            function normalizarNombreSucursal(valor) {
+                let texto = String(valor == null ? '' : valor).toLowerCase();
+                try {
+                    texto = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                } catch (e) {
+                    // Respaldo para navegadores antiguos sin String.normalize().
+                    texto = texto
+                        .replace(/[áàäâã]/g, 'a')
+                        .replace(/[éèëê]/g, 'e')
+                        .replace(/[íìïî]/g, 'i')
+                        .replace(/[óòöôõ]/g, 'o')
+                        .replace(/[úùüû]/g, 'u')
+                        .replace(/ñ/g, 'n');
+                }
+                return texto
+                    .replace(/[^a-z0-9]+/g, ' ')
+                    .trim()
+                    .replace(/\s+/g, ' ');
+            }
+
+            function tokensSignificativosSucursal(texto) {
+                return texto
+                    .split(' ')
+                    .filter(function(t) {
+                        return t.length === 1 || /\d/.test(t);
+                    })
+                    .map(function(t) {
+                        // "01" y "1" se consideran el mismo código.
+                        return t.replace(/\d+/g, function(n) {
+                            return String(parseInt(n, 10));
+                        });
+                    })
+                    .sort()
+                    .join('|');
+            }
+
+            function distanciaLevenshtein(a, b) {
+                if (a === b) return 0;
+                const m = a.length;
+                const n = b.length;
+                if (m === 0) return n;
+                if (n === 0) return m;
+
+                let anterior = new Array(n + 1);
+                for (let j = 0; j <= n; j++) anterior[j] = j;
+
+                for (let i = 1; i <= m; i++) {
+                    const actual = [i];
+                    for (let j = 1; j <= n; j++) {
+                        const costo = a[i - 1] === b[j - 1] ? 0 : 1;
+                        actual[j] = Math.min(
+                            anterior[j] + 1,
+                            actual[j - 1] + 1,
+                            anterior[j - 1] + costo
+                        );
+                    }
+                    anterior = actual;
+                }
+                return anterior[n];
+            }
+
+            function nombreSucursalCoincide(entrada, nombre) {
+                const a = normalizarNombreSucursal(entrada);
+                const b = normalizarNombreSucursal(nombre);
+                if (!a || !b) return false;
+                if (a === b) return true;
+
+                // Los códigos (números o letras sueltas) deben coincidir para no
+                // confirmar por error "Sucursal 1" cuando se quiere "Sucursal 2".
+                if (tokensSignificativosSucursal(a) !== tokensSignificativosSucursal(b)) {
+                    return false;
+                }
+
+                // También se compara sin importar el orden de las palabras.
+                const aOrden = a.split(' ').sort().join(' ');
+                const bOrden = b.split(' ').sort().join(' ');
+                const maxLen = Math.max(aOrden.length, bOrden.length);
+                const permitido = maxLen <= 4 ? 0 : maxLen <= 8 ? 1 : maxLen <= 15 ? 2 : 3;
+
+                return distanciaLevenshtein(aOrden, bOrden) <= permitido ||
+                    distanciaLevenshtein(a, b) <= permitido;
+            }
+
+            function seleccionarConConfirmacion(sucursal, totalSucursales) {
+                if (totalSucursales <= 1 || !String(sucursal.nombre || '').trim()) {
+                    seleccionar(sucursal.id);
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Confirmar sucursal',
+                    html: 'Vas a entrar a <b>' + escaparHtml(sucursal.nombre) + '</b>.<br>' +
+                        '<span style="font-size:13px;color:#8a94a6;">Escribe el nombre de la sucursal para confirmar.</span>',
+                    input: 'text',
+                    inputPlaceholder: 'Nombre de la sucursal',
+                    inputAttributes: {
+                        autocomplete: 'off',
+                        autocapitalize: 'words',
+                        spellcheck: 'false',
+                        maxlength: 80
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Entrar',
+                    cancelButtonText: 'Cancelar',
+                    inputValidator: function(valor) {
+                        if (!String(valor || '').trim()) {
+                            return 'Escribe el nombre de la sucursal.';
+                        }
+                        if (!nombreSucursalCoincide(valor, sucursal.nombre)) {
+                            return 'El nombre no coincide. Revisa la escritura e intenta de nuevo.';
+                        }
+                        return null;
+                    }
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        seleccionar(sucursal.id);
+                    }
+                });
+            }
 
             function seleccionar(id) {
                 fetch('../../configurar/seleccion_sucursal.php', {
