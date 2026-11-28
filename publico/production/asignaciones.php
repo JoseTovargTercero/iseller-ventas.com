@@ -1591,8 +1591,9 @@ $hoy = date('Y-m-d');
             const excedente = Math.max(0, abonado - original);
             const estadoDeuda = abonado <= 0 ? 'PENDIENTE' : (abonado < original ? 'PARCIAL' : 'PAGADA');
 
-            const filas = (d.detalles || []).map((detalle) => `<tr>
-                <td>${esc(detalle.producto_nombre)}</td>
+            const productosDetalle = d.detalles || [];
+            const filas = productosDetalle.map((detalle) => `<tr>
+                <td>${esc(detalle.producto_nombre)}${Number(detalle.es_mayor) === 1 || detalle.es_mayor === true ? ' <span class="a-badge a-badge-mayor">Mayor</span>' : ''}</td>
                 <td class="a-right">${qty(detalle.cantidad)}</td>
                 <td class="a-right a-money">${money(detalle.costo_unitario)}</td>
                 <td class="a-right a-money">${money(detalle.subtotal)}</td>
@@ -1603,6 +1604,33 @@ $hoy = date('Y-m-d');
                 <td>${esc(concepto.concepto)}</td>
                 <td class="a-right a-money">${money(concepto.monto)}</td>
             </tr>`).join('');
+
+            const resumenProductos = productosDetalle.map((detalle) => {
+                const esMayor = Number(detalle.es_mayor) === 1 || detalle.es_mayor === true;
+                return qty(detalle.cantidad) + ' × ' + detalle.producto_nombre + (esMayor ? ' (pacas)' : '');
+            });
+            const resumenConceptos = conceptosDetalle.map((concepto) => concepto.concepto);
+            const partesCorresponde = [];
+            if (resumenProductos.length) {
+                partesCorresponde.push('Mercancía: ' + resumenProductos.join(', '));
+            }
+            if (resumenConceptos.length) {
+                partesCorresponde.push('Conceptos: ' + resumenConceptos.join(', '));
+            }
+            const correspondeTexto = partesCorresponde.length
+                ? partesCorresponde.join(' · ')
+                : 'Sin productos ni conceptos registrados';
+
+            const productosHtml = productosDetalle.length
+                ? `<div class="a-section-title">Productos</div>
+                   <div class="a-table-wrap">
+                       <table class="a-table">
+                           <thead><tr><th>Producto</th><th class="a-right">Cantidad</th><th class="a-right">Costo unitario</th><th class="a-right">Subtotal</th></tr></thead>
+                           <tbody>${filas}</tbody>
+                       </table>
+                   </div>`
+                : '';
+
             const conceptosHtml = conceptosDetalle.length
                 ? `<div class="a-section-title">Conceptos y servicios sin inventario</div>
                    <div class="a-table-wrap">
@@ -1611,6 +1639,10 @@ $hoy = date('Y-m-d');
                            <tbody>${filasConceptos}</tbody>
                        </table>
                    </div>`
+                : '';
+
+            const sinDetalleHtml = (!productosDetalle.length && !conceptosDetalle.length)
+                ? '<div class="a-muted" style="font-size:12.5px;margin-bottom:8px;">Esta asignación no tiene productos ni conceptos registrados.</div>'
                 : '';
 
             const filasPagos = pagos.length
@@ -1679,17 +1711,16 @@ $hoy = date('Y-m-d');
                     <div class="a-detail-cell"><span>Inventario origen</span><strong>${Number(a.descuenta_origen) === 1 ? 'Descontado' : 'No descontado'}</strong></div>
                     <div class="a-detail-cell"><span>Inventario destino</span><strong>${Number(a.suma_destino) === 1 ? 'Sumado' : 'No sumado'}</strong></div>
                     <div class="a-detail-cell"><span>Total</span><strong>${money(a.total)}</strong></div>
+                    <div class="a-detail-cell" style="grid-column: 1 / -1;">
+                        <span>Corresponde a</span>
+                        <strong>${esc(correspondeTexto)}</strong>
+                    </div>
                 </div>
                 ${a.observaciones ? '<div class="a-muted" style="font-size:12.5px;margin-bottom:12px;"><strong style="color:var(--dash-text);">Observaciones:</strong> ' + esc(a.observaciones) + '</div>' : ''}
 
-                <div class="a-section-title">Productos</div>
-                <div class="a-table-wrap">
-                    <table class="a-table">
-                        <thead><tr><th>Producto</th><th class="a-right">Cantidad</th><th class="a-right">Costo unitario</th><th class="a-right">Subtotal</th></tr></thead>
-                        <tbody>${filas || '<tr><td colspan="4" class="a-muted a-center">Sin productos.</td></tr>'}</tbody>
-                    </table>
-                </div>
+                ${productosHtml}
                 ${conceptosHtml}
+                ${sinDetalleHtml}
                 <div class="a-summary-line total"><span>Total asignado</span><b>${money(a.total)}</b></div>
 
                 ${deudaHtml}
