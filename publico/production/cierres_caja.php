@@ -291,7 +291,9 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       text-transform: uppercase;
     }
 
-    .btn-cerrar-admin {
+    .btn-cerrar-admin,
+    .btn-editar-cierre,
+    .btn-ticket-cierre {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -309,9 +311,50 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
       transition: background .18s ease, border-color .18s ease;
     }
 
-    .btn-cerrar-admin:hover {
+    .btn-cerrar-admin:hover,
+    .btn-editar-cierre:hover,
+    .btn-ticket-cierre:hover {
       background: rgba(45, 212, 160, .16);
       border-color: var(--dash-mint);
+    }
+
+    .caja-acciones {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    .caja-acciones .btn-cerrar-admin,
+    .caja-acciones .btn-editar-cierre,
+    .caja-acciones .btn-ticket-cierre {
+      margin-top: 0;
+    }
+
+    .btn-editar-cierre {
+      border-color: rgba(245, 180, 91, .35);
+      background: rgba(245, 180, 91, .08);
+      color: #f5b45b;
+    }
+
+    .btn-editar-cierre:hover {
+      background: rgba(245, 180, 91, .16);
+      border-color: #f5b45b;
+    }
+
+    .btn-ticket-cierre {
+      border-color: rgba(147, 197, 253, .35);
+      background: rgba(147, 197, 253, .08);
+      color: #93c5fd;
+      text-decoration: none;
+    }
+
+    .btn-ticket-cierre:hover {
+      background: rgba(147, 197, 253, .16);
+      border-color: #93c5fd;
+      color: #bfdbfe;
+      text-decoration: none;
     }
 
     /* Formulario del cierre que registra el administrador */
@@ -585,8 +628,15 @@ function cargarCortes() {
       const sucursalLinea = (!sucursal && u.sucursal_nombre)
         ? `<small class="user-sucursal">${escCaja(u.sucursal_nombre)}</small>` : '';
       const badgeSinCierre = sinCierre ? '<span class="badge-sin-cierre">Sin cierre</span>' : '';
+      const idCierre = (u.cierre && Number(u.cierre.id) > 0) ? Number(u.cierre.id) : 0;
       const botonCierre = (esAdminCaja && sinCierre && Number(u.usuario_id) > 0)
         ? `<button type="button" class="btn-cerrar-admin" data-usuario="${u.usuario_id}">Cerrar caja</button>` : '';
+      const botonEditar = (esAdminCaja && !sinCierre && idCierre > 0)
+        ? `<button type="button" class="btn-editar-cierre" data-usuario="${u.usuario_id}">Editar cierre</button>` : '';
+      const botonTicket = (!sinCierre && idCierre > 0)
+        ? `<a class="btn-ticket-cierre" target="_blank" rel="noopener" href="ticket_cierre_58.php?cierre_id=${idCierre}" title="Imprimir ticket 58 mm">Ticket 58 mm</a>` : '';
+      const accionesCaja = (botonCierre || botonEditar || botonTicket)
+        ? `<div class="caja-acciones">${botonCierre}${botonEditar}${botonTicket}</div>` : '';
 
       const vacio = (label) => `<td class="valor text-end vacio" data-label="${label}" style="color:var(--dash-text-muted);">-</td>`;
 
@@ -628,7 +678,7 @@ function cargarCortes() {
           ${inicio}
           ${obs}
           ${badgeSinCierre}
-          ${botonCierre}
+          ${accionesCaja}
         </td>
         <td class="concepto"><strong>Apertura (Fondo Recibido)</strong></td>
         <td class="valor text-end" data-label="Bs">${fmt(ape.efectivo_bs)} Bs</td>
@@ -688,17 +738,30 @@ function cargarCortes() {
   });
 }
 
-async function abrirCierreAdmin(usuarioId) {
+async function abrirCierreCaja(usuarioId, esEdicion = false) {
   const u = datosCortes.get(String(usuarioId));
   if (!u || !esAdminCaja) return;
+
+  const cierre = u.cierre || null;
+  const esEdicionReal = Boolean(esEdicion && cierre && Number(cierre.id) > 0);
+  if (esEdicion && !esEdicionReal) return;
 
   const fmt = (n, dec = 2) => (Number(n) || 0).toLocaleString('es-VE', {
     minimumFractionDigits: dec,
     maximumFractionDigits: dec
   });
-  const sis = Object.assign(totalesCero(), u.cierre ? (u.cierre.sistema || {}) : (u.sistema || {}));
+  const sis = Object.assign(totalesCero(), cierre ? (cierre.sistema || {}) : (u.sistema || {}));
   const ape = Object.assign({ efectivo_bs: 0, dolares: 0, pesos: 0 }, u.apertura || {});
-  const fecha = document.getElementById('fechaFiltro').value;
+  const contado = esEdicionReal
+    ? Object.assign(totalesCero(), cierre.contado || {})
+    : Object.assign({}, sis);
+  const fondo = esEdicionReal
+    ? Object.assign({ efectivo_bs: 0, dolares: 0, pesos: 0 }, cierre.fondo_dejado || {})
+    : Object.assign({}, ape);
+  const observacionesActuales = esEdicionReal ? String(cierre.observaciones || '') : '';
+  const fecha = esEdicionReal && cierre.fecha
+    ? String(cierre.fecha)
+    : document.getElementById('fechaFiltro').value;
   const fmtInput = (valor) => (Number(valor) || 0).toFixed(2);
 
   const campo = (id, label, valor) => `
@@ -714,7 +777,9 @@ async function abrirCierreAdmin(usuarioId) {
         <span>${escCaja(u.sucursal_nombre || 'Sucursal')} · ${escCaja(fecha)}</span>
       </div>
       <p class="admin-cierre-nota">
-        El contado viene precargado con los totales del sistema. Ajústalo si el conteo real es distinto.
+        ${esEdicionReal
+          ? 'Montos actuales del cierre. Ajusta lo que el usuario entregó y guarda los cambios. Los totales del sistema se conservan tal como quedaron registrados.'
+          : 'El contado viene precargado con los totales del sistema. Ajústalo si el conteo real es distinto.'}
       </p>
 
       <div class="admin-cierre-resumen">
@@ -729,34 +794,34 @@ async function abrirCierreAdmin(usuarioId) {
 
       <div class="admin-cierre-section">Cierre contado</div>
       <div class="admin-cierre-grid">
-        ${campo('ac-efectivo_bs_contado', 'Efectivo Bs', sis.efectivo_bs)}
-        ${campo('ac-efectivo_usd_contado', 'Efectivo USD', sis.dolares)}
-        ${campo('ac-pesos_contado', 'Efectivo COP', sis.pesos)}
-        ${campo('ac-punto_contado', 'Punto', sis.punto)}
-        ${campo('ac-pago_movil_contado', 'Pago Móvil', sis.pago_movil)}
-        ${campo('ac-transferencia_contado', 'Transferencia', sis.transferencia)}
-        ${campo('ac-biopago_contado', 'Biopago', sis.biopago)}
+        ${campo('ac-efectivo_bs_contado', 'Efectivo Bs', contado.efectivo_bs)}
+        ${campo('ac-efectivo_usd_contado', 'Efectivo USD', contado.dolares)}
+        ${campo('ac-pesos_contado', 'Efectivo COP', contado.pesos)}
+        ${campo('ac-punto_contado', 'Punto', contado.punto)}
+        ${campo('ac-pago_movil_contado', 'Pago Móvil', contado.pago_movil)}
+        ${campo('ac-transferencia_contado', 'Transferencia', contado.transferencia)}
+        ${campo('ac-biopago_contado', 'Biopago', contado.biopago)}
       </div>
 
       <div class="admin-cierre-section">Fondo dejado</div>
       <div class="admin-cierre-grid">
-        ${campo('ac-efectivo_bs_fondo', 'Fondo Bs', ape.efectivo_bs)}
-        ${campo('ac-efectivo_usd_fondo', 'Fondo USD', ape.dolares)}
-        ${campo('ac-pesos_fondo', 'Fondo COP', ape.pesos)}
+        ${campo('ac-efectivo_bs_fondo', 'Fondo Bs', fondo.efectivo_bs)}
+        ${campo('ac-efectivo_usd_fondo', 'Fondo USD', fondo.dolares)}
+        ${campo('ac-pesos_fondo', 'Fondo COP', fondo.pesos)}
       </div>
 
       <div class="admin-cierre-field admin-cierre-obs">
         <label for="ac-observaciones">Observaciones</label>
-        <textarea id="ac-observaciones" placeholder="Opcional"></textarea>
+        <textarea id="ac-observaciones" placeholder="Opcional">${escCaja(observacionesActuales)}</textarea>
       </div>
     </div>`;
 
   const resultado = await Swal.fire({
-    title: 'Registrar cierre de caja',
+    title: esEdicionReal ? 'Modificar cierre de caja' : 'Registrar cierre de caja',
     html,
     width: 680,
     showCancelButton: true,
-    confirmButtonText: 'Registrar cierre',
+    confirmButtonText: esEdicionReal ? 'Guardar cambios' : 'Registrar cierre',
     cancelButtonText: 'Cancelar',
     confirmButtonColor: '#2dd4a0',
     focusConfirm: false,
@@ -798,12 +863,13 @@ async function abrirCierreAdmin(usuarioId) {
   body.set('usuario_id', u.usuario_id);
   body.set('sucursal_id', u.sucursal_id || '');
   body.set('fecha', fecha);
+  if (esEdicionReal) body.set('cierre_id', cierre.id);
   Object.entries(resultado.value).forEach(([clave, valor]) => {
     body.set(clave, valor);
   });
 
   Swal.fire({
-    title: 'Registrando cierre...',
+    title: esEdicionReal ? 'Guardando cambios...' : 'Registrando cierre...',
     allowOutsideClick: false,
     allowEscapeKey: false,
     showConfirmButton: false,
@@ -819,22 +885,29 @@ async function abrirCierreAdmin(usuarioId) {
     const data = await respuesta.json();
 
     if (data.status !== 'success') {
-      throw new Error(data.message || 'No se pudo registrar el cierre.');
+      throw new Error(data.message || 'No se pudo guardar el cierre.');
     }
 
     Swal.close();
-    Alerta.toast('success', data.message || 'Cierre registrado correctamente.');
+    Alerta.toast('success', data.message || 'Cierre guardado correctamente.');
     cargarCortes();
   } catch (error) {
     Swal.close();
-    Swal.fire('Error', error.message || 'No se pudo registrar el cierre.', 'error');
+    Swal.fire('Error', error.message || 'No se pudo guardar el cierre.', 'error');
   }
 }
 
 document.addEventListener('click', (event) => {
-  const boton = event.target.closest('.btn-cerrar-admin');
-  if (!boton) return;
-  abrirCierreAdmin(boton.dataset.usuario);
+  const botonCerrar = event.target.closest('.btn-cerrar-admin');
+  if (botonCerrar) {
+    abrirCierreCaja(botonCerrar.dataset.usuario, false);
+    return;
+  }
+
+  const botonEditar = event.target.closest('.btn-editar-cierre');
+  if (botonEditar) {
+    abrirCierreCaja(botonEditar.dataset.usuario, true);
+  }
 });
 
 document.getElementById('fechaFiltro').addEventListener('change', cargarCortes);

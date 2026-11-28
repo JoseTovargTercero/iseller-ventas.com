@@ -116,6 +116,9 @@ if (($input['action'] ?? $_GET['action'] ?? '') === 'totales_por_usuario') {
                 ];
             } elseif ($row['tipo_corte'] === 'cierre') {
                 $usuarios_cortes[$uid]['cierre'] = [
+                    'id' => (int) $row['id'],
+                    'fecha' => (string) $row['fecha'],
+                    'creado_en' => (string) ($row['creado_en'] ?? ''),
                     'contado' => [
                         'efectivo_bs' => (float) $row['efectivo_bs_contado'],
                         'dolares' => (float) $row['efectivo_usd_contado'],

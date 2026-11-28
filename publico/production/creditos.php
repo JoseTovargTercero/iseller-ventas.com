@@ -161,6 +161,36 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         background: currentColor;
       }
 
+      .sucursal-lista {
+        display: inline-block;
+        max-width: 220px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: rgba(45, 212, 160, .08);
+        border: 1px solid rgba(45, 212, 160, .22);
+        color: var(--dash-mint);
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: normal;
+        text-align: left;
+      }
+
+      .usuario-lista {
+        display: inline-block;
+        max-width: 220px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: rgba(91, 156, 245, .08);
+        border: 1px solid rgba(91, 156, 245, .22);
+        color: #5b9cf5;
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: normal;
+        text-align: left;
+      }
+
       .deuda-banner {
         background: var(--dash-card);
         border: 1px solid var(--dash-border);
@@ -310,7 +340,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                       <th>Créditos</th>
                       <th>Días desde último crédito</th>
                       <th>Total USD</th>
-                      <th>Sucursal</th>
+                      <th>Sucursales</th>
+                      <th>Otorgado por</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -373,6 +404,22 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
         return escapeHtml(cedula);
       }
 
+      function celdaSucursal(fila) {
+        const valor = String(fila.sucursal || '').trim();
+        if (valor === '') {
+          return '<span title="Sin sucursal registrada">—</span>';
+        }
+        return '<span class="sucursal-lista" title="Sucursales donde tiene créditos">' + escapeHtml(valor) + '</span>';
+      }
+
+      function celdaUsuario(fila) {
+        const valor = String(fila.usuario || '').trim();
+        if (valor === '') {
+          return '<span title="Sin usuario registrado">—</span>';
+        }
+        return '<span class="usuario-lista" title="Usuarios que otorgaron los créditos">' + escapeHtml(valor) + '</span>';
+      }
+
       function celdaDiasUltimoCredito(fila) {
         const dias = fila.dias_ultimo_credito;
         if (dias === null || dias === undefined || dias === '') {
@@ -409,7 +456,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                   data[i].cantidad_creditos,
                   celdaDiasUltimoCredito(data[i]),
                   data[i].suma_monto ? '$ ' + data[i].suma_monto : '-',
-                  data[i].sucursal,
+                  celdaSucursal(data[i]),
+                  celdaUsuario(data[i]),
                   `<a class="btn-detalles" href="creditos_cliente.php?cliente=${encodeURIComponent(nombreEnlace)}" title="Ver detalles">
               <ion-icon name="eye-outline"></ion-icon>
             </a>`

@@ -21,8 +21,8 @@ if (!$cliente) {
 
 
 $abonos = [];
-$stmt = $conexion->prepare("SELECT * FROM abonos WHERE cliente = ?");
-$stmt->bind_param("s", $cliente);
+$stmt = $conexion->prepare("SELECT * FROM abonos WHERE cliente = ? AND bss_id = ?");
+$stmt->bind_param("si", $cliente, $bss_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -251,20 +251,47 @@ function aplicarAbonos($productos, $abonos)
 }
 
 // ───── Obtener productos de créditos activos ─────
-$sql = "SELECT creditos.order_id, creditos.total_price as total_inicial_dolares, creditos.total_price_bs as total_inicial_bs, creditos.total_price_cop as total_inicial_cop
+$sql = "SELECT creditos.order_id,
+               creditos.sucursal_id,
+               S.nombre AS sucursal,
+               U.nombre AS usuario,
+               creditos.total_price as total_inicial_dolares,
+               creditos.total_price_bs as total_inicial_bs,
+               creditos.total_price_cop as total_inicial_cop
           FROM creditos
     LEFT JOIN orden ON orden.id = creditos.order_id
-         WHERE estado = '2' AND negocio = ?
-      ORDER BY negocio DESC";
+    LEFT JOIN sucursales AS S
+           ON S.id = COALESCE(NULLIF(creditos.sucursal_id, 0), orden.id_sucursal)
+    LEFT JOIN usuarios AS U ON U.id = orden.usuario
+         WHERE creditos.estado = '2' AND creditos.negocio = ? AND creditos.bss_id = ?
+      ORDER BY creditos.negocio DESC";
 
 $stmt = $conexion->prepare($sql);
-$stmt->bind_param('s', $cliente);
+$stmt->bind_param('si', $cliente, $bss_id);
 $stmt->execute();
 $res = $stmt->get_result();
 
 $productosGlobales = [];
+$sucursalesGlobales = [];
+$usuariosGlobales = [];
 
 while ($row = $res->fetch_assoc()) {
+    $sucursalNombre = trim((string) ($row['sucursal'] ?? ''));
+    if ($sucursalNombre === '') {
+        $sucursalNombre = 'Sin sucursal';
+    }
+    if (!in_array($sucursalNombre, $sucursalesGlobales, true)) {
+        $sucursalesGlobales[] = $sucursalNombre;
+    }
+
+    $usuarioNombre = trim((string) ($row['usuario'] ?? ''));
+    if ($usuarioNombre === '') {
+        $usuarioNombre = 'Sin usuario';
+    }
+    if (!in_array($usuarioNombre, $usuariosGlobales, true)) {
+        $usuariosGlobales[] = $usuarioNombre;
+    }
+
     $productos = getProductos($row['order_id']);
 
     // cuenta los registros en $productos
@@ -287,6 +314,8 @@ while ($row = $res->fetch_assoc()) {
             'nombre' => $datos['nombre'],
             'origen' => $datos['origen'],
             'stock' => $datos['stock'],
+            'sucursal' => $sucursalNombre,
+            'usuario' => $usuarioNombre,
             'precio_dolar' => $datos['precio_dolar_visible'],
             'precio_peso'  => $datos['precio_peso_visible'],
             'precio_bs'    => $datos['precio_bs_visible'],
@@ -311,8 +340,12 @@ usort($productosGlobales, function ($a, $b) {
 
 //echo '<pre>';
 // Respuesta final
+sort($sucursalesGlobales, SORT_NATURAL | SORT_FLAG_CASE);
+sort($usuariosGlobales, SORT_NATURAL | SORT_FLAG_CASE);
 echo json_encode([
     'deuda_restante' => $deudaRestante,
     'productos'      => $productosAjustados,
     'abonos'         => $abonos, // Muestra los abonos aplicados
+    'sucursales'     => $sucursalesGlobales,
+    'usuarios'       => $usuariosGlobales,
 ], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT);

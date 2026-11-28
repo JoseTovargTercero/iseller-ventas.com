@@ -486,6 +486,14 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
               <ion-icon name="call-outline"></ion-icon>
               Teléfono: <b><?= $telefonoCliente !== '' ? htmlspecialchars($telefonoCliente) : 'Sin teléfono' ?></b>
             </span>
+            <span>
+              <ion-icon name="business-outline"></ion-icon>
+              Sucursales: <b id="sucursales-cliente">—</b>
+            </span>
+            <span>
+              <ion-icon name="person-outline"></ion-icon>
+              Otorgado por: <b id="usuarios-cliente">—</b>
+            </span>
           </div>
           <div class="credito-tiempos">
             <span>
@@ -536,6 +544,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                     <tr>
                       <th>Cant</th>
                       <th>Producto</th>
+                      <th>Sucursal</th>
+                      <th>Otorgado por</th>
                       <th class="text-center">Valor ($)</th>
                       <th class="text-center">Valor (COP)</th>
                       <th class="text-center">Valor (BS)</th>
@@ -564,6 +574,8 @@ if ($_SESSION['nivel'] == 1 || $_SESSION['nivel'] == 2) {
                         <tr>
                           <th>Cant</th>
                           <th>Producto</th>
+                          <th>Sucursal</th>
+                          <th>Otorgado por</th>
                           <th class="text-center">Valor ($)</th>
                           <th class="text-center">Valor (COP)</th>
                           <th class="text-center">Valor (BS)</th>
@@ -623,6 +635,18 @@ let deudaActual = null;
 let ordenesCredito = [];
 let deudaInicialUSD = 0;
 
+function escapeHtml(valor) {
+  return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(c) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c];
+  });
+}
+
 async function cargarCreditos() {
   const tbody = document.querySelector('#tabla-creditos tbody');
   if (!tbody) return;
@@ -634,6 +658,16 @@ async function cargarCreditos() {
     });
     if (!res.ok) throw new Error('Error al obtener datos');
     const data = await res.json();
+    const sucursalesCliente = (data.totales_global && data.totales_global.sucursales) ? data.totales_global.sucursales : [];
+    const elSucursales = document.getElementById('sucursales-cliente');
+    if (elSucursales) {
+      elSucursales.textContent = sucursalesCliente.length ? sucursalesCliente.join(', ') : 'Sin sucursal';
+    }
+    const usuariosCliente = (data.totales_global && data.totales_global.usuarios) ? data.totales_global.usuarios : [];
+    const elUsuarios = document.getElementById('usuarios-cliente');
+    if (elUsuarios) {
+      elUsuarios.textContent = usuariosCliente.length ? usuariosCliente.join(', ') : 'Sin usuario';
+    }
     tbody.innerHTML = '';
     creditosCount = data.ordenes.length;
     ordenesCredito = data.ordenes;
@@ -642,6 +676,8 @@ async function cargarCreditos() {
     if (data.ordenes.length === 0) { window.location.href = 'creditos.php'; }
 
     data.ordenes.forEach(ord => {
+      const sucursal = ord.sucursal || 'Sin sucursal';
+      const usuario = ord.usuario || 'Sin usuario';
       ord.productos.forEach(sub => {
         const { nombre, precio_dolar_visible, precio_peso_visible, precio_bs_visible } = sub.datos;
         const cantidad = sub.cantidad;
@@ -651,7 +687,9 @@ async function cargarCreditos() {
         tbody.insertAdjacentHTML('beforeend', `
           <tr>
             <td>${sub.cantidad}</td>
-            <td>${nombre}</td>
+            <td>${escapeHtml(nombre)}</td>
+            <td>${escapeHtml(sucursal)}</td>
+            <td>${escapeHtml(usuario)}</td>
             <td class="text-center">${usd} <small>$</small></td>
             <td class="text-center">${cop} <small>Cop</small></td>
             <td class="text-center">${bs} <small>Bs</small></td>
@@ -677,6 +715,8 @@ async function cargarCreditos() {
         <tr style="background:rgba(255,255,255,.03);">
           <td>COMPRA: <b>${ord.id}</b></td>
           <td>Fecha: ${ord.fecha}${etiquetaEstricto}</td>
+          <td>${escapeHtml(sucursal)}</td>
+          <td>${escapeHtml(usuario)}</td>
           <td class="text-center"><b>TOTAL:
             <span class="total_final">${ts.usd.toFixed(2)}</span>
             <span class="total_inicial hide">${ts_inicial_u}</span>
@@ -698,12 +738,16 @@ async function cargarCreditos() {
     });
 
     const tg = data.totales_global;
+    const sucursalesGlobales = (tg.sucursales && tg.sucursales.length) ? tg.sucursales.join(', ') : 'Sin sucursal';
+    const usuariosGlobales = (tg.usuarios && tg.usuarios.length) ? tg.usuarios.join(', ') : 'Sin usuario';
     const tg_inicial_u = tg.total_inicial_dolares.toFixed(2);
     const tg_inicial_c = tg.total_inicial_cop > 0 ? tg.total_inicial_cop.toLocaleString('es-CO') : '0,00';
     const tg_inicial_b = tg.total_inicial_bs > 0 ? tg.total_inicial_bs.toLocaleString('es-VE', { minimumFractionDigits: 2 }) : '0,00';
     tbody.insertAdjacentHTML('beforeend', `
       <tr style="background:rgba(255,255,255,.06);">
         <td colspan="2">DEUDA TOTAL:</td>
+        <td>${escapeHtml(sucursalesGlobales)}</td>
+        <td>${escapeHtml(usuariosGlobales)}</td>
         <td class="text-center"><b>
           <span class="total_final">${tg.usd.toFixed(2)}</span>
           <span class="total_inicial hide">${tg_inicial_u}</span>
@@ -724,7 +768,7 @@ async function cargarCreditos() {
     actualizarMetricasTiempo();
   } catch (error) {
     console.error(error);
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>';
   }
 }
 
@@ -825,12 +869,17 @@ async function cargarDeuda() {
     const productos = data.productos || [];
     if (productos.length === 0) { window.location.href = 'creditos.php'; return; }
 
+    const sucursalesDeuda = (data.sucursales && data.sucursales.length) ? data.sucursales.join(', ') : 'Sin sucursal';
+    const usuariosDeuda = (data.usuarios && data.usuarios.length) ? data.usuarios.join(', ') : 'Sin usuario';
+
     productos.forEach(prod => {
       const clase = prod.total_usd.toFixed(2) === '0.00' ? 'text-muted' : '';
       tbody.insertAdjacentHTML('beforeend', `
         <tr>
           <td>${prod.cantidad}</td>
-          <td>${prod.nombre}</td>
+          <td>${escapeHtml(prod.nombre)}</td>
+          <td>${escapeHtml(prod.sucursal || 'Sin sucursal')}</td>
+          <td>${escapeHtml(prod.usuario || 'Sin usuario')}</td>
           <td class="text-center ${clase}">${prod.total_usd.toFixed(2)} <small>$</small></td>
           <td class="text-center ${clase}">${prod.total_cop.toLocaleString('es-CO')} <small>Cop</small></td>
           <td class="text-center ${clase}">${prod.total_bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></td>
@@ -841,6 +890,8 @@ async function cargarDeuda() {
     tbody.insertAdjacentHTML('beforeend', `
       <tr style="background:rgba(255,255,255,.06);">
         <td colspan="2"><b>DEUDA TOTAL:</b></td>
+        <td>${escapeHtml(sucursalesDeuda)}</td>
+        <td>${escapeHtml(usuariosDeuda)}</td>
         <td class="text-center"><b>${tg2.usd.toFixed(2)} <small>$</small></b></td>
         <td class="text-center"><b>${tg2.cop.toLocaleString('es-CO')} <small>Cop</small></b></td>
         <td class="text-center"><b>${tg2.bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} <small>Bs</small></b></td>
@@ -853,7 +904,7 @@ async function cargarDeuda() {
     actualizarMetricasTiempo();
   } catch (error) {
     console.error(error);
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">No fue posible cargar los créditos.</td></tr>';
   }
 }
 

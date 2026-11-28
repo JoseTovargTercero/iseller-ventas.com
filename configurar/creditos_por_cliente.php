@@ -101,6 +101,9 @@ function getProductos($orderId)
 $sql = "SELECT creditos.tipoCompra,
                creditos.id            AS id_credito,
                creditos.order_id,
+               creditos.sucursal_id,
+               S.nombre               AS sucursal,
+               U.nombre               AS usuario,
                orden.created,
                orden.total_price,
                creditos.total_price as total_inicial_dolares,
@@ -110,11 +113,14 @@ $sql = "SELECT creditos.tipoCompra,
                creditos.fecha_limite
           FROM creditos
      LEFT JOIN orden ON orden.id = creditos.order_id
-         WHERE estado = '2' AND negocio = ?
-      ORDER BY negocio DESC";
+     LEFT JOIN sucursales AS S
+            ON S.id = COALESCE(NULLIF(creditos.sucursal_id, 0), orden.id_sucursal)
+     LEFT JOIN usuarios AS U ON U.id = orden.usuario
+         WHERE creditos.estado = '2' AND creditos.negocio = ? AND creditos.bss_id = ?
+      ORDER BY creditos.negocio DESC";
 
 $stmt = $conexion->prepare($sql);
-$stmt->bind_param('s', $cliente);
+$stmt->bind_param('si', $cliente, $bss_id);
 $stmt->execute();
 $res = $stmt->get_result();
 
@@ -126,11 +132,29 @@ $payload = [
         'bs' => 0,
         'total_inicial_dolares' => 0,
         'total_inicial_cop' => 0,
-        'total_inicial_bs' => 0
+        'total_inicial_bs' => 0,
+        'sucursales' => [],
+        'usuarios' => []
     ],
 ];
 
 while ($row = $res->fetch_assoc()) {
+    $sucursalNombre = trim((string) ($row['sucursal'] ?? ''));
+    if ($sucursalNombre === '') {
+        $sucursalNombre = 'Sin sucursal';
+    }
+    if (!in_array($sucursalNombre, $payload['totales_global']['sucursales'], true)) {
+        $payload['totales_global']['sucursales'][] = $sucursalNombre;
+    }
+
+    $usuarioNombre = trim((string) ($row['usuario'] ?? ''));
+    if ($usuarioNombre === '') {
+        $usuarioNombre = 'Sin usuario';
+    }
+    if (!in_array($usuarioNombre, $payload['totales_global']['usuarios'], true)) {
+        $payload['totales_global']['usuarios'][] = $usuarioNombre;
+    }
+
     $totales = ['usd' => 0, 'cop' => 0, 'bs' => 0];
     $productos = getProductos($row['order_id']);
 
@@ -153,6 +177,9 @@ while ($row = $res->fetch_assoc()) {
         'id_credito'  => $row['id_credito'],
         'tipoCompra'  => $row['tipoCompra'],
         'fecha'       => $row['created'],
+        'sucursal'    => $sucursalNombre,
+        'sucursal_id' => (int) ($row['sucursal_id'] ?? 0),
+        'usuario'     => $usuarioNombre,
         'total'       => (float)$row['total_price'],
         'totales'     => $totales,
         'productos'   => $productos,
@@ -167,4 +194,8 @@ while ($row = $res->fetch_assoc()) {
 }
 
 $stmt->close();
+
+sort($payload['totales_global']['sucursales'], SORT_NATURAL | SORT_FLAG_CASE);
+sort($payload['totales_global']['usuarios'], SORT_NATURAL | SORT_FLAG_CASE);
+
 echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);

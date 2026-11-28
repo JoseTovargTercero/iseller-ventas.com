@@ -12,7 +12,7 @@ $sucursal = $nivel === 1
   ? (int) ($_POST['sucursal'] ?? 0)
   : (int) ($_SESSION["sucursal"] ?? 0);
 
-$extraCond = $sucursal > 0 ? 'AND C.sucursal_id = ' . $sucursal : '';
+$extraCond = $sucursal > 0 ? 'AND COALESCE(NULLIF(C.sucursal_id, 0), O.id_sucursal) = ' . $sucursal : '';
 
 // Agrupa por cédula. Si el crédito no tiene cédula, agrupa por el nombre
 // para no mezclar clientes distintos que tampoco tienen cédula.
@@ -21,11 +21,14 @@ $query6 = $conexion->query("SELECT
     MAX(TRIM(C.cedula)) AS cedula,
     COUNT(*) AS total,
     SUM(C.total_price) AS suma_monto,
-    MAX(S.nombre) AS sucursal,
+    GROUP_CONCAT(DISTINCT S.nombre ORDER BY S.nombre SEPARATOR ', ') AS sucursal,
+    GROUP_CONCAT(DISTINCT U.nombre ORDER BY U.nombre SEPARATOR ', ') AS usuario,
     MAX(O.created) AS ultimo_credito
   FROM `creditos` AS C
-  LEFT JOIN sucursales AS S ON S.id = C.sucursal_id
   LEFT JOIN orden AS O ON O.id = C.order_id
+  LEFT JOIN sucursales AS S
+    ON S.id = COALESCE(NULLIF(C.sucursal_id, 0), O.id_sucursal)
+  LEFT JOIN usuarios AS U ON U.id = O.usuario
   WHERE C.estado = 2 AND C.bss_id = $bss_id $extraCond
   GROUP BY CASE
       WHEN TRIM(COALESCE(C.cedula, '')) = '' THEN CONCAT('NOMBRE:', COALESCE(C.negocio, ''))
@@ -38,6 +41,18 @@ $cedulas = [];
 if ($query6 && $query6->num_rows > 0) {
   while ($row6 = $query6->fetch_assoc()) {
     $row6['cedula'] = trim((string) ($row6['cedula'] ?? ''));
+
+    // Sucursales donde el cliente tiene créditos (pueden ser varias).
+    $row6['sucursal'] = trim((string) ($row6['sucursal'] ?? ''));
+    if ($row6['sucursal'] === '') {
+      $row6['sucursal'] = 'Sin sucursal';
+    }
+
+    // Usuarios que otorgaron los créditos del cliente.
+    $row6['usuario'] = trim((string) ($row6['usuario'] ?? ''));
+    if ($row6['usuario'] === '') {
+      $row6['usuario'] = 'Sin usuario';
+    }
 
     // Días transcurridos desde la fecha del último crédito del cliente.
     $ultimoCredito = trim((string) ($row6['ultimo_credito'] ?? ''));
@@ -101,6 +116,7 @@ foreach ($filas as $fila) {
     'cantidad_creditos' => $fila['total'],
     'suma_monto' => $fila['suma_monto'] ? number_format($fila['suma_monto'], 2, '.', ',') : '0.00',
     'sucursal' => $fila['sucursal'],
+    'usuario' => $fila['usuario'],
     'ultimo_credito' => $fila['ultimo_credito_fecha'],
     'dias_ultimo_credito' => $fila['dias_ultimo_credito']
   ];
